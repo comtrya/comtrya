@@ -1,0 +1,14 @@
+depends:
+  - kubernetes
+
+packages:
+  - name: git
+    ensure: installed
+
+files:
+  - from: gitconfig
+    to: /Users/rawkode/gitc
+    symlink: true
+    force: true
+    omit:
+      - ignores

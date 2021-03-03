@@ -1,0 +1,7 @@
+packages:
+  - ensure: installed
+    provider: homebrew
+    list:
+      - kind
+      - kubectl
+      - minikube
