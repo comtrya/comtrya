@@ -8,11 +8,6 @@ pub trait ContextProvider {
     fn get_contexts(&self) -> Vec<Context>;
 }
 
-pub struct ContextStore {
-    pub prefix: String,
-    pub contexts: Vec<Context>,
-}
-
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum Context {
     KeyValueContext(String, String),

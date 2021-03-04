@@ -1,11 +1,11 @@
 use petgraph::prelude::*;
 use serde_json::value::Value;
+use std::path::PathBuf;
 use std::{
     collections::{BTreeMap, HashMap},
     io::Result,
     ops::Deref,
 };
-use std::{ops::Add, path::PathBuf};
 use structopt::StructOpt;
 use tera::{Context, Tera};
 use walkdir::WalkDir;
@@ -215,7 +215,7 @@ fn main() -> Result<()> {
             };
 
             match abc {
-                Ok(a) => println!("File creation was ok"),
+                Ok(_) => println!("File creation was ok"),
                 Err(_) => println!("File creation failed"),
             }
         }
