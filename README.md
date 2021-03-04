@@ -29,7 +29,10 @@ cargo install comtrya
 comtrya --modules-directory ./dotfiles
 ```
 
-### Packages & Files
+### Manifests
+
+A manifest is a collection of packages and files, and this will likely be expanded upon later. A Manifest is a logcal grouping of resources that can be "appied" to your machine, and fetched from remote locations or local.
+#### Packages & Files
 
 Currently, Comtrya can install packages and provision files. Pretty simple at the moment.
 
