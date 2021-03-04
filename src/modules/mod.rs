@@ -69,7 +69,7 @@ impl Module {
 
     pub fn link(&self, file: File) -> Result<(), Box<dyn Error>> {
         println!(
-            "Symlining file {:?} to {:?}",
+            "Symlinking file {:?} to {:?}",
             self.root_dir
                 .clone()
                 .unwrap()
