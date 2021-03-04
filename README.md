@@ -21,6 +21,45 @@ cargo install comtrya
 comtrya --modules-directory ./dotfiles
 ```
 
+### Packages & Files
+
+Currently, Comtrya can install packages and provision files. Pretty simple at the moment.
+
+Single package:
+
+```yaml
+packages:
+  - ensure: installed
+    name: git
+```
+
+List version:
+
+```yaml
+packages:
+  - ensure: installed
+    list:
+      - git
+      - minikube
+```
+
+```yaml
+files:
+  - from: gitconfig
+    to: /Users/rawkode/gitc
+    symlink: true
+    force: true
+    omit:
+      - ignores
+```
+
+### Dependencies
+
+```yaml
+depends:
+  - module_name
+```
+
 ## What's Next?
 
 You should take a look at the issues page (on GitLab, not GitHub) to see what's available to contribute. Below is a short list of the major features that are upcoming.
