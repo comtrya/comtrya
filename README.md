@@ -18,6 +18,7 @@ No binaries are distributed yet, please install and build with Cargo.
 
 ```shell
 cargo install comtrya
+comtrya --modules-directory ./dotfiles
 ```
 
 ## What's Next?
@@ -27,6 +28,10 @@ You should take a look at the issues page (on GitLab, not GitHub) to see what's 
 ### Async DAG
 
 We're using [petgraph]() to build out the graph, but we're not travesing it in a way that will allow us to concurrently execute manifests at the same depth. This is something I wish to sort out pretty soon.
+
+### Config
+
+The example [./dotfiles](./dotfiles) directory contains a [comtrya.yaml](./dotfiles/comtrya.yaml) file that should / will allow you to configure default providers, add contexts / variables, and specify the manifests directory. This doesn't exist yet :)
 
 ### Package Provider Enhancements
 
