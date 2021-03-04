@@ -28,23 +28,21 @@ pub struct Module {
 }
 
 impl Module {
-    pub fn render(&self, file: File) -> String {
-        let tera = match Tera::new(self.root_dir.clone().unwrap().to_str().unwrap()) {
-            Ok(t) => t,
-            Err(e) => {
-                println!("Parsing error(s): {}", e);
-                ::std::process::exit(1);
-            }
-        };
-
-        let context = Context::new();
-        let contents = file.from.clone().unwrap();
-        let template = contents.as_str();
-
-        tera.render(template, &context).unwrap()
+    pub fn render(&self, file: File, tera: &Tera, context: &Context) -> String {
+        tera.clone()
+            .render(
+                format!(
+                    "{}/{}",
+                    self.root_dir.clone().unwrap().to_str().unwrap(),
+                    file.from.clone().unwrap()
+                )
+                .as_str(),
+                &context,
+            )
+            .unwrap()
     }
 
-    pub fn create(&self, file: File) -> Result<(), Box<dyn Error>> {
+    pub fn create(&self, file: File, tera: &Tera, context: &Context) -> Result<(), Box<dyn Error>> {
         println!(
             "Creating file {:?}",
             self.root_dir
@@ -60,7 +58,7 @@ impl Module {
         )?;
 
         use std::io::Write;
-        f.write_all(self.render(file.clone()).as_bytes())?;
+        f.write_all(self.render(file.clone(), tera, context).as_bytes())?;
 
         f.sync_all()?;
 

@@ -1,12 +1,19 @@
 use petgraph::prelude::*;
-use std::path::PathBuf;
-use std::{collections::HashMap, io::Result};
+use std::{collections::HashMap, io::Result, ops::Deref};
+use std::{ops::Add, path::PathBuf};
 use structopt::StructOpt;
+use tera::{Context, Tera};
 use walkdir::WalkDir;
 
+mod contexts;
+use contexts::user::UserContextProvider;
+use contexts::ContextProvider;
+
 mod files;
+
 mod packages;
 use packages::PackageCommand;
+
 mod modules;
 use modules::Module;
 
@@ -30,6 +37,38 @@ fn main() -> Result<()> {
         .unwrap()
         .join(opt.modules_directory.clone());
 
+    let mut tera = match Tera::new(format!("{}/**/*", root_dir.clone().to_str().unwrap()).deref()) {
+        Ok(t) => t,
+        Err(e) => {
+            println!("Parsing error(s): {}", e);
+            ::std::process::exit(1);
+        }
+    };
+
+    // Run Context Providers
+    let mut contexts = Context::new();
+    let context_providers: Vec<Box<dyn ContextProvider>> = vec![Box::new(UserContextProvider {})];
+
+    context_providers.iter().for_each(|provider| {
+        provider.get_contexts().iter().for_each(|context| {
+            match context {
+                contexts::Context::KeyValueContext(k, v) => {
+                    contexts.insert(format!("{}_{}", provider.get_prefix(), k), v);
+                }
+                contexts::Context::ListContext(k, v) => {
+                    contexts.insert(format!("{}_{}", provider.get_prefix(), k), v);
+                }
+            }
+
+            ()
+        });
+
+        ()
+    });
+
+    println!("Contexts for this execution: {:?}", contexts);
+
+    // Find Manifests
     for entry in WalkDir::new(opt.modules_directory)
         .into_iter()
         .filter_map(|e| e.ok())
@@ -37,9 +76,14 @@ fn main() -> Result<()> {
         .filter(|p| p.extension().is_some())
         .filter(|p| ["yaml", "yml"].contains(&(p.extension().unwrap().to_str().unwrap())))
     {
-        let f = std::fs::File::open(entry.clone())?;
-        let reader = std::io::BufReader::new(f);
-        let mut mo: Module = serde_yaml::from_reader(reader).unwrap();
+        let contents = std::fs::read_to_string(entry.clone()).unwrap();
+        let template = contents.as_str();
+
+        println!("Template is {:?}", template);
+
+        let yaml = tera.render_str(template, &contexts).unwrap();
+
+        let mut mo: Module = serde_yaml::from_str(yaml.deref()).unwrap();
 
         let name = match &mo.name {
             Some(name) => name.clone(),
@@ -61,7 +105,26 @@ fn main() -> Result<()> {
             }
         };
 
-        mo.root_dir = Some(root_dir.join(name.clone()));
+        println!(
+            "Root Dir for Module: {}",
+            entry
+                .clone()
+                .parent()
+                .unwrap()
+                .strip_prefix(root_dir.clone())
+                .unwrap()
+                .to_str()
+                .unwrap()
+        );
+        mo.root_dir = Some(
+            entry
+                .clone()
+                .parent()
+                .unwrap()
+                .strip_prefix(root_dir.clone())
+                .unwrap()
+                .to_path_buf(),
+        );
 
         println!("Registering module {:?}", name);
 
@@ -72,6 +135,7 @@ fn main() -> Result<()> {
         ()
     }
 
+    // Build DAG
     let mut dag: Graph<Module, u32, petgraph::Directed> = Graph::new();
 
     let root_module = Module {
@@ -106,6 +170,7 @@ fn main() -> Result<()> {
         });
     }
 
+    // Walk DAG / Run Manifests
     let mut dfs = DfsPostOrder::new(&dag, root_index);
 
     while let Some(visited) = dfs.next(&dag) {
@@ -135,7 +200,7 @@ fn main() -> Result<()> {
 
             let abc = match f.symlink.unwrap_or(false) {
                 true => m1.link(f),
-                false => m1.create(f),
+                false => m1.create(f, &tera, &contexts),
             };
 
             match abc {
