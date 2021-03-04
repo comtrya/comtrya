@@ -170,6 +170,7 @@ dependencies = [
  "os_info",
  "petgraph",
  "serde",
+ "serde_json",
  "serde_yaml",
  "structopt",
  "tera",

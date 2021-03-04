@@ -18,7 +18,11 @@ impl ContextProvider for UserContextProvider {
             ),
             Context::KeyValueContext(
                 String::from("config_dir"),
-                home_dir().unwrap().into_os_string().into_string().unwrap(),
+                config_dir()
+                    .unwrap()
+                    .into_os_string()
+                    .into_string()
+                    .unwrap(),
             ),
         ]
     }

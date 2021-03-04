@@ -1,5 +1,10 @@
 use petgraph::prelude::*;
-use std::{collections::HashMap, io::Result, ops::Deref};
+use serde_json::value::Value;
+use std::{
+    collections::{BTreeMap, HashMap},
+    io::Result,
+    ops::Deref,
+};
 use std::{ops::Add, path::PathBuf};
 use structopt::StructOpt;
 use tera::{Context, Tera};
@@ -50,18 +55,24 @@ fn main() -> Result<()> {
     let context_providers: Vec<Box<dyn ContextProvider>> = vec![Box::new(UserContextProvider {})];
 
     context_providers.iter().for_each(|provider| {
+        let mut values: BTreeMap<String, Value> = BTreeMap::new();
+
         provider.get_contexts().iter().for_each(|context| {
             match context {
                 contexts::Context::KeyValueContext(k, v) => {
-                    contexts.insert(format!("{}_{}", provider.get_prefix(), k), v);
+                    values.insert(k.clone(), v.clone().into());
+                    ()
                 }
                 contexts::Context::ListContext(k, v) => {
-                    contexts.insert(format!("{}_{}", provider.get_prefix(), k), v);
+                    values.insert(k.clone(), v.clone().into());
+                    ()
                 }
             }
 
             ()
         });
+
+        contexts.insert(provider.get_prefix(), &values);
 
         ()
     });
