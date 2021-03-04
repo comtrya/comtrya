@@ -26,7 +26,7 @@ No binaries are distributed yet, please install and build with Cargo.
 
 ```shell
 cargo install comtrya
-comtrya --modules-directory ./dotfiles
+comtrya --manifest-directory ./dotfiles
 ```
 
 ### Manifests
@@ -68,7 +68,7 @@ files:
 
 ```yaml
 depends:
-  - module_name
+  - manifest_name
 ```
 
 ## What's Next?
