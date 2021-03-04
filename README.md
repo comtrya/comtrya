@@ -25,6 +25,17 @@ comtrya --modules-directory ./dotfiles
 
 You should take a look at the issues page (on GitLab, not GitHub) to see what's available to contribute. Below is a short list of the major features that are upcoming.
 
+### Better Output
+
+Currently, Comtrya `println!`'s pretty much everything. We need to use a proper logging library to restrict the scope of the output and should provide a summary output.
+
+```shell
+Comtrya finished in 12.3s
+
+Installed Packages: 12
+Provisioned Files: 34
+```
+
 ### Async DAG
 
 We're using [petgraph]() to build out the graph, but we're not travesing it in a way that will allow us to concurrently execute manifests at the same depth. This is something I wish to sort out pretty soon.
