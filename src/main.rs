@@ -19,8 +19,8 @@ mod files;
 mod packages;
 use packages::PackageCommand;
 
-mod modules;
-use modules::Module;
+mod manifests;
+use manifests::Manifest;
 
 #[derive(StructOpt, Debug)]
 #[structopt(name = "comtrya")]
@@ -29,18 +29,18 @@ struct Opt {
     #[structopt(short, long)]
     debug: bool,
 
-    /// Modules directory
+    /// Directory where manifests are located
     #[structopt(short, long, parse(from_os_str))]
-    modules_directory: PathBuf,
+    manifest_directory: PathBuf,
 }
 
 fn main() -> Result<()> {
     let opt = Opt::from_args();
 
-    let mut modules: HashMap<String, Module> = HashMap::new();
+    let mut manifests: HashMap<String, Manifest> = HashMap::new();
     let root_dir = std::env::current_dir()
         .unwrap()
-        .join(opt.modules_directory.clone());
+        .join(opt.manifest_directory.clone());
 
     let mut tera = match Tera::new(format!("{}/**/*", root_dir.clone().to_str().unwrap()).deref()) {
         Ok(t) => t,
@@ -80,7 +80,7 @@ fn main() -> Result<()> {
     println!("Contexts for this execution: {:?}", contexts);
 
     // Find Manifests
-    for entry in WalkDir::new(opt.modules_directory)
+    for entry in WalkDir::new(opt.manifest_directory)
         .into_iter()
         .filter_map(|e| e.ok())
         .map(|d| d.into_path())
@@ -94,13 +94,13 @@ fn main() -> Result<()> {
 
         let yaml = tera.render_str(template, &contexts).unwrap();
 
-        let mut mo: Module = serde_yaml::from_str(yaml.deref()).unwrap();
+        let mut mo: Manifest = serde_yaml::from_str(yaml.deref()).unwrap();
 
         let name = match &mo.name {
             Some(name) => name.clone(),
             None => {
                 if entry.file_stem().unwrap().to_str().unwrap().eq("main") {
-                    // Use directory name for module name
+                    // Use directory name for manifest name
                     String::from(
                         entry
                             .parent()
@@ -117,7 +117,7 @@ fn main() -> Result<()> {
         };
 
         println!(
-            "Root Dir for Module: {}",
+            "Root Dir for Manifest: {}",
             entry
                 .clone()
                 .parent()
@@ -137,19 +137,19 @@ fn main() -> Result<()> {
                 .to_path_buf(),
         );
 
-        println!("Registering module {:?}", name);
+        println!("Registering Manifest {:?}", name);
 
         mo.name = Some(name.clone());
 
-        modules.insert(name, mo);
+        manifests.insert(name, mo);
 
         ()
     }
 
     // Build DAG
-    let mut dag: Graph<Module, u32, petgraph::Directed> = Graph::new();
+    let mut dag: Graph<Manifest, u32, petgraph::Directed> = Graph::new();
 
-    let root_module = Module {
+    let manifest_root = Manifest {
         root_dir: None,
         dag_index: None,
         name: None,
@@ -157,27 +157,27 @@ fn main() -> Result<()> {
         packages: vec![],
         files: vec![],
     };
-    let root_index = dag.add_node(root_module);
+    let root_index = dag.add_node(manifest_root);
 
-    let modules: HashMap<String, Module> = modules
+    let manifests: HashMap<String, Manifest> = manifests
         .into_iter()
-        .map(|(name, mut module)| {
-            let abc = dag.add_node(module.clone());
+        .map(|(name, mut manifest)| {
+            let abc = dag.add_node(manifest.clone());
 
-            module.dag_index = Some(abc);
+            manifest.dag_index = Some(abc);
             dag.add_edge(root_index, abc, 0);
 
-            (name.clone(), module)
+            (name.clone(), manifest)
         })
         .collect();
 
-    for (name, module) in modules.iter() {
-        module.depends.iter().for_each(|d| {
-            let m1 = modules.get(d).unwrap();
+    for (name, manifest) in manifests.iter() {
+        manifest.depends.iter().for_each(|d| {
+            let m1 = manifests.get(d).unwrap();
 
             println!("Found that {:?} has a dep on {:?}", name, m1.name);
 
-            dag.add_edge(module.dag_index.unwrap(), m1.dag_index.unwrap(), 0);
+            dag.add_edge(manifest.dag_index.unwrap(), m1.dag_index.unwrap(), 0);
         });
     }
 
@@ -187,19 +187,19 @@ fn main() -> Result<()> {
     while let Some(visited) = dfs.next(&dag) {
         let m1 = dag.node_weight(visited).unwrap();
 
-        // Root module, nothing to do.
+        // Root manifest, nothing to do.
         if m1.name.is_none() {
             continue;
         }
 
-        println!("Provisioning Module: {:?}", m1.name.clone().unwrap());
+        println!("Provisioning Manifest: {:?}", m1.name.clone().unwrap());
 
         for p in m1.packages.iter() {
             let result = p.run_command();
             match result.0 {
-                Ok(_) => println!("Module {:?} - Packages Suceeded", p.name()),
+                Ok(_) => println!("Manifest {:?} - Packages Suceeded", p.name()),
                 Err(_) => {
-                    println!("Module {:?} Failed", p.name());
+                    println!("Manifest {:?} Failed", p.name());
 
                     continue;
                 }
@@ -207,7 +207,7 @@ fn main() -> Result<()> {
         }
 
         for f in m1.clone().files.into_iter() {
-            println!("Module {:?} - Files working {:?}", m1.name, f);
+            println!("Manifest {:?} - Files working {:?}", m1.name, f);
 
             let abc = match f.symlink.unwrap_or(false) {
                 true => m1.link(f),

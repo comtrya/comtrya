@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use tera::{Context, Tera};
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct Module {
+pub struct Manifest {
     #[serde(skip)]
     pub root_dir: Option<PathBuf>,
 
@@ -27,7 +27,7 @@ pub struct Module {
     pub name: Option<String>,
 }
 
-impl Module {
+impl Manifest {
     pub fn render(&self, file: File, tera: &Tera, context: &Context) -> String {
         tera.clone()
             .render(
