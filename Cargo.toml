@@ -3,6 +3,8 @@ name = "comtrya"
 version = "0.1.0"
 authors = ["David McKay <david@rawkode.dev>"]
 edition = "2018"
+license = "MIT"
+description = "A tool to simplify reprovisioning a fresh OS. Installs packages and manages dotfiles."
 
 [dependencies]
 petgraph = "0.5.1"
