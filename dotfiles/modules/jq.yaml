@@ -1,6 +1,0 @@
-packages:
-  - name: jq
-    ensure: installed
-
-depends:
-  - git

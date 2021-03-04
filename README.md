@@ -6,6 +6,14 @@
 
 ---
 
+## Warning
+
+This tool is ridiculously early in its development. I'm building out features as I migrate my [dotfiles](https://gitlab.com/rawkode/rawkode) over.
+
+Only for early adopters and masochists.
+
+## About
+
 Comtrya is a tool to help provision a fresh OS with the packages and configuration (dotfiles) you need to become productive again.
 
 I'm a serial OS installer, I wipe the OS on my machines every, approx, 30 days. I've primarily relied on SaltStack to automate this, but I've grown frustrated with the mismatch between configuration management and personal provisioning.

@@ -1,5 +1,0 @@
-modules: ./modules
-
-variables:
-  name: David McKay
-  email: david@rawkode.com
