@@ -17,7 +17,7 @@ use contexts::ContextProvider;
 mod files;
 
 mod packages;
-use packages::PackageCommand;
+use packages::{PackageConfig, ProviderPackage};
 
 mod manifests;
 use manifests::Manifest;
@@ -49,6 +49,9 @@ fn main() -> Result<()> {
             ::std::process::exit(1);
         }
     };
+
+    // Load all supported PackageProviders
+    // let mut package_providers: HashMap<PackageProviders, > = HashMap::new();
 
     // Run Context Providers
     let mut contexts = Context::new();
@@ -194,16 +197,19 @@ fn main() -> Result<()> {
 
         println!("Provisioning Manifest: {:?}", m1.name.clone().unwrap());
 
-        for p in m1.packages.iter() {
-            let result = p.run_command();
-            match result.0 {
-                Ok(_) => println!("Manifest {:?} - Packages Suceeded", p.name()),
-                Err(_) => {
-                    println!("Manifest {:?} Failed", p.name());
+        for p in m1.packages.clone().into_iter() {
+            let p = ProviderPackage::from(p);
 
-                    continue;
-                }
-            }
+            // let result = p.run_command();
+            // match result.0 {
+            //     Ok(_) => println!("Manifest {:?} - Packages Suceeded", p.name()),
+            //     Err(_) => {
+            //         println!("Manifest {:?} Failed", p.name());
+
+            //         continue;
+            //     }
+            // }
+            continue;
         }
 
         for f in m1.clone().files.into_iter() {
