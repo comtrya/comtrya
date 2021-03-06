@@ -181,12 +181,10 @@ mod tests {
     // }
 }
 
-type Providers = providers::homebrew::Homebrew;
-
-pub fn get_provider(provider: PackageProviders) -> Option<Providers> {
+pub fn get_provider(provider: PackageProviders) -> Option<Box<dyn providers::PackageProvider>> {
     match provider {
-        PackageProviders::Apt => None,
-        PackageProviders::Homebrew => Some(providers::homebrew::Homebrew {}),
-        PackageProviders::Scoop => None,
+        PackageProviders::Apt => Some(Box::new(providers::apt::Aptitude {})),
+        PackageProviders::Homebrew => Some(Box::new(providers::homebrew::Homebrew {})),
+        _ => None,
     }
 }

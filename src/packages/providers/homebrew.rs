@@ -6,14 +6,16 @@ use std::{
 };
 use which::which;
 
+use super::PackageProvider;
+
 pub struct Homebrew {}
 
-impl Homebrew {
+impl PackageProvider for Homebrew {
     fn supported(&self) -> bool {
         true
     }
 
-    pub fn init(&self) -> Result<bool, super::PackageProviderError> {
+    fn init(&self) -> Result<bool, super::PackageProviderError> {
         match which("brew") {
             Ok(_) => return Ok(false),
             Err(_) => (),
@@ -52,11 +54,13 @@ impl Homebrew {
         todo!()
     }
 
-    pub fn install(&self, package: &Package) -> Result<bool, super::PackageProviderError> {
+    fn install(&self, package: &Package) -> Result<bool, super::PackageProviderError> {
         Command::new("brew")
             .arg(format!("install {}", package.list.join(" ")))
             .output()
             .unwrap();
+
+        println!("Installed {}", package.list.join(" "));
 
         Ok(true)
     }

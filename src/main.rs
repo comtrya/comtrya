@@ -210,14 +210,14 @@ fn main() -> Result<()> {
 
             match provider.init() {
                 Ok(true) => {
-                    println!("OK INSTALLED HOMEBREW");
+                    println!("Installed package provider");
                     ()
                 }
 
-                Ok(false) => println!("OK HOMEBREW ALREADY INSTALLED"),
+                Ok(false) => (),
 
                 Err(_) => {
-                    println!("FAILED TO INSTALL HOMEBREW");
+                    println!("Failed to install package provider");
                     ()
                 }
             }
@@ -226,6 +226,7 @@ fn main() -> Result<()> {
                 p.list = vec![m1.name.clone().unwrap()];
             }
 
+            println!("INSTALL");
             provider.install(&p);
 
             continue;
