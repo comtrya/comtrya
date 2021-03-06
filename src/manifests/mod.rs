@@ -1,4 +1,4 @@
-use std::{error::Error, path::PathBuf};
+use std::{error::Error, fs::create_dir_all, path::PathBuf};
 
 use crate::files::File;
 use crate::packages::PackageConfig;
@@ -50,6 +50,23 @@ impl Manifest {
                 .unwrap()
                 .join(file.clone().to.unwrap())
         );
+        let mut parent = self
+            .root_dir
+            .clone()
+            .unwrap()
+            .join(file.clone().to.unwrap());
+
+        parent.pop();
+        
+        println!(
+            "Creating directory {:?}",
+            parent
+                .clone()
+                .to_str()
+                
+        );
+        create_dir_all(parent)?;
+
         let mut f = std::fs::File::create(
             self.root_dir
                 .clone()
