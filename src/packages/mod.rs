@@ -1,71 +1,23 @@
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, process::Command};
-use std::{io::Result, process::ExitStatus};
+use std::collections::HashMap;
 
 pub mod providers;
 use providers::PackageProviders;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Package {
-    name: Option<String>,
+    #[serde(default)]
+    pub list: Vec<String>,
 
     #[serde(default)]
-    provider: PackageProviders,
+    pub ensure: PackageStatus,
 
     #[serde(default)]
-    repository: Option<String>,
+    pub provider: PackageProviders,
 
     #[serde(default)]
-    ensure: PackageStatus,
-
-    #[serde(default)]
-    list: Vec<String>,
+    pub repository: Option<String>,
 }
-
-pub trait PackageCommand {
-    fn run_command(&self) -> (Result<ExitStatus>, Vec<u8>);
-}
-
-impl Package {
-    pub fn name(&self) -> String {
-        if self.name.is_some() {
-            return self.name.clone().unwrap();
-        }
-
-        return self.list.join(" ");
-    }
-
-    pub fn get_package_list(&self) -> Vec<String> {
-        if self.list.len() == 0 {
-            return vec![self.name.clone().unwrap()];
-        }
-
-        return self.list.clone();
-    }
-}
-
-// impl PackageCommand for Package {
-//     fn run_command(&self) -> (Result<ExitStatus>, Vec<u8>) {
-//         let mut command = match self.provider {
-//             PackageProviders::Homebrew => Command::new("brew"),
-//             PackageProviders::Apt => Command::new("apt"),
-//         };
-
-//         let command = match self.provider {
-//             PackageProviders::Homebrew => command.arg("install").args(self.get_package_list()),
-//             PackageProviders::Apt => command
-//                 .args(&["install", "-y"])
-//                 .args(self.get_package_list()),
-//         };
-
-//         match command.status() {
-//             Ok(o) => (Ok(o), command.output().unwrap().stdout),
-//             Err(e) => (Err(e), command.output().unwrap().stderr),
-//         }
-//     }
-// }
-
-//////////////////////////////////////////////
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -86,58 +38,95 @@ pub struct PackageConfig {
     name: Option<String>,
 
     #[serde(default)]
-    provider: PackageProviders,
-
-    #[serde(default)]
-    repository: Option<String>,
+    list: Vec<String>,
 
     #[serde(default)]
     ensure: PackageStatus,
 
     #[serde(default)]
+    provider: PackageProviders,
+
+    #[serde(default)]
+    repository: Option<String>,
+
+    #[serde(default)]
+    variants: HashMap<os_info::Type, Variant>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct Variant {
+    name: Option<String>,
+
+    #[serde(default)]
     list: Vec<String>,
 
     #[serde(default)]
-    variants: HashMap<os_info::Type, Package>,
-}
-
-#[derive(Clone, Debug)]
-pub struct ProviderPackage {
-    name: Option<String>,
     provider: PackageProviders,
+
+    #[serde(default)]
     repository: Option<String>,
 }
 
-impl From<PackageConfig> for ProviderPackage {
-    fn from(package: PackageConfig) -> Self {
+impl PackageConfig {
+    pub fn get_list(self) -> Vec<String> {
+        if self.name.is_some() {
+            return vec![self.name.unwrap()];
+        }
+
+        if self.list.is_empty() {
+            return vec![];
+        }
+
+        return self.list;
+    }
+}
+
+impl Variant {
+    pub fn get_list(self) -> Vec<String> {
+        if self.name.is_some() {
+            return vec![self.name.unwrap()];
+        }
+
+        if self.list.is_empty() {
+            return vec![];
+        }
+
+        return self.list;
+    }
+}
+
+impl From<PackageConfig> for Package {
+    fn from(package_config: PackageConfig) -> Self {
         let os = os_info::get();
 
         // Check for variant configuration for this OS
-        let variant = package.variants.get(&os.os_type());
+        let variant = package_config.variants.get(&os.os_type());
 
         // No variant overlays
         if variant.is_none() {
-            return ProviderPackage {
-                name: package.name,
-                provider: package.provider,
-                repository: package.repository,
+            return Package {
+                list: package_config.clone().get_list(),
+                ensure: package_config.clone().ensure,
+                provider: package_config.clone().provider,
+                repository: package_config.clone().repository,
             };
         };
 
         let variant = variant.unwrap();
 
-        let mut provider_package = ProviderPackage {
-            name: package.name,
-            provider: package.provider,
-            repository: package.repository,
+        let mut package = Package {
+            list: package_config.clone().get_list(),
+            ensure: package_config.ensure,
+            provider: package_config.provider,
+            repository: package_config.repository,
         };
 
-        if variant.name.is_some() {
-            provider_package.name = variant.name.clone();
-        };
+        if false == variant.clone().get_list().is_empty() {
+            package.list = variant.clone().get_list();
+        }
 
         if variant.repository.is_some() {
-            provider_package.repository = variant.repository.clone();
+            package.repository = variant.repository.clone();
         };
 
         // I've been torn about this, but here's my logic.
@@ -146,9 +135,9 @@ impl From<PackageConfig> for ProviderPackage {
         // Even if the omission of a provider for a variant gets us
         // the default, that's most likely still expected behaviour.
         // Right?
-        provider_package.provider = variant.provider.clone();
+        package.provider = variant.provider.clone();
 
-        provider_package
+        package
     }
 }
 
@@ -190,4 +179,14 @@ mod tests {
     //     let package: Package = serde_yaml::from_str(json).unwrap();
     //     assert_eq!(package.provider, PackageProviders::Homebrew);
     // }
+}
+
+type Providers = providers::homebrew::Homebrew;
+
+pub fn get_provider(provider: PackageProviders) -> Option<Providers> {
+    match provider {
+        PackageProviders::Apt => None,
+        PackageProviders::Homebrew => Some(providers::homebrew::Homebrew {}),
+        PackageProviders::Scoop => None,
+    }
 }

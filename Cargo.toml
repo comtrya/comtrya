@@ -11,6 +11,7 @@ dirs = "3.0"
 petgraph = "0.5.1"
 # Pending PR: https://github.com/stanislav-tkach/os_info/pull/250/files
 os_info = { git = "https://github.com/rawkode/os_info", branch = "fix/serde-deserialize" }
+reqwest = { version = "0.11.1", features = ["blocking"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0.64"
 serde_yaml = "0.8"

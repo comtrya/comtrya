@@ -17,7 +17,7 @@ use contexts::ContextProvider;
 mod files;
 
 mod packages;
-use packages::{PackageConfig, ProviderPackage};
+use packages::Package;
 
 mod manifests;
 use manifests::Manifest;
@@ -198,17 +198,36 @@ fn main() -> Result<()> {
         println!("Provisioning Manifest: {:?}", m1.name.clone().unwrap());
 
         for p in m1.packages.clone().into_iter() {
-            let p = ProviderPackage::from(p);
+            let mut p = Package::from(p);
+            let provider = packages::get_provider(p.provider.clone());
 
-            // let result = p.run_command();
-            // match result.0 {
-            //     Ok(_) => println!("Manifest {:?} - Packages Suceeded", p.name()),
-            //     Err(_) => {
-            //         println!("Manifest {:?} Failed", p.name());
+            if provider.is_none() {
+                println!("Couldn't find a provider to install {:?}", p.list.join(" "));
+                continue;
+            }
 
-            //         continue;
-            //     }
-            // }
+            let provider = provider.unwrap();
+
+            match provider.init() {
+                Ok(true) => {
+                    println!("OK INSTALLED HOMEBREW");
+                    ()
+                }
+
+                Ok(false) => println!("OK HOMEBREW ALREADY INSTALLED"),
+
+                Err(_) => {
+                    println!("FAILED TO INSTALL HOMEBREW");
+                    ()
+                }
+            }
+
+            if p.list.is_empty() {
+                p.list = vec![m1.name.clone().unwrap()];
+            }
+
+            provider.install(&p);
+
             continue;
         }
 
