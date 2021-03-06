@@ -26,12 +26,16 @@ use manifests::Manifest;
 #[structopt(name = "comtrya")]
 struct Opt {
     /// Activate debug mode
-    #[structopt(short, long)]
+    #[structopt(long)]
     debug: bool,
 
     /// Directory where manifests are located
-    #[structopt(short, long, parse(from_os_str))]
+    #[structopt(short = "d", long, parse(from_os_str), default_value = ".")]
     manifest_directory: PathBuf,
+
+    /// Run a subset of your manifests, comma separated list
+    #[structopt(short = "m", long, use_delimiter = true)]
+    manifests: Vec<String>,
 }
 
 fn main() -> Result<()> {
@@ -187,11 +191,20 @@ fn main() -> Result<()> {
     // Walk DAG / Run Manifests
     let mut dfs = DfsPostOrder::new(&dag, root_index);
 
+    let run_manifests: Vec<String> = match manifests.is_empty() {
+        true => manifests.keys().map(|k| k.clone()).collect(),
+        false => opt.manifests,
+    };
+
     while let Some(visited) = dfs.next(&dag) {
         let m1 = dag.node_weight(visited).unwrap();
 
         // Root manifest, nothing to do.
         if m1.name.is_none() {
+            continue;
+        }
+
+        if false == run_manifests.contains(&m1.name.clone().unwrap()) {
             continue;
         }
 
