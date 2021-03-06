@@ -1,6 +1,23 @@
 use serde::{Deserialize, Serialize};
-use std::process::Command;
-use std::{io::Result, process::ExitStatus};
+use std::collections::HashMap;
+
+pub mod providers;
+use providers::PackageProviders;
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct Package {
+    #[serde(default)]
+    pub list: Vec<String>,
+
+    #[serde(default)]
+    pub ensure: PackageStatus,
+
+    #[serde(default)]
+    pub provider: PackageProviders,
+
+    #[serde(default)]
+    pub repository: Option<String>,
+}
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -10,79 +27,166 @@ pub enum PackageStatus {
     Uninstalled,
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "lowercase")]
-pub enum PackageProvider {
-    Apt,
-    Homebrew,
-}
-
-impl Default for PackageProvider {
+impl Default for PackageStatus {
     fn default() -> Self {
-        let info = os_info::get();
-
-        match info.os_type() {
-            os_info::Type::Debian => PackageProvider::Apt,
-            os_info::Type::Macos => PackageProvider::Homebrew,
-            os_info::Type::Mint => PackageProvider::Apt,
-            os_info::Type::Pop => PackageProvider::Apt,
-            os_info::Type::Ubuntu => PackageProvider::Apt,
-            _ => panic!("Sorry, but we don't have a default provider for {} OS. Please be explicit when requesting a package installation with `provider: XYZ`.", info.os_type()),
-        }
+        PackageStatus::Installed
     }
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct Package {
+pub struct PackageConfig {
     name: Option<String>,
 
     #[serde(default)]
     list: Vec<String>,
 
     #[serde(default)]
-    provider: PackageProvider,
-
     ensure: PackageStatus,
+
+    #[serde(default)]
+    provider: PackageProviders,
+
+    #[serde(default)]
+    repository: Option<String>,
+
+    #[serde(default)]
+    variants: HashMap<os_info::Type, Variant>,
 }
 
-pub trait PackageCommand {
-    fn run_command(&self) -> (Result<ExitStatus>, Vec<u8>);
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct Variant {
+    name: Option<String>,
+
+    #[serde(default)]
+    list: Vec<String>,
+
+    #[serde(default)]
+    provider: PackageProviders,
+
+    #[serde(default)]
+    repository: Option<String>,
 }
 
-impl Package {
-    pub fn name(&self) -> String {
+impl PackageConfig {
+    pub fn get_list(self) -> Vec<String> {
         if self.name.is_some() {
-            return self.name.clone().unwrap();
+            return vec![self.name.unwrap()];
         }
 
-        return self.list.join(" ");
-    }
-
-    pub fn get_package_list(&self) -> Vec<String> {
-        if self.list.len() == 0 {
-            return vec![self.name.clone().unwrap()];
+        if self.list.is_empty() {
+            return vec![];
         }
 
-        return self.list.clone();
+        return self.list;
     }
 }
-impl PackageCommand for Package {
-    fn run_command(&self) -> (Result<ExitStatus>, Vec<u8>) {
-        let mut command = match self.provider {
-            PackageProvider::Homebrew => Command::new("brew"),
-            PackageProvider::Apt => Command::new("apt"),
-        };
 
-        let command = match self.provider {
-            PackageProvider::Homebrew => command.arg("install").args(self.get_package_list()),
-            PackageProvider::Apt => command
-                .args(&["install", "-y"])
-                .args(self.get_package_list()),
-        };
-
-        match command.status() {
-            Ok(o) => (Ok(o), command.output().unwrap().stdout),
-            Err(e) => (Err(e), command.output().unwrap().stderr),
+impl Variant {
+    pub fn get_list(self) -> Vec<String> {
+        if self.name.is_some() {
+            return vec![self.name.unwrap()];
         }
+
+        if self.list.is_empty() {
+            return vec![];
+        }
+
+        return self.list;
+    }
+}
+
+impl From<PackageConfig> for Package {
+    fn from(package_config: PackageConfig) -> Self {
+        let os = os_info::get();
+
+        // Check for variant configuration for this OS
+        let variant = package_config.variants.get(&os.os_type());
+
+        // No variant overlays
+        if variant.is_none() {
+            return Package {
+                list: package_config.clone().get_list(),
+                ensure: package_config.clone().ensure,
+                provider: package_config.clone().provider,
+                repository: package_config.clone().repository,
+            };
+        };
+
+        let variant = variant.unwrap();
+
+        let mut package = Package {
+            list: package_config.clone().get_list(),
+            ensure: package_config.ensure,
+            provider: package_config.provider,
+            repository: package_config.repository,
+        };
+
+        if false == variant.clone().get_list().is_empty() {
+            package.list = variant.clone().get_list();
+        }
+
+        if variant.repository.is_some() {
+            package.repository = variant.repository.clone();
+        };
+
+        // I've been torn about this, but here's my logic.
+        // Variants, when being used, shouldn't use the provider
+        // of the main definition; as we're not the core OS.
+        // Even if the omission of a provider for a variant gets us
+        // the default, that's most likely still expected behaviour.
+        // Right?
+        package.provider = variant.provider.clone();
+
+        package
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn ensure_defaults_to_installed() {
+        let json = r#"name: my_package"#;
+        let package: Package = serde_yaml::from_str(json).unwrap();
+        assert_eq!(package.ensure, PackageStatus::Installed);
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn provider_defaults_to_homebrew_on_macos() {
+        let json = r#"name: my_package"#;
+        let package: Package = serde_yaml::from_str(json).unwrap();
+        assert_eq!(package.provider, PackageProviders::Homebrew);
+    }
+
+    #[cfg(target_os = "windows")]
+    #[test]
+    fn provider_defaults_for_linux() {
+        let json = r#"name: my_package"#;
+        let package: Package = serde_yaml::from_str(json).unwrap();
+        assert_eq!(package.provider, PackageProviders::Scoop);
+    }
+
+    // I can't really mock the os_info::get() call
+    // So not sure how to test I get the correct default package
+    // provider for each OS?
+    //
+    // #[cfg(target_os = "linux")]
+    // #[test]
+    // fn provider_defaults_for_linux() {
+    //     let json = r#"name: my_package"#;
+    //     let package: Package = serde_yaml::from_str(json).unwrap();
+    //     assert_eq!(package.provider, PackageProviders::Homebrew);
+    // }
+}
+
+type Providers = providers::homebrew::Homebrew;
+
+pub fn get_provider(provider: PackageProviders) -> Option<Providers> {
+    match provider {
+        PackageProviders::Apt => None,
+        PackageProviders::Homebrew => Some(providers::homebrew::Homebrew {}),
+        PackageProviders::Scoop => None,
     }
 }

@@ -1,7 +1,7 @@
 use std::{error::Error, path::PathBuf};
 
 use crate::files::File;
-use crate::packages::Package;
+use crate::packages::PackageConfig;
 use petgraph::prelude::*;
 use serde::{Deserialize, Serialize};
 use tera::{Context, Tera};
@@ -18,7 +18,7 @@ pub struct Manifest {
     pub depends: Vec<String>,
 
     #[serde(default)]
-    pub packages: Vec<Package>,
+    pub packages: Vec<PackageConfig>,
 
     #[serde(default)]
     pub files: Vec<File>,
