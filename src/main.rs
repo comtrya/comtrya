@@ -198,79 +198,94 @@ fn main() -> Result<()> {
         });
     }
 
-    // Walk DAG / Run Manifests
-    let mut dfs = DfsPostOrder::new(&dag, root_index);
+    println!("opt manifests is {:?}", opt.manifests);
+    let clone_m = opt.manifests.clone();
 
-    let run_manifests = match opt.manifests.is_empty() {
-        true => manifests.keys().map(|k| k.clone()).collect::<Vec<String>>(),
-        false => opt.manifests,
+    let run_manifests = if (&opt.manifests).is_empty() {
+        // No manifests specified on command line, so run everything
+        vec![String::from("")]
+    } else {
+        // Run subset
+        manifests
+            .keys()
+            .filter(|z| clone_m.contains(z.clone()))
+            .map(|z| z.clone())
+            .collect::<Vec<String>>()
     };
 
     println!("run manifests {:?}", run_manifests);
 
-    while let Some(visited) = dfs.next(&dag) {
-        let m1 = dag.node_weight(visited).unwrap();
+    run_manifests.iter().for_each(|m| {
+        let start = if m.eq(&String::from("")) {
+            root_index
+        } else {
+            manifests.get(m).unwrap().dag_index.unwrap()
+        };
 
-        // Root manifest, nothing to do.
-        if m1.name.is_none() {
-            continue;
-        }
+        let mut dfs = DfsPostOrder::new(&dag, start);
 
-        if false == run_manifests.contains(&m1.name.clone().unwrap()) {
-            continue;
-        }
+        while let Some(visited) = dfs.next(&dag) {
+            let m1 = dag.node_weight(visited).unwrap();
 
-        println!("Provisioning Manifest: {:?}", m1.name.clone().unwrap());
+            println!("Walking {:?}", m1.name);
 
-        for p in m1.packages.clone().into_iter() {
-            let mut p = Package::from(p);
-            let provider = packages::get_provider(p.provider.clone());
-
-            if provider.is_none() {
-                println!("Couldn't find a provider to install {:?}", p.list.join(" "));
+            // Root manifest, nothing to do.
+            if m1.name.is_none() {
                 continue;
             }
 
-            let provider = provider.unwrap();
+            println!("Provisioning Manifest: {:?}", m1.name.clone().unwrap());
 
-            match provider.init() {
-                Ok(true) => {
-                    println!("Installed package provider");
-                    ()
+            for p in m1.packages.clone().into_iter() {
+                let mut p = Package::from(p);
+                let provider = packages::get_provider(p.provider.clone());
+
+                if provider.is_none() {
+                    println!("Couldn't find a provider to install {:?}", p.list.join(" "));
+                    continue;
                 }
 
-                Ok(false) => (),
+                let provider = provider.unwrap();
 
-                Err(_) => {
-                    println!("Failed to install package provider");
-                    ()
+                match provider.init() {
+                    Ok(true) => {
+                        println!("Installed package provider");
+                        ()
+                    }
+
+                    Ok(false) => (),
+
+                    Err(_) => {
+                        println!("Failed to install package provider");
+                        ()
+                    }
+                }
+
+                if p.list.is_empty() {
+                    p.list = vec![m1.name.clone().unwrap()];
+                }
+
+                println!("INSTALL");
+                provider.install(&p);
+
+                continue;
+            }
+
+            for f in m1.clone().files.into_iter() {
+                println!("Manifest {:?} - Files working {:?}", m1.name, f);
+
+                let abc = match f.symlink.unwrap_or(false) {
+                    true => m1.link(f, &tera),
+                    false => m1.create(f, &tera, &contexts),
+                };
+
+                match abc {
+                    Ok(_) => println!("File creation was ok"),
+                    Err(_) => println!("File creation failed"),
                 }
             }
-
-            if p.list.is_empty() {
-                p.list = vec![m1.name.clone().unwrap()];
-            }
-
-            println!("INSTALL");
-            provider.install(&p);
-
-            continue;
         }
-
-        for f in m1.clone().files.into_iter() {
-            println!("Manifest {:?} - Files working {:?}", m1.name, f);
-
-            let abc = match f.symlink.unwrap_or(false) {
-                true => m1.link(f, &tera),
-                false => m1.create(f, &tera, &contexts),
-            };
-
-            match abc {
-                Ok(_) => println!("File creation was ok"),
-                Err(_) => println!("File creation failed"),
-            }
-        }
-    }
+    });
 
     Ok(())
 }
