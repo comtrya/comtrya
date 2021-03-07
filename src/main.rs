@@ -201,10 +201,12 @@ fn main() -> Result<()> {
     // Walk DAG / Run Manifests
     let mut dfs = DfsPostOrder::new(&dag, root_index);
 
-    let run_manifests: Vec<String> = match manifests.is_empty() {
-        true => manifests.keys().map(|k| k.clone()).collect(),
+    let run_manifests = match opt.manifests.is_empty() {
+        true => manifests.keys().map(|k| k.clone()).collect::<Vec<String>>(),
         false => opt.manifests,
     };
+
+    println!("run manifests {:?}", run_manifests);
 
     while let Some(visited) = dfs.next(&dag) {
         let m1 = dag.node_weight(visited).unwrap();
