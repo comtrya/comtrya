@@ -1,11 +1,12 @@
 use petgraph::prelude::*;
 use serde_json::value::Value;
-use std::path::PathBuf;
 use std::{
     collections::{BTreeMap, HashMap},
+    ffi::OsStr,
     io::Result,
     ops::Deref,
 };
+use std::{ffi::OsString, path::PathBuf};
 use structopt::StructOpt;
 use tera::{Context, Tera};
 use walkdir::WalkDir;
@@ -92,6 +93,15 @@ fn main() -> Result<()> {
         .filter_map(|e| e.ok())
         .map(|d| d.into_path())
         .filter(|p| p.extension().is_some())
+        // If the parent directory is files, we assume it's a template.
+        // I'm not sure how I feel about this yet
+        .filter(|p| match p.parent() {
+            Some(p) => p
+                .file_stem()
+                .unwrap_or(&OsStr::new("not_files"))
+                .ne("files"),
+            None => false,
+        })
         .filter(|p| ["yaml", "yml"].contains(&(p.extension().unwrap().to_str().unwrap())))
     {
         let contents = std::fs::read_to_string(entry.clone()).unwrap();
@@ -249,7 +259,7 @@ fn main() -> Result<()> {
             println!("Manifest {:?} - Files working {:?}", m1.name, f);
 
             let abc = match f.symlink.unwrap_or(false) {
-                true => m1.link(f),
+                true => m1.link(f, &tera),
                 false => m1.create(f, &tera, &contexts),
             };
 

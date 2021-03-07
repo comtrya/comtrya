@@ -57,14 +57,8 @@ impl Manifest {
             .join(file.clone().to.unwrap());
 
         parent.pop();
-        
-        println!(
-            "Creating directory {:?}",
-            parent
-                .clone()
-                .to_str()
-                
-        );
+
+        println!("Creating directory {:?}", parent.clone().to_str());
         create_dir_all(parent)?;
 
         let mut f = std::fs::File::create(
@@ -75,14 +69,36 @@ impl Manifest {
         )?;
 
         use std::io::Write;
-        f.write_all(self.render(file.clone(), tera, context).as_bytes())?;
+        if true == file.template {
+            f.write_all(self.render(file.clone(), tera, context).as_bytes())?;
+        } else {
+            f.write_all(
+                std::fs::read_to_string(PathBuf::from(
+                    tera.get_template(
+                        self.root_dir
+                            .clone()
+                            .unwrap()
+                            .join(file.clone().from.unwrap().as_str())
+                            .to_str()
+                            .unwrap(),
+                    )
+                    .unwrap()
+                    .path
+                    .clone()
+                    .unwrap(),
+                ))
+                .unwrap()
+                .as_bytes(),
+            )
+            .unwrap();
+        }
 
         f.sync_all()?;
 
         Ok(())
     }
 
-    pub fn link(&self, file: File) -> Result<(), Box<dyn Error>> {
+    pub fn link(&self, file: File, tera: &Tera) -> Result<(), Box<dyn Error>> {
         println!(
             "Symlinking file {:?} to {:?}",
             self.root_dir
@@ -93,7 +109,20 @@ impl Manifest {
         );
 
         std::os::unix::fs::symlink(
-            PathBuf::from(self.root_dir.clone().unwrap().join(file.from.unwrap())),
+            PathBuf::from(
+                tera.get_template(
+                    self.root_dir
+                        .clone()
+                        .unwrap()
+                        .join(file.clone().from.unwrap().as_str())
+                        .to_str()
+                        .unwrap(),
+                )
+                .unwrap()
+                .path
+                .clone()
+                .unwrap(),
+            ),
             PathBuf::from(file.to.unwrap()),
         )?;
 
