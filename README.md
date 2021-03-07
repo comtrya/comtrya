@@ -1,3 +1,5 @@
+[[_TOC_]]
+
 # Comtrya
 
 ![Comtrya](/Comtrya.gif "Hello")
@@ -26,15 +28,34 @@ I've also tried Ansible, Chef, Puppet, mgmt, and probably anything else you're a
 
 No binaries are distributed yet, please install and build with Cargo.
 
+### Prerequisites
+
+#### MacOS
+
+- HomeBrew installed -> [Install Homebrew](https://brew.sh/)
+- Rust installed -> `brew install rust`
+
+### Installation
+
+#### MacOS
+
 ```shell
 cargo install comtrya
-comtrya --manifest-directory ./dotfiles
 ```
 
-### Manifests
+## Usage
+
+```shell
+comtrya --manifest-directory <manifest-directory> # Directory where manifests are located [default: .]
+# OR
+comtrya --manifests <manifests> # Run a subset of your manifests, comma separated list
+```
+
+## Manifests
 
 A manifest is a collection of packages and files, and this will likely be expanded upon later. A Manifest is a logcal grouping of resources that can be "appied" to your machine, and fetched from remote locations or local.
-#### Packages & Files
+
+### Packages & Files
 
 Currently, Comtrya can install packages and provision files. Pretty simple at the moment.
 
@@ -46,7 +67,7 @@ packages:
     name: git
 ```
 
-List version:
+Install several packages with the list version:
 
 ```yaml
 packages:
@@ -55,6 +76,8 @@ packages:
       - git
       - minikube
 ```
+
+Files:
 
 ```yaml
 files:
