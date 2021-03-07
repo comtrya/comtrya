@@ -10,6 +10,8 @@
 
 This tool is ridiculously early in its development. I'm building out features as I migrate my [dotfiles](https://gitlab.com/rawkode/rawkode) over.
 
+Those dotfiles can be used as a "reference" for migrating your own.
+
 Only for early adopters and masochists.
 
 ## About
@@ -88,11 +90,11 @@ Provisioned Files: 34
 
 ### Async DAG
 
-We're using [petgraph]() to build out the graph, but we're not travesing it in a way that will allow us to concurrently execute manifests at the same depth. This is something I wish to sort out pretty soon.
+We're using [petgraph](https://github.com/petgraph/petgraph) to build out the graph, but we're not travesing it in a way that will allow us to concurrently execute manifests at the same depth. This is something I wish to sort out pretty soon.
 
 ### Config
 
-The example [./dotfiles](./dotfiles) directory contains a [comtrya.yaml](./dotfiles/comtrya.yaml) file that should / will allow you to configure default providers, add contexts / variables, and specify the manifests directory. This doesn't exist yet :)
+TODO: Allow manifest directory and variables to be configured in a `Comtrya.yaml` file.
 
 ### Package Provider Enhancements
 
