@@ -11,6 +11,8 @@ use structopt::StructOpt;
 use tera::{Context, Tera};
 use walkdir::WalkDir;
 
+mod actions;
+
 mod contexts;
 use contexts::user::UserContextProvider;
 use contexts::ContextProvider;
