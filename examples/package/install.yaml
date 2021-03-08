@@ -1,5 +1,5 @@
-#depends:
-#  - ?
+depends:
+  - dev-core
 
 actions:
   - name: visual-studio-code
