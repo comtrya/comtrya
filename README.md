@@ -1,5 +1,3 @@
-[[_TOC_]]
-
 # Comtrya
 
 ![Comtrya](/Comtrya.gif "Hello")
@@ -16,6 +14,11 @@ Those dotfiles can be used as a "reference" for migrating your own.
 
 Only for early adopters and masochists.
 
+---
+
+[[_TOC_]]
+
+---
 ## About
 
 Comtrya is a tool to help provision a fresh OS with the packages and configuration (dotfiles) you need to become productive again.
@@ -30,14 +33,9 @@ No binaries are distributed yet, please install and build with Cargo.
 
 ### Prerequisites
 
-#### MacOS
-
-- HomeBrew installed -> [Install Homebrew](https://brew.sh/)
-- Rust installed -> `brew install rust`
+- Rust installed
 
 ### Installation
-
-#### MacOS
 
 ```shell
 cargo install comtrya
@@ -53,40 +51,41 @@ comtrya --manifests <manifests> # Run a subset of your manifests, comma separate
 
 ## Manifests
 
-A manifest is a collection of packages and files, and this will likely be expanded upon later. A Manifest is a logcal grouping of resources that can be "appied" to your machine, and fetched from remote locations or local.
+A manifest is a collection of packages and files, and this will likely be expanded upon later. A Manifest is a logical grouping of resources that can be applied to your machine, and fetched from remote locations or local.
 
-### Packages & Files
+### Actions
 
-Currently, Comtrya can install packages and provision files. Pretty simple at the moment.
+Actions do stuff
+
+#### Packages
 
 Single package:
 
 ```yaml
-packages:
-  - ensure: installed
+actions:
+  - action: package.install
     name: git
 ```
 
 Install several packages with the list version:
 
 ```yaml
-packages:
-  - ensure: installed
+actions:
+  - action: package.install
     list:
       - git
       - minikube
 ```
 
-Files:
+#### Files
+
+Files must be within a `files` directory within each manifest location.
 
 ```yaml
-files:
-  - from: gitconfig
-    to: /Users/rawkode/gitc
-    symlink: true
-    force: true
-    omit:
-      - ignores
+actions:
+  - action: file.copy
+    from: gitconfig
+    to: /Users/rawkode/gitconfig
 ```
 
 ### Dependencies
