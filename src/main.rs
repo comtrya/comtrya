@@ -1,10 +1,11 @@
 use crate::actions::{Action, Actions};
+use ignore::{types::TypesBuilder, WalkBuilder};
 use petgraph::prelude::*;
-use std::{collections::HashMap, ffi::OsStr, io::Result, ops::Deref};
+use regex::Regex;
+use std::{collections::HashMap, io::Result, ops::Deref};
 use std::{fs::canonicalize, path::PathBuf};
 use structopt::StructOpt;
 use tera::Tera;
-use walkdir::WalkDir;
 
 mod actions;
 mod contexts;
@@ -48,74 +49,77 @@ fn main() -> Result<()> {
     let contexts = build_contexts();
 
     // Find Manifests
-    for entry in WalkDir::new(opt.manifest_directory)
-        .into_iter()
-        .filter_map(|e| e.ok())
-        .map(|d| d.into_path())
-        .filter(|p| p.extension().is_some())
-        .filter(|p| p.extension().unwrap().eq("yaml") || p.extension().unwrap().eq("yml"))
-        // If the parent directory is files, we assume it's a template.
-        // I'm not sure how I feel about this yet
-        .filter(|p| match p.parent() {
-            Some(p) => p
-                .file_stem()
-                .unwrap_or(&OsStr::new("not_files"))
-                .ne("files"),
-            None => false,
-        })
-    {
-        let entry = canonicalize(entry).unwrap();
+    let mut yaml_filter = TypesBuilder::new();
+    yaml_filter.add("yaml", "*.yaml").unwrap();
+    yaml_filter.add("yml", "*.yml").unwrap();
 
-        let contents = std::fs::read_to_string(entry.clone()).unwrap();
-        let template = contents.as_str();
+    let mut walker = WalkBuilder::new(PathBuf::from(opt.manifest_directory));
+    walker
+        .standard_filters(true)
+        .follow_links(false)
+        .same_file_system(true)
+        // Arbitrary for now, 9 "should" be enough?
+        .max_depth(Some(9))
+        .types(yaml_filter.build().unwrap())
+        .build()
+        .filter(|entry| !entry.clone().unwrap().metadata().unwrap().is_dir())
+        .for_each(|entry| {
+            let filename = entry.unwrap();
 
-        println!("Template is {:?}", template);
+            println!("found {:?}", filename);
 
-        let yaml = tera.render_str(template, &contexts).unwrap();
+            let entry = canonicalize(filename.into_path()).unwrap();
 
-        let mut mo: Manifest = serde_yaml::from_str(yaml.deref()).unwrap();
+            let contents = std::fs::read_to_string(entry.clone()).unwrap();
+            let template = contents.as_str();
 
-        let name = match &mo.name {
-            Some(name) => name.clone(),
-            None => {
-                if entry.file_stem().unwrap().to_str().unwrap().eq("main") {
-                    // Use directory name for manifest name
-                    String::from(
-                        entry
-                            .parent()
-                            .unwrap()
-                            .file_stem()
-                            .unwrap()
-                            .to_str()
-                            .unwrap(),
-                    )
-                } else {
-                    String::from(entry.file_stem().unwrap().to_str().unwrap())
+            println!("Template is {:?}", template);
+
+            let yaml = tera.render_str(template, &contexts).unwrap();
+
+            let mut mo: Manifest = serde_yaml::from_str(yaml.deref()).unwrap();
+
+            let name = match &mo.name {
+                Some(name) => name.clone(),
+                None => {
+                    if entry.file_stem().unwrap().to_str().unwrap().eq("main") {
+                        // Use directory name for manifest name
+                        String::from(
+                            entry
+                                .parent()
+                                .unwrap()
+                                .file_stem()
+                                .unwrap()
+                                .to_str()
+                                .unwrap(),
+                        )
+                    } else {
+                        String::from(entry.file_stem().unwrap().to_str().unwrap())
+                    }
                 }
-            }
-        };
+            };
 
-        println!(
-            "Root Dir for Manifest: {}",
-            entry
-                .clone()
-                .parent()
-                .unwrap()
-                .strip_prefix(root_dir.clone())
-                .unwrap()
-                .to_str()
-                .unwrap()
-        );
-        mo.root_dir = Some(entry.clone().parent().unwrap().to_path_buf());
+            println!(
+                "Root Dir for Manifest: {}",
+                entry
+                    .clone()
+                    .parent()
+                    .unwrap()
+                    .strip_prefix(root_dir.clone())
+                    .unwrap()
+                    .to_str()
+                    .unwrap()
+            );
+            mo.root_dir = Some(entry.clone().parent().unwrap().to_path_buf());
 
-        println!("Registering Manifest {:?}", name);
+            println!("Registering Manifest {:?}", name);
 
-        mo.name = Some(name.clone());
+            mo.name = Some(name.clone());
 
-        manifests.insert(name, mo);
+            manifests.insert(name, mo);
 
-        ()
-    }
+            ()
+        });
 
     // Build DAG
     let mut dag: Graph<Manifest, u32, petgraph::Directed> = Graph::new();

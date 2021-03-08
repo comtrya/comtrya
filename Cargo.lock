@@ -179,8 +179,10 @@ name = "comtrya"
 version = "0.3.1"
 dependencies = [
  "dirs",
+ "ignore",
  "os_info",
  "petgraph",
+ "regex",
  "reqwest",
  "serde",
  "serde_json",

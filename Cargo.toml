@@ -8,9 +8,11 @@ description = "A tool to simplify reprovisioning a fresh OS. Installs packages a
 
 [dependencies]
 dirs = "3.0"
-petgraph = "0.5.1"
+ignore = "0.4.17"
 # Pending PR: https://github.com/stanislav-tkach/os_info/pull/250/files
 os_info = { version = "3.0.1", git = "https://github.com/rawkode/os_info", branch = "fix/serde-deserialize" }
+petgraph = "0.5.1"
+regex = "1"
 reqwest = { version = "0.11.1", features = ["blocking"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0.64"
