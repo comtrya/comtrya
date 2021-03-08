@@ -1,16 +1,18 @@
+mod actions;
+mod contexts;
+mod manifest;
+
 use crate::actions::{Action, Actions};
+use contexts::build_contexts;
 use ignore::{types::TypesBuilder, WalkBuilder};
+use manifest::Manifest;
 use petgraph::prelude::*;
 use std::{collections::HashMap, io::Result, ops::Deref};
 use std::{fs::canonicalize, path::PathBuf};
 use structopt::StructOpt;
 use tera::Tera;
-
-mod actions;
-mod contexts;
-use contexts::build_contexts;
-mod manifest;
-use manifest::Manifest;
+use tracing::{debug, error, info, trace, Level};
+use tracing_subscriber::FmtSubscriber;
 
 #[derive(StructOpt, Debug)]
 #[structopt(name = "comtrya")]
@@ -31,18 +33,36 @@ struct Opt {
 fn main() -> Result<()> {
     let opt = Opt::from_args();
 
+    let subscriber = FmtSubscriber::builder().with_max_level(Level::INFO);
+
+    let subscriber = match opt.debug {
+        true => subscriber.with_max_level(Level::DEBUG),
+        _ => subscriber,
+    }
+    .finish();
+
+    tracing::subscriber::set_global_default(subscriber).expect("setting default subscriber failed");
+
     let mut manifests: HashMap<String, Manifest> = HashMap::new();
-    let root_dir = std::env::current_dir()
+
+    let manifest_directory = std::env::current_dir()
         .unwrap()
         .join(opt.manifest_directory.clone());
 
-    let mut tera = match Tera::new(format!("{}/**/*", root_dir.clone().to_str().unwrap()).deref()) {
-        Ok(t) => t,
-        Err(e) => {
-            println!("Parsing error(s): {}", e);
-            ::std::process::exit(1);
-        }
-    };
+    trace!(
+        manifest_directory = manifest_directory.to_str().unwrap(),
+        manifests = opt.manifests.join(",").deref(),
+        message = "Comtrya execution started"
+    );
+
+    let mut tera =
+        match Tera::new(format!("{}/**/*", manifest_directory.clone().to_str().unwrap()).deref()) {
+            Ok(t) => t,
+            Err(e) => {
+                error!(message = "Parsing Errors", error = e.to_string().as_str());
+                ::std::process::exit(1);
+            }
+        };
 
     // Run Context Providers
     let contexts = build_contexts();
@@ -65,16 +85,20 @@ fn main() -> Result<()> {
         .for_each(|entry| {
             let filename = entry.unwrap();
 
-            println!("found {:?}", filename);
+            trace!(manifest = filename.file_name().to_str().unwrap(),);
 
             let entry = canonicalize(filename.into_path()).unwrap();
+
+            trace!(absolute_path = entry.to_str().unwrap());
 
             let contents = std::fs::read_to_string(entry.clone()).unwrap();
             let template = contents.as_str();
 
-            println!("Template is {:?}", template);
+            trace!(template = template);
 
             let yaml = tera.render_str(template, &contexts).unwrap();
+
+            trace!(rendered = yaml.as_str());
 
             let mut mo: Manifest = serde_yaml::from_str(yaml.deref()).unwrap();
 
@@ -98,20 +122,9 @@ fn main() -> Result<()> {
                 }
             };
 
-            println!(
-                "Root Dir for Manifest: {}",
-                entry
-                    .clone()
-                    .parent()
-                    .unwrap()
-                    .strip_prefix(root_dir.clone())
-                    .unwrap()
-                    .to_str()
-                    .unwrap()
-            );
             mo.root_dir = Some(entry.clone().parent().unwrap().to_path_buf());
 
-            println!("Registering Manifest {:?}", name);
+            debug!(message = "Registered Manifest", manifest = name.as_str());
 
             mo.name = Some(name.clone());
 
@@ -149,13 +162,16 @@ fn main() -> Result<()> {
         manifest.depends.iter().for_each(|d| {
             let m1 = manifests.get(d).unwrap();
 
-            println!("Found that {:?} has a dep on {:?}", name, m1.name);
+            trace!(
+                message = "Dependency Registered",
+                from = name.as_str(),
+                to = m1.name.clone().unwrap().as_str()
+            );
 
             dag.add_edge(manifest.dag_index.unwrap(), m1.dag_index.unwrap(), 0);
         });
     }
 
-    println!("opt manifests is {:?}", opt.manifests);
     let clone_m = opt.manifests.clone();
 
     let run_manifests = if (&opt.manifests).is_empty() {
@@ -170,7 +186,10 @@ fn main() -> Result<()> {
             .collect::<Vec<String>>()
     };
 
-    println!("run manifests {:?}", run_manifests);
+    info!(
+        message = "Manifest Run List",
+        manifests = run_manifests.join(",").as_str()
+    );
 
     run_manifests.iter().for_each(|m| {
         let start = if m.eq(&String::from("")) {
@@ -184,15 +203,15 @@ fn main() -> Result<()> {
         while let Some(visited) = dfs.next(&dag) {
             let m1 = dag.node_weight(visited).unwrap();
 
-            println!("Walking {:?}", m1.name);
-
             // Root manifest, nothing to do.
             if m1.name.is_none() {
                 continue;
             }
 
-            println!("Provisioning Manifest: {:?}", m1.name.clone().unwrap());
-            println!("Actions: {:?}", m1.actions);
+            info!(
+                message = "Executing Manifest",
+                manifest = m1.name.clone().unwrap().as_str()
+            );
 
             m1.actions.iter().for_each(|action| {
                 let result = match action {
@@ -201,8 +220,15 @@ fn main() -> Result<()> {
                 };
 
                 match result {
-                    Ok(o) => println!("OK: {:?}", o),
-                    Err(e) => println!("Err: {:?}", e),
+                    Ok(_) => debug!(
+                        message = "Manifest Competed",
+                        manifest = m1.name.clone().unwrap().as_str()
+                    ),
+                    Err(e) => error!(
+                        message = "Manifest Failed",
+                        error = e.message.as_str(),
+                        manifest = m1.name.clone().unwrap().as_str()
+                    ),
                 }
 
                 ()

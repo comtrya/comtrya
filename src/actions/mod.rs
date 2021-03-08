@@ -21,13 +21,13 @@ pub enum Actions {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ActionResult {
     /// Output / response
-    message: String,
+    pub message: String,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ActionError {
     /// Error message
-    message: String,
+    pub message: String,
 }
 
 pub trait Action {

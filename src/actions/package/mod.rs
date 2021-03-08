@@ -1,10 +1,10 @@
-use std::collections::HashMap;
-
-use serde::{Deserialize, Serialize};
-
 pub mod install;
 pub mod providers;
+
 use providers::PackageProviders;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use tracing::debug;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Package {
@@ -70,7 +70,7 @@ impl From<&Package> for PackageVariant {
 
         let variant = variant.unwrap();
 
-        print!("Found a variant: {:?}", variant);
+        debug!(message = "Built Variant", variant = ?variant);
 
         let mut package = PackageVariant {
             name: package.name.clone(),

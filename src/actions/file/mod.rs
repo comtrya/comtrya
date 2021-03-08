@@ -1,17 +1,17 @@
 pub mod copy;
+use super::ActionError;
 use crate::actions::Action;
 use crate::manifest::Manifest;
 use tera::Tera;
-
-use super::ActionError;
+use tracing::trace;
 
 pub trait FileAction: Action {
     fn init(&self, manifest: &Manifest) -> Tera {
         let files_directory = manifest.root_dir.clone().unwrap().join("files");
 
-        println!(
-            "Setting up tera for {:?}",
-            files_directory.join("**/*").to_str().unwrap()
+        trace!(
+            message = "Creating Private Tera for File Action",
+            directory = files_directory.join("**/*").to_str().unwrap()
         );
 
         match Tera::new(files_directory.join("**/*").to_str().unwrap()) {

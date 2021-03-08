@@ -2,6 +2,7 @@ use super::PackageProvider;
 use crate::actions::ActionError;
 use serde::{Deserialize, Serialize};
 use std::process::{Command, Stdio};
+use tracing::{debug, info};
 use which::which;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -10,7 +11,10 @@ pub struct Aptitude {}
 impl PackageProvider for Aptitude {
     fn available(&self) -> bool {
         match which("apt-add-repository") {
-            Ok(_) => true,
+            Ok(_) => {
+                info!(message = "apt-add-repository not available");
+                true
+            }
             Err(_) => false,
         }
     }
@@ -19,15 +23,15 @@ impl PackageProvider for Aptitude {
         // Apt should always be available on Debian / Ubuntu flavours.
         // Lets make sure software-properties-common is available
         // for repository management
-        let installer = Command::new("apt")
+        info!(message = "Installing prerequisites for Aptitude package provider");
+
+        Command::new("apt")
             .args(&["install", "-y", "software-properties-common", "gpg"])
             .stdin(Stdio::inherit())
             .stdout(Stdio::inherit())
             .stderr(Stdio::inherit())
             .output()
             .unwrap();
-
-        println!("Apt install {:?}", String::from_utf8(installer.stdout));
 
         Ok(())
     }
@@ -43,13 +47,10 @@ impl PackageProvider for Aptitude {
             .arg(repository)
             .output()
         {
-            Ok(o) => {
-                println!(
-                    "Added repository {:?}: {:?} output: {:?} and {:?}",
-                    repository,
-                    o.status,
-                    String::from_utf8(o.stdout),
-                    String::from_utf8(o.stderr)
+            Ok(_) => {
+                debug!(
+                    message = "Apt Added Repository",
+                    repository = repository.as_str()
                 );
 
                 ()
@@ -60,6 +61,8 @@ impl PackageProvider for Aptitude {
                 });
             }
         }
+
+        debug!(message = "Running Aptitude Update");
 
         Command::new("apt")
             .arg("update")
@@ -75,15 +78,13 @@ impl PackageProvider for Aptitude {
     fn install(&self, packages: Vec<String>) -> Result<(), ActionError> {
         match Command::new("apt")
             .args(&["install", "-y"])
-            .args(packages)
+            .args(&packages)
             .output()
         {
-            Ok(o) => {
-                println!(
-                    "Installed {:?} output: {:?} and {:?}",
-                    o.status,
-                    String::from_utf8(o.stdout),
-                    String::from_utf8(o.stderr)
+            Ok(_) => {
+                info!(
+                    message = "Package Installed",
+                    packages = packages.clone().join(",").as_str()
                 );
 
                 Ok(())

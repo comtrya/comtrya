@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 use serde_yaml::Value;
 use std::collections::BTreeMap;
+use tracing::{debug, trace};
 use user::UserContextProvider;
 
 /// User context provider: understands the user running the command
@@ -18,6 +19,8 @@ pub enum Context {
 }
 
 pub fn build_contexts() -> tera::Context {
+    trace!("Building Contexts");
+
     let mut contexts = tera::Context::new();
 
     let context_providers = vec![Box::new(UserContextProvider {})];
@@ -28,10 +31,23 @@ pub fn build_contexts() -> tera::Context {
         provider.get_contexts().iter().for_each(|context| {
             match context {
                 Context::KeyValueContext(k, v) => {
+                    debug!(
+                        context = provider.get_prefix().as_str(),
+                        key = k.clone().as_str(),
+                        value = v.clone().as_str(),
+                        message = ""
+                    );
                     values.insert(k.clone(), v.clone().into());
                     ()
                 }
                 Context::ListContext(k, v) => {
+                    debug!(
+                        context = provider.get_prefix().as_str(),
+                        key = k.clone().as_str(),
+                        values = v.clone().join(",").as_str(),
+                        message = ""
+                    );
+
                     values.insert(k.clone(), v.clone().into());
                     ()
                 }
@@ -44,8 +60,6 @@ pub fn build_contexts() -> tera::Context {
 
         ()
     });
-
-    println!("Contexts for this execution: {:?}", contexts);
 
     contexts
 }

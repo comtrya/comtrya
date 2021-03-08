@@ -1,11 +1,11 @@
+use super::Package;
+use super::PackageVariant;
 use crate::actions::command::CommandAction;
 use crate::actions::{Action, ActionError, ActionResult};
 use crate::manifest::Manifest;
 use std::ops::Deref;
 use tera::Context;
-
-use super::Package;
-use super::PackageVariant;
+use tracing::error;
 
 pub type PackageInstall = Package;
 
@@ -45,11 +45,12 @@ impl Action for PackageInstall {
         }
 
         match provider.install(variant.packages()) {
-            Ok(_) => {
-                println!("Installed");
-                ()
-            }
+            Ok(_) => (),
             Err(e) => {
+                error!(
+                    message = "Failed to install package",
+                    packages = variant.packages().join(",").as_str()
+                );
                 return Err(e);
             }
         }

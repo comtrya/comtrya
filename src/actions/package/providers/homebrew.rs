@@ -6,6 +6,7 @@ use std::{
     fs::File,
     process::{Command, Stdio},
 };
+use tracing::info;
 use which::which;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -38,7 +39,7 @@ impl PackageProvider for Homebrew {
 
         // Homebrew can only be used on Linux and macOS, so we can assume
         // we have access to bash ... right? 😅
-        let installer = Command::new("bash")
+        Command::new("bash")
             .args(&["/tmp/brew-install.sh"])
             .stdin(Stdio::inherit())
             .stdout(Stdio::inherit())
@@ -46,7 +47,7 @@ impl PackageProvider for Homebrew {
             .output()
             .unwrap();
 
-        println!("Brew install {:?}", String::from_utf8(installer.stdout));
+        info!(message = "Installed Brew");
 
         Ok(())
     }
@@ -60,13 +61,10 @@ impl PackageProvider for Homebrew {
 
     fn add_repository(&self, repository: &String) -> Result<(), ActionError> {
         match Command::new("brew").arg("tap").arg(repository).output() {
-            Ok(o) => {
-                println!(
-                    "Added repository {:?}: {:?} output: {:?} and {:?}",
-                    repository,
-                    o.status,
-                    String::from_utf8(o.stdout),
-                    String::from_utf8(o.stderr)
+            Ok(_) => {
+                info!(
+                    message = "Added Package Repository",
+                    repository = repository.as_str()
                 );
 
                 Ok(())
@@ -78,13 +76,11 @@ impl PackageProvider for Homebrew {
     }
 
     fn install(&self, packages: Vec<String>) -> Result<(), ActionError> {
-        match Command::new("brew").arg("install").args(packages).output() {
-            Ok(o) => {
-                println!(
-                    "Installed {:?} output: {:?} and {:?}",
-                    o.status,
-                    String::from_utf8(o.stdout),
-                    String::from_utf8(o.stderr)
+        match Command::new("brew").arg("install").args(&packages).output() {
+            Ok(_) => {
+                info!(
+                    message = "Package Installed",
+                    packages = packages.clone().join(",").as_str()
                 );
 
                 Ok(())

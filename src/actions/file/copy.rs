@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 use std::io::Write;
 use std::{fs::create_dir_all, ops::Deref, path::PathBuf};
 use tera::Context;
+use tracing::debug;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct FileCopy {
@@ -48,7 +49,11 @@ impl Action for FileCopy {
         let mut parent = PathBuf::from(&self.to);
         parent.pop();
 
-        println!("Creating directory {:?}", &parent.to_str());
+        debug!(
+            message = "Creating Prerequisite Directories",
+            directories = &parent.to_str().unwrap()
+        );
+
         match create_dir_all(parent) {
             Ok(_) => (),
             Err(_) => {
