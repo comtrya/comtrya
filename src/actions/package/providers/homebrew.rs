@@ -53,10 +53,7 @@ impl PackageProvider for Homebrew {
     }
 
     fn install(&self, packages: Vec<String>) -> Result<(), ActionError> {
-        match Command::new("brew")
-            .args(&["install", packages.join(" ").deref()])
-            .output()
-        {
+        match Command::new("brew").arg("install").args(packages).output() {
             Ok(o) => {
                 println!(
                     "Installed {:?} output: {:?} and {:?}",
