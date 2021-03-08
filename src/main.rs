@@ -1,7 +1,7 @@
 use crate::actions::{Action, Actions};
 use petgraph::prelude::*;
-use std::path::PathBuf;
 use std::{collections::HashMap, ffi::OsStr, io::Result, ops::Deref};
+use std::{fs::canonicalize, path::PathBuf};
 use structopt::StructOpt;
 use tera::Tera;
 use walkdir::WalkDir;
@@ -53,6 +53,7 @@ fn main() -> Result<()> {
         .filter_map(|e| e.ok())
         .map(|d| d.into_path())
         .filter(|p| p.extension().is_some())
+        .filter(|p| p.extension().unwrap().eq("yaml") || p.extension().unwrap().eq("yml"))
         // If the parent directory is files, we assume it's a template.
         // I'm not sure how I feel about this yet
         .filter(|p| match p.parent() {
@@ -62,8 +63,9 @@ fn main() -> Result<()> {
                 .ne("files"),
             None => false,
         })
-        .filter(|p| ["yaml", "yml"].contains(&(p.extension().unwrap().to_str().unwrap())))
     {
+        let entry = canonicalize(entry).unwrap();
+
         let contents = std::fs::read_to_string(entry.clone()).unwrap();
         let template = contents.as_str();
 
