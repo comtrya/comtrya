@@ -1,83 +1,78 @@
 use crate::actions::command::CommandAction;
-use crate::actions::package::{PackageProviders, PackageVariant};
 use crate::actions::{Action, ActionError, ActionResult};
-use crate::manifests::Manifest;
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use crate::manifest::Manifest;
+use std::ops::Deref;
+use tera::Context;
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct PackageInstall {
-    name: Option<String>,
+use super::Package;
+use super::PackageVariant;
 
-    #[serde(default)]
-    list: Vec<String>,
-
-    #[serde(default)]
-    provider: PackageProviders,
-
-    #[serde(default)]
-    repository: Option<String>,
-
-    #[serde(default)]
-    variants: HashMap<os_info::Type, PackageVariant>,
-}
-
-impl PackageInstall {
-    fn packages(&self) -> Vec<String> {
-        if self.name.is_some() {
-            return vec![self.name.clone().unwrap()];
-        }
-
-        if self.list.is_empty() {
-            return vec![];
-        }
-
-        return self.list.clone();
-    }
-}
+pub type PackageInstall = Package;
 
 impl CommandAction for PackageInstall {}
 
 impl Action for PackageInstall {
-    fn run(self: &Self, _manifest: &Manifest) -> Result<ActionResult, ActionError> {
-        let mut command = self.init("brew");
-        let mut command = self.inherit(&mut command);
+    fn run(
+        self: &Self,
+        _manifest: &Manifest,
+        _context: &Context,
+    ) -> Result<ActionResult, ActionError> {
+        let variant: PackageVariant = self.into();
+        let box_provider = variant.provider.clone().get_provider();
+        let provider = box_provider.deref();
 
-        let mut args = self.packages();
-        args.insert(0, String::from("install"));
+        // If the provider isn't available, see if we can bootstrap it
+        if false == provider.available() {
+            match provider.bootstrap() {
+                Ok(_) => {}
+                Err(_) => {
+                    return Err(ActionError {
+                        message: String::from("Provider unavailable"),
+                    });
+                }
+            }
+        }
 
-        let command = self.args(&mut command, args);
+        match provider.install(variant.packages()) {
+            Ok(_) => {
+                println!("Installed");
+                ()
+            }
+            Err(e) => {
+                return Err(e);
+            }
+        }
 
-        self.execute(command)
+        Ok(ActionResult {
+            message: String::from("Done"),
+        })
     }
 }
 
 #[cfg(test)]
 mod tests {
     use crate::actions::Actions;
-    use std::collections::BTreeMap;
 
     #[test]
     fn it_can_be_deserialized() {
         let yaml = r#"
-package-a:
-  action: package.install
+- action: package.install
   name: comtrya
 
-package-b:
-  action: package.install
+- action: package.install
   list:
     - comtrya
 "#;
 
-        let container: BTreeMap<String, Actions> = serde_yaml::from_str(yaml).unwrap();
+        let mut actions: Vec<Actions> = serde_yaml::from_str(yaml).unwrap();
 
-        match container.get("package-a") {
+        match actions.pop() {
             Some(Actions::PackageInstall(package_install)) => {
-                assert_eq!("comtrya", package_install.name.clone().unwrap());
+                assert_eq!(vec!["comtrya"], package_install.list);
+
                 ()
             }
-            None => {
+            _ => {
                 assert!(
                     false,
                     "PackageInstall didn't deserialize to the correct type"
@@ -87,13 +82,12 @@ package-b:
             }
         };
 
-        match container.get("package-b") {
+        match actions.pop() {
             Some(Actions::PackageInstall(package_install)) => {
-                assert_eq!(vec!["comtrya"], package_install.list);
-
+                assert_eq!("comtrya", package_install.name.clone().unwrap());
                 ()
             }
-            None => {
+            _ => {
                 assert!(
                     false,
                     "PackageInstall didn't deserialize to the correct type"

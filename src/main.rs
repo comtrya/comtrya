@@ -7,14 +7,10 @@ use tera::Tera;
 use walkdir::WalkDir;
 
 mod actions;
-
 mod contexts;
 use contexts::build_contexts;
-
-mod files;
-
-mod manifests;
-use manifests::Manifest;
+mod manifest;
+use manifest::Manifest;
 
 #[derive(StructOpt, Debug)]
 #[structopt(name = "comtrya")]
@@ -108,15 +104,7 @@ fn main() -> Result<()> {
                 .to_str()
                 .unwrap()
         );
-        mo.root_dir = Some(
-            entry
-                .clone()
-                .parent()
-                .unwrap()
-                .strip_prefix(root_dir.clone())
-                .unwrap()
-                .to_path_buf(),
-        );
+        mo.root_dir = Some(entry.clone().parent().unwrap().to_path_buf());
 
         println!("Registering Manifest {:?}", name);
 
@@ -203,7 +191,8 @@ fn main() -> Result<()> {
 
             m1.actions.iter().for_each(|action| {
                 let result = match action {
-                    Actions::PackageInstall(p) => p.run(&m1),
+                    Actions::PackageInstall(a) => a.run(&m1, &contexts),
+                    Actions::FileCopy(a) => a.run(m1, &contexts),
                 };
 
                 match result {

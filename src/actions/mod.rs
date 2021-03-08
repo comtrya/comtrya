@@ -1,15 +1,21 @@
-use crate::manifests::Manifest;
+mod command;
+mod file;
+mod package;
+
+use crate::manifest::Manifest;
+use file::copy::FileCopy;
 use package::install::PackageInstall;
 use serde::{Deserialize, Serialize};
-
-pub mod command;
-pub mod package;
+use tera::Context;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(tag = "action")]
 pub enum Actions {
-    #[serde(alias = "package.install")]
+    #[serde(alias = "package.install", alias = "package.installed")]
     PackageInstall(PackageInstall),
+
+    #[serde(alias = "file.copy")]
+    FileCopy(FileCopy),
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -25,5 +31,9 @@ pub struct ActionError {
 }
 
 pub trait Action {
-    fn run(self: &Self, manifest: &Manifest) -> Result<ActionResult, ActionError>;
+    fn run(
+        self: &Self,
+        manifest: &Manifest,
+        context: &Context,
+    ) -> Result<ActionResult, ActionError>;
 }
