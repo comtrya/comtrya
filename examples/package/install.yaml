@@ -1,6 +1,3 @@
-depends:
-  - dev-core
-
 actions:
   - name: visual-studio-code
     action: package.install
