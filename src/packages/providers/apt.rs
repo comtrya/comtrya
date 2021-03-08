@@ -1,9 +1,5 @@
 use crate::packages::Package;
-use reqwest::blocking::Client;
-use std::{
-    fs::File,
-    process::{Command, Stdio},
-};
+use std::process::Command;
 use which::which;
 
 use super::PackageProvider;

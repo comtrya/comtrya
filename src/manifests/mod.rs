@@ -1,13 +1,15 @@
-use std::{error::Error, fs::create_dir_all, path::PathBuf};
-
+use crate::actions::Actions;
 use crate::files::File;
-use crate::packages::PackageConfig;
 use petgraph::prelude::*;
 use serde::{Deserialize, Serialize};
+use std::{collections::HashMap, error::Error, fs::create_dir_all, path::PathBuf};
 use tera::{Context, Tera};
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Manifest {
+    #[serde(default)]
+    pub name: Option<String>,
+
     #[serde(skip)]
     pub root_dir: Option<PathBuf>,
 
@@ -18,13 +20,7 @@ pub struct Manifest {
     pub depends: Vec<String>,
 
     #[serde(default)]
-    pub packages: Vec<PackageConfig>,
-
-    #[serde(default)]
-    pub files: Vec<File>,
-
-    #[serde(default)]
-    pub name: Option<String>,
+    pub actions: Vec<Actions>,
 }
 
 impl Manifest {

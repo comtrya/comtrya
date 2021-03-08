@@ -1,12 +1,13 @@
+use crate::actions::{Action, Actions};
 use petgraph::prelude::*;
 use serde_json::value::Value;
+use std::path::PathBuf;
 use std::{
     collections::{BTreeMap, HashMap},
     ffi::OsStr,
     io::Result,
     ops::Deref,
 };
-use std::{ffi::OsString, path::PathBuf};
 use structopt::StructOpt;
 use tera::{Context, Tera};
 use walkdir::WalkDir;
@@ -18,9 +19,6 @@ use contexts::user::UserContextProvider;
 use contexts::ContextProvider;
 
 mod files;
-
-mod packages;
-use packages::Package;
 
 mod manifests;
 use manifests::Manifest;
@@ -57,37 +55,8 @@ fn main() -> Result<()> {
         }
     };
 
-    // Load all supported PackageProviders
-    // let mut package_providers: HashMap<PackageProviders, > = HashMap::new();
-
     // Run Context Providers
-    let mut contexts = Context::new();
-    let context_providers: Vec<Box<dyn ContextProvider>> = vec![Box::new(UserContextProvider {})];
-
-    context_providers.iter().for_each(|provider| {
-        let mut values: BTreeMap<String, Value> = BTreeMap::new();
-
-        provider.get_contexts().iter().for_each(|context| {
-            match context {
-                contexts::Context::KeyValueContext(k, v) => {
-                    values.insert(k.clone(), v.clone().into());
-                    ()
-                }
-                contexts::Context::ListContext(k, v) => {
-                    values.insert(k.clone(), v.clone().into());
-                    ()
-                }
-            }
-
-            ()
-        });
-
-        contexts.insert(provider.get_prefix(), &values);
-
-        ()
-    });
-
-    println!("Contexts for this execution: {:?}", contexts);
+    let contexts = build_contexts(vec![Box::new(UserContextProvider {})]);
 
     // Find Manifests
     for entry in WalkDir::new(opt.manifest_directory)
@@ -173,9 +142,9 @@ fn main() -> Result<()> {
         dag_index: None,
         name: None,
         depends: vec![],
-        packages: vec![],
-        files: vec![],
+        actions: vec![],
     };
+
     let root_index = dag.add_node(manifest_root);
 
     let manifests: HashMap<String, Manifest> = manifests
@@ -237,57 +206,102 @@ fn main() -> Result<()> {
             }
 
             println!("Provisioning Manifest: {:?}", m1.name.clone().unwrap());
+            println!("Actions: {:?}", m1.actions);
 
-            for p in m1.packages.clone().into_iter() {
-                let mut p = Package::from(p);
-                let provider = packages::get_provider(p.provider.clone());
-
-                if provider.is_none() {
-                    println!("Couldn't find a provider to install {:?}", p.list.join(" "));
-                    continue;
-                }
-
-                let provider = provider.unwrap();
-
-                match provider.init() {
-                    Ok(true) => {
-                        println!("Installed package provider");
-                        ()
-                    }
-
-                    Ok(false) => (),
-
-                    Err(_) => {
-                        println!("Failed to install package provider");
-                        ()
-                    }
-                }
-
-                if p.list.is_empty() {
-                    p.list = vec![m1.name.clone().unwrap()];
-                }
-
-                println!("INSTALL");
-                provider.install(&p);
-
-                continue;
-            }
-
-            for f in m1.clone().files.into_iter() {
-                println!("Manifest {:?} - Files working {:?}", m1.name, f);
-
-                let abc = match f.symlink.unwrap_or(false) {
-                    true => m1.link(f, &tera),
-                    false => m1.create(f, &tera, &contexts),
+            m1.actions.iter().for_each(|action| {
+                let result = match action {
+                    Actions::PackageInstall(p) => p.run(&m1),
                 };
 
-                match abc {
-                    Ok(_) => println!("File creation was ok"),
-                    Err(_) => println!("File creation failed"),
+                match result {
+                    Ok(o) => println!("OK: {:?}", o),
+                    Err(e) => println!("Err: {:?}", e),
                 }
-            }
+
+                ()
+            });
+
+            // for p in m1.packages.clone().into_iter() {
+            //     let mut p = Package::from(p);
+            //     let provider = packages::get_provider(p.provider.clone());
+
+            //     if provider.is_none() {
+            //         println!("Couldn't find a provider to install {:?}", p.list.join(" "));
+            //         continue;
+            //     }
+
+            //     let provider = provider.unwrap();
+
+            //     match provider.init() {
+            //         Ok(true) => {
+            //             println!("Installed package provider");
+            //             ()
+            //         }
+
+            //         Ok(false) => (),
+
+            //         Err(_) => {
+            //             println!("Failed to install package provider");
+            //             ()
+            //         }
+            //     }
+
+            //     if p.list.is_empty() {
+            //         p.list = vec![m1.name.clone().unwrap()];
+            //     }
+
+            //     println!("INSTALL");
+            //     provider.install(&p);
+
+            //     continue;
+            // }
+
+            // for f in m1.clone().files.into_iter() {
+            //     println!("Manifest {:?} - Files working {:?}", m1.name, f);
+
+            //     let abc = match f.symlink.unwrap_or(false) {
+            //         true => m1.link(f, &tera),
+            //         false => m1.create(f, &tera, &contexts),
+            //     };
+
+            //     match abc {
+            //         Ok(_) => println!("File creation was ok"),
+            //         Err(_) => println!("File creation failed"),
+            //     }
+            // }
         }
     });
 
     Ok(())
+}
+
+fn build_contexts(mut context_providers: Vec<Box<dyn ContextProvider>>) -> Context {
+    let mut contexts = Context::new();
+
+    context_providers.iter().for_each(|provider| {
+        let mut values: BTreeMap<String, Value> = BTreeMap::new();
+
+        provider.get_contexts().iter().for_each(|context| {
+            match context {
+                contexts::Context::KeyValueContext(k, v) => {
+                    values.insert(k.clone(), v.clone().into());
+                    ()
+                }
+                contexts::Context::ListContext(k, v) => {
+                    values.insert(k.clone(), v.clone().into());
+                    ()
+                }
+            }
+
+            ()
+        });
+
+        contexts.insert(provider.get_prefix(), &values);
+
+        ()
+    });
+
+    println!("Contexts for this execution: {:?}", contexts);
+
+    contexts
 }

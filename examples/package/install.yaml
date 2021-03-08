@@ -1,0 +1,14 @@
+#depends:
+#  - ?
+
+actions:
+  - name: visual-studio-code
+    action: package.install
+
+  - name: firefox-developer-edition
+    action: package.install
+
+  - action: package.install
+    list:
+      - kubectl
+      - minikube
