@@ -9,7 +9,7 @@ pub struct Aptitude {}
 
 impl PackageProvider for Aptitude {
     fn available(&self) -> bool {
-        match which("apt") {
+        match which("apt-add-repository") {
             Ok(_) => true,
             Err(_) => false,
         }
@@ -52,12 +52,24 @@ impl PackageProvider for Aptitude {
                     String::from_utf8(o.stderr)
                 );
 
-                Ok(())
+                ()
             }
-            Err(error) => Err(ActionError {
-                message: error.to_string(),
-            }),
+            Err(error) => {
+                return Err(ActionError {
+                    message: error.to_string(),
+                });
+            }
         }
+
+        Command::new("apt")
+            .arg("update")
+            .stdin(Stdio::inherit())
+            .stdout(Stdio::inherit())
+            .stderr(Stdio::inherit())
+            .output()
+            .unwrap();
+
+        Ok(())
     }
 
     fn install(&self, packages: Vec<String>) -> Result<(), ActionError> {

@@ -27,6 +27,8 @@ impl Default for PackageProviders {
     fn default() -> Self {
         let info = os_info::get();
 
+        println!("Working with OS {:?}", info.os_type());
+
         match info.os_type() {
             // Debian / Ubuntu Variants
             os_info::Type::Debian => PackageProviders::Aptitude,
