@@ -21,6 +21,10 @@ struct Opt {
     #[structopt(long)]
     debug: bool,
 
+    /// Activate tracing mode (Extra debug)
+    #[structopt(long)]
+    trace: bool,
+
     /// Directory where manifests are located
     #[structopt(short = "d", long, parse(from_os_str), default_value = ".")]
     manifest_directory: PathBuf,
@@ -37,6 +41,11 @@ fn main() -> Result<()> {
 
     let subscriber = match opt.debug {
         true => subscriber.with_max_level(Level::DEBUG),
+        _ => subscriber,
+    };
+
+    let subscriber = match opt.trace {
+        true => subscriber.with_max_level(Level::TRACE),
         _ => subscriber,
     }
     .finish();
