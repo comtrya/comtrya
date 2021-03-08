@@ -39,5 +39,7 @@ impl Default for PackageProviders {
 pub trait PackageProvider {
     fn available(&self) -> bool;
     fn bootstrap(&self) -> Result<(), ActionError>;
+    fn has_repository(&self, repository: &String) -> bool;
+    fn add_repository(&self, repository: &String) -> Result<(), ActionError>;
     fn install(&self, packages: Vec<String>) -> Result<(), ActionError>;
 }

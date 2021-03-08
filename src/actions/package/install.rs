@@ -33,6 +33,17 @@ impl Action for PackageInstall {
             }
         }
 
+        if variant.repository.is_some() {
+            if false == provider.has_repository(&variant.repository.clone().unwrap()) {
+                match provider.add_repository(&variant.repository.clone().unwrap()) {
+                    Ok(_) => {}
+                    Err(e) => {
+                        return Err(e);
+                    }
+                }
+            }
+        }
+
         match provider.install(variant.packages()) {
             Ok(_) => {
                 println!("Installed");
