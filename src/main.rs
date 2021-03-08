@@ -1,7 +1,6 @@
 use crate::actions::{Action, Actions};
 use ignore::{types::TypesBuilder, WalkBuilder};
 use petgraph::prelude::*;
-use regex::Regex;
 use std::{collections::HashMap, io::Result, ops::Deref};
 use std::{fs::canonicalize, path::PathBuf};
 use structopt::StructOpt;

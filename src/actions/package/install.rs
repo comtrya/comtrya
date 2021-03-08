@@ -68,18 +68,18 @@ mod tests {
     fn it_can_be_deserialized() {
         let yaml = r#"
 - action: package.install
-  name: comtrya
+  name: curl
 
 - action: package.install
   list:
-    - comtrya
+    - curl
 "#;
 
         let mut actions: Vec<Actions> = serde_yaml::from_str(yaml).unwrap();
 
         match actions.pop() {
             Some(Actions::PackageInstall(package_install)) => {
-                assert_eq!(vec!["comtrya"], package_install.list);
+                assert_eq!(vec!["curl"], package_install.list);
 
                 ()
             }
@@ -95,7 +95,7 @@ mod tests {
 
         match actions.pop() {
             Some(Actions::PackageInstall(package_install)) => {
-                assert_eq!("comtrya", package_install.name.clone().unwrap());
+                assert_eq!("curl", package_install.name.clone().unwrap());
                 ()
             }
             _ => {

@@ -1,19 +1,24 @@
+mod aptitude;
+mod homebrew;
+
+use self::aptitude::Aptitude;
 use self::homebrew::Homebrew;
 use crate::actions::ActionError;
 use serde::{Deserialize, Serialize};
-
-mod homebrew;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum PackageProviders {
     #[serde(alias = "homebrew", alias = "brew")]
     Homebrew,
+    #[serde(alias = "aptitude", alias = "apt", alias = "apt-get")]
+    Aptitude,
 }
 
 impl PackageProviders {
     pub fn get_provider(self) -> Box<dyn PackageProvider> {
         match self {
             PackageProviders::Homebrew => Box::new(Homebrew {}),
+            PackageProviders::Aptitude => Box::new(Aptitude {}),
         }
     }
 }
@@ -24,10 +29,13 @@ impl Default for PackageProviders {
 
         match info.os_type() {
             // Debian / Ubuntu Variants
-            // os_info::Type::Debian => PackageProviders::Apt,
-            // os_info::Type::Mint => PackageProviders::Apt,
-            // os_info::Type::Pop => PackageProviders::Apt,
-            // os_info::Type::Ubuntu => PackageProviders::Apt,
+            os_info::Type::Debian => PackageProviders::Aptitude,
+            os_info::Type::Mint => PackageProviders::Aptitude,
+            os_info::Type::Pop => PackageProviders::Aptitude,
+            os_info::Type::Ubuntu => PackageProviders::Aptitude,
+            // For some reason, the Rust image is showing as this and
+            // its Debian based?
+            os_info::Type::OracleLinux => PackageProviders::Aptitude,
 
             os_info::Type::Macos => PackageProviders::Homebrew,
 
