@@ -176,7 +176,7 @@ dependencies = [
 
 [[package]]
 name = "comtrya"
-version = "0.3.3"
+version = "0.3.4"
 dependencies = [
  "dirs",
  "ignore",
