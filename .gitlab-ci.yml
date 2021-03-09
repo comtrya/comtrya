@@ -12,12 +12,14 @@ rustfmt:
 
 clippy:
     stage: lint
+    allow_failure: true
     script:
         - rustup component add clippy
         - cargo clippy --all-targets --all-features -- -D warnings
 
 deny:
     stage: lint
+    allow_failure: true
     script:
         - cargo install --locked cargo-deny
         - cargo deny init
