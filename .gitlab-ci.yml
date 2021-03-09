@@ -1,22 +1,65 @@
+image: rust:1
+
 stages:
+    - lint
     - build
-    - test
 
-build:
+rustfmt:
+    stage: lint
+    script:
+        - cargo fmt --all -- --check
+
+clippy:
+    stage: lint
+    script:
+        - cargo clippy --all-targets --all-features -- -D warnings -W clippy:pedantic
+
+deny:
+    stage: lint
+    script:
+        - cargo install --locked cargo-deny
+        - cargo deny init
+        - cargo deny check
+
+.build_steps:
     stage: build
-    image: rust:latest
     script:
-        - cargo build --verbose
-
-test:
-    stage: test
-    image: rust:latest
-    script:
+        - rustup target add ${target}
+        - cargo build --target=${target} --release
         - cargo test --verbose
+        - mkdir bin
+        - mv ./target/release/comtrya ./bin/comtrya-${target}
+    artifacts:
+        paths:
+            - ./bin/comtrya-${target}
+        expire_in: 1 hour
 
-linting:
-    stage: test
-    image: realcundo/docker-rust-aio
-    script:
-        - cargo clippy
-        - cargo fmt -- --check
+x86-linux:
+    extends: .build_steps
+    variables:
+        target: x86_64-unknown-linux-gnu
+
+x86-darwin:
+    extends: .build_steps
+    variables:
+        TARGET: x86_64-apple-darwin
+
+x86-windows:
+    extends: .build_steps
+    variables:
+        TARGET: x86_64-pc-windows-msvc
+
+aarch64-linux:
+    extends: .build_steps
+    variables:
+        TARGET: aarch64-unknown-linux-gnu
+
+aarch64-darwin:
+    extends: .build_steps
+    variables:
+        TARGET: aarch64-apple-darwin
+
+aarch64-windows:
+    extends: .build_steps
+    variables:
+        TARGET: aarch64-pc-windows-msvc
