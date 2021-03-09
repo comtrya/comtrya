@@ -28,14 +28,14 @@ deny:
 .build_steps:
     stage: build
     script:
-        - rustup target add ${target}
-        - cargo build --target=${target} --release
+        - rustup target add $target
+        - cargo build --target=$target --release
         - cargo test --verbose
         - mkdir bin
-        - mv ./target/release/comtrya ./bin/comtrya-${target}
+        - mv ./target/release/comtrya ./bin/comtrya-$target
     artifacts:
         paths:
-            - ./bin/comtrya-${target}
+            - ./bin/comtrya-$target
         expire_in: 1 hour
 
 x86-linux:
