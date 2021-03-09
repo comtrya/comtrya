@@ -34,7 +34,7 @@ struct Opt {
     manifests: Vec<String>,
 }
 
-fn main() -> Result<()> {
+fn main() -> () {
     let opt = Opt::from_args();
 
     let subscriber = FmtSubscriber::builder()
@@ -257,6 +257,4 @@ fn main() -> Result<()> {
             });
         }
     });
-
-    Ok(())
 }

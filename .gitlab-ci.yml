@@ -17,19 +17,19 @@ clippy:
         - rustup component add clippy
         - cargo clippy --all-targets --all-features -- -D warnings
 
-deny:
-    stage: lint
-    allow_failure: true
-    script:
-        - cargo install --locked cargo-deny
-        - cargo deny init
-        - cargo deny check
+# deny:
+#     stage: lint
+#     allow_failure: true
+#     script:
+#         - cargo install --locked cargo-deny
+#         - cargo deny init
+#         - cargo deny check
 
 .build_steps:
     stage: build
     script:
-        - rustup target add $target
-        - cargo build --target=$target --release
+        - cargo install cross
+        - cross build --target=$target --release
         - cargo test --verbose
         - mkdir bin
         - mv ./target/release/comtrya ./bin/comtrya-$target
