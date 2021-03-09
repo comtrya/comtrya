@@ -14,7 +14,7 @@ clippy:
     stage: lint
     script:
         - rustup component add clippy
-        - cargo clippy --all-targets --all-features -- -D warnings -W clippy:pedantic
+        - cargo clippy --all-targets --all-features -- -D warnings
 
 deny:
     stage: lint
