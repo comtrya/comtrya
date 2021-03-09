@@ -37,7 +37,11 @@ struct Opt {
 fn main() -> Result<()> {
     let opt = Opt::from_args();
 
-    let subscriber = FmtSubscriber::builder().with_max_level(Level::INFO);
+    let subscriber = FmtSubscriber::builder()
+        .with_max_level(Level::INFO)
+        .with_ansi(true)
+        .with_target(false)
+        .without_time();
 
     let subscriber = match opt.debug {
         true => subscriber.with_max_level(Level::DEBUG),
