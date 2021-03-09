@@ -7,7 +7,7 @@ license = "MIT"
 description = "A tool to simplify reprovisioning a fresh OS. Installs packages and manages dotfiles."
 
 [dependencies]
-dirs = "3.0"
+dirs_next = "2.0.0"
 ignore = "0.4.17"
 # Pending PR: https://github.com/stanislav-tkach/os_info/pull/250/files
 os_info = { version = "3.0.1", git = "https://github.com/rawkode/os_info", branch = "fix/serde-deserialize" }

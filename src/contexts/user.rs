@@ -1,5 +1,5 @@
 use crate::contexts::{Context, ContextProvider};
-use dirs::{config_dir, home_dir};
+use dirs_next::{config_dir, home_dir};
 
 pub struct UserContextProvider {}
 
