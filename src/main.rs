@@ -94,7 +94,20 @@ fn main() -> Result<()> {
         .max_depth(Some(9))
         .types(yaml_filter.build().unwrap())
         .build()
+        // Don't walk directories
         .filter(|entry| !entry.clone().unwrap().metadata().unwrap().is_dir())
+        // Don't consider anything in a `files` directory a manifest
+        .filter(|entry| {
+            !entry
+                .clone()
+                .unwrap()
+                .path()
+                .parent()
+                .unwrap()
+                .file_name()
+                .unwrap()
+                .eq("files")
+        })
         .for_each(|entry| {
             let filename = entry.unwrap();
 
