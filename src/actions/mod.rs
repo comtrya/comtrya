@@ -31,9 +31,5 @@ pub struct ActionError {
 }
 
 pub trait Action {
-    fn run(
-        self: &Self,
-        manifest: &Manifest,
-        context: &Context,
-    ) -> Result<ActionResult, ActionError>;
+    fn run(&self, manifest: &Manifest, context: &Context) -> Result<ActionResult, ActionError>;
 }

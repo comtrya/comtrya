@@ -12,34 +12,22 @@ pub type PackageInstall = Package;
 impl CommandAction for PackageInstall {}
 
 impl Action for PackageInstall {
-    fn run(
-        self: &Self,
-        _manifest: &Manifest,
-        _context: &Context,
-    ) -> Result<ActionResult, ActionError> {
+    fn run(&self, _manifest: &Manifest, _context: &Context) -> Result<ActionResult, ActionError> {
         let variant: PackageVariant = self.into();
         let box_provider = variant.provider.clone().get_provider();
         let provider = box_provider.deref();
 
         // If the provider isn't available, see if we can bootstrap it
-        if false == provider.available() {
-            match provider.bootstrap() {
-                Ok(_) => {}
-                Err(_) => {
-                    return Err(ActionError {
-                        message: String::from("Provider unavailable"),
-                    });
-                }
-            }
+        if !provider.available() && provider.bootstrap().is_err() {
+            return Err(ActionError {
+                message: String::from("Provider unavailable"),
+            });
         }
 
-        if variant.repository.is_some() {
-            if false == provider.has_repository(&variant.repository.clone().unwrap()) {
-                match provider.add_repository(&variant.repository.clone().unwrap()) {
-                    Ok(_) => {}
-                    Err(e) => {
-                        return Err(e);
-                    }
+        if let Some(ref repo) = variant.repository {
+            if !provider.has_repository(&repo) {
+                if let Err(e) = provider.add_repository(&repo) {
+                    return Err(e);
                 }
             }
         }
@@ -81,34 +69,19 @@ mod tests {
         match actions.pop() {
             Some(Actions::PackageInstall(package_install)) => {
                 assert_eq!(vec!["curl"], package_install.list);
-
-                ()
             }
             _ => {
-                assert!(
-                    false,
-                    "PackageInstall didn't deserialize to the correct type"
-                );
-
-                ()
+                panic!("PackageInstall didn't deserialize to the correct type");
             }
         };
 
         match actions.pop() {
             Some(Actions::PackageInstall(package_install)) => {
-                assert_eq!("curl", package_install.name.clone().unwrap());
-                ()
+                assert_eq!("curl", package_install.name.unwrap());
             }
             _ => {
-                assert!(
-                    false,
-                    "PackageInstall didn't deserialize to the correct type"
-                );
-
-                ()
+                panic!("PackageInstall didn't deserialize to the correct type");
             }
         };
-
-        ()
     }
 }

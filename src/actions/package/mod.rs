@@ -47,7 +47,7 @@ impl PackageVariant {
             return vec![];
         }
 
-        return self.list.clone();
+        self.list.clone()
     }
 }
 
@@ -83,7 +83,7 @@ impl From<&Package> for PackageVariant {
             package.name = variant.name.clone();
         }
 
-        if false == variant.list.is_empty() {
+        if !variant.list.is_empty() {
             package.list = variant.list.clone();
         }
 

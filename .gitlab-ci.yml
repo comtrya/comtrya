@@ -1,9 +1,22 @@
 stages:
     - build
+    - test
 
-rust-latest:
+build:
     stage: build
     image: rust:latest
     script:
         - cargo build --verbose
+
+test:
+    stage: test
+    image: rust:latest
+    script:
         - cargo test --verbose
+
+linting:
+    stage: test
+    image: realcundo/docker-rust-aio
+    script:
+        - cargo clippy
+        - cargo fmt -- --check

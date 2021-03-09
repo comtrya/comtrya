@@ -25,14 +25,10 @@ impl FileCopy {}
 impl FileAction for FileCopy {}
 
 impl Action for FileCopy {
-    fn run(
-        self: &Self,
-        manifest: &Manifest,
-        context: &Context,
-    ) -> Result<ActionResult, ActionError> {
+    fn run(&self, manifest: &Manifest, context: &Context) -> Result<ActionResult, ActionError> {
         let tera = self.init(manifest);
 
-        let contents = match if true == self.template {
+        let contents = match if self.template {
             tera.render(self.from.clone().deref(), context)
                 .map_err(|e| ActionError {
                     message: e.to_string(),
@@ -114,15 +110,10 @@ mod tests {
             Some(Actions::FileCopy(file_copy)) => {
                 assert_eq!("a", file_copy.from);
                 assert_eq!("b", file_copy.to);
-                ()
             }
             _ => {
-                assert!(false, "FileCopy didn't deserialize to the correct type");
-
-                ()
+                panic!("FileCopy didn't deserialize to the correct type");
             }
         };
-
-        ()
     }
 }

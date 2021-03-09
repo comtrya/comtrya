@@ -14,10 +14,7 @@ pub struct Homebrew {}
 
 impl PackageProvider for Homebrew {
     fn available(&self) -> bool {
-        match which("brew") {
-            Ok(_) => true,
-            Err(_) => false,
-        }
+        which("brew").is_ok()
     }
 
     fn bootstrap(&self) -> Result<(), crate::actions::ActionError> {
@@ -52,19 +49,19 @@ impl PackageProvider for Homebrew {
         Ok(())
     }
 
-    fn has_repository(&self, _repository: &String) -> bool {
+    fn has_repository(&self, _repository: &str) -> bool {
         // Brew doesn't make it easy to check if the repository is already added
         // except by running `brew tap` and grepping.
         // Fortunately, adding an exist tap is pretty fast.
         false
     }
 
-    fn add_repository(&self, repository: &String) -> Result<(), ActionError> {
+    fn add_repository(&self, repository: &str) -> Result<(), ActionError> {
         match Command::new("brew").arg("tap").arg(repository).output() {
             Ok(_) => {
                 info!(
                     message = "Added Package Repository",
-                    repository = repository.as_str()
+                    repository = repository
                 );
 
                 Ok(())

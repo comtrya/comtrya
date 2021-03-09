@@ -28,8 +28,10 @@ pub fn build_contexts() -> tera::Context {
     context_providers.iter().for_each(|provider| {
         let mut values: BTreeMap<String, Value> = BTreeMap::new();
 
-        provider.get_contexts().iter().for_each(|context| {
-            match context {
+        provider
+            .get_contexts()
+            .iter()
+            .for_each(|context| match context {
                 Context::KeyValueContext(k, v) => {
                     debug!(
                         context = provider.get_prefix().as_str(),
@@ -38,7 +40,6 @@ pub fn build_contexts() -> tera::Context {
                         message = ""
                     );
                     values.insert(k.clone(), v.clone().into());
-                    ()
                 }
                 Context::ListContext(k, v) => {
                     debug!(
@@ -49,16 +50,10 @@ pub fn build_contexts() -> tera::Context {
                     );
 
                     values.insert(k.clone(), v.clone().into());
-                    ()
                 }
-            }
-
-            ()
-        });
+            });
 
         contexts.insert(provider.get_prefix(), &values);
-
-        ()
     });
 
     contexts

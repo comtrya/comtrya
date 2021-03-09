@@ -36,11 +36,11 @@ impl PackageProvider for Aptitude {
         Ok(())
     }
 
-    fn has_repository(&self, _repository: &String) -> bool {
+    fn has_repository(&self, _repository: &str) -> bool {
         false
     }
 
-    fn add_repository(&self, repository: &String) -> Result<(), ActionError> {
+    fn add_repository(&self, repository: &str) -> Result<(), ActionError> {
         match Command::new("apt-add-repository")
             .env("DEBIAN_FRONTEND", "noninteractive")
             .arg("-y")
@@ -48,12 +48,7 @@ impl PackageProvider for Aptitude {
             .output()
         {
             Ok(_) => {
-                debug!(
-                    message = "Apt Added Repository",
-                    repository = repository.as_str()
-                );
-
-                ()
+                debug!(message = "Apt Added Repository", repository = repository);
             }
             Err(error) => {
                 return Err(ActionError {

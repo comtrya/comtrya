@@ -68,14 +68,14 @@ fn main() -> Result<()> {
         message = "Comtrya execution started"
     );
 
-    let mut tera =
-        match Tera::new(format!("{}/**/*", manifest_directory.clone().to_str().unwrap()).deref()) {
-            Ok(t) => t,
-            Err(e) => {
-                error!(message = "Parsing Errors", error = e.to_string().as_str());
-                ::std::process::exit(1);
-            }
-        };
+    let mut tera = match Tera::new(format!("{}/**/*", manifest_directory.to_str().unwrap()).deref())
+    {
+        Ok(t) => t,
+        Err(e) => {
+            error!(message = "Parsing Errors", error = e.to_string().as_str());
+            ::std::process::exit(1);
+        }
+    };
 
     // Run Context Providers
     let contexts = build_contexts();
@@ -85,7 +85,7 @@ fn main() -> Result<()> {
     yaml_filter.add("yaml", "*.yaml").unwrap();
     yaml_filter.add("yml", "*.yml").unwrap();
 
-    let mut walker = WalkBuilder::new(PathBuf::from(opt.manifest_directory));
+    let mut walker = WalkBuilder::new(opt.manifest_directory);
     walker
         .standard_filters(true)
         .follow_links(false)
@@ -148,15 +148,13 @@ fn main() -> Result<()> {
                 }
             };
 
-            mo.root_dir = Some(entry.clone().parent().unwrap().to_path_buf());
+            mo.root_dir = Some(entry.parent().unwrap().to_path_buf());
 
             debug!(message = "Registered Manifest", manifest = name.as_str());
 
             mo.name = Some(name.clone());
 
             manifests.insert(name, mo);
-
-            ()
         });
 
     // Build DAG
@@ -180,7 +178,7 @@ fn main() -> Result<()> {
             manifest.dag_index = Some(abc);
             dag.add_edge(root_index, abc, 0);
 
-            (name.clone(), manifest)
+            (name, manifest)
         })
         .collect();
 
@@ -207,8 +205,8 @@ fn main() -> Result<()> {
         // Run subset
         manifests
             .keys()
-            .filter(|z| clone_m.contains(z.clone()))
-            .map(|z| z.clone())
+            .filter(|z| clone_m.contains(z))
+            .cloned()
             .collect::<Vec<String>>()
     };
 
@@ -256,8 +254,6 @@ fn main() -> Result<()> {
                         manifest = m1.name.clone().unwrap().as_str()
                     ),
                 }
-
-                ()
             });
         }
     });
