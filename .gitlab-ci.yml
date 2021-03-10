@@ -2,10 +2,13 @@ image: rust:1
 
 variables:
     DOCKER_HOST: "tcp://docker:2375"
+    PACKAGE_REGISTRY_URL: "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/comtrya/${CI_COMMIT_TAG}"
 
 stages:
     - lint
     - build
+    - upload
+    - release
 
 rustfmt:
     stage: lint
@@ -30,14 +33,18 @@ clippy:
 
 .build_steps:
     stage: build
+    # only:
+    #     - tags
     services:
         - docker:dind
     script:
         - curl -fsSL https://get.docker.com -o get-docker.sh
         - sh get-docker.sh
+        - cargo --version
         - cargo install cross
-        - cross build --target=$target --release
-        - cargo test --verbose
+        - cross --version
+        - cross test --release --target "$target"
+        - cross build --release --target "$target"
         - mkdir bin
         - mv ./target/release/comtrya ./bin/comtrya-$target
     artifacts:
@@ -60,17 +67,35 @@ x86-windows:
     variables:
         target: x86_64-pc-windows-msvc
 
-aarch64-linux:
-    extends: .build_steps
-    variables:
-        target: aarch64-unknown-linux-gnu
+# aarch64-linux:
+#     extends: .build_steps
+#     variables:
+#         target: aarch64-unknown-linux-gnu
 
-aarch64-darwin:
-    extends: .build_steps
-    variables:
-        target: aarch64-apple-darwin
+# aarch64-darwin:
+#     extends: .build_steps
+#     variables:
+#         target: aarch64-apple-darwin
 
-aarch64-windows:
-    extends: .build_steps
-    variables:
-        target: aarch64-pc-windows-msvc
+# aarch64-windows:
+#     extends: .build_steps
+#     variables:
+#         target: aarch64-pc-windows-msvc
+
+upload:
+    stage: upload
+    image: curlimages/curl:latest
+    rules:
+        - if: $CI_COMMIT_TAG
+    script:
+        - |
+            find ./bin -type file -name "comtrya-*" -exec curl --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file bin/{} ${PACKAGE_REGISTRY_URL}/{} \;
+
+release:
+    stage: release
+    image: registry.gitlab.com/gitlab-org/release-cli:latest
+    rules:
+        - if: $CI_COMMIT_TAG
+    script:
+        - |
+            release-cli create --name "Release $CI_COMMIT_TAG" --tag-name $CI_COMMIT_TAG
