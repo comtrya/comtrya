@@ -1,5 +1,8 @@
 image: rust:1
 
+variables:
+    DOCKER_HOST: "tcp://docker:2375"
+
 stages:
     - lint
     - build
@@ -27,7 +30,11 @@ clippy:
 
 .build_steps:
     stage: build
+    services:
+        - docker:dind
     script:
+        - curl -fsSL https://get.docker.com -o get-docker.sh
+        - sh get-docker.sh
         - cargo install cross
         - cross build --target=$target --release
         - cargo test --verbose
