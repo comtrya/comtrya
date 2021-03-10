@@ -7,6 +7,7 @@ variables:
 stages:
     - lint
     - build
+    - test
     - upload
     - release
 
@@ -31,19 +32,25 @@ clippy:
 #         - cargo deny init
 #         - cargo deny check
 
+test:
+    stage: test
+    script:
+        - cargo test
+
 .build_steps:
     stage: build
     # only:
     #     - tags
     services:
         - docker:dind
+    variables:
+        CROSS_DOCKER_IN_DOCKER: "true"
     script:
         - curl -fsSL https://get.docker.com -o get-docker.sh
         - sh get-docker.sh
         - cargo --version
         - cargo install cross
         - cross --version
-        - cross test --release --target "$target"
         - cross build --release --target "$target"
         - mkdir bin
         - mv ./target/release/comtrya ./bin/comtrya-$target
@@ -65,7 +72,7 @@ x86-darwin:
 x86-windows:
     extends: .build_steps
     variables:
-        target: x86_64-pc-windows-msvc
+        target: x86_64-pc-windows-gnu
 
 # aarch64-linux:
 #     extends: .build_steps
