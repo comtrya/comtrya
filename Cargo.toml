@@ -1,6 +1,6 @@
 [package]
 name = "comtrya"
-version = "0.3.10"
+version = "0.3.11"
 authors = ["David McKay <david@rawkode.dev>"]
 edition = "2018"
 license = "MIT"
