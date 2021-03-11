@@ -272,7 +272,7 @@ fn main() -> Result<()> {
                 continue;
             }
 
-            let spa = span!(
+            let span_manifest = span!(
                 tracing::Level::ERROR,
                 "manifest_run",
                 manifest = m1.name.clone().unwrap().as_str()
@@ -281,8 +281,9 @@ fn main() -> Result<()> {
 
             m1.actions.iter().for_each(|action| {
                 let result = match action {
-                    Actions::PackageInstall(a) => a.run(&m1, &contexts),
+                    Actions::DirectoryCopy(a) => a.run(m1, &contexts),
                     Actions::FileCopy(a) => a.run(m1, &contexts),
+                    Actions::PackageInstall(a) => a.run(&m1, &contexts),
                 };
 
                 match result {
@@ -291,7 +292,7 @@ fn main() -> Result<()> {
                 }
             });
 
-            spa.exit();
+            span_manifest.exit();
 
             ()
         }
