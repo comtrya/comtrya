@@ -4,9 +4,10 @@ use reqwest::blocking::Client;
 use serde::{Deserialize, Serialize};
 use std::{
     fs::File,
-    process::{Command, Stdio},
+    path::Path,
+    process::{Command, Output, Stdio},
 };
-use tracing::info;
+use tracing::{debug, error, info};
 use which::which;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -72,12 +73,50 @@ impl PackageProvider for Homebrew {
         }
     }
 
+    fn query(&self, packages: Vec<String>) -> Vec<String> {
+        let cellar = Path::new("/usr/local/Cellar");
+        let caskroom = Path::new("/usr/local/Caskroom");
+
+        packages
+            .into_iter()
+            .filter(|package| {
+                if cellar.join(&package).is_dir() {
+                    false
+                } else if caskroom.join(&package).is_dir() {
+                    false
+                } else {
+                    true
+                }
+            })
+            .collect()
+    }
+
     fn install(&self, packages: Vec<String>) -> Result<(), ActionError> {
-        match Command::new("brew").arg("install").args(&packages).output() {
-            Ok(_) => {
+        let need_installed = self.query(packages.clone());
+
+        if need_installed.is_empty() {
+            return Ok(());
+        }
+
+        match Command::new("brew")
+            .arg("install")
+            .args(&need_installed)
+            .output()
+        {
+            Ok(Output { status, .. }) if status.success() => {
                 info!(
                     message = "Package Installed",
-                    packages = packages.clone().join(",").as_str()
+                    packages = need_installed.clone().join(",").as_str()
+                );
+
+                Ok(())
+            }
+            Ok(Output { stderr, .. }) => {
+                error!("Failed to install packages: {}", need_installed.join(" "));
+
+                debug!(
+                    message = String::from_utf8(stderr).unwrap().as_str(),
+                    file = "stderr"
                 );
 
                 Ok(())

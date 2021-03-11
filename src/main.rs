@@ -6,6 +6,7 @@ use crate::actions::{Action, Actions};
 use contexts::build_contexts;
 use ignore::{types::TypesBuilder, WalkBuilder};
 use manifest::Manifest;
+use os_info;
 use petgraph::prelude::*;
 use std::{collections::HashMap, io::Result, ops::Deref};
 use std::{fs::canonicalize, path::PathBuf};
@@ -66,6 +67,12 @@ fn main() -> Result<()> {
         manifest_directory = manifest_directory.to_str().unwrap(),
         manifests = opt.manifests.join(",").deref(),
         message = "Comtrya execution started"
+    );
+
+    // This should be exposed as a context
+    debug!(
+        message = "OS Detected",
+        OS = os_info::get().os_type().to_string().as_str()
     );
 
     let mut tera = match Tera::new(format!("{}/**/*", manifest_directory.to_str().unwrap()).deref())

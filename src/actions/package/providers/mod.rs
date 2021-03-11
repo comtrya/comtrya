@@ -5,7 +5,6 @@ use self::aptitude::Aptitude;
 use self::homebrew::Homebrew;
 use crate::actions::ActionError;
 use serde::{Deserialize, Serialize};
-use tracing::debug;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum PackageProviders {
@@ -27,11 +26,6 @@ impl PackageProviders {
 impl Default for PackageProviders {
     fn default() -> Self {
         let info = os_info::get();
-
-        debug!(
-            message = "OS Detected",
-            OS = info.os_type().to_string().as_str()
-        );
 
         match info.os_type() {
             // Debian / Ubuntu Variants
@@ -55,5 +49,6 @@ pub trait PackageProvider {
     fn bootstrap(&self) -> Result<(), ActionError>;
     fn has_repository(&self, repository: &str) -> bool;
     fn add_repository(&self, repository: &str) -> Result<(), ActionError>;
+    fn query(&self, packages: Vec<String>) -> Vec<String>;
     fn install(&self, packages: Vec<String>) -> Result<(), ActionError>;
 }

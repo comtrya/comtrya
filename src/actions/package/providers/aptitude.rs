@@ -70,6 +70,10 @@ impl PackageProvider for Aptitude {
         Ok(())
     }
 
+    fn query(&self, packages: Vec<String>) -> Vec<String> {
+        packages
+    }
+
     fn install(&self, packages: Vec<String>) -> Result<(), ActionError> {
         match Command::new("apt")
             .args(&["install", "-y"])
