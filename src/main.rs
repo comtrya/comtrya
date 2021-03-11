@@ -4,7 +4,7 @@ mod manifest;
 
 use crate::actions::{Action, Actions};
 use contexts::build_contexts;
-use ignore::{types::TypesBuilder, WalkBuilder};
+use ignore::WalkBuilder;
 use manifest::Manifest;
 use os_info;
 use petgraph::prelude::*;
@@ -75,22 +75,8 @@ fn main() -> Result<()> {
         OS = os_info::get().os_type().to_string().as_str()
     );
 
-    let mut tera = match Tera::new(format!("{}/**/*", manifest_directory.to_str().unwrap()).deref())
-    {
-        Ok(t) => t,
-        Err(e) => {
-            error!(message = "Parsing Errors", error = e.to_string().as_str());
-            ::std::process::exit(1);
-        }
-    };
-
     // Run Context Providers
     let contexts = build_contexts();
-
-    // Find Manifests
-    let mut yaml_filter = TypesBuilder::new();
-    yaml_filter.add("yaml", "*.yaml").unwrap();
-    yaml_filter.add("yml", "*.yml").unwrap();
 
     let mut walker = WalkBuilder::new(opt.manifest_directory);
     walker
@@ -99,10 +85,34 @@ fn main() -> Result<()> {
         .same_file_system(true)
         // Arbitrary for now, 9 "should" be enough?
         .max_depth(Some(9))
-        .types(yaml_filter.build().unwrap())
         .build()
         // Don't walk directories
         .filter(|entry| !entry.clone().unwrap().metadata().unwrap().is_dir())
+        .filter(|entry| {
+            // There has to be a better way to do this.
+            // I couldn't get the TypeBuilder to work
+            if entry
+                .clone()
+                .unwrap()
+                .file_name()
+                .to_str()
+                .unwrap()
+                .ends_with(".yaml")
+            {
+                true
+            } else if entry
+                .clone()
+                .unwrap()
+                .file_name()
+                .to_str()
+                .unwrap()
+                .ends_with(".yml")
+            {
+                true
+            } else {
+                false
+            }
+        })
         // Don't consider anything in a `files` directory a manifest
         .filter(|entry| {
             !entry
@@ -136,7 +146,7 @@ fn main() -> Result<()> {
 
             trace!(template = template);
 
-            let yaml = tera.render_str(template, &contexts).unwrap();
+            let yaml = Tera::one_off(template, &contexts, false).unwrap();
 
             trace!(rendered = yaml.as_str());
 
