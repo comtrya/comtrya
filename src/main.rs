@@ -12,7 +12,7 @@ use std::{collections::HashMap, io::Result, ops::Deref};
 use std::{fs::canonicalize, path::PathBuf};
 use structopt::StructOpt;
 use tera::Tera;
-use tracing::{debug, error, span, trace, Level};
+use tracing::{debug, error, info, span, trace, Level};
 use tracing_subscriber::FmtSubscriber;
 
 #[derive(StructOpt, Debug)]
@@ -273,11 +273,13 @@ fn main() -> Result<()> {
             }
 
             let span_manifest = span!(
-                tracing::Level::ERROR,
+                tracing::Level::INFO,
                 "manifest_run",
                 manifest = m1.name.clone().unwrap().as_str()
             )
             .entered();
+
+            let mut successful = true;
 
             m1.actions.iter().for_each(|action| {
                 let result = match action {
@@ -287,10 +289,22 @@ fn main() -> Result<()> {
                 };
 
                 match result {
-                    Ok(_) => debug!("Success"),
-                    Err(e) => error!(message = e.message.as_str()),
+                    Ok(_) => (),
+                    Err(e) => {
+                        successful = false;
+
+                        error!(message = e.message.as_str())
+                    }
                 }
             });
+
+            if successful {
+                info!("Completed");
+            } else {
+                error!("Failed");
+                span_manifest.exit();
+                break;
+            }
 
             span_manifest.exit();
 
