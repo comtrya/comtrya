@@ -5,7 +5,7 @@ use crate::actions::{Action, ActionError, ActionResult};
 use crate::manifest::Manifest;
 use std::ops::Deref;
 use tera::Context;
-use tracing::error;
+use tracing::span;
 
 pub type PackageInstall = Package;
 
@@ -16,6 +16,13 @@ impl Action for PackageInstall {
         let variant: PackageVariant = self.into();
         let box_provider = variant.provider.clone().get_provider();
         let provider = box_provider.deref();
+
+        let span = span!(
+            tracing::Level::INFO,
+            "package.install",
+            provider = provider.name()
+        )
+        .entered();
 
         // If the provider isn't available, see if we can bootstrap it
         if !provider.available() && provider.bootstrap().is_err() {
@@ -32,20 +39,16 @@ impl Action for PackageInstall {
             }
         }
 
-        match provider.install(variant.packages()) {
-            Ok(_) => (),
-            Err(e) => {
-                error!(
-                    message = "Failed to install package",
-                    packages = variant.packages().join(",").as_str()
-                );
-                return Err(e);
-            }
-        }
+        let result = match provider.install(variant.packages()) {
+            Ok(_) => Ok(ActionResult {
+                message: String::from("Packages installed successfully"),
+            }),
+            Err(e) => Err(e),
+        };
 
-        Ok(ActionResult {
-            message: String::from("Done"),
-        })
+        span.exit();
+
+        result
     }
 }
 

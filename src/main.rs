@@ -12,7 +12,7 @@ use std::{collections::HashMap, io::Result, ops::Deref};
 use std::{fs::canonicalize, path::PathBuf};
 use structopt::StructOpt;
 use tera::Tera;
-use tracing::{debug, error, info, trace, Level};
+use tracing::{debug, error, info, span, trace, Level};
 use tracing_subscriber::FmtSubscriber;
 
 #[derive(StructOpt, Debug)]
@@ -118,7 +118,7 @@ fn main() -> Result<()> {
         .for_each(|entry| {
             let filename = entry.unwrap();
 
-            trace!(manifest = filename.file_name().to_str().unwrap(),);
+            trace!(manifest = filename.file_name().to_str().unwrap());
 
             let entry = canonicalize(filename.into_path()).unwrap();
 
@@ -133,9 +133,16 @@ fn main() -> Result<()> {
 
             trace!(rendered = yaml.as_str());
 
-            let mut mo: Manifest = serde_yaml::from_str(yaml.deref()).unwrap();
+            let mut manifest: Manifest = match serde_yaml::from_str(yaml.deref()) {
+                Ok(manifest) => manifest,
+                Err(e) => {
+                    error!(message = e.to_string().as_str());
 
-            let name = match &mo.name {
+                    return;
+                }
+            };
+
+            let name = match &manifest.name {
                 Some(name) => name.clone(),
                 None => {
                     if entry.file_stem().unwrap().to_str().unwrap().eq("main") {
@@ -155,13 +162,15 @@ fn main() -> Result<()> {
                 }
             };
 
-            mo.root_dir = Some(entry.parent().unwrap().to_path_buf());
+            manifest.root_dir = Some(entry.parent().unwrap().to_path_buf());
 
-            debug!(message = "Registered Manifest", manifest = name.as_str());
+            trace!(message = "Registered Manifest", manifest = name.as_str());
 
-            mo.name = Some(name.clone());
+            manifest.name = Some(name.clone());
 
-            manifests.insert(name, mo);
+            manifests.insert(name, manifest);
+
+            ()
         });
 
     // Build DAG
@@ -191,7 +200,14 @@ fn main() -> Result<()> {
 
     for (name, manifest) in manifests.iter() {
         manifest.depends.iter().for_each(|d| {
-            let m1 = manifests.get(d).unwrap();
+            let m1 = match manifests.get(d) {
+                Some(manifest) => manifest,
+                None => {
+                    error!(message = "Unresolved dependency", dependency = d.as_str());
+
+                    return;
+                }
+            };
 
             trace!(
                 message = "Dependency Registered",
@@ -217,10 +233,7 @@ fn main() -> Result<()> {
             .collect::<Vec<String>>()
     };
 
-    info!(
-        message = "Manifest Run List",
-        manifests = run_manifests.join(",").as_str()
-    );
+    debug!(manifests = run_manifests.join(",").as_str());
 
     run_manifests.iter().for_each(|m| {
         let start = if m.eq(&String::from("")) {
@@ -239,10 +252,12 @@ fn main() -> Result<()> {
                 continue;
             }
 
-            info!(
-                message = "Executing Manifest",
+            let spa = span!(
+                tracing::Level::ERROR,
+                "manifest_run",
                 manifest = m1.name.clone().unwrap().as_str()
-            );
+            )
+            .entered();
 
             m1.actions.iter().for_each(|action| {
                 let result = match action {
@@ -251,17 +266,14 @@ fn main() -> Result<()> {
                 };
 
                 match result {
-                    Ok(_) => debug!(
-                        message = "Manifest Competed",
-                        manifest = m1.name.clone().unwrap().as_str()
-                    ),
-                    Err(e) => error!(
-                        message = "Manifest Failed",
-                        error = e.message.as_str(),
-                        manifest = m1.name.clone().unwrap().as_str()
-                    ),
+                    Ok(_) => info!("Success"),
+                    Err(e) => error!(message = e.message.as_str()),
                 }
             });
+
+            spa.exit();
+
+            ()
         }
     });
 

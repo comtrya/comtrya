@@ -1,21 +1,25 @@
 use super::PackageProvider;
 use crate::actions::ActionError;
 use serde::{Deserialize, Serialize};
-use std::process::{Command, Stdio};
-use tracing::{debug, info};
+use std::process::{Command, Output, Stdio};
+use tracing::{debug, info, span, warn};
 use which::which;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Aptitude {}
 
 impl PackageProvider for Aptitude {
+    fn name(&self) -> &str {
+        "Aptitude"
+    }
+
     fn available(&self) -> bool {
         match which("apt-add-repository") {
-            Ok(_) => {
-                info!(message = "apt-add-repository not available");
-                true
+            Ok(_) => true,
+            Err(_) => {
+                warn!(message = "apt-add-repository not available");
+                false
             }
-            Err(_) => false,
         }
     }
 
@@ -23,17 +27,26 @@ impl PackageProvider for Aptitude {
         // Apt should always be available on Debian / Ubuntu flavours.
         // Lets make sure software-properties-common is available
         // for repository management
-        info!(message = "Installing prerequisites for Aptitude package provider");
+        let span = span!(tracing::Level::INFO, "bootstrap").entered();
 
-        Command::new("apt")
+        let result = match Command::new("apt")
             .args(&["install", "-y", "software-properties-common", "gpg"])
-            .stdin(Stdio::inherit())
-            .stdout(Stdio::inherit())
-            .stderr(Stdio::inherit())
             .output()
-            .unwrap();
+        {
+            Ok(Output { status, .. }) if status.success() => Ok(()),
 
-        Ok(())
+            Ok(Output { stderr, .. }) => Err(ActionError {
+                message: String::from_utf8(stderr).unwrap(),
+            }),
+
+            Err(e) => Err(ActionError {
+                message: e.to_string(),
+            }),
+        };
+
+        span.exit();
+
+        result
     }
 
     fn has_repository(&self, _repository: &str) -> bool {

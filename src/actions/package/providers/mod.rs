@@ -45,6 +45,7 @@ impl Default for PackageProviders {
 }
 
 pub trait PackageProvider {
+    fn name(&self) -> &str;
     fn available(&self) -> bool;
     fn bootstrap(&self) -> Result<(), ActionError>;
     fn has_repository(&self, repository: &str) -> bool;

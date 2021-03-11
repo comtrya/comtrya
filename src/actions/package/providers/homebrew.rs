@@ -7,13 +7,17 @@ use std::{
     path::Path,
     process::{Command, Output, Stdio},
 };
-use tracing::{debug, error, info};
+use tracing::{debug, error, info, trace};
 use which::which;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Homebrew {}
 
 impl PackageProvider for Homebrew {
+    fn name(&self) -> &str {
+        "Homebrew"
+    }
+
     fn available(&self) -> bool {
         which("brew").is_ok()
     }
@@ -45,7 +49,7 @@ impl PackageProvider for Homebrew {
             .output()
             .unwrap();
 
-        info!(message = "Installed Brew");
+        info!(message = "Installed Homebrew");
 
         Ok(())
     }
@@ -81,10 +85,13 @@ impl PackageProvider for Homebrew {
             .into_iter()
             .filter(|package| {
                 if cellar.join(&package).is_dir() {
+                    trace!("{}: found in Cellar", package);
                     false
                 } else if caskroom.join(&package).is_dir() {
+                    trace!("{}: found in Caskroom", package);
                     false
                 } else {
+                    debug!("{}: doesn't appear to be installed", package);
                     true
                 }
             })
@@ -104,23 +111,18 @@ impl PackageProvider for Homebrew {
             .output()
         {
             Ok(Output { status, .. }) if status.success() => {
-                info!(
-                    message = "Package Installed",
-                    packages = need_installed.clone().join(",").as_str()
-                );
-
+                info!(packages = need_installed.clone().join(",").as_str());
                 Ok(())
             }
+
             Ok(Output { stderr, .. }) => {
-                error!("Failed to install packages: {}", need_installed.join(" "));
+                error!(message = String::from_utf8(stderr).unwrap().as_str());
 
-                debug!(
-                    message = String::from_utf8(stderr).unwrap().as_str(),
-                    file = "stderr"
-                );
-
-                Ok(())
+                Err(ActionError {
+                    message: format!("Failed to install {}", need_installed.join(" ")),
+                })
             }
+
             Err(error) => Err(ActionError {
                 message: error.to_string(),
             }),
