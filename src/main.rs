@@ -12,7 +12,7 @@ use std::{collections::HashMap, io::Result, ops::Deref};
 use std::{fs::canonicalize, path::PathBuf};
 use structopt::StructOpt;
 use tera::Tera;
-use tracing::{debug, error, info, span, trace, Level};
+use tracing::{debug, error, span, trace, Level};
 use tracing_subscriber::FmtSubscriber;
 
 #[derive(StructOpt, Debug)]
@@ -118,6 +118,13 @@ fn main() -> Result<()> {
         .for_each(|entry| {
             let filename = entry.unwrap();
 
+            let span = span!(
+                tracing::Level::INFO,
+                "manifest_load",
+                manifest = filename.file_name().to_str().unwrap()
+            )
+            .entered();
+
             trace!(manifest = filename.file_name().to_str().unwrap());
 
             let entry = canonicalize(filename.into_path()).unwrap();
@@ -137,6 +144,7 @@ fn main() -> Result<()> {
                 Ok(manifest) => manifest,
                 Err(e) => {
                     error!(message = e.to_string().as_str());
+                    span.exit();
 
                     return;
                 }
@@ -169,6 +177,8 @@ fn main() -> Result<()> {
             manifest.name = Some(name.clone());
 
             manifests.insert(name, manifest);
+
+            span.exit();
 
             ()
         });
@@ -266,7 +276,7 @@ fn main() -> Result<()> {
                 };
 
                 match result {
-                    Ok(_) => info!("Success"),
+                    Ok(_) => debug!("Success"),
                     Err(e) => error!(message = e.message.as_str()),
                 }
             });
