@@ -51,6 +51,7 @@ test:
         - cargo --version
         - cargo install cross
         - cross --version
+        - echo "$target"
         - cross build --release --target "$target"
         - mkdir bin
         - mv ./target/release/comtrya ./bin/comtrya-$target
