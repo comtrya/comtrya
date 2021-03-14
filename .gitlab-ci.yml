@@ -22,7 +22,7 @@ clippy:
     allow_failure: true
     script:
         - rustup component add clippy
-        - cargo clippy --all-targets --all-features -- -D warnings
+        - cargo clippy --all-targets -- -D warnings
 
 # deny:
 #     stage: lint
@@ -51,7 +51,6 @@ test:
         - cargo --version
         - cargo install cross
         - cross --version
-        - echo "$target"
         - cross build --release --target "$target"
         - mkdir bin
         - mv ./target/release/comtrya ./bin/comtrya-$target
