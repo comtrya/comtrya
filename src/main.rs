@@ -7,7 +7,7 @@ use contexts::build_contexts;
 use ignore::{types::TypesBuilder, WalkBuilder};
 use manifest::Manifest;
 use petgraph::prelude::*;
-use std::{collections::HashMap, io::Result, ops::Deref};
+use std::{collections::HashMap, ops::Deref};
 use std::{fs::canonicalize, path::PathBuf};
 use structopt::StructOpt;
 use tera::Tera;
@@ -34,7 +34,7 @@ struct Opt {
     manifests: Vec<String>,
 }
 
-fn main() -> () {
+fn main() {
     let opt = Opt::from_args();
 
     let subscriber = FmtSubscriber::builder()
@@ -257,6 +257,4 @@ fn main() -> () {
             });
         }
     });
-
-    ()
 }

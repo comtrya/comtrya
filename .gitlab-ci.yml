@@ -48,10 +48,9 @@ test:
     script:
         - curl -fsSL https://get.docker.com -o get-docker.sh
         - sh get-docker.sh
-        - cargo --version
         - cargo install cross
-        - cross --version
-        - cross build --release --target "$target"
+        - rustup add target $target
+        - cross build --release --target $target
         - mkdir bin
         - mv ./target/release/comtrya ./bin/comtrya-$target
     artifacts:
