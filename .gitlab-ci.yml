@@ -4,12 +4,23 @@ variables:
     DOCKER_HOST: "tcp://docker:2375"
     PACKAGE_REGISTRY_URL: "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/comtrya/${CI_COMMIT_TAG}"
 
+cache:
+    key: ${CI_COMMIT_REF_SLUG}
+    paths:
+        - ./target
+
 stages:
+    - check
     - lint
     - build
     - test
     - upload
     - release
+
+check:
+    stage: check
+    script:
+        - cargo check
 
 rustfmt:
     stage: lint
@@ -49,7 +60,7 @@ test:
         - curl -fsSL https://get.docker.com -o get-docker.sh
         - sh get-docker.sh
         - cargo install cross
-        - rustup add target $target
+        - rustup target add $target
         - cross build --release --target $target
         - mkdir bin
         - mv ./target/release/comtrya ./bin/comtrya-$target
@@ -73,20 +84,15 @@ x86-windows:
     variables:
         target: x86_64-pc-windows-gnu
 
-# aarch64-linux:
-#     extends: .build_steps
-#     variables:
-#         target: aarch64-unknown-linux-gnu
+aarch64-linux:
+    extends: .build_steps
+    variables:
+        target: aarch64-unknown-linux-gnu
 
-# aarch64-darwin:
-#     extends: .build_steps
-#     variables:
-#         target: aarch64-apple-darwin
-
-# aarch64-windows:
-#     extends: .build_steps
-#     variables:
-#         target: aarch64-pc-windows-msvc
+aarch64-darwin:
+    extends: .build_steps
+    variables:
+        target: aarch64-apple-darwin
 
 upload:
     stage: upload
