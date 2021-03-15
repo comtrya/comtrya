@@ -52,27 +52,15 @@ test:
     stage: build
     # only:
     #     - tags
-    services:
-        - docker:dind
-    variables:
-        CROSS_DOCKER_IN_DOCKER: "true"
-        CC_aarch64_unknown_linux_gnu: aarch64-unknown-linux-gnu
-        CC_aarch64_apple_darwin: aarch64-apple-darwin
-        CC_x86_64_apple_darwin: x86_64-apple-darwin
-        CC_x86_64_linux_gnu_gcc: x86_64-linux-gnu-gcc
-        CC_x86_64_pc_windows_gnu: x86_64-pc-windows-gnu
-        CC_x86_64_unknown_linux_gnu: x86_64-unknown-linux-gnu
+    before_script:
+        - apt-get update
+        - apt-get install -y curl build-essential clang gcc
     script:
-        - curl -fsSL https://get.docker.com -o get-docker.sh
-        - sh get-docker.sh
-        - cargo install cross
         - rustup target add $target
-        - cross build --release --target $target
-        - mkdir bin
-        - mv ./target/release/comtrya ./bin/comtrya-$target
+        - cargo build --release --target $target
     artifacts:
         paths:
-            - ./bin/comtrya-$target
+            - ./target
         expire_in: 1 hour
 
 x86-linux:
@@ -82,6 +70,7 @@ x86-linux:
 
 x86-darwin:
     extends: .build_steps
+    # No Container Images, ensure host has compile
     variables:
         target: x86_64-apple-darwin
 
@@ -99,21 +88,20 @@ aarch64-darwin:
     extends: .build_steps
     variables:
         target: aarch64-apple-darwin
+# upload:
+#     stage: upload
+#     image: curlimages/curl:latest
+#     rules:
+#         - if: $CI_COMMIT_TAG
+#     script:
+#         - |
+#             find ./bin -type file -name "comtrya" -exec curl --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file bin/{} ${PACKAGE_REGISTRY_URL}/{} \;
 
-upload:
-    stage: upload
-    image: curlimages/curl:latest
-    rules:
-        - if: $CI_COMMIT_TAG
-    script:
-        - |
-            find ./bin -type file -name "comtrya-*" -exec curl --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file bin/{} ${PACKAGE_REGISTRY_URL}/{} \;
-
-release:
-    stage: release
-    image: registry.gitlab.com/gitlab-org/release-cli:latest
-    rules:
-        - if: $CI_COMMIT_TAG
-    script:
-        - |
-            release-cli create --name "Release $CI_COMMIT_TAG" --tag-name $CI_COMMIT_TAG
+# release:
+#     stage: release
+#     image: registry.gitlab.com/gitlab-org/release-cli:latest
+#     rules:
+#         - if: $CI_COMMIT_TAG
+#     script:
+#         - |
+#             release-cli create --name "Release $CI_COMMIT_TAG" --tag-name $CI_COMMIT_TAG

@@ -1,8 +1,6 @@
 [build.env]
 passthrough = [
     "CC_aarch64_unknown_linux_gnu",
-    "CC_aarch64_apple_darwin",
-    "CC_x86_64_apple_darwin",
     "CC_x86_64_linux_gnu_gcc",
     "CC_x86_64_pc_windows_gnu",
     "CC_x86_64_unknown_linux_gnu"
