@@ -65,7 +65,7 @@ test:
         - rustup set profile minimal
         - rustup target add $target
         - cargo install cross
-        - ./cargo/bin/cross build --release --target $target
+        - CROSS_DOCKER_IN_DOCKER=true ./cargo/bin/cross build --release --target $target
     artifacts:
         paths:
             - ./target
