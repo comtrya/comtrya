@@ -2,11 +2,14 @@ image: rust:1
 
 variables:
     DOCKER_HOST: "tcp://docker:2375"
+    DOCKER_DRIVER: overlay2
+    CARGO_HOME: "$CI_PROJECT_DIR/cargo"
     PACKAGE_REGISTRY_URL: "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/comtrya/${CI_COMMIT_TAG}"
 
 cache:
     key: ${CI_COMMIT_REF_SLUG}
     paths:
+        - ./cargo
         - ./target
 
 stages:
@@ -52,42 +55,46 @@ test:
     stage: build
     # only:
     #     - tags
-    before_script:
-        - apt-get update
-        - apt-get install -y curl build-essential clang gcc
     script:
+        - rustup set profile minimal
         - rustup target add $target
-        - cargo build --release --target $target
+        - cargo install cross
+        - cross build --release --target $target
     artifacts:
         paths:
             - ./target
         expire_in: 1 hour
 
+# Host/Target match, nothing special needed
 x86-linux:
     extends: .build_steps
     variables:
         target: x86_64-unknown-linux-gnu
 
-x86-darwin:
-    extends: .build_steps
-    # No Container Images, ensure host has compile
-    variables:
-        target: x86_64-apple-darwin
+# x86-darwin:
+#     extends: .build_steps
+#     # No Container Images, ensure host has compile
+#     variables:
+#         target: x86_64-apple-darwin
 
-x86-windows:
-    extends: .build_steps
-    variables:
-        target: x86_64-pc-windows-gnu
+# x86-windows:
+#     extends: .build_steps
+#     variables:
+#         target: x86_64-pc-windows-gnu
 
 aarch64-linux:
     extends: .build_steps
+    # before_script:
+    #     - dpkg --add-architecture arm64
+    #     - apt update
+    #     - apt install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
     variables:
         target: aarch64-unknown-linux-gnu
+# aarch64-darwin:
+#     extends: .build_steps
+#     variables:
+#         target: aarch64-apple-darwin
 
-aarch64-darwin:
-    extends: .build_steps
-    variables:
-        target: aarch64-apple-darwin
 # upload:
 #     stage: upload
 #     image: curlimages/curl:latest
