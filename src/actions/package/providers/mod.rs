@@ -6,6 +6,8 @@ use self::homebrew::Homebrew;
 use crate::actions::ActionError;
 use serde::{Deserialize, Serialize};
 
+use super::PackageVariant;
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum PackageProviders {
     #[serde(alias = "homebrew", alias = "brew")]
@@ -48,8 +50,8 @@ pub trait PackageProvider {
     fn name(&self) -> &str;
     fn available(&self) -> bool;
     fn bootstrap(&self) -> Result<(), ActionError>;
-    fn has_repository(&self, repository: &str) -> bool;
-    fn add_repository(&self, repository: &str) -> Result<(), ActionError>;
-    fn query(&self, packages: Vec<String>) -> Vec<String>;
-    fn install(&self, packages: Vec<String>) -> Result<(), ActionError>;
+    fn has_repository(&self, package: &PackageVariant) -> bool;
+    fn add_repository(&self, package: &PackageVariant) -> Result<(), ActionError>;
+    fn query(&self, package: &PackageVariant) -> Vec<String>;
+    fn install(&self, package: &PackageVariant) -> Result<(), ActionError>;
 }

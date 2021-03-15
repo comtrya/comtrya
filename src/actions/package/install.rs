@@ -31,15 +31,15 @@ impl Action for PackageInstall {
             });
         }
 
-        if let Some(ref repo) = variant.repository {
-            if !provider.has_repository(&repo) {
-                if let Err(e) = provider.add_repository(&repo) {
+        if let Some(ref _repo) = variant.repository {
+            if !provider.has_repository(&variant) {
+                if let Err(e) = provider.add_repository(&variant) {
                     return Err(e);
                 }
             }
         }
 
-        let result = match provider.install(variant.packages()) {
+        let result = match provider.install(&variant) {
             Ok(_) => Ok(ActionResult {
                 message: String::from("Packages installed successfully"),
             }),

@@ -1,5 +1,5 @@
 use super::PackageProvider;
-use crate::actions::ActionError;
+use crate::actions::{package::PackageVariant, ActionError};
 use reqwest::blocking::Client;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -54,19 +54,21 @@ impl PackageProvider for Homebrew {
         Ok(())
     }
 
-    fn has_repository(&self, _repository: &str) -> bool {
+    fn has_repository(&self, _: &PackageVariant) -> bool {
         // Brew doesn't make it easy to check if the repository is already added
         // except by running `brew tap` and grepping.
         // Fortunately, adding an exist tap is pretty fast.
         false
     }
 
-    fn add_repository(&self, repository: &str) -> Result<(), ActionError> {
-        match Command::new("brew").arg("tap").arg(repository).output() {
+    fn add_repository(&self, package: &PackageVariant) -> Result<(), ActionError> {
+        let repository = package.repository.clone().unwrap();
+
+        match Command::new("brew").arg("tap").arg(&repository).output() {
             Ok(_) => {
                 info!(
                     message = "Added Package Repository",
-                    repository = repository
+                    repository = ?repository
                 );
 
                 Ok(())
@@ -77,29 +79,34 @@ impl PackageProvider for Homebrew {
         }
     }
 
-    fn query(&self, packages: Vec<String>) -> Vec<String> {
+    fn query(&self, package: &PackageVariant) -> Vec<String> {
         let cellar = Path::new("/usr/local/Cellar");
         let caskroom = Path::new("/usr/local/Caskroom");
 
-        packages
+        package
+            .packages()
             .into_iter()
-            .filter(|package| {
-                if cellar.join(&package).is_dir() {
-                    trace!("{}: found in Cellar", package);
+            .filter(|p| {
+                if cellar.join(&p).is_dir() {
+                    trace!("{}: found in Cellar", p);
                     false
-                } else if caskroom.join(&package).is_dir() {
-                    trace!("{}: found in Caskroom", package);
+                } else if caskroom.join(&p).is_dir() {
+                    trace!("{}: found in Caskroom", p);
                     false
                 } else {
-                    debug!("{}: doesn't appear to be installed", package);
+                    debug!("{}: doesn't appear to be installed", p);
                     true
                 }
+            })
+            .map(|p| match &package.repository {
+                Some(repository) => format!("{}/{}", repository, p),
+                None => p,
             })
             .collect()
     }
 
-    fn install(&self, packages: Vec<String>) -> Result<(), ActionError> {
-        let need_installed = self.query(packages.clone());
+    fn install(&self, package: &PackageVariant) -> Result<(), ActionError> {
+        let need_installed = self.query(package);
 
         if need_installed.is_empty() {
             return Ok(());

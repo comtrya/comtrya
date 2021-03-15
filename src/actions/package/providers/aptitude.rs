@@ -1,5 +1,5 @@
 use super::PackageProvider;
-use crate::actions::ActionError;
+use crate::actions::{package::PackageVariant, ActionError};
 use serde::{Deserialize, Serialize};
 use std::process::{Command, Output, Stdio};
 use tracing::{debug, info, span, warn};
@@ -49,19 +49,19 @@ impl PackageProvider for Aptitude {
         result
     }
 
-    fn has_repository(&self, _repository: &str) -> bool {
+    fn has_repository(&self, _package: &PackageVariant) -> bool {
         false
     }
 
-    fn add_repository(&self, repository: &str) -> Result<(), ActionError> {
+    fn add_repository(&self, package: &PackageVariant) -> Result<(), ActionError> {
         match Command::new("apt-add-repository")
             .env("DEBIAN_FRONTEND", "noninteractive")
             .arg("-y")
-            .arg(repository)
+            .arg(package.repository.clone().unwrap())
             .output()
         {
             Ok(_) => {
-                debug!(message = "Apt Added Repository", repository = repository);
+                debug!(message = "Apt Added Repository", repository = ?package.repository.clone().unwrap());
             }
             Err(error) => {
                 return Err(ActionError {
@@ -83,20 +83,20 @@ impl PackageProvider for Aptitude {
         Ok(())
     }
 
-    fn query(&self, packages: Vec<String>) -> Vec<String> {
-        packages
+    fn query(&self, package: &PackageVariant) -> Vec<String> {
+        package.packages()
     }
 
-    fn install(&self, packages: Vec<String>) -> Result<(), ActionError> {
+    fn install(&self, package: &PackageVariant) -> Result<(), ActionError> {
         match Command::new("apt")
             .args(&["install", "-y"])
-            .args(&packages)
+            .args(&package.packages())
             .output()
         {
             Ok(_) => {
                 info!(
                     message = "Package Installed",
-                    packages = packages.clone().join(",").as_str()
+                    packages = package.packages().join(",").as_str()
                 );
 
                 Ok(())
