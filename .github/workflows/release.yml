@@ -124,11 +124,11 @@ jobs:
                   # Setup paths
                   BIN_DIR="${{ env.CICD_INTERMEDIATES_DIR }}/stripped-release-bin/"
                   mkdir -p "${BIN_DIR}"
-                  BIN_NAME="${{ env.PROJECT_NAME }}${EXE_suffix}"
+                  BIN_NAME="${PROJECT_NAME}-v${PROJECT_VERSION}-${{ matrix.job.target }}${EXE_suffix}"
                   BIN_PATH="${BIN_DIR}/${BIN_NAME}"
 
                   # Copy the release build binary to the result location
-                  cp "target/${{ matrix.job.target }}/release/${BIN_NAME}" "${BIN_DIR}/${PROJECT_NAME}-v${PROJECT_VERSION}-${{ matrix.job.target }}"
+                  cp "target/${{ matrix.job.target }}/release/${BIN_NAME}" "${BIN_PATH}"
 
                   # Also strip if possible
                   if [ -n "${STRIP}" ]; then
@@ -137,7 +137,7 @@ jobs:
 
                   # Let subsequent steps know where to find the (stripped) bin
                   echo ::set-output name=BIN_PATH::${BIN_PATH}
-                  echo ::set-output name=BIN_NAME::${PROJECT_NAME}-v${PROJECT_VERSION}-${{ matrix.job.target }}
+                  echo ::set-output name=BIN_NAME::${BIN_NAME}
 
             - name: Set testing options
               id: test-options
