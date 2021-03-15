@@ -17,12 +17,20 @@ cache:
         - ./target
 
 stages:
+    - dockercheck
     - check
     - lint
     - build
     - test
     - upload
     - release
+
+dockercheck:
+    stage: dockercheck
+    services:
+        - docker:dind
+    script:
+        - docker container run hello-world
 
 check:
     stage: check
