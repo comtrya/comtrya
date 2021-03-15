@@ -59,6 +59,8 @@ test:
     stage: build
     # only:
     #     - tags
+    services:
+        - docker:dind
     script:
         - rustup set profile minimal
         - rustup target add $target
