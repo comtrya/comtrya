@@ -6,6 +6,10 @@ variables:
     CARGO_HOME: "$CI_PROJECT_DIR/cargo"
     PACKAGE_REGISTRY_URL: "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/comtrya/${CI_COMMIT_TAG}"
 
+before_script:
+    - curl -fsSL https://get.docker.com -o get-docker.sh
+    - sh get-docker.sh
+
 cache:
     key: ${CI_COMMIT_REF_SLUG}
     paths:
