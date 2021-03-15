@@ -15,10 +15,6 @@ Those dotfiles can be used as a "reference" for migrating your own.
 Only for early adopters and masochists.
 
 ---
-
-[[_TOC_]]
-
----
 ## About
 
 Comtrya is a tool to help provision a fresh OS with the packages and configuration (dotfiles) you need to become productive again.
@@ -29,24 +25,13 @@ I've also tried Ansible, Chef, Puppet, mgmt, and probably anything else you're a
 
 ## Getting Started
 
-No binaries are distributed yet, please install and build with Cargo.
-
-### Prerequisites
-
-- Rust installed
-
-### Installation
-
-```shell
-cargo install comtrya
-```
+You'll find binaries over on the [releases page](https://github.com/rawkode/comtrya/releases/latest).
 
 ## Usage
 
 ```shell
-comtrya --manifest-directory <manifest-directory> # Directory where manifests are located [default: .]
-# OR
-comtrya --manifests <manifests> # Run a subset of your manifests, comma separated list
+comtrya <directory with manifests>
+comtrya --help
 ```
 
 ## Manifests
@@ -55,7 +40,11 @@ A manifest is a collection of packages and files, and this will likely be expand
 
 ### Actions
 
-Actions do stuff
+Docs coming soon!
+
+- directory.copy
+- file.copy
+- package.install
 
 #### Packages
 
