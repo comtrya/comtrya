@@ -1,0 +1,32 @@
+name: pull-request
+
+env:
+  MIN_SUPPORTED_RUST_VERSION: "1.45.0"
+
+on:
+  pull_request: {}
+
+jobs:
+  tests:
+    name: Minimum supported rust version
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Git checkout
+        uses: actions/checkout@v2
+      - name: Install rust toolchain (v${{ env.MIN_SUPPORTED_RUST_VERSION }})
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{ env.MIN_SUPPORTED_RUST_VERSION }}
+          default: true
+          profile: minimal
+          components: clippy
+      - name: Run clippy (on minimum supported rust version to prevent warnings we can't fix)
+        continue-on-error: true
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --all-targets --all-features
+      - name: Run tests
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
