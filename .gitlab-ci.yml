@@ -59,7 +59,7 @@ test:
         - rustup set profile minimal
         - rustup target add $target
         - cargo install cross
-        - cross build --release --target $target
+        - ./cargo/bin/cross build --release --target $target
     artifacts:
         paths:
             - ./target
