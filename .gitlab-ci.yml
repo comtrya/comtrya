@@ -56,12 +56,12 @@ test:
         - docker:dind
     variables:
         CROSS_DOCKER_IN_DOCKER: "true"
-        CC_aarch64-unknown-linux-gnu: aarch64-unknown-linux-gnu
-        CC_aarch64-apple-darwin: aarch64-apple-darwin
-        CC_x86_64-apple-darwin: x86_64-apple-darwin
-        CC_x86_64-linux-gnu-gcc: x86_64-linux-gnu-gcc
-        CC_x86_64-pc-windows-gnu: x86_64-pc-windows-gnu
-        CC_x86_64-unknown-linux-gnu: x86_64-unknown-linux-gnu
+        CC_aarch64_unknown_linux_gnu: aarch64-unknown-linux-gnu
+        CC_aarch64_apple_darwin: aarch64-apple-darwin
+        CC_x86_64_apple_darwin: x86_64-apple-darwin
+        CC_x86_64_linux_gnu_gcc: x86_64-linux-gnu-gcc
+        CC_x86_64_pc_windows_gnu: x86_64-pc-windows-gnu
+        CC_x86_64_unknown_linux_gnu: x86_64-unknown-linux-gnu
     script:
         - curl -fsSL https://get.docker.com -o get-docker.sh
         - sh get-docker.sh
