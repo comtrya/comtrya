@@ -6,9 +6,8 @@ use crate::actions::{Action, Actions};
 use contexts::build_contexts;
 use ignore::WalkBuilder;
 use manifest::Manifest;
-use os_info;
 use petgraph::prelude::*;
-use std::{collections::HashMap, io::Result, ops::Deref};
+use std::{collections::HashMap, ops::Deref};
 use std::{fs::canonicalize, path::PathBuf};
 use structopt::StructOpt;
 use tera::Tera;
@@ -35,7 +34,7 @@ struct Opt {
     manifests: Vec<String>,
 }
 
-fn main() -> Result<()> {
+fn main() {
     let opt = Opt::from_args();
 
     let subscriber = FmtSubscriber::builder()
@@ -98,15 +97,13 @@ fn main() -> Result<()> {
                 .to_str()
                 .unwrap()
                 .ends_with(".yaml")
-            {
-                true
-            } else if entry
-                .clone()
-                .unwrap()
-                .file_name()
-                .to_str()
-                .unwrap()
-                .ends_with(".yml")
+                || entry
+                    .clone()
+                    .unwrap()
+                    .file_name()
+                    .to_str()
+                    .unwrap()
+                    .ends_with(".yml")
             {
                 true
             } else {
@@ -189,8 +186,6 @@ fn main() -> Result<()> {
             manifests.insert(name, manifest);
 
             span.exit();
-
-            ()
         });
 
     // Build DAG
@@ -307,10 +302,6 @@ fn main() -> Result<()> {
             }
 
             span_manifest.exit();
-
-            ()
         }
     });
-
-    Ok(())
 }
