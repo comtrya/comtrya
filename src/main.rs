@@ -17,16 +17,12 @@ use tracing_subscriber::FmtSubscriber;
 #[derive(StructOpt, Debug)]
 #[structopt(name = "comtrya")]
 struct Opt {
-    /// Activate debug mode
-    #[structopt(long)]
-    debug: bool,
-
-    /// Activate tracing mode (Extra debug)
-    #[structopt(long)]
-    trace: bool,
+    /// Debug & tracing mode (-v, -vv)
+    #[structopt(short = "v", long = "verbose", parse(from_occurrences))]
+    verbose: u8,
 
     /// Directory where manifests are located
-    #[structopt(short = "d", long, parse(from_os_str), default_value = ".")]
+    #[structopt(parse(from_os_str))]
     manifest_directory: PathBuf,
 
     /// Run a subset of your manifests, comma separated list
@@ -43,14 +39,11 @@ fn main() {
         .with_target(false)
         .without_time();
 
-    let subscriber = match opt.debug {
-        true => subscriber.with_max_level(Level::DEBUG),
-        _ => subscriber,
-    };
-
-    let subscriber = match opt.trace {
-        true => subscriber.with_max_level(Level::TRACE),
-        _ => subscriber,
+    let subscriber = match opt.verbose {
+        0 => subscriber,
+        1 => subscriber.with_max_level(Level::DEBUG),
+        2 => subscriber.with_max_level(Level::TRACE),
+        _ => subscriber.with_max_level(Level::TRACE),
     }
     .finish();
 
