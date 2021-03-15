@@ -128,7 +128,7 @@ jobs:
                   BIN_PATH="${BIN_DIR}/${BIN_NAME}"
 
                   # Copy the release build binary to the result location
-                  cp "target/${{ matrix.job.target }}/release/${BIN_NAME}" "${BIN_PATH}"
+                  cp "target/${{ matrix.job.target }}/release/${PROJECT_NAME}" "${BIN_PATH}"
 
                   # Also strip if possible
                   if [ -n "${STRIP}" ]; then
