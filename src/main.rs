@@ -70,7 +70,7 @@ fn main() {
     // Run Context Providers
     let contexts = build_contexts();
 
-    let mut walker = WalkBuilder::new(opt.manifest_directory);
+    let mut walker = WalkBuilder::new(manifest_directory);
     walker
         .standard_filters(true)
         .follow_links(false)
