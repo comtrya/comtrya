@@ -29,6 +29,7 @@ jobs:
                   profile: minimal
                   components: clippy
             - name: Run clippy (on minimum supported rust version to prevent warnings we can't fix)
+              continue-on-error: true
               uses: actions-rs/cargo@v1
               with:
                   command: clippy
@@ -69,6 +70,14 @@ jobs:
                   case ${{ matrix.job.target }} in
                     aarch64-unknown-linux-gnu) sudo apt-get -y update ; sudo apt-get -y install gcc-aarch64-linux-gnu ;;
                   esac
+
+            - name: Extract crate information
+              shell: bash
+              run: |
+                  echo "PROJECT_NAME=$(sed -n 's/^name = "\(.*\)"/\1/p' Cargo.toml)" >> $GITHUB_ENV
+                  echo "PROJECT_VERSION=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -n1)" >> $GITHUB_ENV
+                  echo "PROJECT_MAINTAINER=$(sed -n 's/^authors = \["\(.*\)"\]/\1/p' Cargo.toml)" >> $GITHUB_ENV
+                  echo "PROJECT_HOMEPAGE=$(sed -n 's/^homepage = "\(.*\)"/\1/p' Cargo.toml)" >> $GITHUB_ENV
 
             - name: Install Rust toolchain
               uses: actions-rs/toolchain@v1

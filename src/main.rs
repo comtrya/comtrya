@@ -34,7 +34,7 @@ struct Opt {
     manifests: Vec<String>,
 }
 
-fn main() -> () {
+fn main() {
     let opt = Opt::from_args();
 
     let subscriber = FmtSubscriber::builder()
@@ -97,15 +97,13 @@ fn main() -> () {
                 .to_str()
                 .unwrap()
                 .ends_with(".yaml")
-            {
-                true
-            } else if entry
-                .clone()
-                .unwrap()
-                .file_name()
-                .to_str()
-                .unwrap()
-                .ends_with(".yml")
+                || entry
+                    .clone()
+                    .unwrap()
+                    .file_name()
+                    .to_str()
+                    .unwrap()
+                    .ends_with(".yml")
             {
                 true
             } else {
