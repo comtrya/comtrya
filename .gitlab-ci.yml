@@ -65,36 +65,33 @@ test:
             - ./target
         expire_in: 1 hour
 
-# Host/Target match, nothing special needed
+# Linux
 x86-linux:
     extends: .build_steps
     variables:
         target: x86_64-unknown-linux-gnu
 
-# x86-darwin:
-#     extends: .build_steps
-#     # No Container Images, ensure host has compile
-#     variables:
-#         target: x86_64-apple-darwin
-
-# x86-windows:
-#     extends: .build_steps
-#     variables:
-#         target: x86_64-pc-windows-gnu
-
 aarch64-linux:
     extends: .build_steps
-    # before_script:
-    #     - dpkg --add-architecture arm64
-    #     - apt update
-    #     - apt install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
     variables:
         target: aarch64-unknown-linux-gnu
-# aarch64-darwin:
-#     extends: .build_steps
-#     variables:
-#         target: aarch64-apple-darwin
 
+# macOS
+aarch64-darwin:
+    extends: .build_steps
+    variables:
+        target: aarch64-apple-darwin
+
+x86-darwin:
+    extends: .build_steps
+    variables:
+        target: x86_64-apple-darwin
+
+# Windows
+x86-windows:
+    extends: .build_steps
+    variables:
+        target: x86_64-pc-windows-gnu
 # upload:
 #     stage: upload
 #     image: curlimages/curl:latest
