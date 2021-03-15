@@ -7,7 +7,7 @@ use std::{
     path::Path,
     process::{Command, Output, Stdio},
 };
-use tracing::{debug, error, info, trace};
+use tracing::{debug, error, info, trace, warn};
 use which::which;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -112,8 +112,14 @@ impl PackageProvider for Homebrew {
             return Ok(());
         }
 
+        debug!(
+            "Installing with extra args: {}",
+            package.extra_args.clone().join(",")
+        );
+
         match Command::new("brew")
             .arg("install")
+            .args(package.extra_args.clone())
             .args(&need_installed)
             .output()
         {
@@ -122,8 +128,9 @@ impl PackageProvider for Homebrew {
                 Ok(())
             }
 
-            Ok(Output { stderr, .. }) => {
-                error!(message = String::from_utf8(stderr).unwrap().as_str());
+            Ok(Output { stdout, stderr, .. }) => {
+                warn!("{}", String::from_utf8(stdout).unwrap().as_str());
+                error!("{}", String::from_utf8(stderr).unwrap().as_str());
 
                 Err(ActionError {
                     message: format!("Failed to install {}", need_installed.join(" ")),

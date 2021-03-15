@@ -90,6 +90,7 @@ impl PackageProvider for Aptitude {
     fn install(&self, package: &PackageVariant) -> Result<(), ActionError> {
         match Command::new("apt")
             .args(&["install", "-y"])
+            .args(package.extra_args.clone())
             .args(&package.packages())
             .output()
         {

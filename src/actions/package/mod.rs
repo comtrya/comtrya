@@ -20,6 +20,9 @@ pub struct Package {
     repository: Option<String>,
 
     #[serde(default)]
+    extra_args: Vec<String>,
+
+    #[serde(default)]
     variants: HashMap<os_info::Type, PackageVariant>,
 }
 
@@ -35,6 +38,9 @@ pub struct PackageVariant {
 
     #[serde(default)]
     repository: Option<String>,
+
+    #[serde(default)]
+    extra_args: Vec<String>,
 }
 
 impl PackageVariant {
@@ -65,6 +71,7 @@ impl From<&Package> for PackageVariant {
                 list: package.list.clone(),
                 provider: package.provider.clone(),
                 repository: package.repository.clone(),
+                extra_args: package.extra_args.clone(),
             };
         };
 
@@ -77,6 +84,7 @@ impl From<&Package> for PackageVariant {
             list: package.list.clone(),
             provider: package.provider.clone(),
             repository: package.repository.clone(),
+            extra_args: package.extra_args.clone(),
         };
 
         if variant.name.is_some() {
