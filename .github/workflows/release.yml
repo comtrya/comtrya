@@ -124,7 +124,7 @@ jobs:
                   # Setup paths
                   BIN_DIR="${{ env.CICD_INTERMEDIATES_DIR }}/stripped-release-bin/"
                   mkdir -p "${BIN_DIR}"
-                  BIN_NAME="${PROJECT_NAME}-v${PROJECT_VERSION}-${{ matrix.job.target }}${EXE_suffix}"
+                  BIN_NAME="${PROJECT_NAME}-${{ matrix.job.target }}${EXE_suffix}"
                   BIN_PATH="${BIN_DIR}/${BIN_NAME}"
 
                   # Copy the release build binary to the result location
@@ -169,10 +169,16 @@ jobs:
                   unset IS_RELEASE ; if [[ $GITHUB_REF =~ ^refs/tags/v[0-9].* ]]; then IS_RELEASE='true' ; fi
                   echo ::set-output name=IS_RELEASE::${IS_RELEASE}
 
+            - name: Changelog
+              uses: scottbrenner/generate-changelog-action@master
+              id: changelog
+
             - name: Publish archives and packages
               uses: softprops/action-gh-release@v1
               if: steps.is-release.outputs.IS_RELEASE
               with:
+                  body: |
+                      ${{ steps.changelog.outputs.changelog }}
                   files: |
                       ${{ steps.strip.outputs.BIN_PATH }}
               env:
