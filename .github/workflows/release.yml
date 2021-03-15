@@ -159,7 +159,7 @@ jobs:
             - name: "Artifact upload: tarball"
               uses: actions/upload-artifact@master
               with:
-                  name: ${PROJECT_NAME}-v${PROJECT_VERSION}-${{ matrix.job.target }}
+                  name: ${{ steps.strip.outputs.BIN_NAME }}
                   path: ${{ steps.strip.outputs.BIN_PATH }}
 
             - name: Check for release
@@ -174,6 +174,6 @@ jobs:
               if: steps.is-release.outputs.IS_RELEASE
               with:
                   files: |
-                      ${PROJECT_NAME}-v${PROJECT_VERSION}-${{ matrix.job.target }}
+                      ${{ steps.strip.outputs.BIN_PATH }}
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
