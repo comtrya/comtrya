@@ -156,42 +156,11 @@ jobs:
                   command: test
                   args: --target=${{ matrix.job.target }} ${{ steps.test-options.outputs.CARGO_TEST_OPTIONS}}
 
-            - name: Create tarball
-              id: package
-              shell: bash
-              run: |
-                  PKG_suffix=".tar.gz" ; case ${{ matrix.job.target }} in *-pc-windows-*) PKG_suffix=".zip" ;; esac;
-                  PKG_BASENAME=${PROJECT_NAME}-v${PROJECT_VERSION}-${{ matrix.job.target }}
-                  PKG_NAME=${PKG_BASENAME}${PKG_suffix}
-                  echo ::set-output name=PKG_NAME::${PKG_NAME}
-                  PKG_STAGING="${{ env.CICD_INTERMEDIATES_DIR }}/package"
-                  ARCHIVE_DIR="${PKG_STAGING}/${PKG_BASENAME}/"
-                  mkdir -p "${ARCHIVE_DIR}"
-                  mkdir -p "${ARCHIVE_DIR}/autocomplete"
-                  # Binary
-                  cp "${{ steps.strip.outputs.BIN_PATH }}" "$ARCHIVE_DIR"
-                  # Man page
-                  cp 'target/${{ matrix.job.target }}/release/build/${{ env.PROJECT_NAME }}'-*/out/assets/manual/bat.1 "$ARCHIVE_DIR"
-                  # README, LICENSE and CHANGELOG files
-                  cp "README.md" "LICENSE-MIT" "LICENSE-APACHE" "CHANGELOG.md" "$ARCHIVE_DIR"
-                  # Autocompletion files
-                  cp 'target/${{ matrix.job.target }}/release/build/${{ env.PROJECT_NAME }}'-*/out/assets/completions/bat.fish "$ARCHIVE_DIR/autocomplete/${{ env.PROJECT_NAME }}.fish"
-                  cp 'target/${{ matrix.job.target }}/release/build/${{ env.PROJECT_NAME }}'-*/out/assets/completions/bat.zsh "$ARCHIVE_DIR/autocomplete/${{ env.PROJECT_NAME }}.zsh"
-                  # base compressed package
-                  pushd "${PKG_STAGING}/" >/dev/null
-                  case ${{ matrix.job.target }} in
-                    *-pc-windows-*) 7z -y a "${PKG_NAME}" "${PKG_BASENAME}"/* | tail -2 ;;
-                    *) tar czf "${PKG_NAME}" "${PKG_BASENAME}"/* ;;
-                  esac;
-                  popd >/dev/null
-                  # Let subsequent steps know where to find the compressed package
-                  echo ::set-output name=PKG_PATH::"${PKG_STAGING}/${PKG_NAME}"
-
             - name: "Artifact upload: tarball"
               uses: actions/upload-artifact@master
               with:
-                  name: ${{ steps.package.outputs.PKG_NAME }}
-                  path: ${{ steps.package.outputs.PKG_PATH }}
+                  name: ${PROJECT_NAME}-v${PROJECT_VERSION}-${{ matrix.job.target }}
+                  path: ${{ steps.strip.outputs.BIN_PATH }}
 
             - name: Check for release
               id: is-release
@@ -205,6 +174,6 @@ jobs:
               if: steps.is-release.outputs.IS_RELEASE
               with:
                   files: |
-                      ${{ steps.package.outputs.PKG_PATH }}
+                      ${PROJECT_NAME}-v${PROJECT_VERSION}-${{ matrix.job.target }}
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
