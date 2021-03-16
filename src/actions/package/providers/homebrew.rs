@@ -80,8 +80,19 @@ impl PackageProvider for Homebrew {
     }
 
     fn query(&self, package: &PackageVariant) -> Vec<String> {
-        let cellar = Path::new("/usr/local/Cellar");
-        let caskroom = Path::new("/usr/local/Caskroom");
+        let prefix = String::from_utf8(
+            Command::new("brew")
+                .arg("--prefix")
+                .output()
+                .unwrap()
+                .stdout,
+        )
+        .unwrap()
+        .replace("\n", "")
+        .replace("\r", "");
+
+        let cellar = Path::new(&prefix).join("Cellar");
+        let caskroom = Path::new(&prefix).join("Caskroom");
 
         package
             .packages()
