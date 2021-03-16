@@ -38,7 +38,13 @@ If this doesn't work for your OS and architecture, please open an issue and we'l
 ## Usage
 
 ```shell
+# Run all manifests within a directory
 comtrya <directory with manifests>
+
+# --manifests, or -m, will run a subset of your manifests
+comtrya . -m one,two,three
+
+# Show command usage
 comtrya --help
 ```
 
@@ -48,30 +54,19 @@ A manifest is a collection of packages and files, and this will likely be expand
 
 ### Actions
 
-Docs coming soon!
-
 - directory.copy
 - file.copy
 - package.install
 
-#### Packages
+#### Directories
 
-Single package:
-
-```yaml
-actions:
-  - action: package.install
-    name: git
-```
-
-Install several packages with the list version:
+Directories must be within a `files` directory within each manifest location.
 
 ```yaml
 actions:
-  - action: package.install
-    list:
-      - git
-      - minikube
+  - action: directory.copy
+    from: includes
+    to: /Users/rawkode/.zsh/
 ```
 
 #### Files
@@ -83,22 +78,56 @@ actions:
   - action: file.copy
     from: gitconfig
     to: /Users/rawkode/gitconfig
+    template: false # Whether to interpolate {{}} variable syntax with contexts
+```
+#### Packages
+
+Currently Comtrya supports Homebrew and Aptitude as package providers. It'll detect, based on your system, which should be used.
+
+This can be tweaked per action, using the `provider` parameter. Each provider also supports a `repository` parameter, which can add Homebrew Taps or PPAs for Ubuntu systems.
+
+Single package:
+
+```yaml
+actions:
+  - action: package.install
+    name: git
+
+  - action: package.install
+    provider: homebrew
+    repository: homebrew/cask
+    name: docker
+
+  - action: package.install
+    provider: aptitude
+    repository: ppa:longsleep/golang-backports
+    name: golang-go
 ```
 
+Install several packages with the list version:
+
+```yaml
+actions:
+  - action: package.install
+    list:
+      - git
+      - minikube
+```
 ### Dependencies
+
+Dependencies can be configured per manifest, not per action.
 
 ```yaml
 depends:
   - manifest_name
 ```
-
 ## What's Next?
 
-You should take a look at the issues page (on GitLab, not GitHub) to see what's available to contribute. Below is a short list of the major features that are upcoming.
+You should take a look at the issues page to see what's available to contribute. Below is a short list of the major features that are upcoming.
 
 ### Better Output
 
-Currently, Comtrya `println!`'s pretty much everything. We need to use a proper logging library to restrict the scope of the output and should provide a summary output.
+Providing a `--quiet` or `--summary` option that restricts the output to the run time
 
 ```shell
 Comtrya finished in 12.3s
@@ -113,23 +142,12 @@ We're using [petgraph](https://github.com/petgraph/petgraph) to build out the gr
 
 ### Config
 
-TODO: Allow manifest directory and variables to be configured in a `Comtrya.yaml` file.
+TODO: Allow manifest directory and variables to be configured in a `Comtrya.yaml` file. This will allow for `comtrya` with no arguments to function, as in the initial versions.
 
 ### Package Provider Enhancements
 
 Currently, we execute arbitrary `packager install` commands. The provider spec should be enriched to support:
 
-- Already installed lookups
 - List refresh
 - Upgrades
 - Version pinning
-- Packager installation
-  - If Homebrew doesn't exist, offer to install it
-  - If Nix doesn't exist, offer to install it
-  - etc
-
-### Files
-
-Currently, files were prototyped pretty quickly. There's the ability to render and create files on a disk; we need to provide context providers to enrich the templating.
-
-Also, symlinking only works if there's no rendering to take place; but there's no flag to encourage / enforce this.
