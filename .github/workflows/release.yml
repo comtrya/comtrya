@@ -185,6 +185,7 @@ jobs:
               uses: mikepenz/release-changelog-builder-action@v1.6.0
               with:
                   commitMode: true
+                  configuration: ".github/release-notes-configuration.json"
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
