@@ -183,6 +183,8 @@ jobs:
             - name: "Generate Changelog"
               id: changelog
               uses: mikepenz/release-changelog-builder-action@v1.6.0
+              with:
+                  commitMode: true
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
