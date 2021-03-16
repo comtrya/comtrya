@@ -27,7 +27,7 @@ I've also tried Ansible, Chef, Puppet, mgmt, and probably anything else you're a
 
 You'll find binaries over on the [releases page](https://github.com/rawkode/comtrya/releases/latest).
 
-If you're not feeling risk-adverse, you can use this one-liner:
+If you're not feeling risk-averse, you can use this one-liner:
 
 ```shell
 curl -fsSL https://get.comtrya.dev | sh
