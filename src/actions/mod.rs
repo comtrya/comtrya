@@ -6,6 +6,7 @@ mod package;
 use crate::manifest::Manifest;
 use directory::copy::DirectoryCopy;
 use file::copy::FileCopy;
+use file::link::FileLink;
 use package::install::PackageInstall;
 use serde::{Deserialize, Serialize};
 use tera::Context;
@@ -17,6 +18,8 @@ pub enum Actions {
     DirectoryCopy(DirectoryCopy),
     #[serde(alias = "file.copy")]
     FileCopy(FileCopy),
+    #[serde(alias = "file.link")]
+    FileLink(FileLink),
     #[serde(alias = "package.install", alias = "package.installed")]
     PackageInstall(PackageInstall),
 }

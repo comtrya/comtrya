@@ -273,6 +273,7 @@ fn main() {
                 let result = match action {
                     Actions::DirectoryCopy(a) => a.run(m1, &contexts),
                     Actions::FileCopy(a) => a.run(m1, &contexts),
+                    Actions::FileLink(a) => a.run(m1, &contexts),
                     Actions::PackageInstall(a) => a.run(&m1, &contexts),
                 };
 

@@ -1,4 +1,8 @@
 pub mod copy;
+pub mod link;
+
+use std::path::PathBuf;
+
 use super::ActionError;
 use crate::actions::Action;
 use crate::manifest::Manifest;
@@ -22,6 +26,19 @@ pub trait FileAction: Action {
                 e
             ),
         }
+    }
+
+    fn resolve(&self, manifest: &Manifest, path: &str) -> Result<PathBuf, ActionError> {
+        manifest
+            .root_dir
+            .clone()
+            .unwrap()
+            .join("files")
+            .join(path)
+            .canonicalize()
+            .map_err(|e| ActionError {
+                message: format!("Failed because  {}", e.to_string()),
+            })
     }
 
     fn load(&self, manifest: &Manifest, path: &str) -> Result<String, ActionError> {
