@@ -39,7 +39,20 @@ impl Action for FileLink {
         let from = self.resolve(manifest, &self.from).unwrap();
         let to = PathBuf::from(&self.to);
 
-        create_link(from, to)
+        match to.read_link() {
+            Ok(symlink) => {
+                if from.eq(&symlink) {
+                    Ok(ActionResult {
+                        message: String::from("Already present"),
+                    })
+                } else {
+                    Err(ActionError {
+                        message: String::from("Symlink exists to another file"),
+                    })
+                }
+            }
+            Err(_) => create_link(from, to),
+        }
     }
 }
 
