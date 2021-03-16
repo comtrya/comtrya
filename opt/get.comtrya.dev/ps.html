@@ -1,0 +1,18 @@
+## Kindly inspired by Porter.sh Windows install script
+param([String]$COMTRYA_PERMALINK='v0.4.5')
+
+$COMTRYA_HOME="$env:USERPROFILE\.comtrya"
+$COMTRYA_URL="https://github.com/rawkode/comtrya/releases/download/"
+
+echo "Installing porter to $COMTRYA_HOME"
+
+mkdir -f $COMTRYA_HOME
+
+(new-object System.Net.WebClient).DownloadFile("$COMTRYA_URL/$COMTRYA_PERMALINK/comtrya-x86_64-pc-windows-msvc.exe", "$COMTRYA_HOME\comtrya.exe")
+
+echo ""
+echo "Installed $(& $COMTRYA_HOME\comtrya.exe --version)"
+echo ""
+echo "Installation complete."
+echo "Add comtrya to your path by adding the following line to your Microsoft.PowerShell_profile.ps1 and open a new terminal:"
+echo '$env:PATH+=";$env:USERPROFILE\.comtrya"'
