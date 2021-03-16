@@ -278,7 +278,9 @@ fn main() {
                 };
 
                 match result {
-                    Ok(_) => (),
+                    Ok(result) => {
+                        debug!("{}", result.message)
+                    }
                     Err(e) => {
                         successful = false;
 
