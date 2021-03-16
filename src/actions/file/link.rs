@@ -44,7 +44,7 @@ impl Action for FileLink {
 }
 
 #[cfg(windows)]
-fn create_link_win(from: PathBuf, to: PathBuf) -> Result<(), ActionError> {
+fn create_link(from: PathBuf, to: PathBuf) -> Result<ActionResult, ActionError> {
     if from.is_dir() {
         match std::os::windows::fs::symlink_dir(from, to).map_err(|e| ActionError {
             message: e.to_string(),

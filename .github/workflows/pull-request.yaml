@@ -8,25 +8,66 @@ on:
 
 jobs:
   tests:
-    name: Minimum supported rust version
-    runs-on: ubuntu-20.04
+    name: ${{ matrix.job.os }} (${{ matrix.job.target }})
+    runs-on: ${{ matrix.job.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        job:
+          - {
+              os: ubuntu-20.04,
+              target: aarch64-unknown-linux-gnu,
+              use-cross: true,
+            }
+          - { os: ubuntu-20.04, target: x86_64-unknown-linux-gnu }
+          - {
+              os: ubuntu-20.04,
+              target: x86_64-unknown-linux-musl,
+              use-cross: true,
+            }
+          - { os: macos-10.15, target: x86_64-apple-darwin }
+          - { os: windows-2019, target: x86_64-pc-windows-gnu }
+          - { os: windows-2019, target: x86_64-pc-windows-msvc }
     steps:
-      - name: Git checkout
+      - name: Checkout source code
         uses: actions/checkout@v2
-      - name: Install rust toolchain (v${{ env.MIN_SUPPORTED_RUST_VERSION }})
+
+      - name: Install prerequisites
+        shell: bash
+        run: |
+          case ${{ matrix.job.target }} in
+            aarch64-unknown-linux-gnu) sudo apt-get -y update ; sudo apt-get -y install gcc-aarch64-linux-gnu ;;
+          esac
+
+      - name: Extract crate information
+        shell: bash
+        run: |
+          echo "PROJECT_NAME=$(sed -n 's/^name = "\(.*\)"/\1/p' Cargo.toml)" >> $GITHUB_ENV
+          echo "PROJECT_VERSION=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -n1)" >> $GITHUB_ENV
+          echo "PROJECT_MAINTAINER=$(sed -n 's/^authors = \["\(.*\)"\]/\1/p' Cargo.toml)" >> $GITHUB_ENV
+          echo "PROJECT_HOMEPAGE=$(sed -n 's/^homepage = "\(.*\)"/\1/p' Cargo.toml)" >> $GITHUB_ENV
+
+      - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: ${{ env.MIN_SUPPORTED_RUST_VERSION }}
-          default: true
+          toolchain: stable
+          target: ${{ matrix.job.target }}
+          override: true
           profile: minimal
-          components: clippy
-      - name: Run clippy (on minimum supported rust version to prevent warnings we can't fix)
-        continue-on-error: true
-        uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: --all-targets --all-features
+
+      - name: Set testing options
+        id: test-options
+        shell: bash
+        run: |
+          # test only library unit tests and binary for arm-type targets
+          unset CARGO_TEST_OPTIONS
+          unset CARGO_TEST_OPTIONS ; case ${{ matrix.job.target }} in arm-* | aarch64-*) CARGO_TEST_OPTIONS="--lib --bin ${PROJECT_NAME}" ;; esac;
+          echo ::set-output name=CARGO_TEST_OPTIONS::${CARGO_TEST_OPTIONS}
+
       - name: Run tests
         uses: actions-rs/cargo@v1
+        continue-on-error: true
         with:
+          use-cross: ${{ matrix.job.use-cross }}
           command: test
+          args: --target=${{ matrix.job.target }} ${{ steps.test-options.outputs.CARGO_TEST_OPTIONS}}
