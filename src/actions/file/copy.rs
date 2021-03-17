@@ -2,8 +2,8 @@ use super::FileAction;
 use crate::actions::{Action, ActionError, ActionResult};
 use crate::manifest::Manifest;
 use serde::{Deserialize, Serialize};
-use std::io::Write;
 use std::{fs::create_dir_all, ops::Deref, path::PathBuf};
+use std::{fs::Permissions, io::Write, os::unix::prelude::PermissionsExt};
 use tera::Context;
 use tracing::debug;
 
@@ -12,12 +12,19 @@ pub struct FileCopy {
     pub from: String,
     pub to: String,
 
-    #[serde(default = "get_true")]
+    #[serde(default = "default_chmod")]
+    pub chmod: u32,
+
+    #[serde(default = "default_template")]
     pub template: bool,
 }
 
-fn get_true() -> bool {
-    true
+fn default_chmod() -> u32 {
+    644
+}
+
+fn default_template() -> bool {
+    false
 }
 
 impl FileCopy {}
@@ -83,6 +90,15 @@ impl Action for FileCopy {
                 return Err(ActionError {
                     message: String::from("Failed to create file"),
                 });
+            }
+        }
+
+        match std::fs::set_permissions(self.to.clone(), Permissions::from_mode(self.chmod)) {
+            Ok(_) => {}
+            Err(e) => {
+                return Err(ActionError {
+                    message: format!("Failed to set permissions: {}", e.to_string()),
+                })
             }
         }
 
