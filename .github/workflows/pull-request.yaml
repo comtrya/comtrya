@@ -4,9 +4,41 @@ env:
   MIN_SUPPORTED_RUST_VERSION: "1.45.0"
 
 on:
-  pull_request: {}
+  pull_request:
+    branches: [main]
+    types: [opened, edited, synchronize]
 
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: check-for-cc
+        id: check-for-cc
+        uses: agenthunt/conventional-commit-checker-action@v1.0.0
+        with:
+          pr-body-regex: ".*"
+
+      - name: Install stable toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          components: clippy,rustfmt
+          override: true
+
+      - name: Run cargo fmt
+        uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: --all -- --check
+
+      - uses: actions-rs/clippy-check@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
   tests:
     name: ${{ matrix.job.os }} (${{ matrix.job.target }})
     runs-on: ${{ matrix.job.os }}
