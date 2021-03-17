@@ -1,8 +1,10 @@
 mod aptitude;
 mod homebrew;
+mod winget;
 
 use self::aptitude::Aptitude;
 use self::homebrew::Homebrew;
+use self::winget::Winget;
 use crate::actions::ActionError;
 use serde::{Deserialize, Serialize};
 
@@ -14,6 +16,9 @@ pub enum PackageProviders {
     Homebrew,
     #[serde(alias = "aptitude", alias = "apt", alias = "apt-get")]
     Aptitude,
+
+    #[serde(alias = "winget")]
+    Winget,
 }
 
 impl PackageProviders {
@@ -21,6 +26,7 @@ impl PackageProviders {
         match self {
             PackageProviders::Homebrew => Box::new(Homebrew {}),
             PackageProviders::Aptitude => Box::new(Aptitude {}),
+            PackageProviders::Winget => Box::new(Winget {}),
         }
     }
 }
@@ -38,8 +44,8 @@ impl Default for PackageProviders {
             // For some reason, the Rust image is showing as this and
             // its Debian based?
             os_info::Type::OracleLinux => PackageProviders::Aptitude,
-
             os_info::Type::Macos => PackageProviders::Homebrew,
+            os_info::Type::Windows => PackageProviders::Winget,
 
             _ => panic!("Sorry, but we don't have a default provider for {} OS. Please be explicit when requesting a package installation with `provider: XYZ`.", info.os_type()),
         }
