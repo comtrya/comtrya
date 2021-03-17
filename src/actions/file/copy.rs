@@ -3,7 +3,7 @@ use crate::actions::{Action, ActionError, ActionResult};
 use crate::manifest::Manifest;
 use serde::{Deserialize, Serialize};
 use std::{fs::create_dir_all, ops::Deref, path::PathBuf};
-use std::{fs::Permissions, io::Write, os::unix::prelude::PermissionsExt};
+use std::{fs::Permissions, io::Write};
 use tera::Context;
 use tracing::debug;
 
@@ -110,6 +110,8 @@ impl Action for FileCopy {
 
 #[cfg(unix)]
 fn set_permissions(to: PathBuf, chmod: u32) -> std::io::Result<()> {
+    use std::os::unix::prelude::PermissionsExt;
+
     std::fs::set_permissions(to, Permissions::from_mode(chmod))
 }
 
