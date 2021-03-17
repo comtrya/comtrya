@@ -12,12 +12,12 @@ pub struct FileCopy {
     pub from: String,
     pub to: String,
 
-    #[serde(default = "get_true")]
+    #[serde(default = "default_template")]
     pub template: bool,
 }
 
-fn get_true() -> bool {
-    true
+fn default_template() -> bool {
+    false
 }
 
 impl FileCopy {}
