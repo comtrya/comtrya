@@ -93,7 +93,7 @@ impl Action for FileCopy {
             }
         }
 
-        match std::fs::set_permissions(self.to.clone(), Permissions::from_mode(self.chmod)) {
+        match set_permissions(PathBuf::from(self.to.clone()), self.chmod) {
             Ok(_) => {}
             Err(e) => {
                 return Err(ActionError {
@@ -106,6 +106,16 @@ impl Action for FileCopy {
             message: String::from("Copied"),
         })
     }
+}
+
+#[cfg(unix)]
+fn set_permissions(to: PathBuf, chmod: u32) -> std::io::Result<()> {
+    std::fs::set_permissions(to, Permissions::from_mode(chmod))
+}
+
+#[cfg(windows)]
+fn set_permissions(to: PathBuf, chmod: u32) -> std::io::Result<()> {
+    Ok(())
 }
 
 #[cfg(test)]
