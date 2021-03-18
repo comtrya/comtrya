@@ -5,8 +5,12 @@ env:
 
 on:
   pull_request:
-    branches: [main]
-    types: [opened, edited, synchronize]
+    branches:
+      - main
+    types:
+      - opened
+      - edited
+      - synchronize
 
 jobs:
   lint:
@@ -19,6 +23,7 @@ jobs:
         id: check-for-cc
         uses: agenthunt/conventional-commit-checker-action@v1.0.0
         with:
+          # Don't enforce a format for the body, lets rely on the title
           pr-body-regex: ".*"
 
       - name: Install stable toolchain
@@ -50,7 +55,7 @@ jobs:
         with:
           token: ${{secrets.CODECOV_TOKEN}}
 
-  tests:
+  test:
     name: ${{ matrix.job.os }} (${{ matrix.job.target }})
     runs-on: ${{ matrix.job.os }}
     strategy:
