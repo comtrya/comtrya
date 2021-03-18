@@ -3,9 +3,9 @@ actions:
   - action: file.copy
     from: some-file
     to: some-path
+    template: true
 
   # This will not be rendered with contexts
   - action: file.copy
     from: some-file
     to: some-path
-    template: false
