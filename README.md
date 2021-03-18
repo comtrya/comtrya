@@ -6,11 +6,11 @@
 
 ---
 
-![License](https://img.shields.io/github/license/comtrya/comtrya?style=for-the-badge)
+[![License](https://img.shields.io/github/license/comtrya/comtrya?style=for-the-badge)](https://github.com/comtrya/comtrya/blob/main/LICENSE)
 
-![Latest GitHub Release](https://img.shields.io/github/v/release/comtrya/comtrya?label=Latest&style=for-the-badge)
-![GitHub Actions Status](https://img.shields.io/github/checks-status/comtrya/comtrya/main?style=for-the-badge)
-![Codecov](https://img.shields.io/codecov/c/github/comtrya/comtrya?style=for-the-badge)
+[![Latest GitHub Release](https://img.shields.io/github/v/release/comtrya/comtrya?label=Latest&style=for-the-badge)](https://github.com/comtrya/comtrya/releases/latest)
+[![GitHub Actions Status](https://img.shields.io/github/checks-status/comtrya/comtrya/main?style=for-the-badge)](https://github.com/comtrya/comtrya/actions/workflows/main.yml)
+[![Codecov](https://img.shields.io/codecov/c/github/comtrya/comtrya?style=for-the-badge)](https://codecov.io/gh/comtrya/comtrya)
 
 [
 ![Discord](https://img.shields.io/discord/730728064031653999?label=Discord&style=for-the-badge)](https://rawkode.chat)
