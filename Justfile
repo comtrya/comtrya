@@ -6,5 +6,4 @@ fmt:
 
 deny:
     cargo install --locked cargo-deny
-    cargo deny init
     cargo deny check
