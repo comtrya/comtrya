@@ -11,13 +11,6 @@ use tera::Context;
 pub struct DirectoryCopy {
     pub from: String,
     pub to: String,
-
-    #[serde(default = "get_true")]
-    pub template: bool,
-}
-
-fn get_true() -> bool {
-    true
 }
 
 impl DirectoryCopy {}
@@ -64,6 +57,8 @@ impl Action for DirectoryCopy {
 #[cfg(test)]
 mod tests {
     use crate::actions::Actions;
+    use crate::manifest;
+    use crate::Action;
 
     #[test]
     fn it_can_be_deserialized() {
@@ -84,5 +79,37 @@ mod tests {
                 panic!("DirectoryCopy didn't deserialize to the correct type");
             }
         };
+    }
+
+    #[test]
+    fn it_can_copy_a_directory() {
+        let manifest_dir = std::env::current_dir()
+            .unwrap()
+            .join("examples")
+            .join("directory")
+            .join("copy");
+
+        let manifest = manifest::Manifest {
+            name: Some(String::from("copy")),
+            actions: vec![],
+            dag_index: None,
+            depends: vec![],
+            root_dir: Some(manifest_dir.clone()),
+        };
+
+        let to = std::env::temp_dir().join("test-case");
+
+        let directory_copy = super::DirectoryCopy {
+            from: String::from("mydir"),
+            to: String::from(to.to_str().unwrap()),
+        };
+
+        directory_copy
+            .run(&manifest, &tera::Context::new())
+            .unwrap();
+
+        assert_eq!(true, to.is_dir());
+        assert_eq!(true, to.join("file-a").exists());
+        assert_eq!(true, to.join("file-b").exists());
     }
 }
