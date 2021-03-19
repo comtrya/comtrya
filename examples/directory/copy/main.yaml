@@ -1,4 +1,4 @@
 actions:
   - action: directory.copy
-    from: ~/copy_from_dir
-    to: "{{ user.homedir }}/sample"
+    from: mydir
+    to: mydircopy

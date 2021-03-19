@@ -56,24 +56,30 @@ impl Action for DirectoryCopy {
 
 #[cfg(test)]
 mod tests {
+    use std::path::PathBuf;
+
     use crate::actions::Actions;
     use crate::manifest;
     use crate::Action;
+    use crate::Manifest;
+
+    fn get_manifest_dir() -> PathBuf {
+        std::env::current_dir()
+            .unwrap()
+            .join("examples")
+            .join("directory")
+            .join("copy")
+    }
 
     #[test]
     fn it_can_be_deserialized() {
-        let yaml = r#"
-- action: directory.copy
-  from: a
-  to: b
-"#;
+        let example_yaml = std::fs::File::open(get_manifest_dir().join("main.yaml")).unwrap();
+        let mut manifest: Manifest = serde_yaml::from_reader(example_yaml).unwrap();
 
-        let mut actions: Vec<Actions> = serde_yaml::from_str(yaml).unwrap();
-
-        match actions.pop() {
+        match manifest.actions.pop() {
             Some(Actions::DirectoryCopy(dir_copy)) => {
-                assert_eq!("a", dir_copy.from);
-                assert_eq!("b", dir_copy.to);
+                assert_eq!("mydir", dir_copy.from);
+                assert_eq!("mydircopy", dir_copy.to);
             }
             _ => {
                 panic!("DirectoryCopy didn't deserialize to the correct type");
