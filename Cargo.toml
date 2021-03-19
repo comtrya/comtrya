@@ -9,6 +9,7 @@ description = "A tool to simplify reprovisioning a fresh OS. Installs packages a
 [dependencies]
 dirs-next = "2.0.0"
 fs_extra = "1.2.0"
+gitsync = "0.1.6"
 ignore = "0.4.17"
 # Pending PR: https://github.com/stanislav-tkach/os_info/pull/250/files
 os_info = { version = "3.0.1", git = "https://github.com/rawkode/os_info", branch = "fix/serde-deserialize" }
@@ -22,6 +23,7 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0.64"
 serde_yaml = "0.8"
 structopt = "0.3"
+tempdir = "0.3.7"
 tera = "1"
 tracing = "0.1.25"
 tracing-subscriber = "0.2.16"
