@@ -1,8 +1,8 @@
 use super::FileAction;
 use crate::actions::{Action, ActionError, ActionResult};
 use crate::manifest::Manifest;
-use serde::{Deserialize, Serialize};
-use std::{fs::create_dir_all, ops::Deref, path::PathBuf};
+use serde::{de::Error, Deserialize, Deserializer, Serialize};
+use std::{fs::create_dir_all, ops::Deref, path::PathBuf, u32};
 use std::{fs::Permissions, io::Write};
 use tera::Context;
 use tracing::debug;
@@ -12,15 +12,23 @@ pub struct FileCopy {
     pub from: String,
     pub to: String,
 
-    #[serde(default = "default_chmod")]
+    #[serde(default = "default_chmod", deserialize_with = "from_octal")]
     pub chmod: u32,
 
     #[serde(default = "default_template")]
     pub template: bool,
 }
 
+fn from_octal<'de, D>(deserializer: D) -> Result<u32, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let s: &str = Deserialize::deserialize(deserializer)?;
+    u32::from_str_radix(&s[2..], 8).map_err(D::Error::custom)
+}
+
 fn default_chmod() -> u32 {
-    644
+    0o644
 }
 
 fn default_template() -> bool {
