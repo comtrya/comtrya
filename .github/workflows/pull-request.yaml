@@ -76,7 +76,6 @@ jobs:
               use-cross: true,
             }
           - { os: macos-10.15, target: x86_64-apple-darwin }
-          - { os: windows-2019, target: x86_64-pc-windows-gnu }
           - { os: windows-2019, target: x86_64-pc-windows-msvc }
     steps:
       - name: Checkout source code
