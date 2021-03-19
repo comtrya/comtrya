@@ -608,9 +608,9 @@ dependencies = [
 
 [[package]]
 name = "gitsync"
-version = "0.1.5"
+version = "0.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5c39eabf9e3d344c2e1ced436e34b6246157563f467d109d83e292fe6566a71d"
+checksum = "3a3ad1745f0013a481462aa98c9391df00ec493291e0acef04fd38c90e757f5e"
 dependencies = [
  "actix",
  "chrono",

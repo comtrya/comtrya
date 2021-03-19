@@ -8,7 +8,7 @@ use gitsync::GitSync;
 use ignore::WalkBuilder;
 use manifest::Manifest;
 use petgraph::prelude::*;
-use std::{collections::HashMap, ops::Deref, time::Duration};
+use std::{collections::HashMap, ops::Deref};
 use std::{fs::canonicalize, path::PathBuf};
 use structopt::StructOpt;
 use tera::Tera;
@@ -307,6 +307,23 @@ fn main() {
     });
 }
 
+fn clean_git_uri(uri: String) -> String {
+    uri.replace("https", "")
+        .replace("http", "")
+        .replace(":", "")
+        .replace(".", "")
+        .replace("/", "")
+}
+
+#[cfg(test)]
+#[test]
+fn test_clean_git_uri() {
+    assert_eq!(
+        String::from("githubcomcomtryacomtrya"),
+        clean_git_uri(String::from("https://github.com/comtrya/comtrya"))
+    );
+}
+
 fn find_manifests(location: &String) -> Option<PathBuf> {
     if location.starts_with("/") {
         return match PathBuf::from(location).canonicalize() {
@@ -321,27 +338,24 @@ fn find_manifests(location: &String) -> Option<PathBuf> {
 
     // Assume Git
     if location.starts_with("http") {
+        trace!("Syncing remote manifests with Git");
+
         // Extract this to a function!
-        let clean_repo_url = String::from(location.as_str())
-            .replace("https", "")
-            .replace("http", "")
-            .replace(":", "")
-            .replace(".", "")
-            .replace("/", "");
+        let clean_repo_url = clean_git_uri(location.clone());
 
         let cache_path = dirs_next::cache_dir().unwrap().join(clean_repo_url);
 
         let git_sync = GitSync {
             repo: location.clone(),
             dir: cache_path.clone(),
-            branch: String::from("main"),
-            passphrase: None,
-            private_key: None,
-            sync_every: Duration::from_secs(5),
-            username: None,
+            ..Default::default()
         };
 
-        println!("Syncing repo to {}", cache_path.clone().to_str().unwrap());
+        info!(
+            "Syncing Git repository {} to {}",
+            &location,
+            cache_path.clone().to_str().unwrap()
+        );
 
         if let Err(error) = git_sync.bootstrap() {
             error!("Failed to bootstrap repository, {:?}", error);
@@ -349,7 +363,6 @@ fn find_manifests(location: &String) -> Option<PathBuf> {
         }
 
         if let Err(error) = git_sync.sync() {
-            println!("{:?}: FUCK", error);
             error!("Failed to bootstrap repository, {:?}", error);
             return None;
         }
