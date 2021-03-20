@@ -264,7 +264,7 @@ dependencies = [
 
 [[package]]
 name = "comtrya"
-version = "0.5.1"
+version = "0.5.2"
 dependencies = [
  "dirs-next",
  "fs_extra",
