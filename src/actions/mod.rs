@@ -3,7 +3,7 @@ mod directory;
 mod file;
 mod package;
 
-use crate::manifest::Manifest;
+use crate::manifests::Manifest;
 use directory::copy::DirectoryCopy;
 use file::copy::FileCopy;
 use file::link::FileLink;

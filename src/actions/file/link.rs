@@ -1,6 +1,6 @@
 use super::FileAction;
 use crate::actions::{Action, ActionError, ActionResult};
-use crate::manifest::Manifest;
+use crate::manifests::Manifest;
 use serde::{Deserialize, Serialize};
 use std::fs::create_dir_all;
 use std::path::PathBuf;

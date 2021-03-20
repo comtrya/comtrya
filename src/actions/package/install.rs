@@ -2,7 +2,7 @@ use super::Package;
 use super::PackageVariant;
 use crate::actions::command::CommandAction;
 use crate::actions::{Action, ActionError, ActionResult};
-use crate::manifest::Manifest;
+use crate::manifests::Manifest;
 use std::ops::Deref;
 use tera::Context;
 use tracing::span;

@@ -2,7 +2,7 @@ use std::fs::create_dir_all;
 
 use super::DirectoryAction;
 use crate::actions::{Action, ActionError, ActionResult};
-use crate::manifest::Manifest;
+use crate::manifests::Manifest;
 use fs_extra::dir::CopyOptions;
 use serde::{Deserialize, Serialize};
 use tera::Context;
@@ -59,9 +59,8 @@ mod tests {
     use std::path::PathBuf;
 
     use crate::actions::Actions;
-    use crate::manifest;
+    use crate::manifests::Manifest;
     use crate::Action;
-    use crate::Manifest;
 
     fn get_manifest_dir() -> PathBuf {
         std::env::current_dir()
@@ -95,7 +94,7 @@ mod tests {
             .join("directory")
             .join("copy");
 
-        let manifest = manifest::Manifest {
+        let manifest = crate::manifests::Manifest {
             name: Some(String::from("copy")),
             actions: vec![],
             dag_index: None,
