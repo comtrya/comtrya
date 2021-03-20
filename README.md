@@ -110,7 +110,7 @@ actions:
 ```
 #### Packages
 
-Currently Comtrya supports Homebrew and Aptitude as package providers. It'll detect, based on your system, which should be used.
+Currently Comtrya supports Homebrew, Yay and Aptitude as package providers. It'll detect, based on your system, which should be used.
 
 This can be tweaked per action, using the `provider` parameter. Each provider also supports a `repository` parameter, which can add Homebrew Taps or PPAs for Ubuntu systems.
 
