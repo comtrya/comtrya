@@ -1,7 +1,7 @@
 pub mod copy;
 use super::ActionError;
 use crate::actions::Action;
-use crate::manifest::Manifest;
+use crate::manifests::Manifest;
 use tera::Tera;
 use tracing::trace;
 

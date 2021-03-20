@@ -1,15 +1,14 @@
 mod actions;
+use actions::{Action, Actions};
 mod contexts;
-mod manifest;
-
-use crate::actions::{Action, Actions};
 use contexts::build_contexts;
-use gitsync::GitSync;
+mod manifests;
+use manifests::Manifest;
+
 use ignore::WalkBuilder;
-use manifest::Manifest;
 use petgraph::prelude::*;
+use std::fs::canonicalize;
 use std::{collections::HashMap, ops::Deref};
-use std::{fs::canonicalize, path::PathBuf};
 use structopt::StructOpt;
 use tera::Tera;
 use tracing::{debug, error, info, span, trace, Level};
@@ -52,7 +51,21 @@ fn main() {
 
     let mut manifests: HashMap<String, Manifest> = HashMap::new();
 
-    let manifest_directory = match find_manifests(&opt.manifest_location) {
+    let manifest_directory = manifests::register_providers()
+        .into_iter()
+        .filter(|provider| provider.deref().looks_familiar(&opt.manifest_location))
+        .fold(None, |path, provider| {
+            if path.is_some() {
+                return path;
+            }
+
+            match provider.resolve(&opt.manifest_location) {
+                Ok(path) => Some(path),
+                Err(_) => None,
+            }
+        });
+
+    let manifest_directory = match manifest_directory {
         Some(dir) => dir,
         None => {
             error!("Failed to find manifests at {}", opt.manifest_location);
@@ -305,135 +318,4 @@ fn main() {
             span_manifest.exit();
         }
     });
-}
-
-fn clean_git_uri(uri: String) -> String {
-    uri.replace("https", "")
-        .replace("http", "")
-        .replace(":", "")
-        .replace(".", "")
-        .replace("/", "")
-}
-
-#[cfg(test)]
-#[test]
-fn test_clean_git_uri() {
-    assert_eq!(
-        String::from("githubcomcomtryacomtrya"),
-        clean_git_uri(String::from("https://github.com/comtrya/comtrya"))
-    );
-}
-
-fn find_manifests(location: &String) -> Option<PathBuf> {
-    if location.starts_with("/") {
-        return match PathBuf::from(location).canonicalize() {
-            Ok(location) => Some(location),
-            Err(_) => {
-                error!("Failed to locate manifests at {}", location);
-
-                None
-            }
-        };
-    }
-
-    // Assume Git
-    if location.starts_with("http") {
-        trace!("Syncing remote manifests with Git");
-
-        // Extract this to a function!
-        let clean_repo_url = clean_git_uri(location.clone());
-
-        let cache_path = dirs_next::cache_dir().unwrap().join(clean_repo_url);
-
-        let git_sync = GitSync {
-            repo: location.clone(),
-            dir: cache_path.clone(),
-            ..Default::default()
-        };
-
-        info!(
-            "Syncing Git repository {} to {}",
-            &location,
-            cache_path.clone().to_str().unwrap()
-        );
-
-        if let Err(error) = git_sync.bootstrap() {
-            error!("Failed to bootstrap repository, {:?}", error);
-            return None;
-        }
-
-        if let Err(error) = git_sync.sync() {
-            error!("Failed to bootstrap repository, {:?}", error);
-            return None;
-        }
-
-        return Some(cache_path.clone());
-    }
-
-    // Try relative path
-    return match std::env::current_dir()
-        .unwrap()
-        .join(location)
-        .canonicalize()
-    {
-        Ok(location) => Some(location),
-        Err(_) => {
-            error!("Failed to locate manifests at {}", location);
-            None
-        }
-    };
-}
-
-#[cfg(test)]
-mod tests {
-    use tempdir::TempDir;
-
-    use super::find_manifests;
-
-    #[test]
-    fn it_can_handle_non_existant_directories() {
-        let fake = String::from("/fake");
-
-        assert_eq!(true, find_manifests(&fake).is_none());
-    }
-
-    #[test]
-    fn it_can_handle_relative_directories() {
-        // Setup a temp directory and set cwd
-        let temp_cwd = TempDir::new("relative-dirs").unwrap();
-        std::env::set_current_dir(temp_cwd.path()).unwrap();
-
-        // Create a directory within cwd, so canonicalize won't fail
-        let location = String::from("./hello");
-        std::fs::create_dir(temp_cwd.path().join(&location)).unwrap();
-
-        // Pass in a relative path, get an absolute path back
-        assert_eq!(
-            temp_cwd.path().join("hello").canonicalize().unwrap(),
-            find_manifests(&location).unwrap()
-        );
-    }
-
-    #[test]
-    fn it_can_handle_absolute_directories() {
-        let temp_cwd = TempDir::new("relative-dirs").unwrap();
-        let location = String::from(temp_cwd.path().canonicalize().unwrap().to_str().unwrap());
-
-        // Pass in an absolute path, get the same back
-        assert_eq!(
-            temp_cwd.path().canonicalize().unwrap(),
-            find_manifests(&location).unwrap()
-        );
-    }
-
-    #[test]
-    fn it_can_handle_git_uris() {
-        let location = String::from("https://github.com/comtrya/comtrya");
-
-        let git_cache_git = dirs_next::cache_dir()
-            .unwrap()
-            .join("githubcomcomtryacomtrya");
-
-        assert_eq!(git_cache_git, find_manifests(&location).unwrap());
-    }
 }

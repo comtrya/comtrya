@@ -1,3 +1,7 @@
+mod providers;
+pub use providers::register_providers;
+pub use providers::ManifestProvider;
+
 use crate::actions::Actions;
 use petgraph::prelude::*;
 use serde::{Deserialize, Serialize};
