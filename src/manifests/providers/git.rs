@@ -17,7 +17,12 @@ impl ManifestProvider for GitManifestProvider {
     fn resolve(&self, url: &String) -> Result<std::path::PathBuf, super::ManifestProviderError> {
         // Extract this to a function!
         let clean_repo_url = self.clean_git_url(&url);
-        let cache_path = dirs_next::cache_dir().unwrap().join(clean_repo_url);
+        let cache_path = dirs_next::cache_dir()
+            .unwrap()
+            .join("comtrya")
+            .join("manifests")
+            .join("git")
+            .join(clean_repo_url);
 
         let git_sync = GitSync {
             repo: url.clone(),
