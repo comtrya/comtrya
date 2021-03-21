@@ -9,7 +9,12 @@ use tracing::span;
 pub type PackageInstall = Package;
 
 impl Action for PackageInstall {
-    fn run(&self, _manifest: &Manifest, _context: &Context) -> Result<ActionResult, ActionError> {
+    fn run(
+        &self,
+        _manifest: &Manifest,
+        _context: &Context,
+        _dry_run: bool,
+    ) -> Result<ActionResult, ActionError> {
         let variant: PackageVariant = self.into();
         let box_provider = variant.provider.clone().get_provider();
         let provider = box_provider.deref();

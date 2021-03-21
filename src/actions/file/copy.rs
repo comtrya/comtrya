@@ -40,7 +40,12 @@ impl FileCopy {}
 impl FileAction for FileCopy {}
 
 impl Action for FileCopy {
-    fn run(&self, manifest: &Manifest, context: &Context) -> Result<ActionResult, ActionError> {
+    fn run(
+        &self,
+        manifest: &Manifest,
+        context: &Context,
+        _dry_run: bool,
+    ) -> Result<ActionResult, ActionError> {
         let tera = self.init(manifest);
 
         let contents = match if self.template {

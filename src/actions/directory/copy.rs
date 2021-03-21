@@ -18,7 +18,12 @@ impl DirectoryCopy {}
 impl DirectoryAction for DirectoryCopy {}
 
 impl Action for DirectoryCopy {
-    fn run(&self, manifest: &Manifest, _context: &Context) -> Result<ActionResult, ActionError> {
+    fn run(
+        &self,
+        manifest: &Manifest,
+        _context: &Context,
+        _dry_run: bool,
+    ) -> Result<ActionResult, ActionError> {
         let absolute_path = manifest
             .root_dir
             .clone()

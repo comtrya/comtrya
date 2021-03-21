@@ -21,6 +21,10 @@ use tracing_subscriber::FmtSubscriber;
 #[derive(StructOpt, Clone, Debug)]
 #[structopt(name = "comtrya")]
 pub struct Opt {
+    /// Performs a dry-run without changing the system
+    #[structopt(short = "n", long)]
+    dry_run: bool,
+
     /// Debug & tracing mode (-v, -vv)
     #[structopt(short = "v", long = "verbose", parse(from_occurrences))]
     verbose: u8,
@@ -280,6 +284,7 @@ fn main() -> anyhow::Result<()> {
 
     debug!(manifests = run_manifests.join(",").as_str());
 
+    let dry_run = opt.dry_run;
     run_manifests.iter().for_each(|m| {
         let start = if m.eq(&String::from("")) {
             root_index
@@ -308,17 +313,15 @@ fn main() -> anyhow::Result<()> {
 
             m1.actions.iter().for_each(|action| {
                 let result = match action {
-                    Actions::CommandRun(a) => a.run(m1, &contexts),
-                    Actions::DirectoryCopy(a) => a.run(m1, &contexts),
-                    Actions::FileCopy(a) => a.run(m1, &contexts),
-                    Actions::FileLink(a) => a.run(m1, &contexts),
-                    Actions::PackageInstall(a) => a.run(&m1, &contexts),
+                    Actions::CommandRun(a) => a.run(m1, &contexts, dry_run),
+                    Actions::DirectoryCopy(a) => a.run(m1, &contexts, dry_run),
+                    Actions::FileCopy(a) => a.run(m1, &contexts, dry_run),
+                    Actions::FileLink(a) => a.run(m1, &contexts, dry_run),
+                    Actions::PackageInstall(a) => a.run(&m1, &contexts, dry_run),
                 };
 
                 match result {
-                    Ok(result) => {
-                        debug!("{}", result.message)
-                    }
+                    Ok(result) => debug!("{}", result.message),
                     Err(e) => {
                         successful = false;
 
