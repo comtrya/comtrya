@@ -1,11 +1,14 @@
 mod actions;
 use actions::{Action, Actions};
+mod config;
+use crate::config::load_config;
 mod contexts;
 use contexts::build_contexts;
 mod manifests;
 use manifests::Manifest;
 mod utils;
 
+use anyhow::anyhow;
 use ignore::WalkBuilder;
 use petgraph::prelude::*;
 use std::fs::canonicalize;
@@ -15,23 +18,23 @@ use tera::Tera;
 use tracing::{debug, error, info, span, trace, Level};
 use tracing_subscriber::FmtSubscriber;
 
-#[derive(StructOpt, Debug)]
+#[derive(StructOpt, Clone, Debug)]
 #[structopt(name = "comtrya")]
-struct Opt {
+pub struct Opt {
     /// Debug & tracing mode (-v, -vv)
     #[structopt(short = "v", long = "verbose", parse(from_occurrences))]
     verbose: u8,
 
     /// Location of manifests (local directory or Git URI)
     #[structopt()]
-    manifest_location: String,
+    manifest_location: Option<String>,
 
     /// Run a subset of your manifests, comma separated list
     #[structopt(short = "m", long, use_delimiter = true)]
     manifests: Vec<String>,
 }
 
-fn main() {
+fn main() -> anyhow::Result<()> {
     let opt = Opt::from_args();
 
     let subscriber = FmtSubscriber::builder()
@@ -50,17 +53,32 @@ fn main() {
 
     tracing::subscriber::set_global_default(subscriber).expect("setting default subscriber failed");
 
+    let config = match load_config(opt.clone()) {
+        Ok(config) => config,
+        Err(error) => {
+            error!("{}", error.to_string());
+            panic!();
+        }
+    };
+
+    let manifest_location = match config.manifests.first() {
+        Some(l) => l,
+        None => {
+            return Err(anyhow!("No manifest location provided"));
+        }
+    };
+
     let mut manifests: HashMap<String, Manifest> = HashMap::new();
 
     let manifest_directory = manifests::register_providers()
         .into_iter()
-        .filter(|provider| provider.deref().looks_familiar(&opt.manifest_location))
+        .filter(|provider| provider.deref().looks_familiar(&manifest_location))
         .fold(None, |path, provider| {
             if path.is_some() {
                 return path;
             }
 
-            match provider.resolve(&opt.manifest_location) {
+            match provider.resolve(&manifest_location) {
                 Ok(path) => Some(path),
                 Err(_) => None,
             }
@@ -69,7 +87,7 @@ fn main() {
     let manifest_directory = match manifest_directory {
         Some(dir) => dir,
         None => {
-            error!("Failed to find manifests at {}", opt.manifest_location);
+            error!("Failed to find manifests at {}", &manifest_location);
             panic!();
         }
     };
@@ -319,4 +337,6 @@ fn main() {
             span_manifest.exit();
         }
     });
+
+    Ok(())
 }

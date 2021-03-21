@@ -1,0 +1,6 @@
+# Manifest Location
+# Default: [.]
+# This is a list because we'll eventually support multiple.
+# However, only the first is used atm.
+manifests:
+  - https://github.com/rawkode/rawkode
