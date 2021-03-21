@@ -16,6 +16,30 @@ pub fn run_command(command: Command) -> Result<ActionResult, ActionError> {
 
     command.elevate();
 
+    // If we require root, we need to use sudo with inheritted IO
+    // to ensure the user can respond if prompted for a password
+    if command.require_root {
+        match std::process::Command::new("sudo")
+            .stdin(std::process::Stdio::inherit())
+            .stdout(std::process::Stdio::inherit())
+            .stderr(std::process::Stdio::inherit())
+            .arg("--validate")
+            .output()
+        {
+            Ok(std::process::Output { status, .. }) if status.success() => {
+                return Ok(ActionResult {
+                    message: String::from("Success"),
+                });
+            }
+
+            _ => {
+                return Err(ActionError {
+                    message: String::from("Failed to get sudo access"),
+                })
+            }
+        };
+    }
+
     match std::process::Command::new(&command.name)
         .envs(&command.env)
         .args(&command.args)
