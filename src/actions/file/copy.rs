@@ -23,8 +23,8 @@ fn from_octal<'de, D>(deserializer: D) -> Result<u32, D::Error>
 where
     D: Deserializer<'de>,
 {
-    let s: String = Deserialize::deserialize(deserializer)?;
-    u32::from_str_radix(&s, 8).map_err(D::Error::custom)
+    let chmod: u32 = Deserialize::deserialize(deserializer)?;
+    u32::from_str_radix(&chmod.to_string(), 8).map_err(D::Error::custom)
 }
 
 fn default_chmod() -> u32 {
