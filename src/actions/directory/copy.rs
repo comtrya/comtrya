@@ -115,7 +115,7 @@ mod tests {
         };
 
         directory_copy
-            .run(&manifest, &tera::Context::new())
+            .run(&manifest, &tera::Context::new(), false)
             .unwrap();
 
         assert_eq!(true, to.is_dir());

@@ -22,7 +22,7 @@ impl Action for FileLink {
         &self,
         manifest: &Manifest,
         _context: &Context,
-        _dry_run: bool,
+        dry_run: bool,
     ) -> Result<ActionResult, ActionError> {
         let mut parent = PathBuf::from(&self.to);
         parent.pop();
@@ -32,16 +32,18 @@ impl Action for FileLink {
             directories = &parent.to_str().unwrap()
         );
 
-        match create_dir_all(parent) {
-            Ok(_) => (),
-            Err(_) => {
-                return Err(ActionError {
-                    message: String::from("Failed to create parent directory"),
-                });
+        if !dry_run {
+            match create_dir_all(parent) {
+                Ok(_) => (),
+                Err(_) => {
+                    return Err(ActionError {
+                        message: String::from("Failed to create parent directory"),
+                    });
+                }
             }
         }
 
-        let from = self.resolve(manifest, &self.from).unwrap();
+        let from = self.resolve(manifest, &self.from)?;
         let to = PathBuf::from(&self.to);
 
         match to.read_link() {
@@ -56,7 +58,19 @@ impl Action for FileLink {
                     })
                 }
             }
-            Err(_) => create_link(from, to),
+            Err(_) => {
+                if dry_run {
+                    Ok(ActionResult {
+                        message: format!(
+                            "symlink from {} to {}",
+                            from.to_string_lossy(),
+                            to.to_string_lossy()
+                        ),
+                    })
+                } else {
+                    create_link(from, to)
+                }
+            }
         }
     }
 }
