@@ -43,6 +43,7 @@ pub fn run_command(command: Command) -> Result<ActionResult, ActionError> {
     match std::process::Command::new(&command.name)
         .envs(&command.env)
         .args(&command.args)
+        .current_dir(&command.dir)
         .output()
     {
         Ok(std::process::Output { status, stdout, .. }) if status.success() => {
