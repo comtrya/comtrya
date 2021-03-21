@@ -4,9 +4,9 @@ mod winget;
 mod yay;
 
 use self::aptitude::Aptitude;
-use self::yay::Yay;
 use self::homebrew::Homebrew;
 use self::winget::Winget;
+use self::yay::Yay;
 use crate::actions::ActionError;
 use serde::{Deserialize, Serialize};
 
@@ -31,7 +31,7 @@ impl PackageProviders {
             PackageProviders::Homebrew => Box::new(Homebrew {}),
             PackageProviders::Aptitude => Box::new(Aptitude {}),
             PackageProviders::Winget => Box::new(Winget {}),
-            PackageProviders::Yay=> Box::new(Yay {}),
+            PackageProviders::Yay => Box::new(Yay {}),
         }
     }
 }
