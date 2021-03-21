@@ -9,6 +9,7 @@ pub struct Command {
     pub args: Vec<String>,
     pub env: HashMap<String, String>,
     pub require_root: bool,
+    pub dir: Option<String>,
 }
 
 pub fn run_command(command: Command) -> Result<ActionResult, ActionError> {
@@ -43,6 +44,18 @@ pub fn run_command(command: Command) -> Result<ActionResult, ActionError> {
     match std::process::Command::new(&command.name)
         .envs(&command.env)
         .args(&command.args)
+        .current_dir(
+            &command.dir.clone().unwrap_or(
+                std::env::current_dir()
+                    .unwrap()
+                    .into_os_string()
+                    .into_string()
+                    .unwrap(),
+            ),
+        )
+        .stdin(std::process::Stdio::inherit())
+        .stdout(std::process::Stdio::inherit())
+        .stderr(std::process::Stdio::inherit())
         .output()
     {
         Ok(std::process::Output { status, stdout, .. }) if status.success() => {
@@ -106,6 +119,7 @@ mod test {
             name: String::from("apt"),
             env: HashMap::new(),
             args: vec![String::from("install")],
+            dir: None,
             require_root: true,
         };
 

@@ -1,10 +1,12 @@
 mod aptitude;
 mod homebrew;
 mod winget;
+mod yay;
 
 use self::aptitude::Aptitude;
 use self::homebrew::Homebrew;
 use self::winget::Winget;
+use self::yay::Yay;
 use crate::actions::ActionError;
 use serde::{Deserialize, Serialize};
 
@@ -16,6 +18,8 @@ pub enum PackageProviders {
     Homebrew,
     #[serde(alias = "aptitude", alias = "apt", alias = "apt-get")]
     Aptitude,
+    #[serde(alias = "yay", alias = "pacman")]
+    Yay,
 
     #[serde(alias = "winget")]
     Winget,
@@ -27,6 +31,7 @@ impl PackageProviders {
             PackageProviders::Homebrew => Box::new(Homebrew {}),
             PackageProviders::Aptitude => Box::new(Aptitude {}),
             PackageProviders::Winget => Box::new(Winget {}),
+            PackageProviders::Yay => Box::new(Yay {}),
         }
     }
 }
@@ -46,6 +51,9 @@ impl Default for PackageProviders {
             os_info::Type::OracleLinux => PackageProviders::Aptitude,
             os_info::Type::Macos => PackageProviders::Homebrew,
             os_info::Type::Windows => PackageProviders::Winget,
+            // Arch Variants
+            os_info::Type::Manjaro=> PackageProviders::Yay,
+            os_info::Type::Arch=> PackageProviders::Yay,
 
             _ => panic!("Sorry, but we don't have a default provider for {} OS. Please be explicit when requesting a package installation with `provider: XYZ`.", info.os_type()),
         }

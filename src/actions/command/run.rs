@@ -12,6 +12,8 @@ pub struct CommandRun {
 
     #[serde(default = "get_false")]
     pub sudo: bool,
+
+    pub dir: String,
 }
 
 fn get_false() -> bool {
@@ -29,6 +31,7 @@ impl Action for CommandRun {
                 name: self.command.clone(),
                 env: HashMap::new(),
                 args: self.args.clone(),
+                dir: Some(self.dir.clone()),
                 require_root: self.sudo,
             },
         ))?
