@@ -87,7 +87,7 @@ impl PackageProvider for Yay {
                 .chain(package.extra_args.clone())
                 .chain(package.packages())
                 .collect(),
-            require_root: true,
+            require_root: false,
         })?;
 
         Ok(())
