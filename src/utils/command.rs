@@ -96,6 +96,7 @@ impl Command {
 #[cfg(test)]
 mod test {
     use super::*;
+    use std::collections::HashMap;
 
     // Commenting this out until I know how to mock `whoami::username` for test
     // conditions
@@ -103,6 +104,7 @@ mod test {
     fn it_can_elevate() {
         let mut command = Command {
             name: String::from("apt"),
+            env: HashMap::new(),
             args: vec![String::from("install")],
             require_root: true,
         };
