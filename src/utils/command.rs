@@ -50,6 +50,9 @@ pub fn run_command(command: Command) -> Result<ActionResult, ActionError> {
                 .clone()
                 .unwrap_or(std::env::current_dir().unwrap().into_os_string().into_string().unwrap()),
         )
+        .stdin(std::process::Stdio::inherit())
+        .stdout(std::process::Stdio::inherit())
+        .stderr(std::process::Stdio::inherit())
         .output()
     {
         Ok(std::process::Output { status, stdout, .. }) if status.success() => {

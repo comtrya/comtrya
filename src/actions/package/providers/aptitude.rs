@@ -47,7 +47,7 @@ impl PackageProvider for Aptitude {
         run_command(Command {
             name: String::from("apt"),
             env: self.env(),
-            dir: Some(String::new()),
+            dir: None,
             args: vec![
                 String::from("install"),
                 String::from("-y"),
@@ -71,6 +71,7 @@ impl PackageProvider for Aptitude {
             name: String::from("apt-add-repository"),
             env: self.env(),
             dir: Some(String::new()),
+            dir: None,
             args: vec![String::from("-y"), package.repository.clone().unwrap()],
             require_root: true,
         })?;
@@ -80,7 +81,7 @@ impl PackageProvider for Aptitude {
         run_command(Command {
             name: String::from("apt"),
             env: self.env(),
-            dir: Some(String::new()),
+            dir: None,
             args: vec![String::from("update")],
             require_root: true,
         })?;
@@ -96,7 +97,7 @@ impl PackageProvider for Aptitude {
         run_command(Command {
             name: String::from("apt"),
             env: self.env(),
-            dir: Some(String::new()),
+            dir: None,
             args: vec![String::from("install"), String::from("-y")]
                 .into_iter()
                 .chain(package.extra_args.clone())

@@ -29,10 +29,11 @@ impl PackageProvider for Yay {
         let span = span!(tracing::Level::INFO, "bootstrap").entered();
 
         // Install base-devel and git to be able to pull and build/compile stuff
+        info!(message = "Installing base-devel and git");
         run_command(Command {
             name: String::from("pacman"),
             env: HashMap::new(),
-            dir: Some(String::new()),
+            dir: None,
             args: vec![
                 String::from("-S"),
                 String::from("--noconfirm"),
@@ -43,10 +44,11 @@ impl PackageProvider for Yay {
         })?;
 
         // Clone Yay from AUR
+        info!(message = "Cloning yay's PKGBUILD");
         run_command(Command {
             name: String::from("git"),
             env: HashMap::new(),
-            dir: Some(String::new()),
+            dir: None,
             args: vec![
                 String::from("clone"),
                 String::from("https://aur.archlinux.org/yay.git"),
@@ -56,13 +58,26 @@ impl PackageProvider for Yay {
         })?;
 
         // Install Yay from PKGBUILD
+        info!(message = "Building and Installing yay using PKGBUILD script");
         run_command(Command {
             name: String::from("makepkg"),
             env: HashMap::new(),
             dir: Some(String::from("/tmp/yay")),
             args: vec![String::from("-si"), String::from("--noconfirm")],
-            require_root: true,
+            require_root: false,
         })?;
+
+        // 
+        info!(message = "Building and Installing yay using PKGBUILD script");
+        run_command(Command {
+            name: String::from("makepkg"),
+            env: HashMap::new(),
+            dir: Some(String::from("/tmp/yay")),
+            args: vec![String::from("-si"), String::from("--noconfirm")],
+            require_root: false,
+        })?;
+
+        info!(message = "Yay installed");
 
         span.exit();
 
@@ -85,8 +100,13 @@ impl PackageProvider for Yay {
         run_command(Command {
             name: String::from("yay"),
             env: HashMap::new(),
-            dir: Some(String::new()),
-            args: vec![String::from("-S"), String::from("--noconfirm")]
+            dir: None,
+            args: vec![
+                    String::from("-S"),
+                    String::from("--noconfirm"),
+                    String::from("--nocleanmenu"),
+                    String::from("--nodiffmenu"),
+                ]
                 .into_iter()
                 .chain(package.extra_args.clone())
                 .chain(package.packages())
