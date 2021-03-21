@@ -1,8 +1,9 @@
+use std::collections::HashMap;
+
 use super::PackageProvider;
 use crate::actions::{package::PackageVariant, ActionError};
 use crate::utils::command::{run_command, Command};
 use serde::{Deserialize, Serialize};
-use std::process::{Command, Output, Stdio};
 use tracing::{debug, info, span, warn};
 use which::which;
 
@@ -30,7 +31,8 @@ impl PackageProvider for Yay {
         // Install base-devel and git to be able to pull and build/compile stuff
         run_command(Command {
             name: String::from("pacman"),
-            env: self.env(),
+            env: HashMap::new(),
+            dir: Some(String::new()),
             args: vec![
                 String::from("-S"),
                 String::from("--noconfirm"),
@@ -43,7 +45,8 @@ impl PackageProvider for Yay {
         // Clone Yay from AUR
         run_command(Command {
             name: String::from("git"),
-            env: self.env(),
+            env: HashMap::new(),
+            dir: Some(String::new()),
             args: vec![
                 String::from("clone"),
                 String::from("https://aur.archlinux.org/yay.git"),
@@ -55,9 +58,9 @@ impl PackageProvider for Yay {
         // Install Yay from PKGBUILD
         run_command(Command {
             name: String::from("makepkg"),
-            env: self.env(),
+            env: HashMap::new(),
+            dir: Some(String::from("/tmp/yay")),
             args: vec![String::from("-si"), String::from("--noconfirm")],
-            dir: String::from("/tmp/yay"),
             require_root: true,
         })?;
 
@@ -81,7 +84,8 @@ impl PackageProvider for Yay {
     fn install(&self, package: &PackageVariant) -> Result<(), ActionError> {
         run_command(Command {
             name: String::from("yay"),
-            env: self.env(),
+            env: HashMap::new(),
+            dir: Some(String::new()),
             args: vec![String::from("-S"), String::from("--noconfirm")]
                 .into_iter()
                 .chain(package.extra_args.clone())

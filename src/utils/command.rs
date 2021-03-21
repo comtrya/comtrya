@@ -9,6 +9,7 @@ pub struct Command {
     pub args: Vec<String>,
     pub env: HashMap<String, String>,
     pub require_root: bool,
+    pub dir: Option<String>,
 }
 
 pub fn run_command(command: Command) -> Result<ActionResult, ActionError> {
@@ -47,7 +48,7 @@ pub fn run_command(command: Command) -> Result<ActionResult, ActionError> {
             &command
                 .dir
                 .clone()
-                .unwrap_or(std::env::current_dir().unwrap()),
+                .unwrap_or(std::env::current_dir().unwrap().into_os_string().into_string().unwrap()),
         )
         .output()
     {
