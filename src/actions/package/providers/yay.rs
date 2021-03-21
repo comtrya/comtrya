@@ -26,9 +26,28 @@ impl PackageProvider for Yay {
     fn bootstrap(&self) -> Result<(), crate::actions::ActionError> {
         let span = span!(tracing::Level::INFO, "bootstrap").entered();
 
-        // Make sure Yay is available
-        let result = match Command::new("pacman")
-            .args(&["-S", "--noconfirm", "yay"])
+        // Install base-devel and git to be able to pull and build/compile stuff
+        Command::new("pacman")
+            .args(&["-S", "--noconfirm", "base-devel", "git"])
+            .stdin(Stdio::inherit())
+            .stdout(Stdio::inherit())
+            .stderr(Stdio::inherit())
+            .output()
+            .unwrap();
+
+        // Clone Yay from AUR
+        Command::new("git")
+            .args(&["clone", "https://aur.archlinux.org/yay.git", "/tmp/yay"])
+            .stdin(Stdio::inherit())
+            .stdout(Stdio::inherit())
+            .stderr(Stdio::inherit())
+            .output()
+            .unwrap();
+
+        // Install Yay from PKGBUILD
+        let result = match Command::new("makepkg")
+            .args(&["-si", "--noconfirm"])
+            .current_dir("/tmp/yay")
             .output()
         {
             Ok(Output { status, .. }) if status.success() => Ok(()),
