@@ -70,7 +70,6 @@ impl PackageProvider for Aptitude {
         run_command(Command {
             name: String::from("apt-add-repository"),
             env: self.env(),
-            dir: Some(String::new()),
             dir: None,
             args: vec![String::from("-y"), package.repository.clone().unwrap()],
             require_root: true,

@@ -67,7 +67,7 @@ impl PackageProvider for Yay {
             require_root: false,
         })?;
 
-        // 
+        //
         info!(message = "Building and Installing yay using PKGBUILD script");
         run_command(Command {
             name: String::from("makepkg"),
@@ -102,15 +102,15 @@ impl PackageProvider for Yay {
             env: HashMap::new(),
             dir: None,
             args: vec![
-                    String::from("-S"),
-                    String::from("--noconfirm"),
-                    String::from("--nocleanmenu"),
-                    String::from("--nodiffmenu"),
-                ]
-                .into_iter()
-                .chain(package.extra_args.clone())
-                .chain(package.packages())
-                .collect(),
+                String::from("-S"),
+                String::from("--noconfirm"),
+                String::from("--nocleanmenu"),
+                String::from("--nodiffmenu"),
+            ]
+            .into_iter()
+            .chain(package.extra_args.clone())
+            .chain(package.packages())
+            .collect(),
             require_root: false,
         })?;
 

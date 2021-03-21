@@ -18,7 +18,7 @@ pub enum PackageProviders {
     Homebrew,
     #[serde(alias = "aptitude", alias = "apt", alias = "apt-get")]
     Aptitude,
-    #[serde(alias = "yay")]
+    #[serde(alias = "yay", alias = "pacman")]
     Yay,
 
     #[serde(alias = "winget")]

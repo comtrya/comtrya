@@ -45,10 +45,13 @@ pub fn run_command(command: Command) -> Result<ActionResult, ActionError> {
         .envs(&command.env)
         .args(&command.args)
         .current_dir(
-            &command
-                .dir
-                .clone()
-                .unwrap_or(std::env::current_dir().unwrap().into_os_string().into_string().unwrap()),
+            &command.dir.clone().unwrap_or(
+                std::env::current_dir()
+                    .unwrap()
+                    .into_os_string()
+                    .into_string()
+                    .unwrap(),
+            ),
         )
         .stdin(std::process::Stdio::inherit())
         .stdout(std::process::Stdio::inherit())
@@ -116,6 +119,7 @@ mod test {
             name: String::from("apt"),
             env: HashMap::new(),
             args: vec![String::from("install")],
+            dir: None,
             require_root: true,
         };
 
