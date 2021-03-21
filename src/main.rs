@@ -309,14 +309,13 @@ fn main() {
                 }
             });
 
-            if successful {
-                info!("Completed");
-            } else {
+            if !successful {
                 error!("Failed");
                 span_manifest.exit();
                 break;
             }
 
+            info!("Completed");
             span_manifest.exit();
         }
     });
