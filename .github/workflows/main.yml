@@ -182,10 +182,3 @@ jobs:
                       ${{ steps.strip.outputs.BIN_PATH }}
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-    release:
-        if: startsWith(github.ref, 'refs/tags/')
-        runs-on: ubuntu-20.04
-        steps:
-            - name: Checkout
-              uses: actions/checkout@v2
