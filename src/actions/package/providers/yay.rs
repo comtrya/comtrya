@@ -57,7 +57,7 @@ impl PackageProvider for Yay {
             name: String::from("makepkg"),
             env: self.env(),
             args: vec![String::from("-si"), String::from("--noconfirm")],
-            dir: String::from("/tmp/yay")
+            dir: String::from("/tmp/yay"),
             require_root: true,
         })?;
 

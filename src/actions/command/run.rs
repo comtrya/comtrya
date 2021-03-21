@@ -13,7 +13,7 @@ pub struct CommandRun {
     #[serde(default = "get_false")]
     pub sudo: bool,
 
-    pub dir: String,
+    pub dir: Option<String>,
 }
 
 fn get_false() -> bool {
