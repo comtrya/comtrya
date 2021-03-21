@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::actions::{Action, ActionError, ActionResult};
 use serde::{Deserialize, Serialize};
 
@@ -25,6 +27,7 @@ impl Action for CommandRun {
         Ok(crate::utils::command::run_command(
             crate::utils::command::Command {
                 name: self.command.clone(),
+                env: HashMap::new(),
                 args: self.args.clone(),
                 require_root: self.sudo,
             },

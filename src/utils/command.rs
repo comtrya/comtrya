@@ -1,11 +1,13 @@
-use tracing::{error, trace, warn};
+use std::collections::HashMap;
 
 use crate::actions::{ActionError, ActionResult};
+use tracing::{error, trace, warn};
 
 #[derive(Clone)]
 pub struct Command {
     pub name: String,
     pub args: Vec<String>,
+    pub env: HashMap<String, String>,
     pub require_root: bool,
 }
 
@@ -15,10 +17,8 @@ pub fn run_command(command: Command) -> Result<ActionResult, ActionError> {
     command.elevate();
 
     match std::process::Command::new(&command.name)
+        .envs(&command.env)
         .args(&command.args)
-        .stdin(std::process::Stdio::inherit())
-        .stdout(std::process::Stdio::inherit())
-        .stderr(std::process::Stdio::inherit())
         .output()
     {
         Ok(std::process::Output { status, stdout, .. }) if status.success() => {

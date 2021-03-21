@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use super::PackageProvider;
 use crate::actions::{package::PackageVariant, ActionError};
 use crate::utils::command::{run_command, Command};
@@ -7,6 +9,19 @@ use which::which;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Aptitude {}
+
+impl Aptitude {
+    fn env(&self) -> HashMap<String, String> {
+        let mut env = HashMap::new();
+
+        env.insert(
+            String::from("DEBIAN_FRONTEND"),
+            String::from("noninteractive"),
+        );
+
+        env
+    }
+}
 
 impl PackageProvider for Aptitude {
     fn name(&self) -> &str {
@@ -31,6 +46,7 @@ impl PackageProvider for Aptitude {
 
         run_command(Command {
             name: String::from("apt"),
+            env: self.env(),
             args: vec![
                 String::from("install"),
                 String::from("-y"),
@@ -52,6 +68,7 @@ impl PackageProvider for Aptitude {
     fn add_repository(&self, package: &PackageVariant) -> Result<(), ActionError> {
         run_command(Command {
             name: String::from("apt-add-repository"),
+            env: self.env(),
             args: vec![String::from("-y"), package.repository.clone().unwrap()],
             require_root: true,
         })?;
@@ -60,6 +77,7 @@ impl PackageProvider for Aptitude {
 
         run_command(Command {
             name: String::from("apt"),
+            env: self.env(),
             args: vec![String::from("update")],
             require_root: true,
         })?;
@@ -74,6 +92,7 @@ impl PackageProvider for Aptitude {
     fn install(&self, package: &PackageVariant) -> Result<(), ActionError> {
         run_command(Command {
             name: String::from("apt"),
+            env: self.env(),
             args: vec![String::from("install"), String::from("-y")]
                 .into_iter()
                 .chain(package.extra_args.clone())
