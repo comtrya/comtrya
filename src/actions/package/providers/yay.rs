@@ -67,13 +67,13 @@ impl PackageProvider for Yay {
             require_root: false,
         })?;
 
-        //
-        info!(message = "Building and Installing yay using PKGBUILD script");
+        // Clean up
+        info!(message = "Cleaning up temporary PKGBUILD folder");
         run_command(Command {
-            name: String::from("makepkg"),
+            name: String::from("rm"),
             env: HashMap::new(),
-            dir: Some(String::from("/tmp/yay")),
-            args: vec![String::from("-si"), String::from("--noconfirm")],
+            dir: None,
+            args: vec![String::from("-rf"), String::from("/tmp/yay")],
             require_root: false,
         })?;
 
