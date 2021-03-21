@@ -1,6 +1,5 @@
 use crate::actions::{Action, ActionError, ActionResult};
 use serde::{Deserialize, Serialize};
-use tracing::error;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct CommandRun {
