@@ -4,6 +4,7 @@ mod contexts;
 use contexts::build_contexts;
 mod manifests;
 use manifests::Manifest;
+mod utils;
 
 use ignore::WalkBuilder;
 use petgraph::prelude::*;
@@ -289,6 +290,7 @@ fn main() {
 
             m1.actions.iter().for_each(|action| {
                 let result = match action {
+                    Actions::CommandRun(a) => a.run(m1, &contexts),
                     Actions::DirectoryCopy(a) => a.run(m1, &contexts),
                     Actions::FileCopy(a) => a.run(m1, &contexts),
                     Actions::FileLink(a) => a.run(m1, &contexts),

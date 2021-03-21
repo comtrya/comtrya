@@ -4,6 +4,7 @@ mod file;
 mod package;
 
 use crate::manifests::Manifest;
+use command::run::CommandRun;
 use directory::copy::DirectoryCopy;
 use file::copy::FileCopy;
 use file::link::FileLink;
@@ -14,6 +15,8 @@ use tera::Context;
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(tag = "action")]
 pub enum Actions {
+    #[serde(alias = "command.run", alias = "cmd.run")]
+    CommandRun(CommandRun),
     #[serde(alias = "directory.copy", alias = "dir.copy")]
     DirectoryCopy(DirectoryCopy),
     #[serde(alias = "file.copy")]

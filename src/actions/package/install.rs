@@ -1,6 +1,5 @@
 use super::Package;
 use super::PackageVariant;
-use crate::actions::command::CommandAction;
 use crate::actions::{Action, ActionError, ActionResult};
 use crate::manifests::Manifest;
 use std::ops::Deref;
@@ -8,8 +7,6 @@ use tera::Context;
 use tracing::span;
 
 pub type PackageInstall = Package;
-
-impl CommandAction for PackageInstall {}
 
 impl Action for PackageInstall {
     fn run(&self, _manifest: &Manifest, _context: &Context) -> Result<ActionResult, ActionError> {

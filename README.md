@@ -66,9 +66,25 @@ A manifest is a collection of packages and files, and this will likely be expand
 
 ### Actions
 
+- command.run
 - directory.copy
 - file.copy
 - package.install
+
+#### Commands
+
+```yaml
+actions:
+  - action: command.run
+    name: whoami
+    sudo: true
+
+  - action: command.run
+    name: echo
+    args:
+      - Hello
+      - World
+```
 
 #### Directories
 

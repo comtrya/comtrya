@@ -1,0 +1,9 @@
+actions:
+  - action: command.run
+    command: echo
+    args:
+      - hi
+
+  - action: cmd.run
+    command: whoami
+    sudo: true

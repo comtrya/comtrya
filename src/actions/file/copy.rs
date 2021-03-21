@@ -23,7 +23,7 @@ fn from_octal<'de, D>(deserializer: D) -> Result<u32, D::Error>
 where
     D: Deserializer<'de>,
 {
-    let s: String  = Deserialize::deserialize(deserializer)?;
+    let s: String = Deserialize::deserialize(deserializer)?;
     u32::from_str_radix(&s, 8).map_err(D::Error::custom)
 }
 
