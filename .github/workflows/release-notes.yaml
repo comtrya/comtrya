@@ -8,11 +8,14 @@ on:
     types: [opened, reopened, synchronize]
 
 jobs:
-  update_release_draft:
+  update-release:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v2
+
       - uses: release-drafter/release-drafter@v5
         with:
-          config-name: .github/release-drafter/config.yaml
+          config-name: release-drafter.yml
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
