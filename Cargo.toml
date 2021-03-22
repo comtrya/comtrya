@@ -7,6 +7,7 @@ license = "MIT"
 description = "A tool to simplify reprovisioning a fresh OS. Installs packages and manages dotfiles."
 
 [dependencies]
+anyhow = "1.0.39"
 dirs-next = "2.0.0"
 fs_extra = "1.2.0"
 gitsync = "0.1.6"

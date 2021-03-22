@@ -4,7 +4,7 @@ use super::PackageProvider;
 use crate::actions::{package::PackageVariant, ActionError};
 use crate::utils::command::{run_command, Command};
 use serde::{Deserialize, Serialize};
-use tracing::{debug, info, span, warn};
+use tracing::{info, span, warn};
 use which::which;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -88,7 +88,7 @@ impl PackageProvider for Yay {
         false
     }
 
-    fn add_repository(&self, package: &PackageVariant) -> Result<(), ActionError> {
+    fn add_repository(&self, _package: &PackageVariant) -> Result<(), ActionError> {
         Ok(())
     }
 

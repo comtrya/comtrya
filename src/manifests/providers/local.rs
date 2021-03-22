@@ -14,52 +14,29 @@ impl ManifestProvider for LocalManifestProvider {
     }
 
     fn resolve(&self, url: &String) -> Result<PathBuf, ManifestProviderError> {
-        if url.starts_with("/") {
-            return self.resolve_absolute_url(url);
-        }
-
-        self.resolve_relative_url(url)
-    }
-}
-
-impl LocalManifestProvider {
-    fn resolve_absolute_url(&self, url: &String) -> Result<PathBuf, ManifestProviderError> {
-        PathBuf::from(url)
-            .canonicalize()
-            .map_err(|_| ManifestProviderError::NoResolution)
-    }
-
-    fn resolve_relative_url(&self, url: &String) -> Result<PathBuf, ManifestProviderError> {
-        std::env::current_dir()
-            .unwrap()
-            .join(url)
-            .canonicalize()
-            .map_err(|_| ManifestProviderError::NoResolution)
+        PathBuf::from(url).canonicalize().map_err(|_| {
+            return ManifestProviderError::NoResolution;
+        })
     }
 }
 
 #[cfg(test)]
 mod test {
-    use super::super::ManifestProviderError;
+    use super::super::{ManifestProvider, ManifestProviderError};
     use super::LocalManifestProvider;
 
     #[test]
     fn test_resolve_absolute_url() {
-        let local_manifest_provider = LocalManifestProvider {};
+        let local_manifest_provider = LocalManifestProvider;
 
         let cwd = std::env::current_dir().unwrap();
         let cwd_string = String::from(cwd.to_str().unwrap());
 
-        assert_eq!(
-            cwd,
-            local_manifest_provider
-                .resolve_absolute_url(&cwd_string)
-                .unwrap()
-        );
+        assert_eq!(cwd, local_manifest_provider.resolve(&cwd_string).unwrap());
 
         assert_eq!(
             Err(ManifestProviderError::NoResolution),
-            local_manifest_provider.resolve_absolute_url(&String::from("/never-resolve"))
+            local_manifest_provider.resolve(&String::from("/never-resolve"))
         );
     }
 
@@ -72,13 +49,13 @@ mod test {
         assert_eq!(
             cwd,
             local_manifest_provider
-                .resolve_relative_url(&String::from("./examples"))
+                .resolve(&String::from("./examples"))
                 .unwrap()
         );
 
         assert_eq!(
             Err(ManifestProviderError::NoResolution),
-            local_manifest_provider.resolve_relative_url(&String::from("never-resolve"))
+            local_manifest_provider.resolve(&String::from("never-resolve"))
         );
     }
 }
