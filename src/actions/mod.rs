@@ -39,6 +39,14 @@ pub struct ActionError {
     pub message: String,
 }
 
+impl <E: std::error::Error> From<E> for ActionError {
+    fn from(e: E) -> Self {
+        ActionError {
+            message: format!("{}", e)
+        }
+    }
+}
+
 pub trait Action {
     fn run(
         &self,

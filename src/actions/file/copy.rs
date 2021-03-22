@@ -48,19 +48,11 @@ impl Action for FileCopy {
     ) -> Result<ActionResult, ActionError> {
         let tera = self.init(manifest);
 
-        let contents = match if self.template {
-            tera.render(self.from.clone().deref(), context)
-                .map_err(|e| ActionError {
-                    message: e.to_string(),
-                })
+        let contents = if self.template {
+            tera.render(self.from.clone().deref(), context).map_err(ActionError::from)
         } else {
             self.load(manifest, &self.from)
-        } {
-            Ok(contents) => contents,
-            Err(error) => {
-                return Err(error);
-            }
-        };
+        }?;
 
         let mut parent = PathBuf::from(&self.to);
         parent.pop();
