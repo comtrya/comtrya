@@ -39,11 +39,23 @@ pub struct ActionError {
     pub message: String,
 }
 
-impl <E: std::error::Error> From<E> for ActionError {
+impl<E: std::error::Error> From<E> for ActionError {
     fn from(e: E) -> Self {
         ActionError {
-            message: format!("{}", e)
+            message: format!("{}", e),
         }
+    }
+}
+
+pub trait ActionResultExt<M, T> {
+    fn context(self, message: M) -> Result<T, ActionError>;
+}
+
+impl<M: std::fmt::Display, T, E: std::error::Error> ActionResultExt<M, T> for Result<T, E> {
+    fn context(self, message: M) -> Result<T, ActionError> {
+        self.map_err(|e| ActionError {
+            message: format!("{} because of {}", message, e.to_string()),
+        })
     }
 }
 

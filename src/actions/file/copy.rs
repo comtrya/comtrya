@@ -1,5 +1,5 @@
 use super::FileAction;
-use crate::actions::{Action, ActionError, ActionResult};
+use crate::actions::{Action, ActionError, ActionResult, ActionResultExt};
 use crate::manifests::Manifest;
 use serde::{de::Error, Deserialize, Deserializer, Serialize};
 use std::{fs::create_dir_all, ops::Deref, path::PathBuf, u32};
@@ -49,7 +49,8 @@ impl Action for FileCopy {
         let tera = self.init(manifest);
 
         let contents = if self.template {
-            tera.render(self.from.clone().deref(), context).map_err(ActionError::from)
+            tera.render(self.from.clone().deref(), context)
+                .map_err(ActionError::from)
         } else {
             self.load(manifest, &self.from)
         }?;
@@ -62,50 +63,17 @@ impl Action for FileCopy {
             directories = &parent.to_str().unwrap()
         );
 
-        match create_dir_all(parent) {
-            Ok(_) => (),
-            Err(_) => {
-                return Err(ActionError {
-                    message: String::from("Failed to create parent directory"),
-                });
-            }
-        }
+        create_dir_all(parent).context("Failed to create parent directory")?;
 
-        let mut file = match std::fs::File::create(self.to.clone()) {
-            Ok(f) => f,
-            Err(_) => {
-                return Err(ActionError {
-                    message: String::from("Failed to create file"),
-                });
-            }
-        };
+        let mut file = std::fs::File::create(self.to.clone()).context("Failed to create file")?;
 
-        match file.write_all(contents.as_bytes()) {
-            Ok(_) => {}
-            Err(_) => {
-                return Err(ActionError {
-                    message: String::from("Failed to create file"),
-                });
-            }
-        };
+        file.write_all(contents.as_bytes())
+            .context("Failed to create file")?;
 
-        match file.sync_all() {
-            Ok(_) => {}
-            Err(_) => {
-                return Err(ActionError {
-                    message: String::from("Failed to create file"),
-                });
-            }
-        }
+        file.sync_all().context("Failed to create file")?;
 
-        match set_permissions(PathBuf::from(self.to.clone()), self.chmod) {
-            Ok(_) => {}
-            Err(e) => {
-                return Err(ActionError {
-                    message: format!("Failed to set permissions: {}", e.to_string()),
-                })
-            }
-        }
+        set_permissions(PathBuf::from(self.to.clone()), self.chmod)
+            .context("Failed to set permissions")?;
 
         Ok(ActionResult {
             message: String::from("Copied"),
