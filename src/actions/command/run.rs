@@ -27,7 +27,7 @@ impl Action for CommandRun {
         _context: &tera::Context,
         _dry_run: bool,
     ) -> Result<ActionResult, ActionError> {
-        Ok(crate::utils::command::run_command(
+        crate::utils::command::run_command(
             crate::utils::command::Command {
                 name: self.command.clone(),
                 env: HashMap::new(),
@@ -35,6 +35,6 @@ impl Action for CommandRun {
                 dir: Some(self.dir.clone()),
                 require_root: self.sudo,
             },
-        ))?
+        )
     }
 }
