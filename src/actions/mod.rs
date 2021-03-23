@@ -27,6 +27,18 @@ pub enum Actions {
     PackageInstall(PackageInstall),
 }
 
+impl Actions {
+    pub fn inner_ref(&self) -> &dyn Action {
+        match self {
+            Actions::CommandRun(a) => a,
+            Actions::DirectoryCopy(a) => a,
+            Actions::FileCopy(a) => a,
+            Actions::FileLink(a) => a,
+            Actions::PackageInstall(a) => a,
+        }
+    }
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ActionResult {
     /// Output / response

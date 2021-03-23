@@ -1,5 +1,4 @@
 mod actions;
-use actions::{Action, Actions};
 mod config;
 use crate::config::load_config;
 mod contexts;
@@ -312,12 +311,10 @@ fn main() -> anyhow::Result<()> {
             let mut successful = true;
 
             m1.actions.iter().for_each(|action| {
-                let result = match action {
-                    Actions::CommandRun(a) => a.run(m1, &contexts, dry_run),
-                    Actions::DirectoryCopy(a) => a.run(m1, &contexts, dry_run),
-                    Actions::FileCopy(a) => a.run(m1, &contexts, dry_run),
-                    Actions::FileLink(a) => a.run(m1, &contexts, dry_run),
-                    Actions::PackageInstall(a) => a.run(&m1, &contexts, dry_run),
+                let result = if dry_run {
+                    action.inner_ref().dry_run(&m1, &contexts)
+                } else {
+                    action.inner_ref().run(&m1, &contexts, false)
                 };
 
                 match result {
