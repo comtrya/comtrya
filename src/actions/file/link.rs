@@ -1,5 +1,5 @@
 use super::FileAction;
-use crate::actions::{Action, ActionError, ActionResult};
+use crate::actions::{Action, ActionError, ActionResult, ActionResultExt};
 use crate::manifests::Manifest;
 use serde::{Deserialize, Serialize};
 use std::fs::create_dir_all;
@@ -33,14 +33,7 @@ impl Action for FileLink {
         );
 
         if !dry_run {
-            match create_dir_all(parent) {
-                Ok(_) => (),
-                Err(_) => {
-                    return Err(ActionError {
-                        message: String::from("Failed to create parent directory"),
-                    });
-                }
-            }
+            create_dir_all(parent).context("Failed to create parent directory")?;
         }
 
         let from = self.resolve(manifest, &self.from)?;
@@ -78,36 +71,27 @@ impl Action for FileLink {
 #[cfg(windows)]
 fn create_link(from: PathBuf, to: PathBuf) -> Result<ActionResult, ActionError> {
     if from.is_dir() {
-        match std::os::windows::fs::symlink_dir(from, to).map_err(|e| ActionError {
-            message: e.to_string(),
-        }) {
-            Ok(_) => Ok(ActionResult {
+        std::os::windows::fs::symlink_dir(from, to)
+            .context(format!("A: {:?} - {:?}", from, to))
+            .map(|_| ActionResult {
                 message: String::from("Symlink created"),
-            }),
-            Err(e) => Err(e),
-        }
+            })
     } else {
-        match std::os::windows::fs::symlink_file(from, to).map_err(|e| ActionError {
-            message: e.to_string(),
-        }) {
-            Ok(_) => Ok(ActionResult {
+        std::os::windows::fs::symlink_file(from, to)
+            .context(format!("A: {:?} - {:?}", from, to))
+            .map(|_| ActionResult {
                 message: String::from("Symlink created"),
-            }),
-            Err(e) => Err(e),
-        }
+            })
     }
 }
 
 #[cfg(unix)]
 fn create_link(from: PathBuf, to: PathBuf) -> Result<ActionResult, ActionError> {
-    match std::os::unix::fs::symlink(from.clone(), to.clone()).map_err(|e| ActionError {
-        message: format!("A: {:?} - {:?} - {}", from, to, e.to_string()),
-    }) {
-        Ok(_) => Ok(ActionResult {
+    std::os::unix::fs::symlink(from.clone(), to.clone())
+        .context(format!("A: {:?} - {:?}", from, to))
+        .map(|_| ActionResult {
             message: String::from("Symlink created"),
-        }),
-        Err(e) => Err(e),
-    }
+        })
 }
 
 #[cfg(test)]
