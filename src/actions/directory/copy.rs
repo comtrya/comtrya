@@ -1,7 +1,7 @@
 use std::fs::create_dir_all;
 
 use super::DirectoryAction;
-use crate::actions::{Action, ActionError, ActionResult};
+use crate::actions::{Action, ActionError, ActionResult, ActionResultExt};
 use crate::manifests::Manifest;
 use fs_extra::dir::CopyOptions;
 use serde::{Deserialize, Serialize};
@@ -31,16 +31,9 @@ impl Action for DirectoryCopy {
             .join("files")
             .join(&self.from);
 
-        match create_dir_all(&self.to) {
-            Ok(_) => (),
-            Err(_) => {
-                return Err(ActionError {
-                    message: String::from("Failed to create directory"),
-                });
-            }
-        }
+        create_dir_all(&self.to).context("Failed to create directory")?;
 
-        match fs_extra::dir::copy(
+        fs_extra::dir::copy(
             &absolute_path,
             &self.to,
             &CopyOptions {
@@ -48,14 +41,12 @@ impl Action for DirectoryCopy {
                 content_only: true,
                 ..Default::default()
             },
-        ) {
-            Ok(_) => Ok(ActionResult {
-                message: String::from("Copied"),
-            }),
-            Err(e) => Err(ActionError {
-                message: e.to_string(),
-            }),
-        }
+        )
+        .context("Failed to copy directory")?;
+
+        Ok(ActionResult {
+            message: String::from("Copied"),
+        })
     }
 }
 
