@@ -27,14 +27,12 @@ impl Action for CommandRun {
         _context: &tera::Context,
         _dry_run: bool,
     ) -> Result<ActionResult, ActionError> {
-        crate::utils::command::run_command(
-            crate::utils::command::Command {
-                name: self.command.clone(),
-                env: HashMap::new(),
-                args: self.args.clone(),
-                dir: Some(self.dir.clone()),
-                require_root: self.sudo,
-            },
-        )
+        crate::utils::command::run_command(crate::utils::command::Command {
+            name: self.command.clone(),
+            env: HashMap::new(),
+            args: self.args.clone(),
+            dir: Some(self.dir.clone()),
+            require_root: self.sudo,
+        })
     }
 }
