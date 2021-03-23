@@ -66,4 +66,9 @@ pub trait Action {
         context: &Context,
         dry_run: bool,
     ) -> Result<ActionResult, ActionError>;
+
+    fn dry_run(&self, manifest: &Manifest, context: &Context) -> Result<ActionResult, ActionError> {
+        // Take this out when all actions implement dry_run()
+        self.run(manifest, context, true)
+    }
 }
