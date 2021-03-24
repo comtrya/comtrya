@@ -21,6 +21,24 @@ fn get_false() -> bool {
 }
 
 impl Action for CommandRun {
+    fn dry_run(
+        &self,
+        _manifest: &crate::manifests::Manifest,
+        _context: &tera::Context,
+    ) -> Result<ActionResult, ActionError> {
+        let pretty_args = self
+            .args
+            .iter()
+            .map(|a| format!("\"{}\"", a))
+            .collect::<Vec<_>>()
+            .join(", ");
+        Ok(ActionResult {
+            message: format!(
+                "run {} with args {} (require_root={})",
+                self.command, pretty_args, self.sudo
+            ),
+        })
+    }
     fn run(
         &self,
         _manifest: &crate::manifests::Manifest,
