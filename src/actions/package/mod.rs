@@ -3,15 +3,52 @@ pub mod providers;
 
 use providers::PackageProviders;
 use serde::{Deserialize, Serialize};
+use serde::de::{self, SeqAccess};
+use std::fmt;
 use std::collections::HashMap;
 use tracing::debug;
 
+fn deserialize_name_or_list<'de, D>(deserializer: D) -> Result<Vec<String>, D::Error>
+where
+    D: de::Deserializer<'de>,
+{
+    struct SingleOrManyNames;
+
+    impl<'de> de::Visitor<'de> for SingleOrManyNames {
+        type Value = Vec<String>;
+
+        fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+            formatter.write_str("either a string or a list of strings")
+        }
+
+        // We got a single string in "name"...
+        fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+        where
+            E: de::Error,
+        {
+            Ok(vec![v.to_string()])
+        }
+
+        // or a list of names in "list"
+        fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+            where
+                A: SeqAccess<'de>,
+        {
+            let mut res = Vec::new();
+            while let Ok(Some(element)) = seq.next_element::<String>() {
+                res.push(element);
+            }
+            Ok(res)
+        }
+    }
+
+    deserializer.deserialize_any(SingleOrManyNames)
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Package {
-    name: Option<String>,
-
-    #[serde(default)]
-    list: Vec<String>,
+    #[serde(deserialize_with = "deserialize_name_or_list", alias = "name", alias = "list")]
+    names: Vec<String>,
 
     #[serde(default)]
     provider: PackageProviders,
@@ -28,10 +65,8 @@ pub struct Package {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct PackageVariant {
-    name: Option<String>,
-
-    #[serde(default)]
-    list: Vec<String>,
+    #[serde(deserialize_with = "deserialize_name_or_list", alias = "name", alias = "list")]
+    names: Vec<String>,
 
     #[serde(default)]
     provider: PackageProviders,
@@ -45,10 +80,7 @@ pub struct PackageVariant {
 
 impl PackageVariant {
     fn packages(&self) -> Vec<String> {
-        self.name
-            .as_ref()
-            .map(|s| vec![s.clone()])
-            .unwrap_or_else(|| self.list.clone())
+        self.names.clone()
     }
 }
 
@@ -62,8 +94,7 @@ impl From<&Package> for PackageVariant {
         // No variant overlays
         if variant.is_none() {
             return PackageVariant {
-                name: package.name.clone(),
-                list: package.list.clone(),
+                names: package.names.clone(),
                 provider: package.provider.clone(),
                 repository: package.repository.clone(),
                 extra_args: package.extra_args.clone(),
@@ -75,23 +106,10 @@ impl From<&Package> for PackageVariant {
         debug!(message = "Built Variant", variant = ?variant);
 
         let mut package = PackageVariant {
-            name: package.name.clone(),
-            list: package.list.clone(),
+            names: variant.names.clone(),
             provider: package.provider.clone(),
             repository: package.repository.clone(),
             extra_args: package.extra_args.clone(),
-        };
-
-        if variant.name.is_some() {
-            package.name = variant.name.clone();
-        }
-
-        if !variant.list.is_empty() {
-            package.list = variant.list.clone();
-        }
-
-        if variant.repository.is_some() {
-            package.repository = variant.repository.clone();
         };
 
         // I've been torn about this, but here's my logic.
