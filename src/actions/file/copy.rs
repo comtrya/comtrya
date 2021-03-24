@@ -40,11 +40,21 @@ impl FileCopy {}
 impl FileAction for FileCopy {}
 
 impl Action for FileCopy {
+    fn dry_run(
+        &self,
+        _manifest: &Manifest,
+        _context: &Context,
+    ) -> Result<ActionResult, ActionError> {
+        Ok(ActionResult {
+            message: format!("copy from {} to {}", self.from, self.to),
+        })
+    }
+
     fn run(
         &self,
         manifest: &Manifest,
         context: &Context,
-        dry_run: bool,
+        _dry_run: bool,
     ) -> Result<ActionResult, ActionError> {
         let tera = self.init(manifest);
 
@@ -58,32 +68,25 @@ impl Action for FileCopy {
         let mut parent = PathBuf::from(&self.to);
         parent.pop();
 
-        if !dry_run {
-            debug!(
-                message = "Creating Prerequisite Directories",
-                directories = &parent.to_str().unwrap()
-            );
+        debug!(
+            message = "Creating Prerequisite Directories",
+            directories = &parent.to_str().unwrap()
+        );
 
-            create_dir_all(parent).context("Failed to create parent directory")?;
+        create_dir_all(parent).context("Failed to create parent directory")?;
 
-            let mut file =
-                std::fs::File::create(self.to.clone()).context("Failed to create file")?;
+        let mut file = std::fs::File::create(self.to.clone()).context("Failed to create file")?;
 
-            file.write_all(contents.as_bytes())
-                .context("Failed to create file")?;
+        file.write_all(contents.as_bytes())
+            .context("Failed to create file")?;
 
-            file.sync_all().context("Failed to create file")?;
+        file.sync_all().context("Failed to create file")?;
 
-            set_permissions(PathBuf::from(self.to.clone()), self.chmod)
-                .context("Failed to set permissions")?;
-            Ok(ActionResult {
-                message: String::from("Copied"),
-            })
-        } else {
-            Ok(ActionResult {
-                message: format!("copy from {} to {}", self.from, self.to),
-            })
-        }
+        set_permissions(PathBuf::from(self.to.clone()), self.chmod)
+            .context("Failed to set permissions")?;
+        Ok(ActionResult {
+            message: String::from("Copied"),
+        })
     }
 }
 
