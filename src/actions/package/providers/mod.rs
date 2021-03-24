@@ -34,6 +34,15 @@ impl PackageProviders {
             PackageProviders::Yay => Box::new(Yay {}),
         }
     }
+
+    pub fn name(&self) -> &'static str {
+        match self {
+            PackageProviders::Homebrew => "homebrew",
+            PackageProviders::Aptitude => "aptitude",
+            PackageProviders::Winget => "winget",
+            PackageProviders::Yay => "pacman",
+        }
+    }
 }
 
 impl Default for PackageProviders {

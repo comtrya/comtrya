@@ -26,8 +26,6 @@ pub trait DirectoryAction: Action {
 
     fn load(&self, manifest: &Manifest, path: &str) -> Result<String, ActionError> {
         std::fs::read_to_string(manifest.root_dir.clone().unwrap().join("files").join(path))
-            .map_err(|e| ActionError {
-                message: e.to_string(),
-            })
+            .map_err(ActionError::from)
     }
 }

@@ -1,5 +1,4 @@
 mod actions;
-use actions::{Action, Actions};
 mod config;
 use crate::config::load_config;
 mod contexts;
@@ -21,6 +20,10 @@ use tracing_subscriber::FmtSubscriber;
 #[derive(StructOpt, Clone, Debug)]
 #[structopt(name = "comtrya")]
 pub struct Opt {
+    /// Performs a dry-run without changing the system
+    #[structopt(long)]
+    dry_run: bool,
+
     /// Debug & tracing mode (-v, -vv)
     #[structopt(short = "v", long = "verbose", parse(from_occurrences))]
     verbose: u8,
@@ -280,6 +283,7 @@ fn main() -> anyhow::Result<()> {
 
     debug!(manifests = run_manifests.join(",").as_str());
 
+    let dry_run = opt.dry_run;
     run_manifests.iter().for_each(|m| {
         let start = if m.eq(&String::from("")) {
             root_index
@@ -307,18 +311,14 @@ fn main() -> anyhow::Result<()> {
             let mut successful = true;
 
             m1.actions.iter().for_each(|action| {
-                let result = match action {
-                    Actions::CommandRun(a) => a.run(m1, &contexts),
-                    Actions::DirectoryCopy(a) => a.run(m1, &contexts),
-                    Actions::FileCopy(a) => a.run(m1, &contexts),
-                    Actions::FileLink(a) => a.run(m1, &contexts),
-                    Actions::PackageInstall(a) => a.run(&m1, &contexts),
+                let result = if dry_run {
+                    action.inner_ref().dry_run(&m1, &contexts)
+                } else {
+                    action.inner_ref().run(&m1, &contexts)
                 };
 
                 match result {
-                    Ok(result) => {
-                        debug!("{}", result.message)
-                    }
+                    Ok(result) => debug!("{}", result.message),
                     Err(e) => {
                         successful = false;
 

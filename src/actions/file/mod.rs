@@ -29,22 +29,33 @@ pub trait FileAction: Action {
     }
 
     fn resolve(&self, manifest: &Manifest, path: &str) -> Result<PathBuf, ActionError> {
-        manifest
-            .root_dir
-            .clone()
-            .unwrap()
-            .join("files")
-            .join(path)
-            .canonicalize()
-            .map_err(|e| ActionError {
-                message: format!("Failed because  {}", e.to_string()),
-            })
+        use std::io::ErrorKind;
+
+        let file_path = manifest.root_dir.clone().unwrap().join("files").join(path);
+
+        file_path.canonicalize().map_err(|e| ActionError {
+            message: match e.kind() {
+                ErrorKind::NotFound => format!(
+                    "Failed because {} was not found",
+                    file_path.to_string_lossy()
+                ),
+                _ => format!("Failed because {}", e.to_string()),
+            },
+        })
     }
 
     fn load(&self, manifest: &Manifest, path: &str) -> Result<String, ActionError> {
-        std::fs::read_to_string(manifest.root_dir.clone().unwrap().join("files").join(path))
-            .map_err(|e| ActionError {
-                message: e.to_string(),
-            })
+        use std::io::ErrorKind;
+        let file_path = manifest.root_dir.clone().unwrap().join("files").join(path);
+
+        std::fs::read_to_string(file_path.clone()).map_err(|e| ActionError {
+            message: match e.kind() {
+                ErrorKind::NotFound => format!(
+                    "Failed because {} was not found",
+                    file_path.to_string_lossy()
+                ),
+                _ => format!("Failed because {}", e.to_string()),
+            },
+        })
     }
 }
