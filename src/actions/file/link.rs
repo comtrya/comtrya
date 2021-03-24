@@ -68,13 +68,13 @@ impl Action for FileLink {
 #[cfg(windows)]
 fn create_link(from: PathBuf, to: PathBuf) -> Result<ActionResult, ActionError> {
     if from.is_dir() {
-        std::os::windows::fs::symlink_dir(from, to)
+        std::os::windows::fs::symlink_dir(&from, &to)
             .context(format!("A: {:?} - {:?}", from, to))
             .map(|_| ActionResult {
                 message: String::from("Symlink created"),
             })
     } else {
-        std::os::windows::fs::symlink_file(from, to)
+        std::os::windows::fs::symlink_file(&from, &to)
             .context(format!("A: {:?} - {:?}", from, to))
             .map(|_| ActionResult {
                 message: String::from("Symlink created"),
@@ -84,7 +84,7 @@ fn create_link(from: PathBuf, to: PathBuf) -> Result<ActionResult, ActionError> 
 
 #[cfg(unix)]
 fn create_link(from: PathBuf, to: PathBuf) -> Result<ActionResult, ActionError> {
-    std::os::unix::fs::symlink(from.clone(), to.clone())
+    std::os::unix::fs::symlink(&from, &to)
         .context(format!("A: {:?} - {:?}", from, to))
         .map(|_| ActionResult {
             message: String::from("Symlink created"),
