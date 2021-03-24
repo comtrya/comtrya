@@ -84,7 +84,7 @@ mod tests {
 
         match actions.pop() {
             Some(Actions::PackageInstall(package_install)) => {
-                assert_eq!(vec!["curl"], package_install.list);
+                assert_eq!(vec!["curl"], package_install.names);
             }
             _ => {
                 panic!("PackageInstall didn't deserialize to the correct type");
@@ -93,7 +93,7 @@ mod tests {
 
         match actions.pop() {
             Some(Actions::PackageInstall(package_install)) => {
-                assert_eq!("curl", package_install.name.unwrap());
+                assert_eq!(vec!["curl"], package_install.names);
             }
             _ => {
                 panic!("PackageInstall didn't deserialize to the correct type");
