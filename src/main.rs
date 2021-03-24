@@ -314,7 +314,7 @@ fn main() -> anyhow::Result<()> {
                 let result = if dry_run {
                     action.inner_ref().dry_run(&m1, &contexts)
                 } else {
-                    action.inner_ref().run(&m1, &contexts, false)
+                    action.inner_ref().run(&m1, &contexts)
                 };
 
                 match result {

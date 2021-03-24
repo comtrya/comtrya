@@ -43,7 +43,6 @@ impl Action for CommandRun {
         &self,
         _manifest: &crate::manifests::Manifest,
         _context: &tera::Context,
-        _dry_run: bool,
     ) -> Result<ActionResult, ActionError> {
         crate::utils::command::run_command(crate::utils::command::Command {
             name: self.command.clone(),

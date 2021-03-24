@@ -28,12 +28,7 @@ impl Action for DirectoryCopy {
         })
     }
 
-    fn run(
-        &self,
-        manifest: &Manifest,
-        _context: &Context,
-        _dry_run: bool,
-    ) -> Result<ActionResult, ActionError> {
+    fn run(&self, manifest: &Manifest, _context: &Context) -> Result<ActionResult, ActionError> {
         let absolute_path = manifest
             .root_dir
             .clone()
@@ -64,9 +59,8 @@ impl Action for DirectoryCopy {
 mod tests {
     use std::path::PathBuf;
 
-    use crate::actions::Actions;
+    use crate::actions::{Action, Actions};
     use crate::manifests::Manifest;
-    use crate::Action;
 
     fn get_manifest_dir() -> PathBuf {
         std::env::current_dir()
@@ -116,7 +110,7 @@ mod tests {
         };
 
         directory_copy
-            .run(&manifest, &tera::Context::new(), false)
+            .run(&manifest, &tera::Context::new())
             .unwrap();
 
         assert_eq!(true, to.is_dir());

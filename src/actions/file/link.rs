@@ -34,12 +34,7 @@ impl Action for FileLink {
             ),
         })
     }
-    fn run(
-        &self,
-        manifest: &Manifest,
-        _context: &Context,
-        _dry_run: bool,
-    ) -> Result<ActionResult, ActionError> {
+    fn run(&self, manifest: &Manifest, _context: &Context) -> Result<ActionResult, ActionError> {
         let mut parent = PathBuf::from(&self.to);
         parent.pop();
 

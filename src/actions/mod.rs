@@ -72,15 +72,7 @@ impl<M: std::fmt::Display, T, E: std::error::Error> ActionResultExt<M, T> for Re
 }
 
 pub trait Action {
-    fn run(
-        &self,
-        manifest: &Manifest,
-        context: &Context,
-        dry_run: bool,
-    ) -> Result<ActionResult, ActionError>;
+    fn run(&self, manifest: &Manifest, context: &Context) -> Result<ActionResult, ActionError>;
 
-    fn dry_run(&self, manifest: &Manifest, context: &Context) -> Result<ActionResult, ActionError> {
-        // Take this out when all actions implement dry_run()
-        self.run(manifest, context, true)
-    }
+    fn dry_run(&self, manifest: &Manifest, context: &Context) -> Result<ActionResult, ActionError>;
 }
