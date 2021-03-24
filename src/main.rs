@@ -21,7 +21,7 @@ use tracing_subscriber::FmtSubscriber;
 #[structopt(name = "comtrya")]
 pub struct Opt {
     /// Performs a dry-run without changing the system
-    #[structopt(short = "n", long)]
+    #[structopt(long)]
     dry_run: bool,
 
     /// Debug & tracing mode (-v, -vv)
