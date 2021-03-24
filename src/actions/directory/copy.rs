@@ -18,6 +18,16 @@ impl DirectoryCopy {}
 impl DirectoryAction for DirectoryCopy {}
 
 impl Action for DirectoryCopy {
+    fn dry_run(
+        &self,
+        _manifest: &Manifest,
+        _context: &Context,
+    ) -> Result<ActionResult, ActionError> {
+        Ok(ActionResult {
+            message: format!("copy directory from {} to {}", self.from, self.to),
+        })
+    }
+
     fn run(
         &self,
         manifest: &Manifest,
