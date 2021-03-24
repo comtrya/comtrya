@@ -45,15 +45,10 @@ pub struct PackageVariant {
 
 impl PackageVariant {
     fn packages(&self) -> Vec<String> {
-        if self.name.is_some() {
-            return vec![self.name.clone().unwrap()];
-        }
-
-        if self.list.is_empty() {
-            return vec![];
-        }
-
-        self.list.clone()
+        self.name
+            .as_ref()
+            .map(|s| vec![s.clone()])
+            .unwrap_or_else(|| self.list.clone())
     }
 }
 
