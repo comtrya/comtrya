@@ -2,10 +2,10 @@ pub mod install;
 pub mod providers;
 
 use providers::PackageProviders;
-use serde::{Deserialize, Serialize};
 use serde::de::{self, SeqAccess};
-use std::fmt;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::fmt;
 use tracing::debug;
 
 fn deserialize_name_or_list<'de, D>(deserializer: D) -> Result<Vec<String>, D::Error>
@@ -31,8 +31,8 @@ where
 
         // or a list of names in "list"
         fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
-            where
-                A: SeqAccess<'de>,
+        where
+            A: SeqAccess<'de>,
         {
             let mut res = Vec::new();
             while let Ok(Some(element)) = seq.next_element::<String>() {
@@ -47,7 +47,11 @@ where
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Package {
-    #[serde(deserialize_with = "deserialize_name_or_list", alias = "name", alias = "list")]
+    #[serde(
+        deserialize_with = "deserialize_name_or_list",
+        alias = "name",
+        alias = "list"
+    )]
     names: Vec<String>,
 
     #[serde(default)]
@@ -65,7 +69,11 @@ pub struct Package {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct PackageVariant {
-    #[serde(deserialize_with = "deserialize_name_or_list", alias = "name", alias = "list")]
+    #[serde(
+        deserialize_with = "deserialize_name_or_list",
+        alias = "name",
+        alias = "list"
+    )]
     names: Vec<String>,
 
     #[serde(default)]
