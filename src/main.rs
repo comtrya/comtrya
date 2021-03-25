@@ -322,7 +322,7 @@ fn main() -> anyhow::Result<()> {
                     Err(e) => {
                         successful = false;
 
-                        error!(message = e.message.as_str())
+                        error!(message = e.to_string().as_str())
                     }
                 }
             });

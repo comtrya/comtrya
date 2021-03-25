@@ -4,6 +4,7 @@ mod file;
 mod package;
 
 use crate::manifests::Manifest;
+use anyhow::Result;
 use command::run::CommandRun;
 use directory::copy::DirectoryCopy;
 use file::copy::FileCopy;
@@ -59,20 +60,8 @@ impl<E: std::error::Error> From<E> for ActionError {
     }
 }
 
-pub trait ActionResultExt<M, T> {
-    fn context(self, message: M) -> Result<T, ActionError>;
-}
-
-impl<M: std::fmt::Display, T, E: std::error::Error> ActionResultExt<M, T> for Result<T, E> {
-    fn context(self, message: M) -> Result<T, ActionError> {
-        self.map_err(|e| ActionError {
-            message: format!("{} because of {}", message, e.to_string()),
-        })
-    }
-}
-
 pub trait Action {
-    fn run(&self, manifest: &Manifest, context: &Context) -> Result<ActionResult, ActionError>;
+    fn run(&self, manifest: &Manifest, context: &Context) -> Result<ActionResult>;
 
-    fn dry_run(&self, manifest: &Manifest, context: &Context) -> Result<ActionResult, ActionError>;
+    fn dry_run(&self, manifest: &Manifest, context: &Context) -> Result<ActionResult>;
 }

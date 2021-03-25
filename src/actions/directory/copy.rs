@@ -1,8 +1,9 @@
 use std::fs::create_dir_all;
 
 use super::DirectoryAction;
-use crate::actions::{Action, ActionError, ActionResult, ActionResultExt};
+use crate::actions::{Action, ActionResult};
 use crate::manifests::Manifest;
+use anyhow::{Context as ResultWithContext, Result};
 use fs_extra::dir::CopyOptions;
 use serde::{Deserialize, Serialize};
 use tera::Context;
@@ -18,17 +19,13 @@ impl DirectoryCopy {}
 impl DirectoryAction for DirectoryCopy {}
 
 impl Action for DirectoryCopy {
-    fn dry_run(
-        &self,
-        _manifest: &Manifest,
-        _context: &Context,
-    ) -> Result<ActionResult, ActionError> {
+    fn dry_run(&self, _manifest: &Manifest, _context: &Context) -> Result<ActionResult> {
         Ok(ActionResult {
             message: format!("copy directory from {} to {}", self.from, self.to),
         })
     }
 
-    fn run(&self, manifest: &Manifest, _context: &Context) -> Result<ActionResult, ActionError> {
+    fn run(&self, manifest: &Manifest, _context: &Context) -> Result<ActionResult> {
         let absolute_path = manifest
             .root_dir
             .clone()
