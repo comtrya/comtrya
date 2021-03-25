@@ -17,6 +17,8 @@ jobs:
 
       - name: check-for-cc
         id: check-for-cc
+        # PR can always be renamed at merge
+        continue-on-error: true
         uses: agenthunt/conventional-commit-checker-action@v1.0.0
         with:
           # Don't enforce a format for the body, lets rely on the title
