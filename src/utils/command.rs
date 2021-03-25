@@ -27,11 +27,7 @@ pub fn run_command(command: Command) -> Result<ActionResult, ActionError> {
             .arg("--validate")
             .output()
         {
-            Ok(std::process::Output { status, .. }) if status.success() => {
-                return Ok(ActionResult {
-                    message: String::from("Success"),
-                });
-            }
+            Ok(std::process::Output { status, .. }) if status.success() => (),
 
             _ => {
                 return Err(ActionError {
