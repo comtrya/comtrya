@@ -1,5 +1,6 @@
 use super::PackageProvider;
-use crate::actions::{package::PackageVariant, ActionError};
+use crate::actions::package::PackageVariant;
+use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
 use std::process::Command;
 use tracing::{debug, trace, warn};
@@ -23,19 +24,17 @@ impl PackageProvider for Winget {
         }
     }
 
-    fn bootstrap(&self) -> Result<(), crate::actions::ActionError> {
+    fn bootstrap(&self) -> Result<()> {
         // Not sure if we can automate this atm, we'll require it
         // be installed upfront for the time being
-        Err(ActionError {
-            message: String::from("Winget is not available. Please install"),
-        })
+        Err(anyhow!("Winget is not available. Please install"))
     }
 
     fn has_repository(&self, _package: &PackageVariant) -> bool {
         true
     }
 
-    fn add_repository(&self, _package: &PackageVariant) -> Result<(), ActionError> {
+    fn add_repository(&self, _package: &PackageVariant) -> Result<()> {
         Ok(())
     }
 
@@ -44,7 +43,7 @@ impl PackageProvider for Winget {
         package.packages()
     }
 
-    fn install(&self, package: &PackageVariant) -> Result<(), ActionError> {
+    fn install(&self, package: &PackageVariant) -> Result<()> {
         let result = package
             .packages()
             .into_iter()
@@ -68,20 +67,15 @@ impl PackageProvider for Winget {
                         debug!("Failed to install {}", p);
                         trace!("{:?}", error.to_string());
 
-                        Err(ActionError {
-                            message: String::from(format!(
-                                "Failed to install {}, but successfully installed {:?}",
-                                p,
-                                acc.join(",")
-                            )),
-                        })
+                        Err(anyhow!(format!(
+                            "Failed to install {}, but successfully installed {:?}",
+                            p,
+                            acc.join(",")
+                        )))
                     }
                 }
             });
 
-        match result {
-            Ok(_) => Ok(()),
-            Err(e) => Err(e),
-        }
+        result.map(|_| ())
     }
 }

@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
-use crate::actions::{Action, ActionError, ActionResult};
+use crate::actions::{Action, ActionResult};
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -25,7 +26,7 @@ impl Action for CommandRun {
         &self,
         _manifest: &crate::manifests::Manifest,
         _context: &tera::Context,
-    ) -> Result<ActionResult, ActionError> {
+    ) -> Result<ActionResult> {
         let pretty_args = self
             .args
             .iter()
@@ -43,7 +44,7 @@ impl Action for CommandRun {
         &self,
         _manifest: &crate::manifests::Manifest,
         _context: &tera::Context,
-    ) -> Result<ActionResult, ActionError> {
+    ) -> Result<ActionResult> {
         crate::utils::command::run_command(crate::utils::command::Command {
             name: self.command.clone(),
             env: HashMap::new(),

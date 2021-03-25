@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
-use crate::actions::{ActionError, ActionResult};
+use crate::actions::ActionResult;
+use anyhow::{anyhow, Result};
 use tracing::{error, trace, warn};
 
 #[derive(Clone)]
@@ -12,7 +13,7 @@ pub struct Command {
     pub dir: Option<String>,
 }
 
-pub fn run_command(command: Command) -> Result<ActionResult, ActionError> {
+pub fn run_command(command: Command) -> Result<ActionResult> {
     let mut command = command.clone();
 
     command.elevate();
@@ -29,11 +30,7 @@ pub fn run_command(command: Command) -> Result<ActionResult, ActionError> {
         {
             Ok(std::process::Output { status, .. }) if status.success() => (),
 
-            _ => {
-                return Err(ActionError {
-                    message: String::from("Failed to get sudo access"),
-                })
-            }
+            _ => return Err(anyhow!("Failed to get sudo access")),
         };
     }
 
@@ -70,19 +67,14 @@ pub fn run_command(command: Command) -> Result<ActionResult, ActionError> {
             warn!("{}", String::from_utf8(stdout).unwrap().as_str());
             error!("{}", String::from_utf8(stderr).unwrap().as_str());
 
-            Err(ActionError {
-                message: String::from(format!(
-                    "Exit code: {}. Failed to run {} {}",
-                    status.code().unwrap(),
-                    command.name,
-                    command.args.join(" ")
-                )),
-            })
+            Err(anyhow!(format!(
+                "Exit code: {}. Failed to run {} {}",
+                status.code().unwrap(),
+                command.name,
+                command.args.join(" ")
+            )))
         }
-
-        Err(e) => Err(ActionError {
-            message: e.to_string(),
-        }),
+        Err(e) => Err(anyhow!(e)),
     }
 }
 

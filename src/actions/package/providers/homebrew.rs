@@ -1,5 +1,6 @@
 use super::PackageProvider;
-use crate::actions::{package::PackageVariant, ActionError};
+use crate::actions::package::PackageVariant;
+use anyhow::{anyhow, Context as ResultWithContext, Result};
 use reqwest::blocking::Client;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -22,22 +23,15 @@ impl PackageProvider for Homebrew {
         which("brew").is_ok()
     }
 
-    fn bootstrap(&self) -> Result<(), crate::actions::ActionError> {
+    fn bootstrap(&self) -> Result<()> {
         let client = Client::new();
-        match client
+        client
             .get("https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh")
             .send()
-        {
-            Ok(mut res) => {
+            .map(|mut res| {
                 let mut file = File::create("/tmp/brew-install.sh").unwrap();
                 ::std::io::copy(&mut res, &mut file).unwrap();
-            }
-            Err(e) => {
-                return Err(ActionError {
-                    message: e.to_string(),
-                });
-            }
-        };
+            })?;
 
         // Homebrew can only be used on Linux and macOS, so we can assume
         // we have access to bash ... right? 😅
@@ -61,22 +55,20 @@ impl PackageProvider for Homebrew {
         false
     }
 
-    fn add_repository(&self, package: &PackageVariant) -> Result<(), ActionError> {
+    fn add_repository(&self, package: &PackageVariant) -> Result<()> {
         let repository = package.repository.clone().unwrap();
 
-        match Command::new("brew").arg("tap").arg(&repository).output() {
-            Ok(_) => {
+        Command::new("brew")
+            .arg("tap")
+            .arg(&repository)
+            .output()
+            .map(|_| {
                 info!(
                     message = "Added Package Repository",
                     repository = ?repository
                 );
-
-                Ok(())
-            }
-            Err(error) => Err(ActionError {
-                message: error.to_string(),
-            }),
-        }
+            })
+            .context(format!("failed to run brew tap {:?}", repository))
     }
 
     fn query(&self, package: &PackageVariant) -> Vec<String> {
@@ -116,7 +108,7 @@ impl PackageProvider for Homebrew {
             .collect()
     }
 
-    fn install(&self, package: &PackageVariant) -> Result<(), ActionError> {
+    fn install(&self, package: &PackageVariant) -> Result<()> {
         let need_installed = self.query(package);
 
         if need_installed.is_empty() {
@@ -143,14 +135,13 @@ impl PackageProvider for Homebrew {
                 warn!("{}", String::from_utf8(stdout).unwrap().as_str());
                 error!("{}", String::from_utf8(stderr).unwrap().as_str());
 
-                Err(ActionError {
-                    message: format!("Failed to install {}", need_installed.join(" ")),
-                })
+                Err(anyhow!(format!(
+                    "Failed to install {}",
+                    need_installed.join(" ")
+                )))
             }
 
-            Err(error) => Err(ActionError {
-                message: error.to_string(),
-            }),
+            Err(error) => Err(anyhow!(error)),
         }
     }
 }

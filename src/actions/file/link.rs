@@ -1,6 +1,7 @@
 use super::FileAction;
-use crate::actions::{Action, ActionError, ActionResult, ActionResultExt};
+use crate::actions::{Action, ActionResult};
 use crate::manifests::Manifest;
+use anyhow::{anyhow, Context as ResultWithContext, Result};
 use serde::{Deserialize, Serialize};
 use std::fs::create_dir_all;
 use std::path::PathBuf;
@@ -18,11 +19,7 @@ impl FileLink {}
 impl FileAction for FileLink {}
 
 impl Action for FileLink {
-    fn dry_run(
-        &self,
-        manifest: &Manifest,
-        _context: &Context,
-    ) -> Result<ActionResult, ActionError> {
+    fn dry_run(&self, manifest: &Manifest, _context: &Context) -> Result<ActionResult> {
         let from = self.resolve(manifest, &self.from)?;
         let to = PathBuf::from(&self.to);
 
@@ -34,7 +31,8 @@ impl Action for FileLink {
             ),
         })
     }
-    fn run(&self, manifest: &Manifest, _context: &Context) -> Result<ActionResult, ActionError> {
+
+    fn run(&self, manifest: &Manifest, _context: &Context) -> Result<ActionResult> {
         let mut parent = PathBuf::from(&self.to);
         parent.pop();
 
@@ -55,9 +53,7 @@ impl Action for FileLink {
                         message: String::from("Already present"),
                     })
                 } else {
-                    Err(ActionError {
-                        message: String::from("Symlink exists to another file"),
-                    })
+                    Err(anyhow!("Symlink exists to another file"))
                 }
             }
             Err(_) => create_link(from, to),
@@ -66,7 +62,7 @@ impl Action for FileLink {
 }
 
 #[cfg(windows)]
-fn create_link(from: PathBuf, to: PathBuf) -> Result<ActionResult, ActionError> {
+fn create_link(from: PathBuf, to: PathBuf) -> Result<ActionResult> {
     if from.is_dir() {
         std::os::windows::fs::symlink_dir(&from, &to)
             .context(format!("A: {:?} - {:?}", from, to))
@@ -83,7 +79,7 @@ fn create_link(from: PathBuf, to: PathBuf) -> Result<ActionResult, ActionError> 
 }
 
 #[cfg(unix)]
-fn create_link(from: PathBuf, to: PathBuf) -> Result<ActionResult, ActionError> {
+fn create_link(from: PathBuf, to: PathBuf) -> Result<ActionResult> {
     std::os::unix::fs::symlink(&from, &to)
         .context(format!("A: {:?} - {:?}", from, to))
         .map(|_| ActionResult {

@@ -1,8 +1,9 @@
 use std::collections::HashMap;
 
 use super::PackageProvider;
-use crate::actions::{package::PackageVariant, ActionError};
+use crate::actions::package::PackageVariant;
 use crate::utils::command::{run_command, Command};
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use tracing::{info, span, warn};
 use which::which;
@@ -25,7 +26,7 @@ impl PackageProvider for Yay {
         }
     }
 
-    fn bootstrap(&self) -> Result<(), crate::actions::ActionError> {
+    fn bootstrap(&self) -> Result<()> {
         let span = span!(tracing::Level::INFO, "bootstrap").entered();
 
         // Install base-devel and git to be able to pull and build/compile stuff
@@ -88,7 +89,7 @@ impl PackageProvider for Yay {
         false
     }
 
-    fn add_repository(&self, _package: &PackageVariant) -> Result<(), ActionError> {
+    fn add_repository(&self, _package: &PackageVariant) -> Result<()> {
         Ok(())
     }
 
@@ -96,7 +97,7 @@ impl PackageProvider for Yay {
         package.packages()
     }
 
-    fn install(&self, package: &PackageVariant) -> Result<(), ActionError> {
+    fn install(&self, package: &PackageVariant) -> Result<()> {
         run_command(Command {
             name: String::from("yay"),
             env: HashMap::new(),

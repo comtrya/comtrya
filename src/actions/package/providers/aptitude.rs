@@ -1,8 +1,9 @@
 use std::collections::HashMap;
 
 use super::PackageProvider;
-use crate::actions::{package::PackageVariant, ActionError};
+use crate::actions::package::PackageVariant;
 use crate::utils::command::{run_command, Command};
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use tracing::{debug, span, warn};
 use which::which;
@@ -38,7 +39,7 @@ impl PackageProvider for Aptitude {
         }
     }
 
-    fn bootstrap(&self) -> Result<(), crate::actions::ActionError> {
+    fn bootstrap(&self) -> Result<()> {
         // Apt should always be available on Debian / Ubuntu flavours.
         // Lets make sure software-properties-common is available
         // for repository management
@@ -66,7 +67,7 @@ impl PackageProvider for Aptitude {
         false
     }
 
-    fn add_repository(&self, package: &PackageVariant) -> Result<(), ActionError> {
+    fn add_repository(&self, package: &PackageVariant) -> Result<()> {
         run_command(Command {
             name: String::from("apt-add-repository"),
             env: self.env(),
@@ -92,7 +93,7 @@ impl PackageProvider for Aptitude {
         package.packages()
     }
 
-    fn install(&self, package: &PackageVariant) -> Result<(), ActionError> {
+    fn install(&self, package: &PackageVariant) -> Result<()> {
         run_command(Command {
             name: String::from("apt"),
             env: self.env(),

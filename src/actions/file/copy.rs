@@ -1,6 +1,7 @@
 use super::FileAction;
-use crate::actions::{Action, ActionError, ActionResult, ActionResultExt};
+use crate::actions::{Action, ActionResult};
 use crate::manifests::Manifest;
+use anyhow::{Context as ResultWithContext, Result};
 use serde::{de::Error, Deserialize, Deserializer, Serialize};
 use std::io::Write;
 use std::{fs::create_dir_all, ops::Deref, path::PathBuf, u32};
@@ -40,22 +41,18 @@ impl FileCopy {}
 impl FileAction for FileCopy {}
 
 impl Action for FileCopy {
-    fn dry_run(
-        &self,
-        _manifest: &Manifest,
-        _context: &Context,
-    ) -> Result<ActionResult, ActionError> {
+    fn dry_run(&self, _manifest: &Manifest, _context: &Context) -> Result<ActionResult> {
         Ok(ActionResult {
             message: format!("copy from {} to {}", self.from, self.to),
         })
     }
 
-    fn run(&self, manifest: &Manifest, context: &Context) -> Result<ActionResult, ActionError> {
+    fn run(&self, manifest: &Manifest, context: &Context) -> Result<ActionResult> {
         let tera = self.init(manifest);
 
         let contents = if self.template {
             tera.render(self.from.clone().deref(), context)
-                .map_err(ActionError::from)
+                .context("Failed to render template")
         } else {
             self.load(manifest, &self.from)
         }?;

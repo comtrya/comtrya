@@ -1,7 +1,8 @@
 use super::Package;
 use super::PackageVariant;
-use crate::actions::{Action, ActionError, ActionResult};
+use crate::actions::{Action, ActionResult};
 use crate::manifests::Manifest;
+use anyhow::{anyhow, Context as ResultWithContext, Result};
 use std::ops::Deref;
 use tera::Context;
 use tracing::span;
@@ -9,11 +10,7 @@ use tracing::span;
 pub type PackageInstall = Package;
 
 impl Action for PackageInstall {
-    fn dry_run(
-        &self,
-        _manifest: &Manifest,
-        _context: &Context,
-    ) -> Result<ActionResult, ActionError> {
+    fn dry_run(&self, _manifest: &Manifest, _context: &Context) -> Result<ActionResult> {
         let variant: PackageVariant = self.into();
 
         Ok(ActionResult {
@@ -25,7 +22,7 @@ impl Action for PackageInstall {
         })
     }
 
-    fn run(&self, _manifest: &Manifest, _context: &Context) -> Result<ActionResult, ActionError> {
+    fn run(&self, _manifest: &Manifest, _context: &Context) -> Result<ActionResult> {
         let variant: PackageVariant = self.into();
         let box_provider = variant.provider.clone().get_provider();
         let provider = box_provider.deref();
@@ -39,16 +36,14 @@ impl Action for PackageInstall {
 
         // If the provider isn't available, see if we can bootstrap it
         if !provider.available() && provider.bootstrap().is_err() {
-            return Err(ActionError {
-                message: String::from("Provider unavailable"),
-            });
+            return Err(anyhow!("Provider unavailable"));
         }
 
         if let Some(ref _repo) = variant.repository {
             if !provider.has_repository(&variant) {
-                if let Err(e) = provider.add_repository(&variant) {
-                    return Err(e);
-                }
+                provider
+                    .add_repository(&variant)
+                    .context("failed to add repository")?;
             }
         }
 

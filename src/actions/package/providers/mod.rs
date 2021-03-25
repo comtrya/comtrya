@@ -7,7 +7,7 @@ use self::aptitude::Aptitude;
 use self::homebrew::Homebrew;
 use self::winget::Winget;
 use self::yay::Yay;
-use crate::actions::ActionError;
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
 
 use super::PackageVariant;
@@ -72,9 +72,9 @@ impl Default for PackageProviders {
 pub trait PackageProvider {
     fn name(&self) -> &str;
     fn available(&self) -> bool;
-    fn bootstrap(&self) -> Result<(), ActionError>;
+    fn bootstrap(&self) -> Result<()>;
     fn has_repository(&self, package: &PackageVariant) -> bool;
-    fn add_repository(&self, package: &PackageVariant) -> Result<(), ActionError>;
+    fn add_repository(&self, package: &PackageVariant) -> Result<()>;
     fn query(&self, package: &PackageVariant) -> Vec<String>;
-    fn install(&self, package: &PackageVariant) -> Result<(), ActionError>;
+    fn install(&self, package: &PackageVariant) -> Result<()>;
 }
