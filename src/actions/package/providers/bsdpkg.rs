@@ -1,6 +1,7 @@
 use super::PackageProvider;
-use crate::actions::{package::PackageVariant, ActionError};
+use crate::actions::package::PackageVariant;
 use crate::utils::command::{run_command, Command};
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use tracing::{span, warn};
@@ -30,7 +31,7 @@ impl PackageProvider for BsdPkg {
         }
     }
 
-    fn bootstrap(&self) -> Result<(), crate::actions::ActionError> {
+    fn bootstrap(&self) -> Result<()> {
         let span = span!(tracing::Level::INFO, "bootstrap").entered();
 
         let mut env = HashMap::new();
@@ -53,7 +54,7 @@ impl PackageProvider for BsdPkg {
         false
     }
 
-    fn add_repository(&self, _package: &PackageVariant) -> Result<(), ActionError> {
+    fn add_repository(&self, _package: &PackageVariant) -> Result<()> {
         // I don't know what this looks like yet
         Ok(())
     }
@@ -64,7 +65,7 @@ impl PackageProvider for BsdPkg {
         package.packages()
     }
 
-    fn install(&self, package: &PackageVariant) -> Result<(), ActionError> {
+    fn install(&self, package: &PackageVariant) -> Result<()> {
         run_command(Command {
             name: String::from("pkg"),
             env: self.env(),
