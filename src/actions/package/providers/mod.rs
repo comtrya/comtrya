@@ -1,23 +1,28 @@
 mod aptitude;
-mod homebrew;
-mod winget;
-mod yay;
-
 use self::aptitude::Aptitude;
+mod bsdpkg;
+use self::bsdpkg::BsdPkg;
+mod homebrew;
 use self::homebrew::Homebrew;
-use self::winget::Winget;
+mod yay;
 use self::yay::Yay;
 use anyhow::Result;
-use serde::{Deserialize, Serialize};
-
+mod winget;
+use self::winget::Winget;
 use super::PackageVariant;
+use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum PackageProviders {
-    #[serde(alias = "homebrew", alias = "brew")]
-    Homebrew,
     #[serde(alias = "aptitude", alias = "apt", alias = "apt-get")]
     Aptitude,
+
+    #[serde(alias = "bsdpkg")]
+    BsdPkg,
+
+    #[serde(alias = "homebrew", alias = "brew")]
+    Homebrew,
+
     #[serde(alias = "yay", alias = "pacman")]
     Yay,
 
@@ -28,19 +33,21 @@ pub enum PackageProviders {
 impl PackageProviders {
     pub fn get_provider(self) -> Box<dyn PackageProvider> {
         match self {
-            PackageProviders::Homebrew => Box::new(Homebrew {}),
             PackageProviders::Aptitude => Box::new(Aptitude {}),
-            PackageProviders::Winget => Box::new(Winget {}),
+            PackageProviders::BsdPkg => Box::new(BsdPkg {}),
+            PackageProviders::Homebrew => Box::new(Homebrew {}),
             PackageProviders::Yay => Box::new(Yay {}),
+            PackageProviders::Winget => Box::new(Winget {}),
         }
     }
 
     pub fn name(&self) -> &'static str {
         match self {
-            PackageProviders::Homebrew => "homebrew",
             PackageProviders::Aptitude => "aptitude",
-            PackageProviders::Winget => "winget",
+            PackageProviders::BsdPkg => "bsdpkg",
+            PackageProviders::Homebrew => "homebrew",
             PackageProviders::Yay => "pacman",
+            PackageProviders::Winget => "winget",
         }
     }
 }

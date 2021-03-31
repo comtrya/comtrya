@@ -46,9 +46,6 @@ pub fn run_command(command: Command) -> Result<ActionResult> {
                     .unwrap(),
             ),
         )
-        .stdin(std::process::Stdio::inherit())
-        .stdout(std::process::Stdio::inherit())
-        .stderr(std::process::Stdio::inherit())
         .output()
     {
         Ok(std::process::Output { status, stdout, .. }) if status.success() => {
@@ -85,6 +82,7 @@ impl Command {
         }
 
         if "root" == whoami::username() {
+            self.require_root = false;
             return self;
         }
 
