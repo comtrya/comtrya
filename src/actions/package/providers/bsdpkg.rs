@@ -82,13 +82,13 @@ impl PackageProvider for BsdPkg {
         }
 
         let mut command = if "root" == whoami::username() {
-            std::process::Command::new("sudo")
+            std::process::Command::new("/usr/sbin/pkg")
         } else {
-            std::process::Command::new("pkg")
+            std::process::Command::new("sudo")
         };
 
-        if "root" == whoami::username() {
-            command.arg("pkg");
+        if "root" != whoami::username() {
+            command.arg("/usr/sbin/pkg");
         }
 
         let result = command
@@ -103,7 +103,7 @@ impl PackageProvider for BsdPkg {
 
         // Rerun without dry-run / -n if nothing is to be removed
         match result {
-            Ok(std::process::Output { status, stdout, .. }) if status.success() => {
+            Ok(std::process::Output { stdout, .. }) => {
                 // Command run OK, check for removed
                 let out_string = String::from_utf8(stdout).unwrap();
                 if out_string.to_lowercase().contains("removed") {
@@ -113,19 +113,26 @@ impl PackageProvider for BsdPkg {
                     )));
                 }
             }
-            Ok(std::process::Output { .. }) => {
-                return Err(anyhow!("Failed to install packages"));
-            }
             Err(e) => {
                 return Err(anyhow!(e));
             }
         }
 
         // OK to install
+        let mut command = if "root" == whoami::username() {
+            std::process::Command::new("/usr/sbin/pkg")
+        } else {
+            std::process::Command::new("sudo")
+        };
+
+        if "root" != whoami::username() {
+            command.arg("/usr/sbin/pkg");
+        }
+
         let result = command
             .envs(self.env())
             .args(
-                vec![String::from("install")]
+                vec![String::from("install"), String::from("--yes")]
                     .into_iter()
                     .chain(package.extra_args.clone())
                     .chain(package.packages()),
