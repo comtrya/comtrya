@@ -18,6 +18,7 @@ autolabeler:
     - label: "Type::Defect"
       title:
           - "/^fix:/"
+
     - label: "Type::Enhancement"
       branch:
           - "/^feat/"
