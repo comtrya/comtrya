@@ -1,10 +1,10 @@
 use super::PackageProvider;
 use crate::actions::package::PackageVariant;
 use crate::utils::command::{run_command, Command};
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use tracing::{span, warn};
+use tracing::{instrument, span, warn};
 use which::which;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -12,7 +12,9 @@ pub struct BsdPkg {}
 
 impl BsdPkg {
     fn env(&self) -> HashMap<String, String> {
-        HashMap::new()
+        let mut env: HashMap<String, String> = HashMap::new();
+        env.insert(String::from("ASSUME_ALWAYS_YES"), String::from("true"));
+        env
     }
 }
 
@@ -31,15 +33,13 @@ impl PackageProvider for BsdPkg {
         }
     }
 
+    #[instrument(name = "bootstrap", level = "info", skip(self))]
     fn bootstrap(&self) -> Result<()> {
         let span = span!(tracing::Level::INFO, "bootstrap").entered();
 
-        let mut env = HashMap::new();
-        env.insert(String::from("ALWAYS_ASSUME_YES"), String::from("1"));
-
         run_command(Command {
-            name: String::from("/usr/local/sbin/pkg"),
-            env,
+            name: String::from("/usr/sbin/pkg"),
+            env: self.env(),
             dir: None,
             args: vec![String::from("bootstrap")],
             require_root: true,
@@ -66,19 +66,76 @@ impl PackageProvider for BsdPkg {
     }
 
     fn install(&self, package: &PackageVariant) -> Result<()> {
-        run_command(Command {
-            name: String::from("pkg"),
-            env: self.env(),
-            dir: None,
-            // This -n will stop the installation from removing any packages
-            args: vec![String::from("install"), String::from("-n")]
-                .into_iter()
-                .chain(package.extra_args.clone())
-                .chain(package.packages())
-                .collect(),
-            require_root: true,
-        })?;
+        // Manually ensure we have sudo
+        if "root" != whoami::username() {
+            match std::process::Command::new("sudo")
+                .stdin(std::process::Stdio::inherit())
+                .stdout(std::process::Stdio::inherit())
+                .stderr(std::process::Stdio::inherit())
+                .arg("--validate")
+                .output()
+            {
+                Ok(std::process::Output { status, .. }) if status.success() => (),
 
-        Ok(())
+                _ => return Err(anyhow!("Failed to get sudo access")),
+            };
+        }
+
+        let mut command = if "root" == whoami::username() {
+            std::process::Command::new("sudo")
+        } else {
+            std::process::Command::new("pkg")
+        };
+
+        if "root" == whoami::username() {
+            command.arg("pkg");
+        }
+
+        let result = command
+            .envs(self.env())
+            .args(
+                vec![String::from("install"), String::from("-n")]
+                    .into_iter()
+                    .chain(package.extra_args.clone())
+                    .chain(package.packages()),
+            )
+            .output();
+
+        // Rerun without dry-run / -n if nothing is to be removed
+        match result {
+            Ok(std::process::Output { status, stdout, .. }) if status.success() => {
+                // Command run OK, check for removed
+                let out_string = String::from_utf8(stdout).unwrap();
+                if out_string.to_lowercase().contains("removed") {
+                    return Err(anyhow!(format!(
+                        "Installing '{}' would remove packages. Please run this manually",
+                        package.packages().join(",")
+                    )));
+                }
+            }
+            Ok(std::process::Output { .. }) => {
+                return Err(anyhow!("Failed to install packages"));
+            }
+            Err(e) => {
+                return Err(anyhow!(e));
+            }
+        }
+
+        // OK to install
+        let result = command
+            .envs(self.env())
+            .args(
+                vec![String::from("install")]
+                    .into_iter()
+                    .chain(package.extra_args.clone())
+                    .chain(package.packages()),
+            )
+            .output();
+
+        match result {
+            Ok(std::process::Output { status, .. }) if status.success() => Ok(()),
+            Ok(std::process::Output { .. }) => Err(anyhow!("Failed to install packages")),
+            Err(e) => Err(anyhow!(e)),
+        }
     }
 }

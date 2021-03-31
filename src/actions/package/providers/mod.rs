@@ -44,7 +44,7 @@ impl PackageProviders {
     pub fn name(&self) -> &'static str {
         match self {
             PackageProviders::Aptitude => "aptitude",
-            &PackageProviders::BsdPkg => "bsdpkg",
+            PackageProviders::BsdPkg => "bsdpkg",
             PackageProviders::Homebrew => "homebrew",
             PackageProviders::Yay => "pacman",
             PackageProviders::Winget => "winget",

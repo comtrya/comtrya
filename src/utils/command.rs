@@ -82,6 +82,7 @@ impl Command {
         }
 
         if "root" == whoami::username() {
+            self.require_root = false;
             return self;
         }
 
