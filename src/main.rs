@@ -311,10 +311,14 @@ fn main() -> anyhow::Result<()> {
             let mut successful = true;
 
             m1.actions.iter().for_each(|action| {
+                let action = action.inner_ref();
+
+                dbg!(action.changeset(&m1, &contexts));
+
                 let result = if dry_run {
-                    action.inner_ref().dry_run(&m1, &contexts)
+                    action.dry_run(&m1, &contexts)
                 } else {
-                    action.inner_ref().run(&m1, &contexts)
+                    action.run(&m1, &contexts)
                 };
 
                 match result {
