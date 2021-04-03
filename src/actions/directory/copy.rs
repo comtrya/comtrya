@@ -1,7 +1,7 @@
 use std::fs::create_dir_all;
 
 use super::DirectoryAction;
-use crate::actions::{Action, ActionResult};
+use crate::actions::{Action, ActionResult, ChangeSet};
 use crate::manifests::Manifest;
 use anyhow::{Context as ResultWithContext, Result};
 use fs_extra::dir::CopyOptions;
@@ -19,12 +19,6 @@ impl DirectoryCopy {}
 impl DirectoryAction for DirectoryCopy {}
 
 impl Action for DirectoryCopy {
-    fn dry_run(&self, _manifest: &Manifest, _context: &Context) -> Result<ActionResult> {
-        Ok(ActionResult {
-            message: format!("copy directory from {} to {}", self.from, self.to),
-        })
-    }
-
     fn run(&self, manifest: &Manifest, _context: &Context) -> Result<ActionResult> {
         let absolute_path = manifest
             .root_dir
@@ -48,6 +42,18 @@ impl Action for DirectoryCopy {
 
         Ok(ActionResult {
             message: String::from("Copied"),
+        })
+    }
+
+    fn dry_run(&self, _manifest: &Manifest, _context: &Context) -> Result<ActionResult> {
+        Ok(ActionResult {
+            message: format!("copy directory from {} to {}", self.from, self.to),
+        })
+    }
+
+    fn changeset(&self, _manifest: &Manifest, _context: &Context) -> Option<ChangeSet> {
+        Some(ChangeSet {
+            changes: Vec::new(),
         })
     }
 }

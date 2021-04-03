@@ -14,7 +14,7 @@ use std::fs::canonicalize;
 use std::{collections::HashMap, ops::Deref};
 use structopt::StructOpt;
 use tera::Tera;
-use tracing::{debug, error, info, span, trace, Level};
+use tracing::{debug, error, info, span, trace, Level, Subscriber};
 use tracing_subscriber::FmtSubscriber;
 
 #[derive(StructOpt, Clone, Debug)]
@@ -35,24 +35,32 @@ pub struct Opt {
     /// Run a subset of your manifests, comma separated list
     #[structopt(short = "m", long, use_delimiter = true)]
     manifests: Vec<String>,
+
+    /// Disable color printing
+    #[structopt(long = "no-color")]
+    no_color: bool,
+}
+
+fn configure_subscriber(opt: &Opt) -> impl Subscriber {
+    let builder = FmtSubscriber::builder()
+        .with_max_level(Level::INFO)
+        .with_ansi(!opt.no_color)
+        .with_target(false)
+        .without_time();
+
+    match opt.verbose {
+        0 => builder,
+        1 => builder.with_max_level(Level::DEBUG),
+        2 => builder.with_max_level(Level::TRACE),
+        _ => builder.with_max_level(Level::TRACE),
+    }
+    .finish()
 }
 
 fn main() -> anyhow::Result<()> {
     let opt = Opt::from_args();
 
-    let subscriber = FmtSubscriber::builder()
-        .with_max_level(Level::INFO)
-        .with_ansi(true)
-        .with_target(false)
-        .without_time();
-
-    let subscriber = match opt.verbose {
-        0 => subscriber,
-        1 => subscriber.with_max_level(Level::DEBUG),
-        2 => subscriber.with_max_level(Level::TRACE),
-        _ => subscriber.with_max_level(Level::TRACE),
-    }
-    .finish();
+    let subscriber = configure_subscriber(&opt);
 
     tracing::subscriber::set_global_default(subscriber).expect("setting default subscriber failed");
 
@@ -311,10 +319,12 @@ fn main() -> anyhow::Result<()> {
             let mut successful = true;
 
             m1.actions.iter().for_each(|action| {
+                let action = action.inner_ref();
+
                 let result = if dry_run {
-                    action.inner_ref().dry_run(&m1, &contexts)
+                    action.dry_run(&m1, &contexts)
                 } else {
-                    action.inner_ref().run(&m1, &contexts)
+                    action.run(&m1, &contexts)
                 };
 
                 match result {
