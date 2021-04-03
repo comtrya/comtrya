@@ -23,9 +23,7 @@ actions:
     to: mydircopy
 "#)
         ])
-    ]).create_in(&path.clone()).expect("should have create stuff");
-
-
+    ]).create_in(&path.clone()).expect("should have create test directories");
 
     let assert = cd(path).run("comtrya directory/copy/main.yaml --dry-run --no-color");
 
