@@ -14,8 +14,8 @@ use std::fs::canonicalize;
 use std::{collections::HashMap, ops::Deref};
 use structopt::StructOpt;
 use tera::Tera;
-use tracing::{debug, error, info, span, trace, Level};
-use tracing_subscriber::FmtSubscriber;
+use tracing::{debug, error, info, span, trace, Level, Subscriber};
+use tracing_subscriber::{FmtSubscriber};
 
 #[derive(StructOpt, Clone, Debug)]
 #[structopt(name = "comtrya")]
@@ -320,8 +320,6 @@ fn main() -> anyhow::Result<()> {
 
             m1.actions.iter().for_each(|action| {
                 let action = action.inner_ref();
-
-                dbg!(action.changeset(&m1, &contexts));
 
                 let result = if dry_run {
                     action.dry_run(&m1, &contexts)
