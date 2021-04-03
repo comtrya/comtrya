@@ -1,7 +1,10 @@
 #![allow(dead_code)]
 use assert_cmd::{assert::Assert, Command};
-use std::{fs::{File, create_dir}, path::Path};
 use std::io::Result;
+use std::{
+    fs::{create_dir, File},
+    path::Path,
+};
 
 // re-export for all modules to share
 pub use predicates::{prelude::PredicateBooleanExt, str::contains as c};
@@ -47,8 +50,8 @@ pub(crate) fn cd(path: PathBuf) -> Dir {
 }
 
 pub(crate) enum Entry {
-    Dir{name: String, entries: Vec<Entry>},
-    File{name: String, content: String},
+    Dir { name: String, entries: Vec<Entry> },
+    File { name: String, content: String },
 }
 
 impl Entry {
@@ -59,9 +62,9 @@ impl Entry {
                 create_dir(new_dir.clone())?;
                 for entry in entries {
                     entry.create_in(&new_dir)?;
-                };
-            },
-            Entry::File{name, content} => {
+                }
+            }
+            Entry::File { name, content } => {
                 use std::io::Write;
                 let new_path = parent.join(name);
                 let mut f = File::create(new_path.clone())?;
@@ -74,11 +77,17 @@ impl Entry {
 
 pub(crate) fn f<I>(name: &'static str, s: I) -> Entry
 where
-    I: Into<String>
+    I: Into<String>,
 {
-    Entry::File{name: name.into(), content: s.into()}
+    Entry::File {
+        name: name.into(),
+        content: s.into(),
+    }
 }
 
 pub(crate) fn dir(name: &'static str, entries: Vec<Entry>) -> Entry {
-    Entry::Dir{name: name.into(), entries}
+    Entry::Dir {
+        name: name.into(),
+        entries,
+    }
 }

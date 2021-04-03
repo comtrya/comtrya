@@ -15,7 +15,7 @@ use std::{collections::HashMap, ops::Deref};
 use structopt::StructOpt;
 use tera::Tera;
 use tracing::{debug, error, info, span, trace, Level, Subscriber};
-use tracing_subscriber::{FmtSubscriber};
+use tracing_subscriber::FmtSubscriber;
 
 #[derive(StructOpt, Clone, Debug)]
 #[structopt(name = "comtrya")]
@@ -53,9 +53,9 @@ fn configure_subscriber(opt: &Opt) -> impl Subscriber {
         1 => builder.with_max_level(Level::DEBUG),
         2 => builder.with_max_level(Level::TRACE),
         _ => builder.with_max_level(Level::TRACE),
-    }.finish()
+    }
+    .finish()
 }
-
 
 fn main() -> anyhow::Result<()> {
     let opt = Opt::from_args();
