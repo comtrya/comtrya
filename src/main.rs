@@ -35,24 +35,32 @@ pub struct Opt {
     /// Run a subset of your manifests, comma separated list
     #[structopt(short = "m", long, use_delimiter = true)]
     manifests: Vec<String>,
+
+    /// Disable color printing
+    #[structopt(long = "no-color")]
+    no_color: bool,
 }
+
+fn configure_subscriber(opt: &Opt) -> impl Subscriber {
+    let builder = FmtSubscriber::builder()
+        .with_max_level(Level::INFO)
+        .with_ansi(!opt.no_color)
+        .with_target(false)
+        .without_time();
+
+    match opt.verbose {
+        0 => builder,
+        1 => builder.with_max_level(Level::DEBUG),
+        2 => builder.with_max_level(Level::TRACE),
+        _ => builder.with_max_level(Level::TRACE),
+    }.finish()
+}
+
 
 fn main() -> anyhow::Result<()> {
     let opt = Opt::from_args();
 
-    let subscriber = FmtSubscriber::builder()
-        .with_max_level(Level::INFO)
-        .with_ansi(true)
-        .with_target(false)
-        .without_time();
-
-    let subscriber = match opt.verbose {
-        0 => subscriber,
-        1 => subscriber.with_max_level(Level::DEBUG),
-        2 => subscriber.with_max_level(Level::TRACE),
-        _ => subscriber.with_max_level(Level::TRACE),
-    }
-    .finish();
+    let subscriber = configure_subscriber(&opt);
 
     tracing::subscriber::set_global_default(subscriber).expect("setting default subscriber failed");
 
