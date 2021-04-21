@@ -1,9 +1,11 @@
 actions:
   - action: command.run
     command: echo
+    dir: .
     args:
       - hi
 
   - action: cmd.run
     command: whoami
+    dir: .
     sudo: true

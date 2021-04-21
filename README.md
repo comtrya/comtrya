@@ -76,11 +76,13 @@ A manifest is a collection of packages and files, and this will likely be expand
 ```yaml
 actions:
   - action: command.run
-    name: whoami
+    command: whoami
+    dir: .
     sudo: true
 
   - action: command.run
-    name: echo
+    command: echo
+    dir: .
     args:
       - Hello
       - World
