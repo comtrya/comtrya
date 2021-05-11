@@ -50,8 +50,27 @@ impl Atom for FileOwnership {
         let current_owner = users::get_user_by_uid(metadata.uid()).unwrap();
         let current_group = users::get_group_by_gid(metadata.gid()).unwrap();
 
-        let requested_owner = users::get_user_by_name(self.owner.as_str()).unwrap();
-        let requested_group = users::get_group_by_name(self.group.as_str()).unwrap();
+        let requested_owner = match users::get_user_by_name(self.owner.as_str()) {
+            Some(owner) => owner,
+            None => {
+                error!(
+                    "Skipping chown as requested owner, {}, does not exist",
+                    self.owner,
+                );
+                return false;
+            }
+        };
+
+        let requested_group = match users::get_group_by_name(self.group.as_str()) {
+            Some(group) => group,
+            None => {
+                error!(
+                    "Skipping chown as requested group, {}, does not exist",
+                    self.group,
+                );
+                return false;
+            }
+        };
 
         if current_owner.uid() != requested_owner.uid() {
             return true;
@@ -90,7 +109,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn it_can_plan() {
+    fn it_can() {
         let user = users::get_current_username()
             .unwrap()
             .into_string()
@@ -140,30 +159,4 @@ mod tests {
 
         assert_eq!(true, file_chown.plan());
     }
-
-    #[test]
-    fn it_can_execute() {
-        let temp_file = match tempfile::NamedTempFile::new() {
-            std::result::Result::Ok(file) => file,
-            std::result::Result::Err(_) => {
-                assert_eq!(false, true);
-                return;
-            }
-        };
-
-        let file_chown = FileOwnership {
-            path: temp_file.path().to_path_buf(),
-            owner: String::from("nobody"),
-            group: String::from("nobody"),
-        };
-
-        assert_eq!(true, file_chown.plan());
-        // There's no chown in Rust stdlib and coreutils seems overly complex?
-        // Perhaps we'll shell out for now
-        // assert_eq!(true, file_chown.execute().is_ok());
-        // assert_eq!(false, file_chown.plan());
-    }
-
-    #[test]
-    fn it_can_revert() {}
 }
