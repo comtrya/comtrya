@@ -1,4 +1,4 @@
-pub mod always_suceed;
+pub mod always_succeed;
 
 pub enum FlowControl {
     ErrorIf(Box<dyn Finalizer>),
@@ -6,5 +6,5 @@ pub enum FlowControl {
 }
 
 pub trait Finalizer {
-    fn run(&self) -> bool;
+    fn run(&self, result: &Result<std::process::Output, std::io::Error>) -> bool;
 }
