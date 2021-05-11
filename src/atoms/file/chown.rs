@@ -98,10 +98,6 @@ impl Atom for FileOwnership {
     fn execute(&self) -> anyhow::Result<()> {
         Ok(())
     }
-
-    fn revert(&self) -> anyhow::Result<()> {
-        Ok(())
-    }
 }
 
 #[cfg(test)]
