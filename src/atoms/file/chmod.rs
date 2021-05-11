@@ -1,7 +1,6 @@
 use super::super::Atom;
 use super::FileAtom;
 use std::path::PathBuf;
-use tracing::error;
 
 pub struct FilePermissions {
     path: PathBuf,
@@ -26,7 +25,7 @@ impl std::fmt::Display for FilePermissions {
 }
 
 #[cfg(unix)]
-use std::os::unix::prelude::PermissionsExt;
+use {std::os::unix::prelude::PermissionsExt, tracing::error};
 
 #[cfg(unix)]
 impl Atom for FilePermissions {
@@ -68,10 +67,6 @@ impl Atom for FilePermissions {
     }
 
     fn execute(&self) -> anyhow::Result<()> {
-        Ok(())
-    }
-
-    fn revert(&self) -> anyhow::Result<()> {
         Ok(())
     }
 }
@@ -165,7 +160,4 @@ mod tests {
         assert_eq!(true, file_chmod.execute().is_ok());
         assert_eq!(false, file_chmod.plan());
     }
-
-    #[test]
-    fn it_can_revert() {}
 }
