@@ -16,6 +16,7 @@ pub struct CommandRun {
     finalizers: Vec<finalizers::FlowControl>,
 }
 
+#[allow(dead_code)]
 pub fn new_run_command(command: String) -> CommandRun {
     CommandRun {
         command,
@@ -75,6 +76,12 @@ impl Atom for CommandRun {
         // If we require root, we need to use sudo with inherited IO
         // to ensure the user can respond if prompted for a password
         if command.eq("sudo") {
+            tracing::info!(
+                "Sudo required for privilege elevation to run `{} {}`. Validating sudo ...",
+                &command,
+                arguments.clone().join(" ")
+            );
+
             match std::process::Command::new("sudo")
                 .stdin(std::process::Stdio::inherit())
                 .stdout(std::process::Stdio::inherit())
