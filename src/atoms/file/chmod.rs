@@ -14,6 +14,17 @@ impl FileAtom for FilePermissions {
     }
 }
 
+impl std::fmt::Display for FilePermissions {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "The permissions on {} need to be set to {}",
+            self.path.to_str().unwrap(),
+            self.mode
+        )
+    }
+}
+
 #[cfg(unix)]
 use std::os::unix::prelude::PermissionsExt;
 

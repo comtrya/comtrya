@@ -306,6 +306,7 @@ dependencies = [
  "assert_cmd",
  "assert_fs",
  "dirs-next",
+ "file_diff",
  "fs_extra",
  "gitsync",
  "ignore",
@@ -472,6 +473,12 @@ name = "fake-simd"
 version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e88a8acf291dafb59c2d96e8f59828f3838bb1a70398823ade51a84de6a6deed"
+
+[[package]]
+name = "file_diff"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "31a7a908b8f32538a2143e59a6e4e2508988832d5d4d6f7c156b3cbc762643a5"
 
 [[package]]
 name = "fixedbitset"

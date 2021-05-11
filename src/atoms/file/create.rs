@@ -12,6 +12,16 @@ impl FileAtom for FileCreate {
     }
 }
 
+impl std::fmt::Display for FileCreate {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "The file {} needs to be created",
+            self.path.to_str().unwrap(),
+        )
+    }
+}
+
 impl Atom for FileCreate {
     fn plan(&self) -> bool {
         !self.path.exists()
@@ -67,23 +77,5 @@ mod tests {
 
         assert_eq!(true, file_create.execute().is_ok());
         assert_eq!(false, file_create.plan());
-    }
-
-    #[test]
-    fn it_can_revert() {
-        let temp_file = match tempfile::NamedTempFile::new() {
-            std::result::Result::Ok(file) => file,
-            std::result::Result::Err(_) => {
-                assert_eq!(false, true);
-                return;
-            }
-        };
-
-        let file_create = FileCreate {
-            path: temp_file.path().to_path_buf(),
-        };
-
-        assert_eq!(true, file_create.revert().is_ok());
-        assert_eq!(true, file_create.plan());
     }
 }

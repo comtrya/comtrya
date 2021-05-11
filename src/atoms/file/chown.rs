@@ -15,6 +15,18 @@ impl FileAtom for FileOwnership {
     }
 }
 
+impl std::fmt::Display for FileOwnership {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "The owner and group on {} need to be set to {}:{}",
+            self.path.to_str().unwrap(),
+            self.owner,
+            self.group,
+        )
+    }
+}
+
 #[cfg(unix)]
 use std::os::unix::prelude::MetadataExt;
 
@@ -146,6 +158,8 @@ mod tests {
         };
 
         assert_eq!(true, file_chown.plan());
+        // There's no chown in Rust stdlib and coreutils seems overly complex?
+        // Perhaps we'll shell out for now
         // assert_eq!(true, file_chown.execute().is_ok());
         // assert_eq!(false, file_chown.plan());
     }
