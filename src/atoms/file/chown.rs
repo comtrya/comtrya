@@ -138,7 +138,7 @@ mod tests {
         let file_chown = FileOwnership {
             path: temp_file.path().to_path_buf(),
             owner: user.clone(),
-            group: String::from("wheel"),
+            group: String::from("daemon"),
         };
 
         assert_eq!(true, file_chown.plan());
@@ -154,7 +154,7 @@ mod tests {
         let file_chown = FileOwnership {
             path: temp_file.path().to_path_buf(),
             owner: String::from("root"),
-            group: String::from("wheel"),
+            group: String::from("daemon"),
         };
 
         assert_eq!(true, file_chown.plan());
