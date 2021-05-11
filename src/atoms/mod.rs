@@ -1,3 +1,4 @@
+mod command;
 mod file;
 
 pub trait Atom: std::fmt::Display {
