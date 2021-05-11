@@ -75,6 +75,9 @@ pub trait Action {
     }
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct DirectoryChange {}
+
 #[derive(Debug)]
 pub struct Change {
     pub action: String, // Which action: "package.install"
