@@ -1,9 +1,10 @@
 use super::PackageProvider;
-use crate::actions::package::PackageVariant;
-use anyhow::{anyhow, Result};
+use crate::{
+    actions::package::PackageVariant,
+    atoms::{command::Exec, Atom},
+};
 use serde::{Deserialize, Serialize};
-use std::process::Command;
-use tracing::{debug, trace, warn};
+use tracing::warn;
 use which::which;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -24,18 +25,16 @@ impl PackageProvider for Winget {
         }
     }
 
-    fn bootstrap(&self) -> Result<()> {
-        // Not sure if we can automate this atm, we'll require it
-        // be installed upfront for the time being
-        Err(anyhow!("Winget is not available. Please install"))
+    fn bootstrap(&self) -> Vec<Box<dyn Atom>> {
+        vec![]
     }
 
     fn has_repository(&self, _package: &PackageVariant) -> bool {
         true
     }
 
-    fn add_repository(&self, _package: &PackageVariant) -> Result<()> {
-        Ok(())
+    fn add_repository(&self, _package: &PackageVariant) -> Vec<Box<dyn Atom>> {
+        vec![]
     }
 
     fn query(&self, package: &PackageVariant) -> Vec<String> {
@@ -43,39 +42,22 @@ impl PackageProvider for Winget {
         package.packages()
     }
 
-    fn install(&self, package: &PackageVariant) -> Result<()> {
-        let result = package
+    fn install(&self, package: &PackageVariant) -> Vec<Box<dyn Atom>> {
+        package
             .packages()
-            .into_iter()
-            .try_fold(vec![], |mut acc, p| {
-                match Command::new("winget")
-                    .args(&["install", "--silent"])
-                    .args(package.extra_args.clone())
-                    .arg(&p)
-                    .output()
-                {
-                    Ok(result) => {
-                        debug!("Installed {}", p.clone());
-
-                        acc.push(p);
-
-                        trace!("{:?}", String::from_utf8(result.stdout).unwrap());
-
-                        Ok(acc)
-                    }
-                    Err(error) => {
-                        debug!("Failed to install {}", p);
-                        trace!("{:?}", error.to_string());
-
-                        Err(anyhow!(format!(
-                            "Failed to install {}, but successfully installed {:?}",
-                            p,
-                            acc.join(",")
-                        )))
-                    }
-                }
-            });
-
-        result.map(|_| ())
+            .iter()
+            .map::<Box<dyn Atom>, _>(|p| {
+                Box::new(Exec {
+                    command: String::from("winget"),
+                    arguments: [
+                        vec![String::from("install"), String::from("--silent")],
+                        package.extra_args.clone(),
+                        vec![p.clone()],
+                    ]
+                    .concat(),
+                    ..Default::default()
+                })
+            })
+            .collect()
     }
 }

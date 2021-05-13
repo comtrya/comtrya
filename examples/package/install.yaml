@@ -1,5 +1,6 @@
 actions:
   - action: package.install
+    name: font-cascadia-code
     variants:
       macos:
         repository: homebrew/cask-fonts

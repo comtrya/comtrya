@@ -1,20 +1,20 @@
 use super::PackageProvider;
-use crate::actions::package::PackageVariant;
-use crate::utils::command::{run_command, Command};
-use anyhow::{anyhow, Result};
+use crate::atoms::command::finalizers::output_contains::OutputContains;
+use crate::atoms::command::finalizers::FlowControl::FinishIf;
+use crate::{
+    actions::package::PackageVariant,
+    atoms::{command::Exec, Atom},
+};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use tracing::{instrument, span, warn};
+use tracing::{instrument, warn};
 use which::which;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct BsdPkg {}
 
 impl BsdPkg {
-    fn env(&self) -> HashMap<String, String> {
-        let mut env: HashMap<String, String> = HashMap::new();
-        env.insert(String::from("ASSUME_ALWAYS_YES"), String::from("true"));
-        env
+    fn env(&self) -> Vec<(String, String)> {
+        vec![(String::from("ASSUME_ALWAYS_YES"), String::from("true"))]
     }
 }
 
@@ -34,29 +34,22 @@ impl PackageProvider for BsdPkg {
     }
 
     #[instrument(name = "bootstrap", level = "info", skip(self))]
-    fn bootstrap(&self) -> Result<()> {
-        let span = span!(tracing::Level::INFO, "bootstrap").entered();
-
-        run_command(Command {
-            name: String::from("/usr/sbin/pkg"),
-            env: self.env(),
-            dir: None,
-            args: vec![String::from("bootstrap")],
-            require_root: true,
-        })?;
-
-        span.exit();
-
-        Ok(())
+    fn bootstrap(&self) -> Vec<Box<dyn Atom>> {
+        vec![Box::new(Exec {
+            command: String::from("/usr/sbin/pkg"),
+            arguments: vec![String::from("bootstrap")],
+            environment: self.env(),
+            privileged: true,
+            ..Default::default()
+        })]
     }
 
     fn has_repository(&self, _package: &PackageVariant) -> bool {
         false
     }
 
-    fn add_repository(&self, _package: &PackageVariant) -> Result<()> {
-        // I don't know what this looks like yet
-        Ok(())
+    fn add_repository(&self, _package: &PackageVariant) -> Vec<Box<dyn Atom>> {
+        vec![]
     }
 
     fn query(&self, package: &PackageVariant) -> Vec<String> {
@@ -65,84 +58,29 @@ impl PackageProvider for BsdPkg {
         package.packages()
     }
 
-    fn install(&self, package: &PackageVariant) -> Result<()> {
-        // Manually ensure we have sudo
-        if "root" != whoami::username() {
-            match std::process::Command::new("sudo")
-                .stdin(std::process::Stdio::inherit())
-                .stdout(std::process::Stdio::inherit())
-                .stderr(std::process::Stdio::inherit())
-                .arg("--validate")
-                .output()
-            {
-                Ok(std::process::Output { status, .. }) if status.success() => (),
-
-                _ => return Err(anyhow!("Failed to get sudo access")),
-            };
-        }
-
-        let mut command = if "root" == whoami::username() {
-            std::process::Command::new("/usr/sbin/pkg")
-        } else {
-            std::process::Command::new("sudo")
-        };
-
-        if "root" != whoami::username() {
-            command.arg("/usr/sbin/pkg");
-        }
-
-        let result = command
-            .envs(self.env())
-            .args(
-                vec![String::from("install"), String::from("-n")]
+    fn install(&self, package: &PackageVariant) -> Vec<Box<dyn Atom>> {
+        vec![
+            Box::new(Exec {
+                command: String::from("/usr/sbin/pkg"),
+                arguments: vec![String::from("install"), String::from("-n")]
                     .into_iter()
                     .chain(package.extra_args.clone())
-                    .chain(package.packages()),
-            )
-            .output();
-
-        // Rerun without dry-run / -n if nothing is to be removed
-        match result {
-            Ok(std::process::Output { stdout, .. }) => {
-                // Command run OK, check for removed
-                let out_string = String::from_utf8(stdout).unwrap();
-                if out_string.to_lowercase().contains("removed") {
-                    return Err(anyhow!(format!(
-                        "Installing '{}' would remove packages. Please run this manually",
-                        package.packages().join(",")
-                    )));
-                }
-            }
-            Err(e) => {
-                return Err(anyhow!(e));
-            }
-        }
-
-        // OK to install
-        let mut command = if "root" == whoami::username() {
-            std::process::Command::new("/usr/sbin/pkg")
-        } else {
-            std::process::Command::new("sudo")
-        };
-
-        if "root" != whoami::username() {
-            command.arg("/usr/sbin/pkg");
-        }
-
-        let result = command
-            .envs(self.env())
-            .args(
-                vec![String::from("install"), String::from("--yes")]
+                    .chain(package.packages())
+                    .collect(),
+                finalizers: vec![FinishIf(Box::new(OutputContains("removed")))],
+                privileged: true,
+                ..Default::default()
+            }),
+            Box::new(Exec {
+                command: String::from("/usr/sbin/pkg"),
+                arguments: vec![String::from("install")]
                     .into_iter()
                     .chain(package.extra_args.clone())
-                    .chain(package.packages()),
-            )
-            .output();
-
-        match result {
-            Ok(std::process::Output { status, .. }) if status.success() => Ok(()),
-            Ok(std::process::Output { .. }) => Err(anyhow!("Failed to install packages")),
-            Err(e) => Err(anyhow!(e)),
-        }
+                    .chain(package.packages())
+                    .collect(),
+                privileged: true,
+                ..Default::default()
+            }),
+        ]
     }
 }

@@ -1,7 +1,9 @@
 use super::Atom;
 
-mod finalizers;
-mod initializers;
-mod run;
+mod exec;
+pub mod finalizers;
+pub mod initializers;
+
+pub use exec::Exec;
 
 pub trait CommandAtom: Atom {}

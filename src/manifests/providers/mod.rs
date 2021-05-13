@@ -2,7 +2,6 @@ mod git;
 use git::GitManifestProvider;
 mod local;
 use local::LocalManifestProvider;
-
 use std::path::PathBuf;
 
 pub fn register_providers() -> Vec<Box<dyn ManifestProvider>> {

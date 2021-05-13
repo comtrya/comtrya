@@ -2,18 +2,18 @@ use super::super::Atom;
 use super::FileAtom;
 use std::path::PathBuf;
 
-pub struct FilePermissions {
-    path: PathBuf,
-    mode: u32,
+pub struct Chmod {
+    pub path: PathBuf,
+    pub mode: u32,
 }
 
-impl FileAtom for FilePermissions {
+impl FileAtom for Chmod {
     fn get_path(&self) -> &PathBuf {
         &self.path
     }
 }
 
-impl std::fmt::Display for FilePermissions {
+impl std::fmt::Display for Chmod {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
@@ -28,7 +28,7 @@ impl std::fmt::Display for FilePermissions {
 use {std::os::unix::prelude::PermissionsExt, tracing::error};
 
 #[cfg(unix)]
-impl Atom for FilePermissions {
+impl Atom for Chmod {
     fn plan(&self) -> bool {
         let metadata = match std::fs::metadata(&self.path) {
             Ok(m) => m,
@@ -102,14 +102,14 @@ mod tests {
             .is_ok(),
         );
 
-        let file_chmod = FilePermissions {
+        let file_chmod = Chmod {
             path: temp_dir.path().join("644"),
             mode: 0o644,
         };
 
         assert_eq!(false, file_chmod.plan());
 
-        let file_chmod = FilePermissions {
+        let file_chmod = Chmod {
             path: temp_dir.path().join("644"),
             mode: 0o640,
         };
@@ -144,14 +144,14 @@ mod tests {
             .is_ok(),
         );
 
-        let file_chmod = FilePermissions {
+        let file_chmod = Chmod {
             path: temp_dir.path().join("644"),
             mode: 0o644,
         };
 
         assert_eq!(false, file_chmod.plan());
 
-        let file_chmod = FilePermissions {
+        let file_chmod = Chmod {
             path: temp_dir.path().join("644"),
             mode: 0o640,
         };

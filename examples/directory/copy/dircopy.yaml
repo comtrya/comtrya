@@ -1,4 +1,4 @@
 actions:
   - action: directory.copy
     from: mydir
-    to: mydircopy
+    to: /tmp/dircopy

@@ -2,17 +2,17 @@ use super::super::Atom;
 use super::FileAtom;
 use std::path::PathBuf;
 
-pub struct FileCreate {
-    path: PathBuf,
+pub struct Create {
+    pub path: PathBuf,
 }
 
-impl FileAtom for FileCreate {
+impl FileAtom for Create {
     fn get_path(&self) -> &PathBuf {
         &self.path
     }
 }
 
-impl std::fmt::Display for FileCreate {
+impl std::fmt::Display for Create {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
@@ -22,7 +22,7 @@ impl std::fmt::Display for FileCreate {
     }
 }
 
-impl Atom for FileCreate {
+impl Atom for Create {
     fn plan(&self) -> bool {
         !self.path.exists()
     }
@@ -40,7 +40,7 @@ mod tests {
 
     #[test]
     fn it_can_plan() {
-        let file_create = FileCreate {
+        let file_create = Create {
             path: std::path::PathBuf::from("some-random-path"),
         };
 
@@ -54,7 +54,7 @@ mod tests {
             }
         };
 
-        let file_create = FileCreate {
+        let file_create = Create {
             path: temp_file.path().to_path_buf(),
         };
 
@@ -71,7 +71,7 @@ mod tests {
             }
         };
 
-        let file_create = FileCreate {
+        let file_create = Create {
             path: temp_dir.path().join("create-me"),
         };
 

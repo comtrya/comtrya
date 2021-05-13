@@ -3,19 +3,19 @@ use super::FileAtom;
 use std::path::PathBuf;
 use tracing::error;
 
-pub struct FileOwnership {
-    path: PathBuf,
-    owner: String,
-    group: String,
+pub struct Chown {
+    pub path: PathBuf,
+    pub owner: String,
+    pub group: String,
 }
 
-impl FileAtom for FileOwnership {
+impl FileAtom for Chown {
     fn get_path(&self) -> &PathBuf {
         &self.path
     }
 }
 
-impl std::fmt::Display for FileOwnership {
+impl std::fmt::Display for Chown {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
@@ -31,7 +31,7 @@ impl std::fmt::Display for FileOwnership {
 use std::os::unix::prelude::MetadataExt;
 
 #[cfg(unix)]
-impl Atom for FileOwnership {
+impl Atom for Chown {
     fn plan(&self) -> bool {
         let metadata = match std::fs::metadata(&self.path) {
             Ok(m) => m,
@@ -123,7 +123,7 @@ mod tests {
             }
         };
 
-        let file_chown = FileOwnership {
+        let file_chown = Chown {
             path: temp_file.path().to_path_buf(),
             owner: user.clone(),
             group: group.clone(),
@@ -131,7 +131,7 @@ mod tests {
 
         assert_eq!(false, file_chown.plan());
 
-        let file_chown = FileOwnership {
+        let file_chown = Chown {
             path: temp_file.path().to_path_buf(),
             owner: user.clone(),
             group: String::from("daemon"),
@@ -139,7 +139,7 @@ mod tests {
 
         assert_eq!(true, file_chown.plan());
 
-        let file_chown = FileOwnership {
+        let file_chown = Chown {
             path: temp_file.path().to_path_buf(),
             owner: String::from("root"),
             group: group.clone(),
@@ -147,7 +147,7 @@ mod tests {
 
         assert_eq!(true, file_chown.plan());
 
-        let file_chown = FileOwnership {
+        let file_chown = Chown {
             path: temp_file.path().to_path_buf(),
             owner: String::from("root"),
             group: String::from("daemon"),

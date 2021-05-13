@@ -6,7 +6,6 @@ mod contexts;
 use contexts::build_contexts;
 mod manifests;
 use manifests::Manifest;
-mod utils;
 
 use anyhow::anyhow;
 use ignore::WalkBuilder;
@@ -322,20 +321,28 @@ fn main() -> anyhow::Result<()> {
             m1.actions.iter().for_each(|action| {
                 let action = action.inner_ref();
 
-                let result = if dry_run {
-                    action.dry_run(&m1, &contexts)
-                } else {
-                    action.run(&m1, &contexts)
-                };
+                action
+                    .plan(&m1, &contexts)
+                    .into_iter()
+                    .try_for_each(|atom| {
+                        if !atom.plan() {
+                            debug!("Atom not required");
+                            return Some(());
+                        }
 
-                match result {
-                    Ok(result) => debug!("{}", result.message),
-                    Err(e) => {
-                        successful = false;
+                        if dry_run {
+                            return Some(());
+                        }
 
-                        error!(message = e.to_string().as_str())
-                    }
-                }
+                        match atom.execute() {
+                            Ok(_) => Some(()),
+                            Err(err) => {
+                                debug!("Some atom failed: {:?}", err);
+                                successful = false;
+                                return None;
+                            }
+                        }
+                    });
             });
 
             if !successful {
