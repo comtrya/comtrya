@@ -9,3 +9,11 @@ actions:
     command: whoami
     dir: .
     sudo: true
+
+  - action: command.run
+    command: sh
+    args:
+      - "-c"
+      - "curl -sfL https://get.k3s.io | sh -"
+    dir: .
+    sudo: true
