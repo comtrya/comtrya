@@ -74,6 +74,7 @@ impl Atom for Link {
         } else {
             std::os::windows::fs::symlink_file(&self.to, &self.from)?;
         }
+
         Ok(())
     }
 }

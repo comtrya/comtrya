@@ -61,7 +61,7 @@ impl Atom for Chmod {
 }
 
 #[cfg(not(unix))]
-impl Atom for FilePermissions {
+impl Atom for Chmod {
     fn plan(&self) -> bool {
         false
     }

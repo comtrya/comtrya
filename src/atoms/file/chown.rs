@@ -89,7 +89,7 @@ impl Atom for Chown {
 }
 
 #[cfg(not(unix))]
-impl Atom for FileOwnership {
+impl Atom for Chown {
     fn plan(&self) -> bool {
         // Never run
         false
