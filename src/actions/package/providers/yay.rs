@@ -1,11 +1,8 @@
-use std::collections::HashMap;
-
 use super::PackageProvider;
-use crate::actions::package::PackageVariant;
-use crate::utils::command::{run_command, Command};
-use anyhow::Result;
+use crate::atoms::command::Exec;
+use crate::{actions::package::PackageVariant, atoms::Atom};
 use serde::{Deserialize, Serialize};
-use tracing::{info, span, warn};
+use tracing::warn;
 use which::which;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -26,95 +23,64 @@ impl PackageProvider for Yay {
         }
     }
 
-    fn bootstrap(&self) -> Result<()> {
-        let span = span!(tracing::Level::INFO, "bootstrap").entered();
-
-        // Install base-devel and git to be able to pull and build/compile stuff
-        info!(message = "Installing base-devel and git");
-        run_command(Command {
-            name: String::from("pacman"),
-            env: HashMap::new(),
-            dir: None,
-            args: vec![
-                String::from("-S"),
-                String::from("--noconfirm"),
-                String::from("base-devel"),
-                String::from("git"),
-            ],
-            require_root: true,
-        })?;
-
-        // Clone Yay from AUR
-        info!(message = "Cloning yay's PKGBUILD");
-        run_command(Command {
-            name: String::from("git"),
-            env: HashMap::new(),
-            dir: None,
-            args: vec![
-                String::from("clone"),
-                String::from("https://aur.archlinux.org/yay.git"),
-                String::from("/tmp/yay"),
-            ],
-            require_root: false,
-        })?;
-
-        // Install Yay from PKGBUILD
-        info!(message = "Building and Installing yay using PKGBUILD script");
-        run_command(Command {
-            name: String::from("makepkg"),
-            env: HashMap::new(),
-            dir: Some(String::from("/tmp/yay")),
-            args: vec![String::from("-si"), String::from("--noconfirm")],
-            require_root: false,
-        })?;
-
-        // Clean up
-        info!(message = "Cleaning up temporary PKGBUILD folder");
-        run_command(Command {
-            name: String::from("rm"),
-            env: HashMap::new(),
-            dir: None,
-            args: vec![String::from("-rf"), String::from("/tmp/yay")],
-            require_root: false,
-        })?;
-
-        info!(message = "Yay installed");
-
-        span.exit();
-
-        Ok(())
+    fn bootstrap(&self) -> Vec<Box<dyn Atom>> {
+        vec![
+            Box::new(Exec {
+                command: String::from("pacman"),
+                arguments: vec![
+                    String::from("-S"),
+                    String::from("--noconfirm"),
+                    String::from("base-devel"),
+                    String::from("git"),
+                ],
+                privileged: true,
+                ..Default::default()
+            }),
+            Box::new(Exec {
+                command: String::from("git"),
+                arguments: vec![
+                    String::from("clone"),
+                    String::from("https://aur.archlinux.org/yay.git"),
+                    String::from("/tmp/yay"),
+                ],
+                ..Default::default()
+            }),
+            Box::new(Exec {
+                command: String::from("makepkg"),
+                arguments: vec![String::from("-si"), String::from("--noconfirm")],
+                working_dir: Some(String::from("/tmp/yay")),
+                ..Default::default()
+            }),
+        ]
     }
 
     fn has_repository(&self, _package: &PackageVariant) -> bool {
         false
     }
 
-    fn add_repository(&self, _package: &PackageVariant) -> Result<()> {
-        Ok(())
+    fn add_repository(&self, _package: &PackageVariant) -> Vec<Box<dyn Atom>> {
+        vec![]
     }
 
     fn query(&self, package: &PackageVariant) -> Vec<String> {
         package.packages()
     }
 
-    fn install(&self, package: &PackageVariant) -> Result<()> {
-        run_command(Command {
-            name: String::from("yay"),
-            env: HashMap::new(),
-            dir: None,
-            args: vec![
-                String::from("-S"),
-                String::from("--noconfirm"),
-                String::from("--nocleanmenu"),
-                String::from("--nodiffmenu"),
+    fn install(&self, package: &PackageVariant) -> Vec<Box<dyn Atom>> {
+        vec![Box::new(Exec {
+            command: String::from("yay"),
+            arguments: [
+                vec![
+                    String::from("-S"),
+                    String::from("--noconfirm"),
+                    String::from("--nocleanmenu"),
+                    String::from("--nodiffmenu"),
+                ],
+                package.extra_args.clone(),
+                package.packages(),
             ]
-            .into_iter()
-            .chain(package.extra_args.clone())
-            .chain(package.packages())
-            .collect(),
-            require_root: false,
-        })?;
-
-        Ok(())
+            .concat(),
+            ..Default::default()
+        })]
     }
 }

@@ -3,18 +3,18 @@ use super::FileAtom;
 use file_diff::diff;
 use std::path::PathBuf;
 
-pub struct FileCopy {
-    from: PathBuf,
-    to: PathBuf,
+pub struct Copy {
+    pub from: PathBuf,
+    pub to: PathBuf,
 }
 
-impl FileAtom for FileCopy {
+impl FileAtom for Copy {
     fn get_path(&self) -> &PathBuf {
         &self.from
     }
 }
 
-impl std::fmt::Display for FileCopy {
+impl std::fmt::Display for Copy {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
@@ -25,7 +25,7 @@ impl std::fmt::Display for FileCopy {
     }
 }
 
-impl Atom for FileCopy {
+impl Atom for Copy {
     fn plan(&self) -> bool {
         !diff(self.from.to_str().unwrap(), self.to.to_str().unwrap())
     }
@@ -69,14 +69,14 @@ mod tests {
             .is_ok()
         );
 
-        let file_copy = FileCopy {
+        let file_copy = Copy {
             from: from_file.path().to_path_buf(),
             to: to_file.path().to_path_buf(),
         };
 
         assert_eq!(true, file_copy.plan());
 
-        let file_copy = FileCopy {
+        let file_copy = Copy {
             from: from_file.path().to_path_buf(),
             to: from_file.path().to_path_buf(),
         };
@@ -113,7 +113,7 @@ mod tests {
             .is_ok()
         );
 
-        let file_copy = FileCopy {
+        let file_copy = Copy {
             from: from_file.path().to_path_buf(),
             to: to_file.path().to_path_buf(),
         };

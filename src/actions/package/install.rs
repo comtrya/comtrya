@@ -1,28 +1,15 @@
 use super::Package;
 use super::PackageVariant;
-use crate::actions::{Action, ActionResult};
 use crate::manifests::Manifest;
-use anyhow::{anyhow, Context as ResultWithContext, Result};
+use crate::{actions::Action, atoms::Atom};
 use std::ops::Deref;
 use tera::Context;
-use tracing::span;
+use tracing::{error, span};
 
 pub type PackageInstall = Package;
 
 impl Action for PackageInstall {
-    fn dry_run(&self, _manifest: &Manifest, _context: &Context) -> Result<ActionResult> {
-        let variant: PackageVariant = self.into();
-
-        Ok(ActionResult {
-            message: format!(
-                "Install {} from {}",
-                variant.packages().join(", "),
-                variant.provider.name()
-            ),
-        })
-    }
-
-    fn run(&self, _manifest: &Manifest, _context: &Context) -> Result<ActionResult> {
+    fn plan(&self, _manifest: &Manifest, _context: &Context) -> Vec<Box<dyn Atom>> {
         let variant: PackageVariant = self.into();
         let box_provider = variant.provider.clone().get_provider();
         let provider = box_provider.deref();
@@ -34,29 +21,32 @@ impl Action for PackageInstall {
         )
         .entered();
 
+        let mut atoms: Vec<Box<dyn Atom>> = vec![];
+
         // If the provider isn't available, see if we can bootstrap it
-        if !provider.available() && provider.bootstrap().is_err() {
-            return Err(anyhow!("Provider unavailable"));
+        if !provider.available() {
+            if provider.bootstrap().len() == 0 {
+                error!(
+                    "Package Provider, {}, isn't available. Skipping action",
+                    provider.name()
+                );
+                return vec![];
+            }
+
+            atoms.append(&mut provider.bootstrap());
         }
 
         if let Some(ref _repo) = variant.repository {
             if !provider.has_repository(&variant) {
-                provider
-                    .add_repository(&variant)
-                    .context("failed to add repository")?;
+                atoms.append(&mut provider.add_repository(&variant));
             }
         }
 
-        let result = match provider.install(&variant) {
-            Ok(_) => Ok(ActionResult {
-                message: String::from("Packages installed successfully"),
-            }),
-            Err(e) => Err(e),
-        };
+        atoms.append(&mut provider.install(&variant));
 
         span.exit();
 
-        result
+        atoms
     }
 }
 

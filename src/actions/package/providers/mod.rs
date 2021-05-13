@@ -1,12 +1,12 @@
 mod aptitude;
 use self::aptitude::Aptitude;
+use crate::atoms::Atom;
 mod bsdpkg;
 use self::bsdpkg::BsdPkg;
 mod homebrew;
 use self::homebrew::Homebrew;
 mod yay;
 use self::yay::Yay;
-use anyhow::Result;
 mod winget;
 use self::winget::Winget;
 use super::PackageVariant;
@@ -40,16 +40,6 @@ impl PackageProviders {
             PackageProviders::Winget => Box::new(Winget {}),
         }
     }
-
-    pub fn name(&self) -> &'static str {
-        match self {
-            PackageProviders::Aptitude => "aptitude",
-            PackageProviders::BsdPkg => "bsdpkg",
-            PackageProviders::Homebrew => "homebrew",
-            PackageProviders::Yay => "pacman",
-            PackageProviders::Winget => "winget",
-        }
-    }
 }
 
 impl Default for PackageProviders {
@@ -79,9 +69,9 @@ impl Default for PackageProviders {
 pub trait PackageProvider {
     fn name(&self) -> &str;
     fn available(&self) -> bool;
-    fn bootstrap(&self) -> Result<()>;
+    fn bootstrap(&self) -> Vec<Box<dyn Atom>>;
     fn has_repository(&self, package: &PackageVariant) -> bool;
-    fn add_repository(&self, package: &PackageVariant) -> Result<()>;
+    fn add_repository(&self, package: &PackageVariant) -> Vec<Box<dyn Atom>>;
     fn query(&self, package: &PackageVariant) -> Vec<String>;
-    fn install(&self, package: &PackageVariant) -> Result<()>;
+    fn install(&self, package: &PackageVariant) -> Vec<Box<dyn Atom>>;
 }

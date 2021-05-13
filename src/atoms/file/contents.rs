@@ -3,18 +3,18 @@ use super::FileAtom;
 use std::path::PathBuf;
 use tracing::error;
 
-pub struct FileContents {
-    path: PathBuf,
-    contents: String,
+pub struct SetContents {
+    pub path: PathBuf,
+    pub contents: String,
 }
 
-impl FileAtom for FileContents {
+impl FileAtom for SetContents {
     fn get_path(&self) -> &PathBuf {
         &self.path
     }
 }
 
-impl std::fmt::Display for FileContents {
+impl std::fmt::Display for SetContents {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
@@ -25,7 +25,7 @@ impl std::fmt::Display for FileContents {
     }
 }
 
-impl Atom for FileContents {
+impl Atom for SetContents {
     fn plan(&self) -> bool {
         let contents = match std::fs::read_to_string(&self.path) {
             Ok(contents) => contents,
@@ -63,14 +63,14 @@ mod tests {
             }
         };
 
-        let file_contents = FileContents {
+        let file_contents = SetContents {
             path: file.path().to_path_buf(),
             contents: String::from(""),
         };
 
         assert_eq!(false, file_contents.plan());
 
-        let file_contents = FileContents {
+        let file_contents = SetContents {
             path: file.path().to_path_buf(),
             contents: String::from("Hello, world!"),
         };

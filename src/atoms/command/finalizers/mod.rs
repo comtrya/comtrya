@@ -1,4 +1,5 @@
 pub mod always_succeed;
+pub mod output_contains;
 
 #[allow(dead_code)]
 pub enum FlowControl {

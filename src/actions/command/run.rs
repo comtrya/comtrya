@@ -1,11 +1,9 @@
-use std::collections::HashMap;
-
-use crate::actions::{Action, ActionResult};
-use anyhow::Result;
+use crate::{actions::Action, manifests::Manifest};
 use serde::{Deserialize, Serialize};
+use tera::Context;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct CommandRun {
+pub struct RunCommand {
     pub command: String,
 
     #[serde(default)]
@@ -14,43 +12,23 @@ pub struct CommandRun {
     #[serde(default = "get_false")]
     pub sudo: bool,
 
-    pub dir: String,
+    pub dir: Option<String>,
 }
 
 fn get_false() -> bool {
     false
 }
 
-impl Action for CommandRun {
-    fn dry_run(
-        &self,
-        _manifest: &crate::manifests::Manifest,
-        _context: &tera::Context,
-    ) -> Result<ActionResult> {
-        let pretty_args = self
-            .args
-            .iter()
-            .map(|a| format!("\"{}\"", a))
-            .collect::<Vec<_>>()
-            .join(", ");
-        Ok(ActionResult {
-            message: format!(
-                "run {} with args {} (require_root={})",
-                self.command, pretty_args, self.sudo
-            ),
-        })
-    }
-    fn run(
-        &self,
-        _manifest: &crate::manifests::Manifest,
-        _context: &tera::Context,
-    ) -> Result<ActionResult> {
-        crate::utils::command::run_command(crate::utils::command::Command {
-            name: self.command.clone(),
-            env: HashMap::new(),
-            args: self.args.clone(),
-            dir: Some(self.dir.clone()),
-            require_root: self.sudo,
-        })
+impl Action for RunCommand {
+    fn plan(&self, _: &Manifest, _: &Context) -> Vec<Box<dyn crate::atoms::Atom>> {
+        use crate::atoms::command::Exec;
+
+        vec![Box::new(Exec {
+            command: self.command.clone(),
+            arguments: self.args.clone(),
+            privileged: self.sudo,
+            working_dir: self.dir.clone(),
+            ..Default::default()
+        })]
     }
 }

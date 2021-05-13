@@ -1,12 +1,9 @@
 use super::FileAction;
-use crate::actions::{Action, ActionResult};
 use crate::manifests::Manifest;
-use anyhow::{anyhow, Context as ResultWithContext, Result};
+use crate::{actions::Action, atoms::Atom};
 use serde::{Deserialize, Serialize};
-use std::fs::create_dir_all;
 use std::path::PathBuf;
 use tera::Context;
-use tracing::debug;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct FileLink {
@@ -19,72 +16,26 @@ impl FileLink {}
 impl FileAction for FileLink {}
 
 impl Action for FileLink {
-    fn dry_run(&self, manifest: &Manifest, _context: &Context) -> Result<ActionResult> {
-        let from = self.resolve(manifest, &self.from)?;
+    fn plan(&self, _: &Manifest, _: &Context) -> Vec<Box<dyn Atom>> {
+        use crate::atoms::command::Exec;
+        use crate::atoms::file::Link;
+
+        let from = PathBuf::from(&self.from);
         let to = PathBuf::from(&self.to);
+        let parent = from.clone();
 
-        Ok(ActionResult {
-            message: format!(
-                "symlink from {} to {}",
-                from.to_string_lossy(),
-                to.to_string_lossy()
-            ),
-        })
+        vec![
+            Box::new(Exec {
+                command: String::from("mkdir"),
+                arguments: vec![
+                    String::from("-p"),
+                    String::from(parent.parent().unwrap().to_str().unwrap()),
+                ],
+                ..Default::default()
+            }),
+            Box::new(Link { from, to }),
+        ]
     }
-
-    fn run(&self, manifest: &Manifest, _context: &Context) -> Result<ActionResult> {
-        let mut parent = PathBuf::from(&self.to);
-        parent.pop();
-
-        debug!(
-            message = "Creating Prerequisite Directories",
-            directories = &parent.to_str().unwrap()
-        );
-
-        create_dir_all(parent).context("Failed to create parent directory")?;
-
-        let from = self.resolve(manifest, &self.from)?;
-        let to = PathBuf::from(&self.to);
-
-        match to.read_link() {
-            Ok(symlink) => {
-                if from.eq(&symlink) {
-                    Ok(ActionResult {
-                        message: String::from("Already present"),
-                    })
-                } else {
-                    Err(anyhow!("Symlink exists to another file"))
-                }
-            }
-            Err(_) => create_link(from, to),
-        }
-    }
-}
-
-#[cfg(windows)]
-fn create_link(from: PathBuf, to: PathBuf) -> Result<ActionResult> {
-    if from.is_dir() {
-        std::os::windows::fs::symlink_dir(&from, &to)
-            .context(format!("A: {:?} - {:?}", from, to))
-            .map(|_| ActionResult {
-                message: String::from("Symlink created"),
-            })
-    } else {
-        std::os::windows::fs::symlink_file(&from, &to)
-            .context(format!("A: {:?} - {:?}", from, to))
-            .map(|_| ActionResult {
-                message: String::from("Symlink created"),
-            })
-    }
-}
-
-#[cfg(unix)]
-fn create_link(from: PathBuf, to: PathBuf) -> Result<ActionResult> {
-    std::os::unix::fs::symlink(&from, &to)
-        .context(format!("A: {:?} - {:?}", from, to))
-        .map(|_| ActionResult {
-            message: String::from("Symlink created"),
-        })
 }
 
 #[cfg(test)]

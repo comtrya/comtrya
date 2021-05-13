@@ -1,10 +1,6 @@
-use std::fs::create_dir_all;
-
 use super::DirectoryAction;
-use crate::actions::{Action, ActionResult, ChangeSet};
-use crate::manifests::Manifest;
-use anyhow::{Context as ResultWithContext, Result};
-use fs_extra::dir::CopyOptions;
+use crate::{actions::Action, atoms::Atom};
+use crate::{atoms::command::Exec, manifests::Manifest};
 use serde::{Deserialize, Serialize};
 use tera::Context;
 
@@ -19,51 +15,27 @@ impl DirectoryCopy {}
 impl DirectoryAction for DirectoryCopy {}
 
 impl Action for DirectoryCopy {
-    fn run(&self, manifest: &Manifest, _context: &Context) -> Result<ActionResult> {
-        let absolute_path = manifest
-            .root_dir
-            .clone()
-            .unwrap()
-            .join("files")
-            .join(&self.from);
-
-        create_dir_all(&self.to).context("Failed to create directory")?;
-
-        fs_extra::dir::copy(
-            &absolute_path,
-            &self.to,
-            &CopyOptions {
-                overwrite: true,
-                content_only: true,
+    fn plan(&self, _: &Manifest, _context: &Context) -> Vec<Box<dyn Atom>> {
+        vec![
+            Box::new(Exec {
+                command: String::from("mkdir"),
+                arguments: vec![String::from("-p"), self.to.clone()],
                 ..Default::default()
-            },
-        )
-        .context("Failed to copy directory")?;
-
-        Ok(ActionResult {
-            message: String::from("Copied"),
-        })
-    }
-
-    fn dry_run(&self, _manifest: &Manifest, _context: &Context) -> Result<ActionResult> {
-        Ok(ActionResult {
-            message: format!("copy directory from {} to {}", self.from, self.to),
-        })
-    }
-
-    fn changeset(&self, _manifest: &Manifest, _context: &Context) -> Option<ChangeSet> {
-        Some(ChangeSet {
-            changes: Vec::new(),
-        })
+            }),
+            Box::new(Exec {
+                command: String::from("cp"),
+                arguments: vec![String::from("-r"), self.from.clone(), self.to.clone()],
+                ..Default::default()
+            }),
+        ]
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use std::path::PathBuf;
-
-    use crate::actions::{Action, Actions};
+    use crate::actions::Actions;
     use crate::manifests::Manifest;
+    use std::path::PathBuf;
 
     fn get_manifest_dir() -> PathBuf {
         std::env::current_dir()
@@ -87,37 +59,5 @@ mod tests {
                 panic!("DirectoryCopy didn't deserialize to the correct type");
             }
         };
-    }
-
-    #[test]
-    fn it_can_copy_a_directory() {
-        let manifest_dir = std::env::current_dir()
-            .unwrap()
-            .join("examples")
-            .join("directory")
-            .join("copy");
-
-        let manifest = crate::manifests::Manifest {
-            name: Some(String::from("copy")),
-            actions: vec![],
-            dag_index: None,
-            depends: vec![],
-            root_dir: Some(manifest_dir.clone()),
-        };
-
-        let to = std::env::temp_dir().join("test-case");
-
-        let directory_copy = super::DirectoryCopy {
-            from: String::from("mydir"),
-            to: String::from(to.to_str().unwrap()),
-        };
-
-        directory_copy
-            .run(&manifest, &tera::Context::new())
-            .unwrap();
-
-        assert_eq!(true, to.is_dir());
-        assert_eq!(true, to.join("file-a").exists());
-        assert_eq!(true, to.join("file-b").exists());
     }
 }

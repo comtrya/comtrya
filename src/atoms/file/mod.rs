@@ -6,6 +6,12 @@ mod create;
 mod link;
 
 use super::Atom;
+pub use chmod::Chmod;
+pub use chown::Chown;
+pub use contents::SetContents;
+pub use copy::Copy;
+pub use create::Create;
+pub use link::Link;
 
 pub trait FileAtom: Atom {
     // Don't think this is needed? Validate soon

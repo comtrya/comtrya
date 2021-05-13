@@ -6,25 +6,25 @@ use std::io::Error;
 use std::process::Output;
 
 #[derive(Default)]
-pub struct CommandRun {
-    command: String,
-    arguments: Vec<String>,
-    working_dir: Option<String>,
-    environment: Vec<(String, String)>,
-    privileged: bool,
-    initializers: Vec<initializers::FlowControl>,
-    finalizers: Vec<finalizers::FlowControl>,
+pub struct Exec {
+    pub command: String,
+    pub arguments: Vec<String>,
+    pub working_dir: Option<String>,
+    pub environment: Vec<(String, String)>,
+    pub privileged: bool,
+    pub initializers: Vec<initializers::FlowControl>,
+    pub finalizers: Vec<finalizers::FlowControl>,
 }
 
 #[allow(dead_code)]
-pub fn new_run_command(command: String) -> CommandRun {
-    CommandRun {
+pub fn new_run_command(command: String) -> Exec {
+    Exec {
         command,
         ..Default::default()
     }
 }
 
-impl CommandRun {
+impl Exec {
     fn elevate_if_required(&self) -> (String, Vec<String>) {
         if !self.privileged {
             return (self.command.clone(), self.arguments.clone());
@@ -41,7 +41,7 @@ impl CommandRun {
     }
 }
 
-impl std::fmt::Display for CommandRun {
+impl std::fmt::Display for Exec {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
@@ -53,7 +53,7 @@ impl std::fmt::Display for CommandRun {
     }
 }
 
-impl Atom for CommandRun {
+impl Atom for Exec {
     fn plan(&self) -> bool {
         let mut initializers = self.initializers.iter();
 
@@ -119,7 +119,7 @@ impl Atom for CommandRun {
     }
 }
 
-impl CommandRun {
+impl Exec {
     fn finalize(&self, result: Result<Output, Error>) -> Result<(), anyhow::Error> {
         let mut finalizers = self.finalizers.iter();
 
@@ -150,7 +150,7 @@ mod tests {
 
     #[test]
     fn defaults() {
-        let command_run = CommandRun {
+        let command_run = Exec {
             ..Default::default()
         };
 
@@ -200,7 +200,7 @@ mod tests {
         use super::initializers::FlowControl::SkipIf;
 
         // Ensure that no initializers always returns true
-        let command_run = CommandRun {
+        let command_run = Exec {
             command: String::from("echo"),
             ..Default::default()
         };
@@ -208,7 +208,7 @@ mod tests {
         assert_eq!(true, command_run.plan());
 
         // Ensure that SkipIf returns false when satisfied
-        let command_run = CommandRun {
+        let command_run = Exec {
             command: String::from("echo"),
             initializers: vec![
                 SkipIf(Box::new(CommandFound("not-a-real-command"))),
@@ -221,7 +221,7 @@ mod tests {
         assert_eq!(false, command_run.plan());
 
         // Ensure that SkipIf returns true when not satisfied
-        let command_run = CommandRun {
+        let command_run = Exec {
             command: String::from("echo"),
             initializers: vec![
                 SkipIf(Box::new(CommandFound("not-a-real-command"))),
@@ -239,7 +239,7 @@ mod tests {
         use super::finalizers::FlowControl::{ErrorIf, FinishIf};
 
         // Nothing changes when using no finalizers
-        let command_run = CommandRun {
+        let command_run = Exec {
             command: String::from("echo"),
             ..Default::default()
         };
@@ -247,7 +247,7 @@ mod tests {
         let result = command_run.execute();
         assert_eq!(true, result.is_ok());
 
-        let command_run = CommandRun {
+        let command_run = Exec {
             command: String::from("not-a-command"),
             ..Default::default()
         };
@@ -256,7 +256,7 @@ mod tests {
         assert_eq!(true, result.is_err());
 
         // AlwaysSucceed
-        let command_run = CommandRun {
+        let command_run = Exec {
             command: String::from("not-a-command"),
             finalizers: vec![FinishIf(Box::new(AlwaysSucceed {}))],
             ..Default::default()
@@ -265,7 +265,7 @@ mod tests {
         let result = command_run.execute();
         assert_eq!(true, result.is_ok());
 
-        let command_run = CommandRun {
+        let command_run = Exec {
             command: String::from("not-a-command"),
             finalizers: vec![ErrorIf(Box::new(AlwaysSucceed {}))],
             ..Default::default()
@@ -274,7 +274,7 @@ mod tests {
         let result = command_run.execute();
         assert_eq!(true, result.is_err());
 
-        let command_run = CommandRun {
+        let command_run = Exec {
             command: String::from("not-a-command"),
             finalizers: vec![
                 FinishIf(Box::new(AlwaysSucceed {})),

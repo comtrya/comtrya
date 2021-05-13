@@ -1,26 +1,19 @@
-use std::collections::HashMap;
-
 use super::PackageProvider;
-use crate::actions::package::PackageVariant;
-use crate::utils::command::{run_command, Command};
-use anyhow::Result;
+use crate::atoms::command::Exec;
+use crate::{actions::package::PackageVariant, atoms::Atom};
 use serde::{Deserialize, Serialize};
-use tracing::{debug, span, warn};
+use tracing::warn;
 use which::which;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Aptitude {}
 
 impl Aptitude {
-    fn env(&self) -> HashMap<String, String> {
-        let mut env = HashMap::new();
-
-        env.insert(
+    fn env(&self) -> Vec<(String, String)> {
+        vec![(
             String::from("DEBIAN_FRONTEND"),
             String::from("noninteractive"),
-        );
-
-        env
+        )]
     }
 }
 
@@ -39,73 +32,59 @@ impl PackageProvider for Aptitude {
         }
     }
 
-    fn bootstrap(&self) -> Result<()> {
-        // Apt should always be available on Debian / Ubuntu flavours.
-        // Lets make sure software-properties-common is available
-        // for repository management
-        let span = span!(tracing::Level::INFO, "bootstrap").entered();
-
-        run_command(Command {
-            name: String::from("apt"),
-            env: self.env(),
-            dir: None,
-            args: vec![
+    fn bootstrap(&self) -> Vec<Box<dyn Atom>> {
+        vec![Box::new(Exec {
+            command: String::from("apt"),
+            arguments: vec![
                 String::from("install"),
-                String::from("-y"),
+                String::from("--yes"),
                 String::from("software-properties-common"),
                 String::from("gpg"),
             ],
-            require_root: true,
-        })?;
-
-        span.exit();
-
-        Ok(())
+            environment: self.env(),
+            privileged: true,
+            ..Default::default()
+        })]
     }
 
     fn has_repository(&self, _package: &PackageVariant) -> bool {
         false
     }
 
-    fn add_repository(&self, package: &PackageVariant) -> Result<()> {
-        run_command(Command {
-            name: String::from("apt-add-repository"),
-            env: self.env(),
-            dir: None,
-            args: vec![String::from("-y"), package.repository.clone().unwrap()],
-            require_root: true,
-        })?;
-
-        debug!(message = "Running Aptitude Update");
-
-        run_command(Command {
-            name: String::from("apt"),
-            env: self.env(),
-            dir: None,
-            args: vec![String::from("update")],
-            require_root: true,
-        })?;
-
-        Ok(())
+    fn add_repository(&self, package: &PackageVariant) -> Vec<Box<dyn Atom>> {
+        vec![
+            Box::new(Exec {
+                command: String::from("apt-add-repository"),
+                arguments: vec![String::from("-y"), package.repository.clone().unwrap()],
+                environment: self.env(),
+                privileged: true,
+                ..Default::default()
+            }),
+            Box::new(Exec {
+                command: String::from("apt"),
+                arguments: vec![String::from("update")],
+                environment: self.env(),
+                privileged: true,
+                ..Default::default()
+            }),
+        ]
     }
 
     fn query(&self, package: &PackageVariant) -> Vec<String> {
         package.packages()
     }
 
-    fn install(&self, package: &PackageVariant) -> Result<()> {
-        run_command(Command {
-            name: String::from("apt"),
-            env: self.env(),
-            dir: None,
-            args: vec![String::from("install"), String::from("-y")]
+    fn install(&self, package: &PackageVariant) -> Vec<Box<dyn Atom>> {
+        vec![Box::new(Exec {
+            command: String::from("apt"),
+            arguments: vec![String::from("install"), String::from("--yes")]
                 .into_iter()
                 .chain(package.extra_args.clone())
                 .chain(package.packages())
                 .collect(),
-            require_root: true,
-        })?;
-
-        Ok(())
+            environment: self.env(),
+            privileged: true,
+            ..Default::default()
+        })]
     }
 }

@@ -3,9 +3,8 @@ mod directory;
 mod file;
 mod package;
 
-use crate::manifests::Manifest;
-use anyhow::Result;
-use command::run::CommandRun;
+use crate::{atoms::Atom, manifests::Manifest};
+use command::run::RunCommand;
 use directory::copy::DirectoryCopy;
 use file::copy::FileCopy;
 use file::link::FileLink;
@@ -17,7 +16,7 @@ use tera::Context;
 #[serde(tag = "action")]
 pub enum Actions {
     #[serde(alias = "command.run", alias = "cmd.run")]
-    CommandRun(CommandRun),
+    CommandRun(RunCommand),
     #[serde(alias = "directory.copy", alias = "dir.copy")]
     DirectoryCopy(DirectoryCopy),
     #[serde(alias = "file.copy")]
@@ -61,30 +60,5 @@ impl<E: std::error::Error> From<E> for ActionError {
 }
 
 pub trait Action {
-    fn run(&self, manifest: &Manifest, context: &Context) -> Result<ActionResult>;
-
-    fn dry_run(&self, manifest: &Manifest, context: &Context) -> Result<ActionResult>;
-
-    fn changeset(&self, manifest: &Manifest, _context: &Context) -> Option<ChangeSet> {
-        Some(ChangeSet {
-            changes: vec![Change {
-                action: manifest.name.clone().unwrap_or("unknown".to_string()),
-                change: String::from("No ChangeSet implementation, assuming always needs executed"),
-            }],
-        })
-    }
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct DirectoryChange {}
-
-#[derive(Debug)]
-pub struct Change {
-    pub action: String, // Which action: "package.install"
-    pub change: String, // What needs to happen: "The requested packages, vim and emacs, are currently missing"
-}
-
-#[derive(Debug)]
-pub struct ChangeSet {
-    changes: Vec<Change>,
+    fn plan(&self, manifest: &Manifest, context: &Context) -> Vec<Box<dyn Atom>>;
 }

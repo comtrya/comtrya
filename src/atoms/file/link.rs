@@ -3,18 +3,18 @@ use super::FileAtom;
 use std::path::PathBuf;
 use tracing::{debug, error, warn};
 
-pub struct FileLink {
-    from: PathBuf,
-    to: PathBuf,
+pub struct Link {
+    pub from: PathBuf,
+    pub to: PathBuf,
 }
 
-impl FileAtom for FileLink {
+impl FileAtom for Link {
     fn get_path(&self) -> &PathBuf {
         &self.from
     }
 }
 
-impl std::fmt::Display for FileLink {
+impl std::fmt::Display for Link {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
@@ -25,7 +25,7 @@ impl std::fmt::Display for FileLink {
     }
 }
 
-impl Atom for FileLink {
+impl Atom for Link {
     fn plan(&self) -> bool {
         // First, ensure self.to exists and can be linked to
         if !self.to.exists() {
@@ -100,7 +100,7 @@ mod tests {
             }
         };
 
-        let atom = FileLink {
+        let atom = Link {
             from: from_dir.path().join("symlink"),
             to: to_file.path().to_path_buf(),
         };

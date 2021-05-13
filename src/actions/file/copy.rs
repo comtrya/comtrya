@@ -1,12 +1,11 @@
 use super::FileAction;
-use crate::actions::{Action, ActionResult};
 use crate::manifests::Manifest;
+use crate::{actions::Action, atoms::Atom};
 use anyhow::{Context as ResultWithContext, Result};
 use serde::{de::Error, Deserialize, Deserializer, Serialize};
-use std::io::Write;
-use std::{fs::create_dir_all, ops::Deref, path::PathBuf, u32};
+use std::{ops::Deref, path::PathBuf, u32};
 use tera::Context;
-use tracing::debug;
+use tracing::error;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct FileCopy {
@@ -41,58 +40,47 @@ impl FileCopy {}
 impl FileAction for FileCopy {}
 
 impl Action for FileCopy {
-    fn dry_run(&self, _manifest: &Manifest, _context: &Context) -> Result<ActionResult> {
-        Ok(ActionResult {
-            message: format!("copy from {} to {}", self.from, self.to),
-        })
-    }
-
-    fn run(&self, manifest: &Manifest, context: &Context) -> Result<ActionResult> {
+    fn plan(&self, manifest: &Manifest, context: &Context) -> Vec<Box<dyn Atom>> {
+        // There should be an Atom for rendering too
         let tera = self.init(manifest);
 
-        let contents = if self.template {
+        let contents = match if self.template {
             tera.render(self.from.clone().deref(), context)
                 .context("Failed to render template")
         } else {
             self.load(manifest, &self.from)
-        }?;
+        } {
+            Ok(contents) => contents,
+            Err(_) => {
+                // We need some way to bubble an error up the chain
+                error!("Failed to get contents for FileCopy action");
+                return vec![];
+            }
+        };
 
-        let mut parent = PathBuf::from(&self.to);
-        parent.pop();
+        use crate::atoms::command::Exec;
+        use crate::atoms::file::{Chmod, Create, SetContents};
 
-        debug!(
-            message = "Creating Prerequisite Directories",
-            directories = &parent.to_str().unwrap()
-        );
+        let path = PathBuf::from(&self.to);
+        let parent = path.clone();
 
-        create_dir_all(parent).context("Failed to create parent directory")?;
-
-        let mut file = std::fs::File::create(self.to.clone()).context("Failed to create file")?;
-
-        file.write_all(contents.as_bytes())
-            .context("Failed to create file")?;
-
-        file.sync_all().context("Failed to create file")?;
-
-        set_permissions(PathBuf::from(self.to.clone()), self.chmod)
-            .context("Failed to set permissions")?;
-        Ok(ActionResult {
-            message: String::from("Copied"),
-        })
+        vec![
+            Box::new(Exec {
+                command: String::from("mkdir"),
+                arguments: vec![
+                    String::from("-p"),
+                    String::from(parent.parent().unwrap().to_str().unwrap()),
+                ],
+                ..Default::default()
+            }),
+            Box::new(Create { path: path.clone() }),
+            Box::new(Chmod {
+                path: path.clone(),
+                mode: self.chmod,
+            }),
+            Box::new(SetContents { path, contents }),
+        ]
     }
-}
-
-#[cfg(unix)]
-fn set_permissions(to: PathBuf, chmod: u32) -> std::io::Result<()> {
-    use std::fs::Permissions;
-    use std::os::unix::prelude::PermissionsExt;
-
-    std::fs::set_permissions(to, Permissions::from_mode(chmod))
-}
-
-#[cfg(windows)]
-fn set_permissions(_to: PathBuf, chmod: u32) -> std::io::Result<()> {
-    Ok(())
 }
 
 #[cfg(test)]
