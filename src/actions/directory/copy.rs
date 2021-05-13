@@ -3,6 +3,7 @@ use crate::{actions::Action, atoms::Atom};
 use crate::{atoms::command::Exec, manifests::Manifest};
 use serde::{Deserialize, Serialize};
 use tera::Context;
+use tracing::error;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct DirectoryCopy {
@@ -15,7 +16,18 @@ impl DirectoryCopy {}
 impl DirectoryAction for DirectoryCopy {}
 
 impl Action for DirectoryCopy {
-    fn plan(&self, _: &Manifest, _context: &Context) -> Vec<Box<dyn Atom>> {
+    fn plan(&self, manifest: &Manifest, _context: &Context) -> Vec<Box<dyn Atom>> {
+        let from: String = match self.resolve(manifest, &self.from) {
+            Ok(from) => from,
+            Err(_) => {
+                error!("Failed to resolve path for file link");
+                return vec![];
+            }
+        }
+        .to_str()
+        .unwrap()
+        .into();
+
         vec![
             Box::new(Exec {
                 command: String::from("mkdir"),
@@ -24,7 +36,7 @@ impl Action for DirectoryCopy {
             }),
             Box::new(Exec {
                 command: String::from("cp"),
-                arguments: vec![String::from("-r"), self.from.clone(), self.to.clone()],
+                arguments: vec![String::from("-r"), from.clone(), self.to.clone()],
                 ..Default::default()
             }),
         ]
