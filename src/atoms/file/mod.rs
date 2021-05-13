@@ -3,6 +3,7 @@ mod chown;
 mod contents;
 mod copy;
 mod create;
+mod link;
 
 use super::Atom;
 

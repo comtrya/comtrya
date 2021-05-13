@@ -7,3 +7,6 @@ fmt:
 deny:
     cargo install --locked cargo-deny
     cargo deny check
+
+test:
+    cargo test -- --nocapture --color=always
