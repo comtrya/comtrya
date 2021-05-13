@@ -59,13 +59,13 @@ mod tests {
 
     #[test]
     fn it_can_be_deserialized() {
-        let example_yaml = std::fs::File::open(get_manifest_dir().join("main.yaml")).unwrap();
+        let example_yaml = std::fs::File::open(get_manifest_dir().join("dircopy.yaml")).unwrap();
         let mut manifest: Manifest = serde_yaml::from_reader(example_yaml).unwrap();
 
         match manifest.actions.pop() {
             Some(Actions::DirectoryCopy(dir_copy)) => {
                 assert_eq!("mydir", dir_copy.from);
-                assert_eq!("mydircopy", dir_copy.to);
+                assert_eq!("/tmp/dircopy", dir_copy.to);
             }
             _ => {
                 panic!("DirectoryCopy didn't deserialize to the correct type");
