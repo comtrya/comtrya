@@ -40,7 +40,5 @@ actions:
 
     let assert = cd(path).run("comtrya directory/copy/main.yaml --dry-run --no-color");
 
-    assert
-        .success()
-        .stdout(c(r#"INFO manifest_run{manifest="copy"}: Completed"#));
+    assert.success();
 }
