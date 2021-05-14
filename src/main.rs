@@ -321,29 +321,41 @@ fn main() -> anyhow::Result<()> {
             m1.actions.iter().for_each(|action| {
                 let action = action.inner_ref();
 
-                action
+                let mut atoms = action
                     .plan(&m1, &contexts)
                     .into_iter()
-                    .try_for_each(|atom| {
-                        if !atom.plan() {
-                            debug!("Atom not required");
-                            return Some(());
-                        }
+                    .filter(|x| x.plan())
+                    .peekable();
 
-                        if dry_run {
-                            return Some(());
-                        }
+                if atoms.peek().is_none() {
+                    info!("Nothing to be done to reconcile manifest");
+                    return;
+                }
 
-                        match atom.execute() {
-                            Ok(_) => Some(()),
-                            Err(err) => {
-                                debug!("Some atom failed: {:?}", err);
-                                successful = false;
-                                return None;
-                            }
+                let mut atoms_iter = atoms.into_iter();
+
+                while let Some(atom) = atoms_iter.next() {
+                    info!("{}", atom);
+
+                    if dry_run {
+                        continue;
+                    }
+
+                    match atom.execute() {
+                        Ok(_) => continue,
+                        Err(err) => {
+                            debug!("Atom failed to execute: {:?}", err);
+                            successful = false;
+                            break;
                         }
-                    });
+                    }
+                }
             });
+
+            if dry_run {
+                span_manifest.exit();
+                continue;
+            }
 
             if !successful {
                 error!("Failed");
