@@ -17,6 +17,8 @@ use tera::Tera;
 use tracing::{debug, error, info, span, trace, Level, Subscriber};
 use tracing_subscriber::FmtSubscriber;
 
+const VERSION: Option<&'static str> = option_env!("CARGO_PKG_VERSION");
+
 #[derive(StructOpt, Clone, Debug)]
 #[structopt(name = "comtrya")]
 pub struct Opt {
@@ -39,6 +41,10 @@ pub struct Opt {
     /// Disable color printing
     #[structopt(long = "no-color")]
     no_color: bool,
+
+    /// Print the version
+    #[structopt(long = "version", short = "V")]
+    print_version: bool,
 }
 
 fn configure_subscriber(opt: &Opt) -> impl Subscriber {
@@ -59,6 +65,11 @@ fn configure_subscriber(opt: &Opt) -> impl Subscriber {
 
 fn main() -> anyhow::Result<()> {
     let opt = Opt::from_args();
+
+    if opt.print_version {
+        println!("{}", VERSION.unwrap_or("unknown"));
+        return Ok(());
+    }
 
     let subscriber = configure_subscriber(&opt);
 
