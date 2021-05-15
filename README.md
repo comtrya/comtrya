@@ -58,6 +58,9 @@ comtrya . -m one,two,three
 
 # Show command usage
 comtrya --help
+
+# Prints version information
+comtrya --version
 ```
 
 ## Manifests
