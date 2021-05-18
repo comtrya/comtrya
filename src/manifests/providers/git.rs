@@ -46,7 +46,7 @@ impl ManifestProvider for GitManifestProvider {
             return Err(ManifestProviderError::NoResolution);
         }
 
-        return Ok(cache_path);
+        Ok(cache_path)
     }
 }
 
