@@ -36,7 +36,7 @@ impl Action for DirectoryCopy {
             }),
             Box::new(Exec {
                 command: String::from("cp"),
-                arguments: vec![String::from("-r"), from.clone(), self.to.clone()],
+                arguments: vec![String::from("-r"), from, self.to.clone()],
                 ..Default::default()
             }),
         ]
