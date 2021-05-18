@@ -1,9 +1,9 @@
 use super::FileAction;
 use crate::manifests::Manifest;
 use crate::{actions::Action, atoms::Atom};
-use anyhow::{Context as ResultWithContext, Result};
+use anyhow::Result;
 use serde::{de::Error, Deserialize, Deserializer, Serialize};
-use std::{ops::Deref, path::PathBuf, u32};
+use std::{path::PathBuf, u32};
 use tera::Context;
 use tracing::error;
 
@@ -41,19 +41,28 @@ impl FileAction for FileCopy {}
 
 impl Action for FileCopy {
     fn plan(&self, manifest: &Manifest, context: &Context) -> Vec<Box<dyn Atom>> {
-        // There should be an Atom for rendering too
-        let tera = self.init(manifest);
-
-        let contents = match if self.template {
-            tera.render(self.from.clone().deref(), context)
-                .context("Failed to render template")
-        } else {
-            self.load(manifest, &self.from)
-        } {
-            Ok(contents) => contents,
-            Err(_) => {
-                // We need some way to bubble an error up the chain
-                error!("Failed to get contents for FileCopy action");
+        let contents = match self.load(manifest, &self.from) {
+            Ok(contents) => {
+                if self.template {
+                    match tera::Tera::one_off(contents.as_str(), &context, false) {
+                        Ok(rendered) => rendered,
+                        Err(err) => {
+                            error!(
+                                "Failed to render contents for FileCopy action: {}",
+                                err.to_string()
+                            );
+                            return vec![];
+                        }
+                    }
+                } else {
+                    contents
+                }
+            }
+            Err(err) => {
+                error!(
+                    "Failed to get contents for FileCopy action: {}",
+                    err.to_string()
+                );
                 return vec![];
             }
         };

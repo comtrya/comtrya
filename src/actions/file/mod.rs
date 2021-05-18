@@ -1,33 +1,12 @@
 pub mod copy;
 pub mod link;
 
-use std::path::PathBuf;
-
 use crate::actions::Action;
 use crate::manifests::Manifest;
 use anyhow::{anyhow, Result};
-use tera::Tera;
-use tracing::trace;
+use std::path::PathBuf;
 
 pub trait FileAction: Action {
-    fn init(&self, manifest: &Manifest) -> Tera {
-        let files_directory = manifest.root_dir.clone().unwrap().join("files");
-
-        trace!(
-            message = "Creating Private Tera for File Action",
-            directory = files_directory.join("**/*").to_str().unwrap()
-        );
-
-        match Tera::new(files_directory.join("**/*").to_str().unwrap()) {
-            Ok(t) => t,
-            Err(e) => panic!(
-                "Failed to initialise Tera for {:?}: {:?}",
-                manifest.name.clone().unwrap(),
-                e
-            ),
-        }
-    }
-
     fn resolve(&self, manifest: &Manifest, path: &str) -> Result<PathBuf> {
         use std::io::ErrorKind;
 
