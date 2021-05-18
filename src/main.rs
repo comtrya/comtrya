@@ -338,7 +338,7 @@ fn main() -> anyhow::Result<()> {
                     return;
                 }
 
-                for atom in atoms.next() {
+                for atom in atoms {
                     info!("{}", atom);
 
                     if dry_run {

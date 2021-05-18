@@ -57,7 +57,7 @@ impl Atom for Exec {
     fn plan(&self) -> bool {
         let mut initializers = self.initializers.iter();
 
-        for initializer in initializers.next() {
+        for initializer in initializers {
             match initializer {
                 initializers::FlowControl::SkipIf(skip) => {
                     if skip.run() {
@@ -121,7 +121,7 @@ impl Exec {
     fn finalize(&self, result: Result<Output, Error>) -> Result<(), anyhow::Error> {
         let mut finalizers = self.finalizers.iter();
 
-        for finalizer in finalizers.next() {
+        for finalizer in finalizers {
             match finalizer {
                 finalizers::FlowControl::ErrorIf(errrun) => {
                     if errrun.run(&result) {
