@@ -79,7 +79,7 @@ impl Atom for Exec {
             tracing::info!(
                 "Sudo required for privilege elevation to run `{} {}`. Validating sudo ...",
                 &command,
-                arguments.clone().join(" ")
+                arguments.join(" ")
             );
 
             match std::process::Command::new("sudo")
