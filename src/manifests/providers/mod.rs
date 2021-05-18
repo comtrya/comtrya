@@ -23,9 +23,9 @@ pub enum ManifestProviderError {
 pub trait ManifestProvider {
     /// This functions is called to establish if it could potentially
     /// be able to resolve the url provided
-    fn looks_familiar(&self, url: &String) -> bool;
+    fn looks_familiar(&self, url: &str) -> bool;
 
     /// This function is responsible for returning a PathBuf with
     /// the directory containing the manifests
-    fn resolve(&self, url: &String) -> Result<PathBuf, ManifestProviderError>;
+    fn resolve(&self, url: &str) -> Result<PathBuf, ManifestProviderError>;
 }

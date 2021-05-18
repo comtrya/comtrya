@@ -9,11 +9,11 @@ impl ManifestProvider for LocalManifestProvider {
     /// The Local provider is essentially our final chance to
     /// resolve the url. It'll match anything and try to find a
     /// directory
-    fn looks_familiar(&self, _url: &String) -> bool {
+    fn looks_familiar(&self, _url: &str) -> bool {
         true
     }
 
-    fn resolve(&self, url: &String) -> Result<PathBuf, ManifestProviderError> {
+    fn resolve(&self, url: &str) -> Result<PathBuf, ManifestProviderError> {
         PathBuf::from(url)
             .canonicalize()
             .map_err(|_| ManifestProviderError::NoResolution)
