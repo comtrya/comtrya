@@ -51,8 +51,8 @@ impl ManifestProvider for GitManifestProvider {
 }
 
 impl GitManifestProvider {
-    fn clean_git_url(&self, uri: &String) -> String {
-        uri.clone()
+    fn clean_git_url(&self, uri: &str) -> String {
+        uri.to_string()
             .replace("https", "")
             .replace("http", "")
             .replace(":", "")
@@ -72,8 +72,7 @@ mod test {
 
         assert_eq!(
             "githubcomcomtryacomtrya",
-            git_manifest_provider
-                .clean_git_url(&String::from("https://github.com/comtrya/comtrya"))
+            git_manifest_provider.clean_git_url("https://github.com/comtrya/comtrya")
         );
     }
 
