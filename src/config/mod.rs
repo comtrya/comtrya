@@ -49,27 +49,21 @@ pub fn load_config(opts: Opt) -> Result<Config> {
 
 fn find_configs() -> Option<PathBuf> {
     // Check current working directory first
-    match std::env::current_dir() {
-        Ok(cwd) => {
-            let local_config = cwd.join("Comtrya.yaml");
+    if let Ok(cwd) = std::env::current_dir() {
+        let local_config = cwd.join("Comtrya.yaml");
 
-            if true == local_config.is_file() {
-                return Some(local_config);
-            }
+        if true == local_config.is_file() {
+            return Some(local_config);
         }
-        Err(_) => {}
-    };
+    }
 
     // Check platform's config dir
-    match dirs_next::config_dir() {
-        Some(config_dir) => {
-            let local_config = config_dir.join("Comtrya.yaml");
+    if let Some(config_dir) = dirs_next::config_dir() {
+        let local_config = config_dir.join("Comtrya.yaml");
 
-            if true == local_config.is_file() {
-                return Some(local_config);
-            }
+        if true == local_config.is_file() {
+            return Some(local_config);
         }
-        None => {}
     };
 
     None
