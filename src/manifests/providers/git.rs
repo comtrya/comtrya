@@ -7,14 +7,14 @@ use tracing::{error, info};
 pub struct GitManifestProvider;
 
 impl ManifestProvider for GitManifestProvider {
-    fn looks_familiar(&self, url: &String) -> bool {
+    fn looks_familiar(&self, url: &str) -> bool {
         use regex::Regex;
         let regex = Regex::new(r"^(https|git|ssh)://").unwrap();
 
         regex.is_match(url)
     }
 
-    fn resolve(&self, url: &String) -> Result<std::path::PathBuf, super::ManifestProviderError> {
+    fn resolve(&self, url: &str) -> Result<std::path::PathBuf, super::ManifestProviderError> {
         // Extract this to a function!
         let clean_repo_url = self.clean_git_url(&url);
         let cache_path = dirs_next::cache_dir()
@@ -25,7 +25,7 @@ impl ManifestProvider for GitManifestProvider {
             .join(clean_repo_url);
 
         let git_sync = GitSync {
-            repo: url.clone(),
+            repo: url.to_string(),
             dir: cache_path.clone(),
             ..Default::default()
         };
