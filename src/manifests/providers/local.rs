@@ -14,9 +14,9 @@ impl ManifestProvider for LocalManifestProvider {
     }
 
     fn resolve(&self, url: &String) -> Result<PathBuf, ManifestProviderError> {
-        PathBuf::from(url).canonicalize().map_err(|_| {
-            return ManifestProviderError::NoResolution;
-        })
+        PathBuf::from(url)
+            .canonicalize()
+            .map_err(|_| ManifestProviderError::NoResolution)
     }
 }
 
