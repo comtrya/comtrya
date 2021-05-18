@@ -52,7 +52,7 @@ fn find_configs() -> Option<PathBuf> {
     if let Ok(cwd) = std::env::current_dir() {
         let local_config = cwd.join("Comtrya.yaml");
 
-        if true == local_config.is_file() {
+        if local_config.is_file() {
             return Some(local_config);
         }
     }
@@ -61,7 +61,7 @@ fn find_configs() -> Option<PathBuf> {
     if let Some(config_dir) = dirs_next::config_dir() {
         let local_config = config_dir.join("Comtrya.yaml");
 
-        if true == local_config.is_file() {
+        if local_config.is_file() {
             return Some(local_config);
         }
     };
