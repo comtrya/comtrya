@@ -25,7 +25,7 @@ impl Action for PackageInstall {
 
         // If the provider isn't available, see if we can bootstrap it
         if !provider.available() {
-            if provider.bootstrap().len() == 0 {
+            if provider.bootstrap().is_empty() {
                 error!(
                     "Package Provider, {}, isn't available. Skipping action",
                     provider.name()
