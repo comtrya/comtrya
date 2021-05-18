@@ -142,7 +142,7 @@ fn main() -> anyhow::Result<()> {
         .filter(|entry| {
             // There has to be a better way to do this.
             // I couldn't get the TypeBuilder to work
-            if entry
+            entry
                 .clone()
                 .unwrap()
                 .file_name()
@@ -156,11 +156,6 @@ fn main() -> anyhow::Result<()> {
                     .to_str()
                     .unwrap()
                     .ends_with(".yml")
-            {
-                true
-            } else {
-                false
-            }
         })
         // Don't consider anything in a `files` directory a manifest
         .filter(|entry| {
@@ -343,9 +338,7 @@ fn main() -> anyhow::Result<()> {
                     return;
                 }
 
-                let mut atoms_iter = atoms.into_iter();
-
-                while let Some(atom) = atoms_iter.next() {
+                for atom in atoms.next() {
                     info!("{}", atom);
 
                     if dry_run {
