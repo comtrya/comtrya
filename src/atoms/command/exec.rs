@@ -121,7 +121,7 @@ impl Exec {
     fn finalize(&self, result: Result<Output, Error>) -> Result<(), anyhow::Error> {
         let mut finalizers = self.finalizers.iter();
 
-        while let Some(finalizer) = finalizers.next() {
+        for finalizer in finalizers.next() {
             match finalizer {
                 finalizers::FlowControl::ErrorIf(errrun) => {
                     if errrun.run(&result) {
