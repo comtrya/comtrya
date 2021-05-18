@@ -57,7 +57,7 @@ impl Atom for Exec {
     fn plan(&self) -> bool {
         let mut initializers = self.initializers.iter();
 
-        while let Some(initializer) = initializers.next() {
+        for initializer in initializers.next() {
             match initializer {
                 initializers::FlowControl::SkipIf(skip) => {
                     if skip.run() {
