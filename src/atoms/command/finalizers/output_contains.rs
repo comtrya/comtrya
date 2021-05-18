@@ -9,11 +9,7 @@ impl Finalizer for OutputContains {
             Ok(std::process::Output { stdout, .. }) => {
                 // Command run OK, check for removed
                 let out_string = String::from_utf8(stdout.clone()).unwrap();
-                if out_string.to_lowercase().contains(self.0) {
-                    true
-                } else {
-                    false
-                }
+                out_string.to_lowercase().contains(self.0)
             }
             Err(_) => false,
         }
