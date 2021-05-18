@@ -6,11 +6,7 @@ pub struct CommandFound(pub &'static str);
 impl Initializer for CommandFound {
     fn run(&self) -> bool {
         use which::which;
-
-        match which(self.0) {
-            Ok(_) => true,
-            Err(_) => false,
-        }
+        which(self.0).is_ok()
     }
 }
 
