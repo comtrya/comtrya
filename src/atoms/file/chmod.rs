@@ -56,7 +56,7 @@ impl Atom for Chmod {
             std::fs::Permissions::from_mode(self.mode),
         )?;
 
-        return Ok(());
+        Ok(())
     }
 }
 
