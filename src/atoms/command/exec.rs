@@ -1,7 +1,5 @@
 use super::super::Atom;
 use anyhow::anyhow;
-use std::io::Error;
-use std::process::Output;
 
 #[derive(Default)]
 pub struct Exec {
@@ -122,12 +120,6 @@ impl Atom for Exec {
 
     fn error_message(&self) -> String {
         self.status.stderr.clone()
-    }
-}
-
-impl Exec {
-    fn finalize(&self, result: Result<Output, Error>) -> Result<(), anyhow::Error> {
-        result.map(|_| ()).map_err(|error| anyhow!(error))
     }
 }
 

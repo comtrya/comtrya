@@ -18,7 +18,7 @@ mod tests {
     #[test]
     fn it_returns_false_when_not_found() {
         let finalizer = OutputContains("hello-world");
-        let result = finalizer.finalize(Echo::boxed("goodbye-world"));
+        let result = finalizer.finalize(Box::new(Echo("goodbye-world")));
 
         assert_eq!(true, result.is_ok());
         assert_eq!(false, result.unwrap());
@@ -27,7 +27,7 @@ mod tests {
     #[test]
     fn it_returns_true_when_found() {
         let finalizer = OutputContains("hello-world");
-        let result = finalizer.finalize(Echo::boxed("hello-world"));
+        let result = finalizer.finalize(Box::new(Echo("hello-world")));
 
         assert_eq!(true, result.is_ok());
         assert_eq!(true, result.unwrap());

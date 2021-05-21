@@ -1,6 +1,6 @@
 use super::FileAction;
-use crate::manifests::Manifest;
-use crate::{actions::Action, atoms::Atom};
+use crate::actions::Action;
+use crate::{actions::ActionAtom, manifests::Manifest};
 use anyhow::Result;
 use serde::{de::Error, Deserialize, Deserializer, Serialize};
 use std::{path::PathBuf, u32};
@@ -40,7 +40,7 @@ impl FileCopy {}
 impl FileAction for FileCopy {}
 
 impl Action for FileCopy {
-    fn plan(&self, manifest: &Manifest, context: &Context) -> Vec<Box<dyn Atom>> {
+    fn plan(&self, manifest: &Manifest, context: &Context) -> Vec<ActionAtom> {
         let contents = match self.load(manifest, &self.from) {
             Ok(contents) => {
                 if self.template {
@@ -74,20 +74,36 @@ impl Action for FileCopy {
         let parent = path.clone();
 
         vec![
-            Box::new(Exec {
-                command: String::from("mkdir"),
-                arguments: vec![
-                    String::from("-p"),
-                    String::from(parent.parent().unwrap().to_str().unwrap()),
-                ],
-                ..Default::default()
-            }),
-            Box::new(Create { path: path.clone() }),
-            Box::new(Chmod {
-                path: path.clone(),
-                mode: self.chmod,
-            }),
-            Box::new(SetContents { path, contents }),
+            ActionAtom {
+                atom: Box::new(Exec {
+                    command: String::from("mkdir"),
+                    arguments: vec![
+                        String::from("-p"),
+                        String::from(parent.parent().unwrap().to_str().unwrap()),
+                    ],
+                    ..Default::default()
+                }),
+                initializers: vec![],
+                finalizers: vec![],
+            },
+            ActionAtom {
+                atom: Box::new(Create { path: path.clone() }),
+                initializers: vec![],
+                finalizers: vec![],
+            },
+            ActionAtom {
+                atom: Box::new(Chmod {
+                    path: path.clone(),
+                    mode: self.chmod,
+                }),
+                initializers: vec![],
+                finalizers: vec![],
+            },
+            ActionAtom {
+                atom: Box::new(SetContents { path, contents }),
+                initializers: vec![],
+                finalizers: vec![],
+            },
         ]
     }
 }

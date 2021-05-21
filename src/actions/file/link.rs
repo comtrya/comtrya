@@ -1,6 +1,6 @@
 use super::FileAction;
-use crate::manifests::Manifest;
-use crate::{actions::Action, atoms::Atom};
+use crate::actions::Action;
+use crate::{actions::ActionAtom, manifests::Manifest};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use tera::Context;
@@ -16,7 +16,7 @@ impl FileLink {}
 impl FileAction for FileLink {}
 
 impl Action for FileLink {
-    fn plan(&self, _: &Manifest, _: &Context) -> Vec<Box<dyn Atom>> {
+    fn plan(&self, _: &Manifest, _: &Context) -> Vec<ActionAtom> {
         use crate::atoms::command::Exec;
         use crate::atoms::file::Link;
 
@@ -25,15 +25,23 @@ impl Action for FileLink {
         let parent = from.clone();
 
         vec![
-            Box::new(Exec {
-                command: String::from("mkdir"),
-                arguments: vec![
-                    String::from("-p"),
-                    String::from(parent.parent().unwrap().to_str().unwrap()),
-                ],
-                ..Default::default()
-            }),
-            Box::new(Link { from, to }),
+            ActionAtom {
+                atom: Box::new(Exec {
+                    command: String::from("mkdir"),
+                    arguments: vec![
+                        String::from("-p"),
+                        String::from(parent.parent().unwrap().to_str().unwrap()),
+                    ],
+                    ..Default::default()
+                }),
+                initializers: vec![],
+                finalizers: vec![],
+            },
+            ActionAtom {
+                atom: Box::new(Link { from, to }),
+                initializers: vec![],
+                finalizers: vec![],
+            },
         ]
     }
 }

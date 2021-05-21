@@ -1,6 +1,6 @@
 use super::PackageProvider;
-use crate::atoms::command::Exec;
-use crate::{actions::package::PackageVariant, atoms::Atom};
+use crate::actions::package::PackageVariant;
+use crate::{actions::ActionAtom, atoms::command::Exec};
 use serde::{Deserialize, Serialize};
 use tracing::warn;
 use which::which;
@@ -23,34 +23,46 @@ impl PackageProvider for Yay {
         }
     }
 
-    fn bootstrap(&self) -> Vec<Box<dyn Atom>> {
+    fn bootstrap(&self) -> Vec<ActionAtom> {
         vec![
-            Box::new(Exec {
-                command: String::from("pacman"),
-                arguments: vec![
-                    String::from("-S"),
-                    String::from("--noconfirm"),
-                    String::from("base-devel"),
-                    String::from("git"),
-                ],
-                privileged: true,
-                ..Default::default()
-            }),
-            Box::new(Exec {
-                command: String::from("git"),
-                arguments: vec![
-                    String::from("clone"),
-                    String::from("https://aur.archlinux.org/yay.git"),
-                    String::from("/tmp/yay"),
-                ],
-                ..Default::default()
-            }),
-            Box::new(Exec {
-                command: String::from("makepkg"),
-                arguments: vec![String::from("-si"), String::from("--noconfirm")],
-                working_dir: Some(String::from("/tmp/yay")),
-                ..Default::default()
-            }),
+            ActionAtom {
+                atom: Box::new(Exec {
+                    command: String::from("pacman"),
+                    arguments: vec![
+                        String::from("-S"),
+                        String::from("--noconfirm"),
+                        String::from("base-devel"),
+                        String::from("git"),
+                    ],
+                    privileged: true,
+                    ..Default::default()
+                }),
+                initializers: vec![],
+                finalizers: vec![],
+            },
+            ActionAtom {
+                atom: Box::new(Exec {
+                    command: String::from("git"),
+                    arguments: vec![
+                        String::from("clone"),
+                        String::from("https://aur.archlinux.org/yay.git"),
+                        String::from("/tmp/yay"),
+                    ],
+                    ..Default::default()
+                }),
+                initializers: vec![],
+                finalizers: vec![],
+            },
+            ActionAtom {
+                atom: Box::new(Exec {
+                    command: String::from("makepkg"),
+                    arguments: vec![String::from("-si"), String::from("--noconfirm")],
+                    working_dir: Some(String::from("/tmp/yay")),
+                    ..Default::default()
+                }),
+                initializers: vec![],
+                finalizers: vec![],
+            },
         ]
     }
 
@@ -58,7 +70,7 @@ impl PackageProvider for Yay {
         false
     }
 
-    fn add_repository(&self, _package: &PackageVariant) -> Vec<Box<dyn Atom>> {
+    fn add_repository(&self, _package: &PackageVariant) -> Vec<ActionAtom> {
         vec![]
     }
 
@@ -66,21 +78,25 @@ impl PackageProvider for Yay {
         package.packages()
     }
 
-    fn install(&self, package: &PackageVariant) -> Vec<Box<dyn Atom>> {
-        vec![Box::new(Exec {
-            command: String::from("yay"),
-            arguments: [
-                vec![
-                    String::from("-S"),
-                    String::from("--noconfirm"),
-                    String::from("--nocleanmenu"),
-                    String::from("--nodiffmenu"),
-                ],
-                package.extra_args.clone(),
-                package.packages(),
-            ]
-            .concat(),
-            ..Default::default()
-        })]
+    fn install(&self, package: &PackageVariant) -> Vec<ActionAtom> {
+        vec![ActionAtom {
+            atom: Box::new(Exec {
+                command: String::from("yay"),
+                arguments: [
+                    vec![
+                        String::from("-S"),
+                        String::from("--noconfirm"),
+                        String::from("--nocleanmenu"),
+                        String::from("--nodiffmenu"),
+                    ],
+                    package.extra_args.clone(),
+                    package.packages(),
+                ]
+                .concat(),
+                ..Default::default()
+            }),
+            initializers: vec![],
+            finalizers: vec![],
+        }]
     }
 }

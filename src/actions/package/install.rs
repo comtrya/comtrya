@@ -1,7 +1,7 @@
 use super::Package;
 use super::PackageVariant;
-use crate::manifests::Manifest;
-use crate::{actions::Action, atoms::Atom};
+use crate::actions::Action;
+use crate::{actions::ActionAtom, manifests::Manifest};
 use std::ops::Deref;
 use tera::Context;
 use tracing::{error, span};
@@ -9,7 +9,7 @@ use tracing::{error, span};
 pub type PackageInstall = Package;
 
 impl Action for PackageInstall {
-    fn plan(&self, _manifest: &Manifest, _context: &Context) -> Vec<Box<dyn Atom>> {
+    fn plan(&self, _manifest: &Manifest, _context: &Context) -> Vec<ActionAtom> {
         let variant: PackageVariant = self.into();
         let box_provider = variant.provider.clone().get_provider();
         let provider = box_provider.deref();
@@ -21,7 +21,7 @@ impl Action for PackageInstall {
         )
         .entered();
 
-        let mut atoms: Vec<Box<dyn Atom>> = vec![];
+        let mut atoms: Vec<ActionAtom> = vec![];
 
         // If the provider isn't available, see if we can bootstrap it
         if !provider.available() {

@@ -1,7 +1,7 @@
 use super::PackageProvider;
 use crate::{
-    actions::package::PackageVariant,
-    atoms::{command::Exec, Atom},
+    actions::{package::PackageVariant, ActionAtom},
+    atoms::command::Exec,
 };
 use serde::{Deserialize, Serialize};
 use std::{path::Path, process::Command};
@@ -20,15 +20,15 @@ impl PackageProvider for Homebrew {
         which("brew").is_ok()
     }
 
-    fn bootstrap(&self) -> Vec<Box<dyn Atom>> {
-        vec![Box::new(Exec {
+    fn bootstrap(&self) -> Vec<ActionAtom> {
+        vec![ActionAtom { atom: Box::new(Exec {
             command: String::from("bash"),
             arguments: vec![
                 String::from("-c"),
                 String::from("$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)")
             ],
             ..Default::default()
-        })]
+        }), initializers: vec![], finalizers: vec![] },]
     }
 
     fn has_repository(&self, _: &PackageVariant) -> bool {
@@ -38,14 +38,18 @@ impl PackageProvider for Homebrew {
         false
     }
 
-    fn add_repository(&self, package: &PackageVariant) -> Vec<Box<dyn Atom>> {
+    fn add_repository(&self, package: &PackageVariant) -> Vec<ActionAtom> {
         let repository = package.repository.clone().unwrap();
 
-        vec![Box::new(Exec {
-            command: String::from("brew"),
-            arguments: vec![String::from("tap"), repository],
-            ..Default::default()
-        })]
+        vec![ActionAtom {
+            atom: Box::new(Exec {
+                command: String::from("brew"),
+                arguments: vec![String::from("tap"), repository],
+                ..Default::default()
+            }),
+            initializers: vec![],
+            finalizers: vec![],
+        }]
     }
 
     fn query(&self, package: &PackageVariant) -> Vec<String> {
@@ -85,22 +89,26 @@ impl PackageProvider for Homebrew {
             .collect()
     }
 
-    fn install(&self, package: &PackageVariant) -> Vec<Box<dyn Atom>> {
+    fn install(&self, package: &PackageVariant) -> Vec<ActionAtom> {
         let need_installed = self.query(package);
 
         if need_installed.is_empty() {
             return vec![];
         }
 
-        vec![Box::new(Exec {
-            command: String::from("brew"),
-            arguments: [
-                vec![String::from("install")],
-                package.extra_args.clone(),
-                need_installed,
-            ]
-            .concat(),
-            ..Default::default()
-        })]
+        vec![ActionAtom {
+            atom: Box::new(Exec {
+                command: String::from("brew"),
+                arguments: [
+                    vec![String::from("install")],
+                    package.extra_args.clone(),
+                    need_installed,
+                ]
+                .concat(),
+                ..Default::default()
+            }),
+            initializers: vec![],
+            finalizers: vec![],
+        }]
     }
 }
