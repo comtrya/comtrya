@@ -72,6 +72,7 @@ impl Atom for Chmod {
 }
 
 #[cfg(test)]
+#[cfg(unix)]
 mod tests {
     use super::*;
 
