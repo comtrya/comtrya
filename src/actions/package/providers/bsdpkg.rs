@@ -1,9 +1,9 @@
 use super::PackageProvider;
-use crate::atoms::command::finalizers::output_contains::OutputContains;
-use crate::atoms::command::finalizers::FlowControl::FinishIf;
+// use crate::atoms::command::finalizers::output_contains::OutputContains;
+// use crate::atoms::command::finalizers::FlowControl::FinishIf;
 use crate::{
-    actions::package::PackageVariant,
-    atoms::{command::Exec, Atom},
+    actions::{package::PackageVariant, ActionAtom},
+    atoms::command::Exec,
 };
 use serde::{Deserialize, Serialize};
 use tracing::{instrument, warn};
@@ -34,21 +34,25 @@ impl PackageProvider for BsdPkg {
     }
 
     #[instrument(name = "bootstrap", level = "info", skip(self))]
-    fn bootstrap(&self) -> Vec<Box<dyn Atom>> {
-        vec![Box::new(Exec {
-            command: String::from("/usr/sbin/pkg"),
-            arguments: vec![String::from("bootstrap")],
-            environment: self.env(),
-            privileged: true,
-            ..Default::default()
-        })]
+    fn bootstrap(&self) -> Vec<ActionAtom> {
+        vec![ActionAtom {
+            atom: Box::new(Exec {
+                command: String::from("/usr/sbin/pkg"),
+                arguments: vec![String::from("bootstrap")],
+                environment: self.env(),
+                privileged: true,
+                ..Default::default()
+            }),
+            initializers: vec![],
+            finalizers: vec![],
+        }]
     }
 
     fn has_repository(&self, _package: &PackageVariant) -> bool {
         false
     }
 
-    fn add_repository(&self, _package: &PackageVariant) -> Vec<Box<dyn Atom>> {
+    fn add_repository(&self, _package: &PackageVariant) -> Vec<ActionAtom> {
         vec![]
     }
 
@@ -58,29 +62,37 @@ impl PackageProvider for BsdPkg {
         package.packages()
     }
 
-    fn install(&self, package: &PackageVariant) -> Vec<Box<dyn Atom>> {
+    fn install(&self, package: &PackageVariant) -> Vec<ActionAtom> {
         vec![
-            Box::new(Exec {
-                command: String::from("/usr/sbin/pkg"),
-                arguments: vec![String::from("install"), String::from("-n")]
-                    .into_iter()
-                    .chain(package.extra_args.clone())
-                    .chain(package.packages())
-                    .collect(),
-                finalizers: vec![FinishIf(Box::new(OutputContains("removed")))],
-                privileged: true,
-                ..Default::default()
-            }),
-            Box::new(Exec {
-                command: String::from("/usr/sbin/pkg"),
-                arguments: vec![String::from("install")]
-                    .into_iter()
-                    .chain(package.extra_args.clone())
-                    .chain(package.packages())
-                    .collect(),
-                privileged: true,
-                ..Default::default()
-            }),
+            ActionAtom {
+                atom: Box::new(Exec {
+                    command: String::from("/usr/sbin/pkg"),
+                    arguments: vec![String::from("install"), String::from("-n")]
+                        .into_iter()
+                        .chain(package.extra_args.clone())
+                        .chain(package.packages())
+                        .collect(),
+                    // finalizers: vec![FinishIf(Box::new(OutputContains("removed")))],
+                    privileged: true,
+                    ..Default::default()
+                }),
+                initializers: vec![],
+                finalizers: vec![],
+            },
+            ActionAtom {
+                atom: Box::new(Exec {
+                    command: String::from("/usr/sbin/pkg"),
+                    arguments: vec![String::from("install")]
+                        .into_iter()
+                        .chain(package.extra_args.clone())
+                        .chain(package.packages())
+                        .collect(),
+                    privileged: true,
+                    ..Default::default()
+                }),
+                initializers: vec![],
+                finalizers: vec![],
+            },
         ]
     }
 }

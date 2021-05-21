@@ -30,12 +30,6 @@ pub trait Atom: std::fmt::Display {
 
 pub struct Echo(&'static str);
 
-impl Echo {
-    pub fn boxed(str: &'static str) -> Box<dyn Atom> {
-        Box::new(Echo(str))
-    }
-}
-
 impl Atom for Echo {
     fn plan(&self) -> bool {
         true

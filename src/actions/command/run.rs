@@ -1,4 +1,7 @@
-use crate::{actions::Action, manifests::Manifest};
+use crate::{
+    actions::{Action, ActionAtom},
+    manifests::Manifest,
+};
 use serde::{Deserialize, Serialize};
 use tera::Context;
 
@@ -20,15 +23,19 @@ fn get_false() -> bool {
 }
 
 impl Action for RunCommand {
-    fn plan(&self, _: &Manifest, _: &Context) -> Vec<Box<dyn crate::atoms::Atom>> {
+    fn plan(&self, _: &Manifest, _: &Context) -> Vec<ActionAtom> {
         use crate::atoms::command::Exec;
 
-        vec![Box::new(Exec {
-            command: self.command.clone(),
-            arguments: self.args.clone(),
-            privileged: self.sudo,
-            working_dir: self.dir.clone(),
-            ..Default::default()
-        })]
+        vec![ActionAtom {
+            atom: Box::new(Exec {
+                command: self.command.clone(),
+                arguments: self.args.clone(),
+                privileged: self.sudo,
+                working_dir: self.dir.clone(),
+                ..Default::default()
+            }),
+            initializers: vec![],
+            finalizers: vec![],
+        }]
     }
 }

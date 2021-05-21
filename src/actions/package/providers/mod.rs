@@ -1,6 +1,6 @@
 mod aptitude;
 use self::aptitude::Aptitude;
-use crate::atoms::Atom;
+use crate::actions::ActionAtom;
 mod bsdpkg;
 use self::bsdpkg::BsdPkg;
 mod homebrew;
@@ -69,9 +69,9 @@ impl Default for PackageProviders {
 pub trait PackageProvider {
     fn name(&self) -> &str;
     fn available(&self) -> bool;
-    fn bootstrap(&self) -> Vec<Box<dyn Atom>>;
+    fn bootstrap(&self) -> Vec<ActionAtom>;
     fn has_repository(&self, package: &PackageVariant) -> bool;
-    fn add_repository(&self, package: &PackageVariant) -> Vec<Box<dyn Atom>>;
+    fn add_repository(&self, package: &PackageVariant) -> Vec<ActionAtom>;
     fn query(&self, package: &PackageVariant) -> Vec<String>;
-    fn install(&self, package: &PackageVariant) -> Vec<Box<dyn Atom>>;
+    fn install(&self, package: &PackageVariant) -> Vec<ActionAtom>;
 }

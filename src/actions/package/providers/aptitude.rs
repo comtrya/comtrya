@@ -1,6 +1,6 @@
 use super::PackageProvider;
-use crate::atoms::command::Exec;
-use crate::{actions::package::PackageVariant, atoms::Atom};
+use crate::actions::package::PackageVariant;
+use crate::{actions::ActionAtom, atoms::command::Exec};
 use serde::{Deserialize, Serialize};
 use tracing::warn;
 use which::which;
@@ -32,41 +32,53 @@ impl PackageProvider for Aptitude {
         }
     }
 
-    fn bootstrap(&self) -> Vec<Box<dyn Atom>> {
-        vec![Box::new(Exec {
-            command: String::from("apt"),
-            arguments: vec![
-                String::from("install"),
-                String::from("--yes"),
-                String::from("software-properties-common"),
-                String::from("gpg"),
-            ],
-            environment: self.env(),
-            privileged: true,
-            ..Default::default()
-        })]
+    fn bootstrap(&self) -> Vec<ActionAtom> {
+        vec![ActionAtom {
+            atom: Box::new(Exec {
+                command: String::from("apt"),
+                arguments: vec![
+                    String::from("install"),
+                    String::from("--yes"),
+                    String::from("software-properties-common"),
+                    String::from("gpg"),
+                ],
+                environment: self.env(),
+                privileged: true,
+                ..Default::default()
+            }),
+            initializers: vec![],
+            finalizers: vec![],
+        }]
     }
 
     fn has_repository(&self, _package: &PackageVariant) -> bool {
         false
     }
 
-    fn add_repository(&self, package: &PackageVariant) -> Vec<Box<dyn Atom>> {
+    fn add_repository(&self, package: &PackageVariant) -> Vec<ActionAtom> {
         vec![
-            Box::new(Exec {
-                command: String::from("apt-add-repository"),
-                arguments: vec![String::from("-y"), package.repository.clone().unwrap()],
-                environment: self.env(),
-                privileged: true,
-                ..Default::default()
-            }),
-            Box::new(Exec {
-                command: String::from("apt"),
-                arguments: vec![String::from("update")],
-                environment: self.env(),
-                privileged: true,
-                ..Default::default()
-            }),
+            ActionAtom {
+                atom: Box::new(Exec {
+                    command: String::from("apt-add-repository"),
+                    arguments: vec![String::from("-y"), package.repository.clone().unwrap()],
+                    environment: self.env(),
+                    privileged: true,
+                    ..Default::default()
+                }),
+                initializers: vec![],
+                finalizers: vec![],
+            },
+            ActionAtom {
+                atom: Box::new(Exec {
+                    command: String::from("apt"),
+                    arguments: vec![String::from("update")],
+                    environment: self.env(),
+                    privileged: true,
+                    ..Default::default()
+                }),
+                initializers: vec![],
+                finalizers: vec![],
+            },
         ]
     }
 
@@ -74,17 +86,21 @@ impl PackageProvider for Aptitude {
         package.packages()
     }
 
-    fn install(&self, package: &PackageVariant) -> Vec<Box<dyn Atom>> {
-        vec![Box::new(Exec {
-            command: String::from("apt"),
-            arguments: vec![String::from("install"), String::from("--yes")]
-                .into_iter()
-                .chain(package.extra_args.clone())
-                .chain(package.packages())
-                .collect(),
-            environment: self.env(),
-            privileged: true,
-            ..Default::default()
-        })]
+    fn install(&self, package: &PackageVariant) -> Vec<ActionAtom> {
+        vec![ActionAtom {
+            atom: Box::new(Exec {
+                command: String::from("apt"),
+                arguments: vec![String::from("install"), String::from("--yes")]
+                    .into_iter()
+                    .chain(package.extra_args.clone())
+                    .chain(package.packages())
+                    .collect(),
+                environment: self.env(),
+                privileged: true,
+                ..Default::default()
+            }),
+            initializers: vec![],
+            finalizers: vec![],
+        }]
     }
 }

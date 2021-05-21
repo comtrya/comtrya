@@ -327,13 +327,39 @@ fn main() -> anyhow::Result<()> {
             m1.actions.iter().for_each(|action| {
                 let action = action.inner_ref();
 
-                let mut atoms = action
+                let mut action_atoms = action
                     .plan(&m1, &contexts)
                     .into_iter()
-                    .filter(|x| x.plan())
+                    .filter(|action_atom| {
+                        action_atom
+                            .initializers
+                            .iter()
+                            .fold(true, |_, flow_control| match flow_control {
+                                atoms::initializers::FlowControl::SkipIf(i) => {
+                                    match i.initialize() {
+                                        Ok(true) => {
+                                            // Returning false because we should Skip if true, so false
+                                            // will filter this out of the atom list
+                                            return false;
+                                        }
+                                        Ok(false) => true,
+                                        Err(e) => {
+                                            error!(
+                                                "Failed to run initializer on Atom: {}",
+                                                e.to_string()
+                                            );
+                                            // On an error, we can't really determine if this Atom should
+                                            // run; so lets play it safe and filter it out too
+                                            return false;
+                                        }
+                                    }
+                                }
+                            })
+                    })
+                    .filter(|action_atom| action_atom.atom.plan())
                     .peekable();
 
-                if atoms.peek().is_none() {
+                if action_atoms.peek().is_none() {
                     info!("Nothing to be done to reconcile manifest");
                     return;
                 }
@@ -345,7 +371,7 @@ fn main() -> anyhow::Result<()> {
                         continue;
                     }
 
-                    match atom.execute() {
+                    match action_atom.atom.execute() {
                         Ok(_) => continue,
                         Err(err) => {
                             debug!("Atom failed to execute: {:?}", err);

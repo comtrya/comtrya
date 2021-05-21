@@ -1,5 +1,5 @@
 use super::DirectoryAction;
-use crate::{actions::Action, atoms::Atom};
+use crate::actions::{Action, ActionAtom};
 use crate::{atoms::command::Exec, manifests::Manifest};
 use serde::{Deserialize, Serialize};
 use tera::Context;
@@ -16,7 +16,7 @@ impl DirectoryCopy {}
 impl DirectoryAction for DirectoryCopy {}
 
 impl Action for DirectoryCopy {
-    fn plan(&self, manifest: &Manifest, _context: &Context) -> Vec<Box<dyn Atom>> {
+    fn plan(&self, manifest: &Manifest, _context: &Context) -> Vec<ActionAtom> {
         let from: String = match self.resolve(manifest, &self.from) {
             Ok(from) => from,
             Err(_) => {
@@ -29,16 +29,24 @@ impl Action for DirectoryCopy {
         .into();
 
         vec![
-            Box::new(Exec {
-                command: String::from("mkdir"),
-                arguments: vec![String::from("-p"), self.to.clone()],
-                ..Default::default()
-            }),
-            Box::new(Exec {
-                command: String::from("cp"),
-                arguments: vec![String::from("-r"), from, self.to.clone()],
-                ..Default::default()
-            }),
+            ActionAtom {
+                atom: Box::new(Exec {
+                    command: String::from("mkdir"),
+                    arguments: vec![String::from("-p"), self.to.clone()],
+                    ..Default::default()
+                }),
+                initializers: vec![],
+                finalizers: vec![],
+            },
+            ActionAtom {
+                atom: Box::new(Exec {
+                    command: String::from("cp"),
+                    arguments: vec![String::from("-r"), from.clone(), self.to.clone()],
+                    ..Default::default()
+                }),
+                initializers: vec![],
+                finalizers: vec![],
+            },
         ]
     }
 }
