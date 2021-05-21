@@ -1,6 +1,6 @@
-mod output_contains;
+use crate::atoms::Atom;
 
-use super::Atom;
+mod output_contains;
 
 #[allow(dead_code)]
 pub enum FlowControl {

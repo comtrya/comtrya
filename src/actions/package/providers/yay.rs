@@ -1,6 +1,7 @@
 use super::PackageProvider;
 use crate::actions::package::PackageVariant;
-use crate::{actions::ActionAtom, atoms::command::Exec};
+use crate::atoms::command::Exec;
+use crate::steps::Step;
 use serde::{Deserialize, Serialize};
 use tracing::warn;
 use which::which;
@@ -23,9 +24,9 @@ impl PackageProvider for Yay {
         }
     }
 
-    fn bootstrap(&self) -> Vec<ActionAtom> {
+    fn bootstrap(&self) -> Vec<Step> {
         vec![
-            ActionAtom {
+            Step {
                 atom: Box::new(Exec {
                     command: String::from("pacman"),
                     arguments: vec![
@@ -40,7 +41,7 @@ impl PackageProvider for Yay {
                 initializers: vec![],
                 finalizers: vec![],
             },
-            ActionAtom {
+            Step {
                 atom: Box::new(Exec {
                     command: String::from("git"),
                     arguments: vec![
@@ -53,7 +54,7 @@ impl PackageProvider for Yay {
                 initializers: vec![],
                 finalizers: vec![],
             },
-            ActionAtom {
+            Step {
                 atom: Box::new(Exec {
                     command: String::from("makepkg"),
                     arguments: vec![String::from("-si"), String::from("--noconfirm")],
@@ -70,7 +71,7 @@ impl PackageProvider for Yay {
         false
     }
 
-    fn add_repository(&self, _package: &PackageVariant) -> Vec<ActionAtom> {
+    fn add_repository(&self, _package: &PackageVariant) -> Vec<Step> {
         vec![]
     }
 
@@ -78,8 +79,8 @@ impl PackageProvider for Yay {
         package.packages()
     }
 
-    fn install(&self, package: &PackageVariant) -> Vec<ActionAtom> {
-        vec![ActionAtom {
+    fn install(&self, package: &PackageVariant) -> Vec<Step> {
+        vec![Step {
             atom: Box::new(Exec {
                 command: String::from("yay"),
                 arguments: [

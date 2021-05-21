@@ -3,12 +3,8 @@ mod directory;
 mod file;
 mod package;
 
-use std::fmt::Display;
-
-use crate::{
-    atoms::{finalizers, initializers, Atom},
-    manifests::Manifest,
-};
+use crate::manifests::Manifest;
+use crate::steps::Step;
 use command::run::RunCommand;
 use directory::copy::DirectoryCopy;
 use file::copy::FileCopy;
@@ -64,22 +60,6 @@ impl<E: std::error::Error> From<E> for ActionError {
     }
 }
 
-pub struct ActionAtom {
-    pub atom: Box<dyn Atom>,
-    pub initializers: Vec<initializers::FlowControl>,
-    pub finalizers: Vec<finalizers::FlowControl>,
-}
-
-impl Display for ActionAtom {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "ActionAtom: {} (Not printing initializers and finalizers yet)",
-            self.atom
-        )
-    }
-}
-
 pub trait Action {
-    fn plan(&self, manifest: &Manifest, context: &Context) -> Vec<ActionAtom>;
+    fn plan(&self, manifest: &Manifest, context: &Context) -> Vec<Step>;
 }

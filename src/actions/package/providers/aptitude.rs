@@ -1,6 +1,7 @@
 use super::PackageProvider;
 use crate::actions::package::PackageVariant;
-use crate::{actions::ActionAtom, atoms::command::Exec};
+use crate::atoms::command::Exec;
+use crate::steps::Step;
 use serde::{Deserialize, Serialize};
 use tracing::warn;
 use which::which;
@@ -32,8 +33,8 @@ impl PackageProvider for Aptitude {
         }
     }
 
-    fn bootstrap(&self) -> Vec<ActionAtom> {
-        vec![ActionAtom {
+    fn bootstrap(&self) -> Vec<Step> {
+        vec![Step {
             atom: Box::new(Exec {
                 command: String::from("apt"),
                 arguments: vec![
@@ -55,9 +56,9 @@ impl PackageProvider for Aptitude {
         false
     }
 
-    fn add_repository(&self, package: &PackageVariant) -> Vec<ActionAtom> {
+    fn add_repository(&self, package: &PackageVariant) -> Vec<Step> {
         vec![
-            ActionAtom {
+            Step {
                 atom: Box::new(Exec {
                     command: String::from("apt-add-repository"),
                     arguments: vec![String::from("-y"), package.repository.clone().unwrap()],
@@ -68,7 +69,7 @@ impl PackageProvider for Aptitude {
                 initializers: vec![],
                 finalizers: vec![],
             },
-            ActionAtom {
+            Step {
                 atom: Box::new(Exec {
                     command: String::from("apt"),
                     arguments: vec![String::from("update")],
@@ -86,8 +87,8 @@ impl PackageProvider for Aptitude {
         package.packages()
     }
 
-    fn install(&self, package: &PackageVariant) -> Vec<ActionAtom> {
-        vec![ActionAtom {
+    fn install(&self, package: &PackageVariant) -> Vec<Step> {
+        vec![Step {
             atom: Box::new(Exec {
                 command: String::from("apt"),
                 arguments: vec![String::from("install"), String::from("--yes")]

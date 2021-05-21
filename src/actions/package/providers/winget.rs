@@ -1,8 +1,6 @@
 use super::PackageProvider;
-use crate::{
-    actions::{package::PackageVariant, ActionAtom},
-    atoms::command::Exec,
-};
+use crate::steps::Step;
+use crate::{actions::package::PackageVariant, atoms::command::Exec};
 use serde::{Deserialize, Serialize};
 use tracing::warn;
 use which::which;
@@ -25,7 +23,7 @@ impl PackageProvider for Winget {
         }
     }
 
-    fn bootstrap(&self) -> Vec<ActionAtom> {
+    fn bootstrap(&self) -> Vec<Step> {
         vec![]
     }
 
@@ -33,7 +31,7 @@ impl PackageProvider for Winget {
         true
     }
 
-    fn add_repository(&self, _package: &PackageVariant) -> Vec<ActionAtom> {
+    fn add_repository(&self, _package: &PackageVariant) -> Vec<Step> {
         vec![]
     }
 
@@ -42,11 +40,11 @@ impl PackageProvider for Winget {
         package.packages()
     }
 
-    fn install(&self, package: &PackageVariant) -> Vec<ActionAtom> {
+    fn install(&self, package: &PackageVariant) -> Vec<Step> {
         package
             .packages()
             .iter()
-            .map::<ActionAtom, _>(|p| ActionAtom {
+            .map::<Step, _>(|p| Step {
                 atom: Box::new(Exec {
                     command: String::from("winget"),
                     arguments: [

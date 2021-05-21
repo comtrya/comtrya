@@ -1,6 +1,7 @@
 use super::FileAction;
 use crate::actions::Action;
-use crate::{actions::ActionAtom, manifests::Manifest};
+use crate::manifests::Manifest;
+use crate::steps::Step;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use tera::Context;
@@ -16,7 +17,7 @@ impl FileLink {}
 impl FileAction for FileLink {}
 
 impl Action for FileLink {
-    fn plan(&self, _: &Manifest, _: &Context) -> Vec<ActionAtom> {
+    fn plan(&self, _: &Manifest, _: &Context) -> Vec<Step> {
         use crate::atoms::command::Exec;
         use crate::atoms::file::Link;
 
@@ -25,7 +26,7 @@ impl Action for FileLink {
         let parent = from.clone();
 
         vec![
-            ActionAtom {
+            Step {
                 atom: Box::new(Exec {
                     command: String::from("mkdir"),
                     arguments: vec![
@@ -37,7 +38,7 @@ impl Action for FileLink {
                 initializers: vec![],
                 finalizers: vec![],
             },
-            ActionAtom {
+            Step {
                 atom: Box::new(Link { from, to }),
                 initializers: vec![],
                 finalizers: vec![],
