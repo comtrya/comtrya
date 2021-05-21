@@ -83,7 +83,7 @@ impl Atom for Chown {
         false
     }
 
-    fn execute(&self) -> anyhow::Result<()> {
+    fn execute(&mut self) -> anyhow::Result<()> {
         Ok(())
     }
 }

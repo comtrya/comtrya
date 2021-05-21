@@ -27,7 +27,7 @@ impl Atom for Create {
         !self.path.exists()
     }
 
-    fn execute(&self) -> anyhow::Result<()> {
+    fn execute(&mut self) -> anyhow::Result<()> {
         std::fs::File::create(&self.path)?;
 
         Ok(())
@@ -71,7 +71,7 @@ mod tests {
             }
         };
 
-        let file_create = Create {
+        let mut file_create = Create {
             path: temp_dir.path().join("create-me"),
         };
 

@@ -50,7 +50,7 @@ impl Atom for Chmod {
             != metadata.permissions().mode()
     }
 
-    fn execute(&self) -> anyhow::Result<()> {
+    fn execute(&mut self) -> anyhow::Result<()> {
         std::fs::set_permissions(
             self.path.as_path(),
             std::fs::Permissions::from_mode(self.mode),
@@ -151,7 +151,7 @@ mod tests {
 
         assert_eq!(false, file_chmod.plan());
 
-        let file_chmod = Chmod {
+        let mut file_chmod = Chmod {
             path: temp_dir.path().join("644"),
             mode: 0o640,
         };

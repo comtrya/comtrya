@@ -1,6 +1,4 @@
 use super::super::Atom;
-use super::finalizers;
-use super::initializers;
 use anyhow::anyhow;
 use std::io::Error;
 use std::process::Output;
@@ -12,8 +10,14 @@ pub struct Exec {
     pub working_dir: Option<String>,
     pub environment: Vec<(String, String)>,
     pub privileged: bool,
-    pub initializers: Vec<initializers::FlowControl>,
-    pub finalizers: Vec<finalizers::FlowControl>,
+    pub(crate) status: ExecStatus,
+}
+
+#[derive(Default)]
+pub(crate) struct ExecStatus {
+    code: i32,
+    stdout: String,
+    stderr: String,
 }
 
 #[allow(dead_code)]
@@ -55,22 +59,10 @@ impl std::fmt::Display for Exec {
 
 impl Atom for Exec {
     fn plan(&self) -> bool {
-        let mut initializers = self.initializers.iter();
-
-        for initializer in initializers {
-            match initializer {
-                initializers::FlowControl::SkipIf(skip) => {
-                    if skip.run() {
-                        return false;
-                    }
-                }
-            }
-        }
-
         true
     }
 
-    fn execute(&self) -> anyhow::Result<()> {
+    fn execute(&mut self) -> anyhow::Result<()> {
         let (command, arguments) = self.elevate_if_required();
 
         // If we require root, we need to use sudo with inherited IO
@@ -99,45 +91,42 @@ impl Atom for Exec {
             };
         }
 
-        let result = std::process::Command::new(&command)
+        match std::process::Command::new(&command)
             .envs(self.environment.clone())
             .args(&arguments)
-            .current_dir(&self.working_dir.clone().unwrap_or_else(|| {
-                std::env::current_dir()
-                    .unwrap()
-                    .into_os_string()
-                    .into_string()
-                    .unwrap()
-            }))
-            .output();
+            .current_dir(
+                &self.working_dir.clone().unwrap_or(
+                    std::env::current_dir()
+                        .unwrap()
+                        .into_os_string()
+                        .into_string()
+                        .unwrap(),
+                ),
+            )
+            .output()
+        {
+            Ok(output) => {
+                self.status.code = output.status.code().unwrap();
+                self.status.stdout = String::from_utf8(output.stdout).unwrap();
+                self.status.stderr = String::from_utf8(output.stderr).unwrap();
 
-        self.finalize(result)?;
+                Ok(())
+            }
+            Err(err) => Err(anyhow!(err)),
+        }
+    }
 
-        Ok(())
+    fn output_string(&self) -> String {
+        self.status.stdout.clone()
+    }
+
+    fn error_message(&self) -> String {
+        self.status.stderr.clone()
     }
 }
 
 impl Exec {
     fn finalize(&self, result: Result<Output, Error>) -> Result<(), anyhow::Error> {
-        let mut finalizers = self.finalizers.iter();
-
-        for finalizer in finalizers {
-            match finalizer {
-                finalizers::FlowControl::ErrorIf(errrun) => {
-                    if errrun.run(&result) {
-                        tracing::warn!("Exited finalizers early because of ErrorIf");
-                        return Err(anyhow!("Exited finalizers early because of ErrorIf"));
-                    }
-                }
-                finalizers::FlowControl::FinishIf(finrun) => {
-                    if finrun.run(&result) {
-                        tracing::warn!("Exited finalizers early because of FinishIf");
-                        return Ok(());
-                    }
-                }
-            }
-        }
-
         result.map(|_| ()).map_err(|error| anyhow!(error))
     }
 }
@@ -156,8 +145,6 @@ mod tests {
         assert_eq!(0, command_run.arguments.len());
         assert_eq!(None, command_run.working_dir);
         assert_eq!(0, command_run.environment.len());
-        assert_eq!(0, command_run.initializers.len());
-        assert_eq!(0, command_run.finalizers.len());
         assert_eq!(false, command_run.privileged);
 
         let command_run = new_run_command(String::from("echo"));
@@ -166,8 +153,6 @@ mod tests {
         assert_eq!(0, command_run.arguments.len());
         assert_eq!(None, command_run.working_dir);
         assert_eq!(0, command_run.environment.len());
-        assert_eq!(0, command_run.initializers.len());
-        assert_eq!(0, command_run.finalizers.len());
         assert_eq!(false, command_run.privileged);
     }
 
@@ -192,96 +177,96 @@ mod tests {
         );
     }
 
-    #[test]
-    fn initializers() {
-        use super::initializers::command_found::CommandFound;
-        use super::initializers::FlowControl::SkipIf;
+    // #[test]
+    // fn initializers() {
+    //     use super::initializers::command_found::CommandFound;
+    //     use super::initializers::FlowControl::SkipIf;
 
-        // Ensure that no initializers always returns true
-        let command_run = Exec {
-            command: String::from("echo"),
-            ..Default::default()
-        };
+    //     // Ensure that no initializers always returns true
+    //     let command_run = Exec {
+    //         command: String::from("echo"),
+    //         ..Default::default()
+    //     };
 
-        assert_eq!(true, command_run.plan());
+    //     assert_eq!(true, command_run.plan());
 
-        // Ensure that SkipIf returns false when satisfied
-        let command_run = Exec {
-            command: String::from("echo"),
-            initializers: vec![
-                SkipIf(Box::new(CommandFound("not-a-real-command"))),
-                SkipIf(Box::new(CommandFound("ls"))),
-                SkipIf(Box::new(CommandFound("not-a-real-command"))),
-            ],
-            ..Default::default()
-        };
+    //     // Ensure that SkipIf returns false when satisfied
+    //     let command_run = Exec {
+    //         command: String::from("echo"),
+    //         initializers: vec![
+    //             SkipIf(Box::new(CommandFound("not-a-real-command"))),
+    //             SkipIf(Box::new(CommandFound("ls"))),
+    //             SkipIf(Box::new(CommandFound("not-a-real-command"))),
+    //         ],
+    //         ..Default::default()
+    //     };
 
-        assert_eq!(false, command_run.plan());
+    //     assert_eq!(false, command_run.plan());
 
-        // Ensure that SkipIf returns true when not satisfied
-        let command_run = Exec {
-            command: String::from("echo"),
-            initializers: vec![
-                SkipIf(Box::new(CommandFound("not-a-real-command"))),
-                SkipIf(Box::new(CommandFound("not-a-real-command"))),
-            ],
-            ..Default::default()
-        };
+    //     // Ensure that SkipIf returns true when not satisfied
+    //     let command_run = Exec {
+    //         command: String::from("echo"),
+    //         initializers: vec![
+    //             SkipIf(Box::new(CommandFound("not-a-real-command"))),
+    //             SkipIf(Box::new(CommandFound("not-a-real-command"))),
+    //         ],
+    //         ..Default::default()
+    //     };
 
-        assert_eq!(true, command_run.plan())
-    }
+    //     assert_eq!(true, command_run.plan())
+    // }
 
-    #[test]
-    fn finalizers() {
-        use super::finalizers::always_succeed::AlwaysSucceed;
-        use super::finalizers::FlowControl::{ErrorIf, FinishIf};
+    // #[test]
+    // fn finalizers() {
+    //     use super::finalizers::always_succeed::AlwaysSucceed;
+    //     use super::finalizers::FlowControl::{ErrorIf, FinishIf};
 
-        // Nothing changes when using no finalizers
-        let command_run = Exec {
-            command: String::from("echo"),
-            ..Default::default()
-        };
+    //     // Nothing changes when using no finalizers
+    //     let mut command_run = Exec {
+    //         command: String::from("echo"),
+    //         ..Default::default()
+    //     };
 
-        let result = command_run.execute();
-        assert_eq!(true, result.is_ok());
+    //     let result = command_run.execute();
+    //     assert_eq!(true, result.is_ok());
 
-        let command_run = Exec {
-            command: String::from("not-a-command"),
-            ..Default::default()
-        };
+    //     let mut command_run = Exec {
+    //         command: String::from("not-a-command"),
+    //         ..Default::default()
+    //     };
 
-        let result = command_run.execute();
-        assert_eq!(true, result.is_err());
+    //     let result = command_run.execute();
+    //     assert_eq!(true, result.is_err());
 
-        // AlwaysSucceed
-        let command_run = Exec {
-            command: String::from("not-a-command"),
-            finalizers: vec![FinishIf(Box::new(AlwaysSucceed {}))],
-            ..Default::default()
-        };
+    //     // AlwaysSucceed
+    //     let mut command_run = Exec {
+    //         command: String::from("not-a-command"),
+    //         finalizers: vec![FinishIf(Box::new(AlwaysSucceed {}))],
+    //         ..Default::default()
+    //     };
 
-        let result = command_run.execute();
-        assert_eq!(true, result.is_ok());
+    //     let result = command_run.execute();
+    //     assert_eq!(true, result.is_ok());
 
-        let command_run = Exec {
-            command: String::from("not-a-command"),
-            finalizers: vec![ErrorIf(Box::new(AlwaysSucceed {}))],
-            ..Default::default()
-        };
+    //     let mut command_run = Exec {
+    //         command: String::from("not-a-command"),
+    //         finalizers: vec![ErrorIf(Box::new(AlwaysSucceed {}))],
+    //         ..Default::default()
+    //     };
 
-        let result = command_run.execute();
-        assert_eq!(true, result.is_err());
+    //     let result = command_run.execute();
+    //     assert_eq!(true, result.is_err());
 
-        let command_run = Exec {
-            command: String::from("not-a-command"),
-            finalizers: vec![
-                FinishIf(Box::new(AlwaysSucceed {})),
-                ErrorIf(Box::new(AlwaysSucceed {})),
-            ],
-            ..Default::default()
-        };
+    //     let mut command_run = Exec {
+    //         command: String::from("not-a-command"),
+    //         finalizers: vec![
+    //             FinishIf(Box::new(AlwaysSucceed {})),
+    //             ErrorIf(Box::new(AlwaysSucceed {})),
+    //         ],
+    //         ..Default::default()
+    //     };
 
-        let result = command_run.execute();
-        assert_eq!(true, result.is_ok());
-    }
+    //     let result = command_run.execute();
+    //     assert_eq!(true, result.is_ok());
+    // }
 }
