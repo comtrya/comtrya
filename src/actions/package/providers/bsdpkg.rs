@@ -1,10 +1,8 @@
 use super::PackageProvider;
 // use crate::atoms::command::finalizers::output_contains::OutputContains;
 // use crate::atoms::command::finalizers::FlowControl::FinishIf;
-use crate::{
-    actions::{package::PackageVariant, ActionAtom},
-    atoms::command::Exec,
-};
+use crate::steps::Step;
+use crate::{actions::package::PackageVariant, atoms::command::Exec};
 use serde::{Deserialize, Serialize};
 use tracing::{instrument, warn};
 use which::which;
@@ -34,8 +32,8 @@ impl PackageProvider for BsdPkg {
     }
 
     #[instrument(name = "bootstrap", level = "info", skip(self))]
-    fn bootstrap(&self) -> Vec<ActionAtom> {
-        vec![ActionAtom {
+    fn bootstrap(&self) -> Vec<Step> {
+        vec![Step {
             atom: Box::new(Exec {
                 command: String::from("/usr/sbin/pkg"),
                 arguments: vec![String::from("bootstrap")],
@@ -52,7 +50,7 @@ impl PackageProvider for BsdPkg {
         false
     }
 
-    fn add_repository(&self, _package: &PackageVariant) -> Vec<ActionAtom> {
+    fn add_repository(&self, _package: &PackageVariant) -> Vec<Step> {
         vec![]
     }
 
@@ -62,9 +60,9 @@ impl PackageProvider for BsdPkg {
         package.packages()
     }
 
-    fn install(&self, package: &PackageVariant) -> Vec<ActionAtom> {
+    fn install(&self, package: &PackageVariant) -> Vec<Step> {
         vec![
-            ActionAtom {
+            Step {
                 atom: Box::new(Exec {
                     command: String::from("/usr/sbin/pkg"),
                     arguments: vec![String::from("install"), String::from("-n")]
@@ -79,7 +77,7 @@ impl PackageProvider for BsdPkg {
                 initializers: vec![],
                 finalizers: vec![],
             },
-            ActionAtom {
+            Step {
                 atom: Box::new(Exec {
                     command: String::from("/usr/sbin/pkg"),
                     arguments: vec![String::from("install")]

@@ -1,6 +1,7 @@
 use super::FileAction;
 use crate::actions::Action;
-use crate::{actions::ActionAtom, manifests::Manifest};
+use crate::manifests::Manifest;
+use crate::steps::Step;
 use anyhow::Result;
 use serde::{de::Error, Deserialize, Deserializer, Serialize};
 use std::{path::PathBuf, u32};
@@ -40,7 +41,7 @@ impl FileCopy {}
 impl FileAction for FileCopy {}
 
 impl Action for FileCopy {
-    fn plan(&self, manifest: &Manifest, context: &Context) -> Vec<ActionAtom> {
+    fn plan(&self, manifest: &Manifest, context: &Context) -> Vec<Step> {
         let contents = match self.load(manifest, &self.from) {
             Ok(contents) => {
                 if self.template {
@@ -74,7 +75,7 @@ impl Action for FileCopy {
         let parent = path.clone();
 
         vec![
-            ActionAtom {
+            Step {
                 atom: Box::new(Exec {
                     command: String::from("mkdir"),
                     arguments: vec![
@@ -86,12 +87,12 @@ impl Action for FileCopy {
                 initializers: vec![],
                 finalizers: vec![],
             },
-            ActionAtom {
+            Step {
                 atom: Box::new(Create { path: path.clone() }),
                 initializers: vec![],
                 finalizers: vec![],
             },
-            ActionAtom {
+            Step {
                 atom: Box::new(Chmod {
                     path: path.clone(),
                     mode: self.chmod,
@@ -99,7 +100,7 @@ impl Action for FileCopy {
                 initializers: vec![],
                 finalizers: vec![],
             },
-            ActionAtom {
+            Step {
                 atom: Box::new(SetContents { path, contents }),
                 initializers: vec![],
                 finalizers: vec![],

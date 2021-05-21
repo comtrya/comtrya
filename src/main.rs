@@ -1,14 +1,8 @@
-mod actions;
-mod atoms;
-mod config;
 use crate::config::load_config;
-mod contexts;
-use contexts::build_contexts;
-mod manifests;
-use manifests::Manifest;
-
 use anyhow::anyhow;
+use contexts::build_contexts;
 use ignore::WalkBuilder;
+use manifests::Manifest;
 use petgraph::prelude::*;
 use std::fs::canonicalize;
 use std::{collections::HashMap, ops::Deref};
@@ -16,6 +10,13 @@ use structopt::StructOpt;
 use tera::Tera;
 use tracing::{debug, error, info, span, trace, Level, Subscriber};
 use tracing_subscriber::FmtSubscriber;
+
+mod actions;
+mod atoms;
+mod config;
+mod contexts;
+mod manifests;
+mod steps;
 
 const VERSION: Option<&'static str> = option_env!("CARGO_PKG_VERSION");
 
@@ -327,15 +328,14 @@ fn main() -> anyhow::Result<()> {
             m1.actions.iter().for_each(|action| {
                 let action = action.inner_ref();
 
-                let mut action_atoms = action
+                let mut steps = action
                     .plan(&m1, &contexts)
                     .into_iter()
-                    .filter(|action_atom| {
-                        action_atom
-                            .initializers
+                    .filter(|step| {
+                        step.initializers
                             .iter()
                             .fold(true, |_, flow_control| match flow_control {
-                                atoms::initializers::FlowControl::SkipIf(i) => {
+                                steps::initializers::FlowControl::SkipIf(i) => {
                                     match i.initialize() {
                                         Ok(true) => {
                                             // Returning false because we should Skip if true, so false
@@ -359,7 +359,7 @@ fn main() -> anyhow::Result<()> {
                     .filter(|action_atom| action_atom.atom.plan())
                     .peekable();
 
-                if action_atoms.peek().is_none() {
+                if steps.peek().is_none() {
                     info!("Nothing to be done to reconcile manifest");
                     return;
                 }

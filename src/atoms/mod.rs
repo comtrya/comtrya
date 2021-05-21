@@ -2,9 +2,6 @@ pub mod command;
 pub mod file;
 pub mod http;
 
-pub mod finalizers;
-pub mod initializers;
-
 pub trait Atom: std::fmt::Display {
     // Determine if this atom needs to run
     fn plan(&self) -> bool;
@@ -28,7 +25,7 @@ pub trait Atom: std::fmt::Display {
     }
 }
 
-pub struct Echo(&'static str);
+pub struct Echo(pub &'static str);
 
 impl Atom for Echo {
     fn plan(&self) -> bool {

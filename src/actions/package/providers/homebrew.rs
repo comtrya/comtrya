@@ -1,8 +1,6 @@
 use super::PackageProvider;
-use crate::{
-    actions::{package::PackageVariant, ActionAtom},
-    atoms::command::Exec,
-};
+use crate::steps::Step;
+use crate::{actions::package::PackageVariant, atoms::command::Exec};
 use serde::{Deserialize, Serialize};
 use std::{path::Path, process::Command};
 use tracing::{debug, trace};
@@ -20,8 +18,8 @@ impl PackageProvider for Homebrew {
         which("brew").is_ok()
     }
 
-    fn bootstrap(&self) -> Vec<ActionAtom> {
-        vec![ActionAtom { atom: Box::new(Exec {
+    fn bootstrap(&self) -> Vec<Step> {
+        vec![Step { atom: Box::new(Exec {
             command: String::from("bash"),
             arguments: vec![
                 String::from("-c"),
@@ -38,10 +36,10 @@ impl PackageProvider for Homebrew {
         false
     }
 
-    fn add_repository(&self, package: &PackageVariant) -> Vec<ActionAtom> {
+    fn add_repository(&self, package: &PackageVariant) -> Vec<Step> {
         let repository = package.repository.clone().unwrap();
 
-        vec![ActionAtom {
+        vec![Step {
             atom: Box::new(Exec {
                 command: String::from("brew"),
                 arguments: vec![String::from("tap"), repository],
@@ -89,14 +87,14 @@ impl PackageProvider for Homebrew {
             .collect()
     }
 
-    fn install(&self, package: &PackageVariant) -> Vec<ActionAtom> {
+    fn install(&self, package: &PackageVariant) -> Vec<Step> {
         let need_installed = self.query(package);
 
         if need_installed.is_empty() {
             return vec![];
         }
 
-        vec![ActionAtom {
+        vec![Step {
             atom: Box::new(Exec {
                 command: String::from("brew"),
                 arguments: [
