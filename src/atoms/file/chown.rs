@@ -107,12 +107,16 @@ mod tests {
 
     #[test]
     fn it_can() {
+        // Using unwrap_or_else which catches the CI build where the users
+        // crate can't seem to detect the user within a container.
+        // Which I know to be root.
         let user = users::get_current_username()
-            .unwrap()
+            .unwrap_or_else(|| std::ffi::OsString::from("root"))
             .into_string()
             .unwrap();
+
         let group = users::get_current_groupname()
-            .unwrap()
+            .unwrap_or_else(|| std::ffi::OsString::from("root"))
             .into_string()
             .unwrap();
 
