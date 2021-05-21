@@ -66,7 +66,7 @@ impl Atom for Chmod {
         false
     }
 
-    fn execute(&self) -> anyhow::Result<()> {
+    fn execute(&mut self) -> anyhow::Result<()> {
         Ok(())
     }
 }
