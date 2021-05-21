@@ -18,7 +18,7 @@ impl ManifestProvider for GitManifestProvider {
         // Extract this to a function!
         let clean_repo_url = self.clean_git_url(&url);
         let cache_path = dirs_next::cache_dir()
-            .unwrap()
+            .unwrap_or_else(|| std::path::PathBuf::from("/tmp/comtrya"))
             .join("comtrya")
             .join("manifests")
             .join("git")
