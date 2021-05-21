@@ -30,7 +30,7 @@ impl Atom for Copy {
         !diff(self.from.to_str().unwrap(), self.to.to_str().unwrap())
     }
 
-    fn execute(&self) -> anyhow::Result<()> {
+    fn execute(&mut self) -> anyhow::Result<()> {
         std::fs::copy(&self.from, &self.to)?;
 
         Ok(())
@@ -113,7 +113,7 @@ mod tests {
             .is_ok()
         );
 
-        let file_copy = Copy {
+        let mut file_copy = Copy {
             from: from_file.path().to_path_buf(),
             to: to_file.path().to_path_buf(),
         };

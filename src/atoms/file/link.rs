@@ -61,7 +61,7 @@ impl Atom for Link {
     }
 
     #[cfg(unix)]
-    fn execute(&self) -> anyhow::Result<()> {
+    fn execute(&mut self) -> anyhow::Result<()> {
         std::os::unix::fs::symlink(&self.to, &self.from)?;
 
         Ok(())
@@ -101,7 +101,7 @@ mod tests {
             }
         };
 
-        let atom = Link {
+        let mut atom = Link {
             from: from_dir.path().join("symlink"),
             to: to_file.path().to_path_buf(),
         };

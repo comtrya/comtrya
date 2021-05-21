@@ -42,7 +42,7 @@ impl Atom for SetContents {
         !contents.eq(&self.contents)
     }
 
-    fn execute(&self) -> anyhow::Result<()> {
+    fn execute(&mut self) -> anyhow::Result<()> {
         std::fs::write(&self.path, &self.contents)?;
 
         Ok(())
@@ -70,7 +70,7 @@ mod tests {
 
         assert_eq!(false, file_contents.plan());
 
-        let file_contents = SetContents {
+        let mut file_contents = SetContents {
             path: file.path().to_path_buf(),
             contents: String::from("Hello, world!"),
         };
