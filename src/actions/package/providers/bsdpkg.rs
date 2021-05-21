@@ -1,6 +1,6 @@
 use super::PackageProvider;
-// use crate::atoms::command::finalizers::output_contains::OutputContains;
-// use crate::atoms::command::finalizers::FlowControl::FinishIf;
+use crate::steps::finalizers::FlowControl::StopIf;
+use crate::steps::finalizers::OutputContains;
 use crate::steps::Step;
 use crate::{actions::package::PackageVariant, atoms::command::Exec};
 use serde::{Deserialize, Serialize};
@@ -70,12 +70,11 @@ impl PackageProvider for BsdPkg {
                         .chain(package.extra_args.clone())
                         .chain(package.packages())
                         .collect(),
-                    // finalizers: vec![FinishIf(Box::new(OutputContains("removed")))],
                     privileged: true,
                     ..Default::default()
                 }),
                 initializers: vec![],
-                finalizers: vec![],
+                finalizers: vec![StopIf(Box::new(OutputContains("removed")))],
             },
             Step {
                 atom: Box::new(Exec {
