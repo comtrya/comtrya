@@ -331,32 +331,8 @@ fn main() -> anyhow::Result<()> {
                 let mut steps = action
                     .plan(&m1, &contexts)
                     .into_iter()
-                    .filter(|step| {
-                        step.initializers
-                            .iter()
-                            .fold(true, |_, flow_control| match flow_control {
-                                steps::initializers::FlowControl::SkipIf(i) => {
-                                    match i.initialize() {
-                                        Ok(true) => {
-                                            // Returning false because we should Skip if true, so false
-                                            // will filter this out of the atom list
-                                            return false;
-                                        }
-                                        Ok(false) => true,
-                                        Err(e) => {
-                                            error!(
-                                                "Failed to run initializer on Atom: {}",
-                                                e.to_string()
-                                            );
-                                            // On an error, we can't really determine if this Atom should
-                                            // run; so lets play it safe and filter it out too
-                                            return false;
-                                        }
-                                    }
-                                }
-                            })
-                    })
-                    .filter(|action_atom| action_atom.atom.plan())
+                    .filter(|step| step.do_initializers_allow_us_to_run())
+                    .filter(|step| step.atom.plan())
                     .peekable();
 
                 if steps.peek().is_none() {
@@ -371,7 +347,7 @@ fn main() -> anyhow::Result<()> {
                         continue;
                     }
 
-                    match action_atom.atom.execute() {
+                    match step.atom.execute() {
                         Ok(_) => continue,
                         Err(err) => {
                             debug!("Atom failed to execute: {:?}", err);
