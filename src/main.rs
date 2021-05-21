@@ -348,12 +348,18 @@ fn main() -> anyhow::Result<()> {
                     }
 
                     match step.atom.execute() {
-                        Ok(_) => continue,
+                        Ok(_) => (),
                         Err(err) => {
                             debug!("Atom failed to execute: {:?}", err);
                             successful = false;
                             break;
                         }
+                    }
+
+                    if !step.do_finalizers_allow_us_to_continue() {
+                        debug!("Finalizers won't allow us to continue with this action");
+                        successful = false;
+                        break;
                     }
                 }
             });

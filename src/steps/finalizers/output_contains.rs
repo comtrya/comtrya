@@ -5,7 +5,7 @@ use crate::atoms::Atom;
 pub struct OutputContains(pub &'static str);
 
 impl Finalizer for OutputContains {
-    fn finalize(&self, atom: Box<dyn Atom>) -> anyhow::Result<bool> {
+    fn finalize(&self, atom: &Box<dyn Atom>) -> anyhow::Result<bool> {
         Ok(atom.output_string().contains(self.0))
     }
 }
@@ -17,8 +17,9 @@ mod tests {
 
     #[test]
     fn it_returns_false_when_not_found() {
+        let atom: Box<dyn Atom> = Box::new(Echo("goodbye-world"));
         let finalizer = OutputContains("hello-world");
-        let result = finalizer.finalize(Box::new(Echo("goodbye-world")));
+        let result = finalizer.finalize(&atom);
 
         assert_eq!(true, result.is_ok());
         assert_eq!(false, result.unwrap());
@@ -26,8 +27,9 @@ mod tests {
 
     #[test]
     fn it_returns_true_when_found() {
+        let step: Box<dyn Atom> = Box::new(Echo("hello-world"));
         let finalizer = OutputContains("hello-world");
-        let result = finalizer.finalize(Box::new(Echo("hello-world")));
+        let result = finalizer.finalize(&step);
 
         assert_eq!(true, result.is_ok());
         assert_eq!(true, result.unwrap());
