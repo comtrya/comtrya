@@ -147,15 +147,6 @@ jobs:
                   echo ::set-output name=BIN_PATH::${BIN_PATH}
                   echo ::set-output name=BIN_NAME::${BIN_NAME}
 
-            - name: Set Testing Options
-              id: test-options
-              shell: bash
-              run: |
-                  # test only library unit tests and binary for arm-type targets
-                  unset CARGO_TEST_OPTIONS
-                  unset CARGO_TEST_OPTIONS ; case ${{ matrix.job.target }} in arm-* | aarch64-*) CARGO_TEST_OPTIONS="--bin ${PROJECT_NAME}" ;; esac;
-                  echo ::set-output name=CARGO_TEST_OPTIONS::${CARGO_TEST_OPTIONS}
-
             - name: Test
               uses: actions-rs/cargo@v1
               with:
