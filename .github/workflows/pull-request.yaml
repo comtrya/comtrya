@@ -116,7 +116,6 @@ jobs:
 
       - name: Run tests
         uses: actions-rs/cargo@v1
-        continue-on-error: true
         with:
           use-cross: ${{ matrix.job.use-cross }}
           command: test

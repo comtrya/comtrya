@@ -28,7 +28,6 @@ jobs:
                   components: clippy
 
             - name: Run Clippy
-              continue-on-error: true
               uses: actions-rs/cargo@v1
               with:
                   command: clippy
@@ -159,7 +158,6 @@ jobs:
 
             - name: Test
               uses: actions-rs/cargo@v1
-              continue-on-error: true
               with:
                   use-cross: ${{ matrix.job.use-cross }}
                   command: test
