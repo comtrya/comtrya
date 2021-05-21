@@ -101,6 +101,7 @@ impl Atom for Chown {
 }
 
 #[cfg(test)]
+#[cfg(unix)]
 mod tests {
     use super::*;
 
