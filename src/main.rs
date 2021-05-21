@@ -340,8 +340,8 @@ fn main() -> anyhow::Result<()> {
                     return;
                 }
 
-                for atom in atoms {
-                    info!("{}", atom);
+                for mut step in steps {
+                    info!("{}", step);
 
                     if dry_run {
                         continue;
