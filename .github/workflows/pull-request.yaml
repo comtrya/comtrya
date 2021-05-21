@@ -66,6 +66,7 @@ jobs:
       matrix:
         job:
           - { os: ubuntu-20.04, target: aarch64-unknown-linux-gnu }
+          - { os: ubuntu-20.04, target: aarch64-unknown-linux-musl }
           - { os: ubuntu-20.04, target: x86_64-unknown-linux-gnu }
           - { os: ubuntu-20.04, target: x86_64-unknown-linux-musl }
           - { os: macos-10.15, target: x86_64-apple-darwin }
@@ -79,6 +80,7 @@ jobs:
         run: |
           case ${{ matrix.job.target }} in
             aarch64-unknown-linux-gnu) sudo apt-get -y update ; sudo apt-get -y install gcc-aarch64-linux-gnu ;;
+            *-musl) sudo apt-get -y update ; sudo apt-get -y install musl-tools ;;
           esac
 
       - name: Extract crate information
