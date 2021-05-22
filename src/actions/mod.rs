@@ -76,3 +76,37 @@ impl<E: std::error::Error> From<E> for ActionError {
 pub trait Action {
     fn plan(&self, manifest: &Manifest, context: &Context) -> Vec<Step>;
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::actions::Actions;
+    use crate::manifests::Manifest;
+
+    #[test]
+    fn can_parse_some_advanced_stuff() {
+        let content = r#"
+actions:
+- action: command.run
+  only: user.username != "root"
+  command: echo
+  args:
+    - hi
+  variants:
+    - where: Debian
+      command: halt
+"#;
+        let m: Manifest = serde_yaml::from_str(content).unwrap();
+
+        let action = &m.actions[0];
+
+        let command = match action {
+            Actions::CommandRun(cr) => cr,
+            _ => panic!("did not get a command to run"),
+        };
+        assert_eq!(command.only, Some("user.username != \"root\"".into()));
+
+        let variant = &command.variants[0];
+        assert_eq!(variant.where_clause, "Debian");
+        assert_eq!(variant.command.command, "halt");
+    }
+}
