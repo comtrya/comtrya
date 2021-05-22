@@ -45,7 +45,7 @@ mod tests {
     #[test]
     fn it_can() {
         let tmpdir = tempdir().unwrap();
-        let to_file = String::from(tmpdir.path().clone().join("download").to_str().unwrap());
+        let to_file = String::from(tmpdir.path().join("download").to_str().unwrap());
 
         let mut atom = Download {
             url: String::from("https://www.google.com/images/branding/googlelogo/2x/googlelogo_color_272x92dp.png"),
