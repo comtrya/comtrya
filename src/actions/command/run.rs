@@ -7,6 +7,8 @@ use tera::Context;
 pub struct RunCommand {
     pub command: String,
 
+    pub only: Option<String>,
+
     #[serde(default)]
     pub args: Vec<String>,
 
@@ -14,6 +16,19 @@ pub struct RunCommand {
     pub sudo: bool,
 
     pub dir: Option<String>,
+
+    #[serde(default)]
+    pub variants: Vec<Variant<RunCommand>>,
+}
+
+type Where = String;
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct Variant<T> {
+    #[serde(rename = "where")]
+    pub where_clause: Where,
+    #[serde(flatten)]
+    pub command: T,
 }
 
 fn get_false() -> bool {
