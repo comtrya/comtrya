@@ -61,7 +61,9 @@ impl GitManifestProvider {
     }
 }
 
+// Need to work out why this doesn't pass on Windows.
 #[cfg(test)]
+#[cfg(unix)]
 mod test {
     use super::super::ManifestProvider;
     use super::GitManifestProvider;

@@ -65,17 +65,24 @@ jobs:
       fail-fast: false
       matrix:
         job:
-          - {
-              os: ubuntu-20.04,
-              target: aarch64-unknown-linux-gnu,
-              use-cross: true,
-            }
+          # Some jobs are commented out. Cross currently runs
+          # the build in a container, which doesn't have a "proper"
+          # setup that allows CACHE_DIR / TMP_DIR etc to exist,
+          # meaning that some of the tests pass because it's using `/`
+          # and the user isn't root. There's a change to Cross that fixes
+          # this, but a version hasn't been released in 8 months.
+          # Hopefully we can uncomment these soon.
+          # - {
+          #     os: ubuntu-20.04,
+          #     target: aarch64-unknown-linux-gnu,
+          #     use-cross: true,
+          #   }
           - { os: ubuntu-20.04, target: x86_64-unknown-linux-gnu }
-          - {
-              os: ubuntu-20.04,
-              target: x86_64-unknown-linux-musl,
-              use-cross: true,
-            }
+          # - {
+          #     os: ubuntu-20.04,
+          #     target: x86_64-unknown-linux-musl,
+          #     use-cross: true,
+          #   }
           - { os: macos-10.15, target: x86_64-apple-darwin }
           - { os: windows-2019, target: x86_64-pc-windows-msvc }
     steps:

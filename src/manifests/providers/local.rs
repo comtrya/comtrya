@@ -29,7 +29,7 @@ mod test {
     fn test_resolve_absolute_url() {
         let local_manifest_provider = LocalManifestProvider;
 
-        let cwd = std::env::current_dir().unwrap();
+        let cwd = std::env::current_dir().unwrap().canonicalize().unwrap();
         let cwd_string = String::from(cwd.to_str().unwrap());
 
         assert_eq!(cwd, local_manifest_provider.resolve(&cwd_string).unwrap());
@@ -44,7 +44,11 @@ mod test {
     fn test_resolve_relative_url() {
         let local_manifest_provider = LocalManifestProvider {};
 
-        let cwd = std::env::current_dir().unwrap().join("examples");
+        let cwd = std::env::current_dir()
+            .unwrap()
+            .canonicalize()
+            .unwrap()
+            .join("examples");
 
         assert_eq!(
             cwd,
