@@ -92,15 +92,13 @@ impl Atom for Exec {
         match std::process::Command::new(&command)
             .envs(self.environment.clone())
             .args(&arguments)
-            .current_dir(
-                &self.working_dir.clone().unwrap_or(
-                    std::env::current_dir()
-                        .unwrap()
-                        .into_os_string()
-                        .into_string()
-                        .unwrap(),
-                ),
-            )
+            .current_dir(&self.working_dir.clone().unwrap_or_else(|| {
+                std::env::current_dir()
+                    .unwrap()
+                    .into_os_string()
+                    .into_string()
+                    .unwrap()
+            }))
             .output()
         {
             Ok(output) => {

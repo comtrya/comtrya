@@ -42,7 +42,7 @@ impl Action for DirectoryCopy {
             Step {
                 atom: Box::new(Exec {
                     command: String::from("cp"),
-                    arguments: vec![String::from("-r"), from.clone(), self.to.clone()],
+                    arguments: vec![String::from("-r"), from, self.to.clone()],
                     ..Default::default()
                 }),
                 initializers: vec![],

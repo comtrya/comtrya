@@ -31,7 +31,7 @@ impl Step {
                         Ok(true) => {
                             // Returning false because we should Skip if true, so false
                             // will filter this out of the atom list
-                            return false;
+                            false
                         }
                         Ok(false) => true,
                         Err(err) => {
@@ -39,7 +39,7 @@ impl Step {
 
                             // On an error, we can't really determine if this Atom should
                             // run; so lets play it safe and filter it out too
-                            return false;
+                            false
                         }
                     }
                 }
@@ -51,11 +51,11 @@ impl Step {
             .iter()
             .fold(true, |_, flow_control| match flow_control {
                 finalizers::FlowControl::StopIf(i) => {
-                    match i.finalize(&self.atom) {
+                    match i.finalize(self.atom.as_ref()) {
                         Ok(true) => {
                             // Returning false because we should Skip if true, so false
                             // will filter this out of the atom list
-                            return false;
+                            false
                         }
                         Ok(false) => true,
                         Err(err) => {
@@ -63,7 +63,7 @@ impl Step {
 
                             // On an error, we can't really determine if this Atom should
                             // run; so lets play it safe and filter it out too
-                            return false;
+                            false
                         }
                     }
                 }
