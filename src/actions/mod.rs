@@ -5,7 +5,7 @@ mod package;
 
 use crate::manifests::Manifest;
 use crate::steps::Step;
-use command::run::RunCommand;
+use command::run::{Extended, RunCommand};
 use directory::{DirectoryCopy, DirectoryCreate};
 use file::copy::FileCopy;
 use file::download::FileDownload;
@@ -18,7 +18,7 @@ use tera::Context;
 #[serde(tag = "action")]
 pub enum Actions {
     #[serde(alias = "command.run", alias = "cmd.run")]
-    CommandRun(RunCommand),
+    CommandRun(Extended<RunCommand>),
 
     #[serde(alias = "directory.copy", alias = "dir.copy")]
     DirectoryCopy(DirectoryCopy),
@@ -79,7 +79,7 @@ pub trait Action {
 
 #[cfg(test)]
 mod tests {
-    use crate::actions::Actions;
+    use crate::actions::{command::run::RunCommand, Actions};
     use crate::manifests::Manifest;
 
     #[test]
@@ -99,14 +99,23 @@ actions:
 
         let action = &m.actions[0];
 
-        let command = match action {
+        let ext = match action {
             Actions::CommandRun(cr) => cr,
             _ => panic!("did not get a command to run"),
         };
-        assert_eq!(command.only, Some("user.username != \"root\"".into()));
+        assert_eq!(ext.condition, Some("user.username != \"root\"".into()));
+        assert_eq!(
+            ext.action,
+            RunCommand {
+                command: "echo".into(),
+                args: vec!["hi".into()],
+                sudo: false,
+                dir: None,
+            }
+        );
 
-        let variant = &command.variants[0];
-        assert_eq!(variant.where_clause, "Debian");
-        assert_eq!(variant.command.command, "halt");
+        let variant = &ext.variants[0];
+        assert_eq!(variant.condition, "Debian");
+        assert_eq!(variant.action.command, "halt");
     }
 }
