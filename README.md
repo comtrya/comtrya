@@ -9,7 +9,7 @@
 [![License](https://img.shields.io/github/license/comtrya/comtrya?style=for-the-badge)](https://github.com/comtrya/comtrya/blob/main/LICENSE)
 
 [![Latest GitHub Release](https://img.shields.io/github/v/release/comtrya/comtrya?label=Latest&style=for-the-badge)](https://github.com/comtrya/comtrya/releases/latest)
-[![GitHub Actions Status](https://img.shields.io/github/checks-status/comtrya/comtrya/main?style=for-the-badge)](https://github.com/comtrya/comtrya/actions/workflows/main.yml)
+[![GitHub Actions Status](https://img.shields.io/github/workflow/status/comtrya/comtrya/release/main?style=for-the-badge)](https://github.com/comtrya/comtrya/actions/workflows/main.yml)
 [![Codecov](https://img.shields.io/codecov/c/github/comtrya/comtrya?style=for-the-badge)](https://codecov.io/gh/comtrya/comtrya)
 
 [
@@ -18,13 +18,7 @@
 
 ---
 
-## Warning
-
-This tool is ridiculously early in its development. I'm building out features as I migrate my [dotfiles](https://gitlab.com/rawkode/rawkode) over.
-
-Those dotfiles can be used as a "reference" for migrating your own.
-
-Only for early adopters and masochists.
+Want to learn how to use Comtrya? [Check the docs](https://comtrya.dev).
 
 ---
 ## About
@@ -35,7 +29,7 @@ I'm a serial OS installer, I wipe the OS on my machines every, approx, 30 days. 
 
 I've also tried Ansible, Chef, Puppet, mgmt, and probably anything else you're about to suggest; they all have a flaw that makes it too cumbersome to adopt for the trivial use-case.
 
-## Getting Started
+## Installing
 
 You'll find binaries over on the [releases page](https://github.com/rawkode/comtrya/releases/latest).
 
@@ -63,97 +57,6 @@ comtrya --help
 comtrya --version
 ```
 
-## Manifests
-
-A manifest is a collection of packages and files, and this will likely be expanded upon later. A Manifest is a logical grouping of resources that can be applied to your machine, and fetched from remote locations or local.
-
-### Actions
-
-- command.run
-- directory.copy
-- file.copy
-- package.install
-
-#### Commands
-
-```yaml
-actions:
-  - action: command.run
-    command: whoami
-    dir: .
-    sudo: true
-
-  - action: command.run
-    command: echo
-    dir: .
-    args:
-      - Hello
-      - World
-```
-
-#### Directories
-
-Directories must be within a `files` directory within each manifest location.
-
-```yaml
-actions:
-  - action: directory.copy
-    from: includes
-    to: /Users/rawkode/.zsh/
-```
-
-#### Files
-
-Files must be within a `files` directory within each manifest location.
-
-```yaml
-actions:
-  - action: file.copy
-    from: gitconfig
-    to: /Users/rawkode/gitconfig
-    template: false # Whether to interpolate {{}} variable syntax with contexts
-```
-#### Packages
-
-Currently Comtrya supports Homebrew, Yay and Aptitude as package providers. It'll detect, based on your system, which should be used.
-
-This can be tweaked per action, using the `provider` parameter. Each provider also supports a `repository` parameter, which can add Homebrew Taps or PPAs for Ubuntu systems.
-
-Single package:
-
-```yaml
-actions:
-  - action: package.install
-    name: git
-
-  - action: package.install
-    provider: homebrew
-    repository: homebrew/cask
-    name: docker
-
-  - action: package.install
-    provider: aptitude
-    repository: ppa:longsleep/golang-backports
-    name: golang-go
-```
-
-Install several packages with the list version:
-
-```yaml
-actions:
-  - action: package.install
-    list:
-      - git
-      - minikube
-```
-### Dependencies
-
-Dependencies can be configured per manifest, not per action.
-
-```yaml
-depends:
-  - manifest_name
-```
 ## What's Next?
 
 You should take a look at the issues page to see what's available to contribute. Below is a short list of the major features that are upcoming.
