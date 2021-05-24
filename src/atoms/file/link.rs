@@ -68,7 +68,7 @@ impl Atom for Link {
 
     #[cfg(windows)]
     fn execute(&mut self) -> anyhow::Result<()> {
-        if self.targe.is_dir() {
+        if self.target.is_dir() {
             std::os::windows::fs::symlink_dir(&self.source, &self.target)?;
         } else {
             std::os::windows::fs::symlink_file(&self.source, &self.target)?;
