@@ -9,7 +9,14 @@ use tracing::error;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct FileLink {
+    #[serde(
+        alias = "from"
+    )]
     pub source: String,
+
+    #[serde(
+        alias = "to"
+    )]
     pub target: String,
 }
 
