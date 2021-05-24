@@ -83,5 +83,24 @@ mod tests {
                 panic!("FileLink didn't deserialize to the correct type");
             }
         };
+
+        // Old style format
+        let yaml = r#"
+- action: file.link
+  from: a
+  to: b
+"#;
+
+        let mut actions: Vec<Actions> = serde_yaml::from_str(yaml).unwrap();
+
+        match actions.pop() {
+            Some(Actions::FileLink(link)) => {
+                assert_eq!("a", link.source);
+                assert_eq!("b", link.target);
+            }
+            _ => {
+                panic!("FileLink didn't deserialize to the correct type");
+            }
+        };
     }
 }
