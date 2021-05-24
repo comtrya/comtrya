@@ -4,13 +4,13 @@ use std::path::PathBuf;
 use tracing::{debug, error, warn};
 
 pub struct Link {
-    pub from: PathBuf,
-    pub to: PathBuf,
+    pub source: PathBuf,
+    pub target: PathBuf,
 }
 
 impl FileAtom for Link {
     fn get_path(&self) -> &PathBuf {
-        &self.from
+        &self.source
     }
 }
 
@@ -19,37 +19,36 @@ impl std::fmt::Display for Link {
         write!(
             f,
             "The file {} contents needs to be linked from {}",
-            self.to.to_str().unwrap(),
-            self.from.to_str().unwrap(),
+            self.target.to_str().unwrap(),
+            self.source.to_str().unwrap(),
         )
     }
 }
 
 impl Atom for Link {
     fn plan(&self) -> bool {
-        // First, ensure self.to exists and can be linked to
-        if !self.to.exists() {
+        // First, ensure source exists and can be linked to
+        if !self.source.exists() {
             error!(
-                "Cannot plan: file to link to is missing: {}",
-                self.to.to_str().unwrap()
+                "Cannot plan: source file is missing: {}",
+                self.source.to_str().unwrap()
             );
             return false;
         }
 
-        // File doesn't exist, we can run safely
-        if !self.from.exists() {
+        // Target file doesn't exist, we can run safely
+        if !self.target.exists() {
             return true;
         }
-
-        // File exists, lets check if it's a symlink which can be safely updated
+        // Target file exists, lets check if it's a symlink which can be safely updated
         // or return a false and emit some logging that we can't create the link
         // without purging a file
-        let link = match std::fs::read_link(&self.from) {
+        let link = match std::fs::read_link(&self.target) {
             Ok(link) => link,
             Err(err) => {
                 warn!(
-                    "Cannot plan: file to link from already exists and isn't a link: {}",
-                    self.from.to_str().unwrap()
+                    "Cannot plan: target already exists and isn't a link: {}",
+                    self.target.to_str().unwrap()
                 );
                 debug!("Cannot plan: {}", err);
                 return false;
@@ -57,22 +56,22 @@ impl Atom for Link {
         };
 
         // If this file doesn't link to what we expect, lets make it so
-        !link.eq(&self.to)
+        !link.eq(&self.source)
     }
 
     #[cfg(unix)]
     fn execute(&mut self) -> anyhow::Result<()> {
-        std::os::unix::fs::symlink(&self.to, &self.from)?;
+        std::os::unix::fs::symlink(&self.source, &self.target)?;
 
         Ok(())
     }
 
     #[cfg(windows)]
     fn execute(&mut self) -> anyhow::Result<()> {
-        if self.to.is_dir() {
-            std::os::windows::fs::symlink_dir(&self.to, &self.from)?;
+        if self.targe.is_dir() {
+            std::os::windows::fs::symlink_dir(&self.source, &self.target)?;
         } else {
-            std::os::windows::fs::symlink_file(&self.to, &self.from)?;
+            std::os::windows::fs::symlink_file(&self.source, &self.target)?;
         }
 
         Ok(())
@@ -102,10 +101,9 @@ mod tests {
         };
 
         let mut atom = Link {
-            from: from_dir.path().join("symlink"),
-            to: to_file.path().to_path_buf(),
+            target: from_dir.path().join("symlink"),
+            source: to_file.path().to_path_buf(),
         };
-
         assert_eq!(true, atom.plan());
         assert_eq!(true, atom.execute().is_ok());
         assert_eq!(false, atom.plan());
