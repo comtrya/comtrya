@@ -115,9 +115,9 @@ impl From<&Package> for PackageVariant {
 
         let mut package = PackageVariant {
             names: variant.names.clone(),
-            provider: package.provider.clone(),
-            repository: package.repository.clone(),
-            extra_args: package.extra_args.clone(),
+            provider: variant.provider.clone(),
+            repository: variant.repository.clone(),
+            extra_args: variant.extra_args.clone(),
         };
 
         // I've been torn about this, but here's my logic.
