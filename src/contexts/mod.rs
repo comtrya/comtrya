@@ -4,6 +4,9 @@ use std::collections::BTreeMap;
 use tracing::{debug, trace};
 use user::UserContextProvider;
 
+use crate::contexts::os::OSContextProvider;
+
+pub mod os;
 /// User context provider: understands the user running the command
 pub mod user;
 
@@ -23,7 +26,10 @@ pub fn build_contexts() -> tera::Context {
 
     let mut contexts = tera::Context::new();
 
-    let context_providers = vec![Box::new(UserContextProvider {})];
+    let context_providers: Vec<Box<dyn ContextProvider>> = vec![
+        Box::new(UserContextProvider {}),
+        Box::new(OSContextProvider {}),
+    ];
 
     context_providers.iter().for_each(|provider| {
         let mut values: BTreeMap<String, Value> = BTreeMap::new();
