@@ -69,6 +69,7 @@ impl Action for FileCopy {
         };
 
         use crate::atoms::command::Exec;
+        use crate::atoms::directory::Create as DirCreate;
         use crate::atoms::file::{Chmod, Create, SetContents};
 
         let path = PathBuf::from(&self.to);
@@ -76,13 +77,8 @@ impl Action for FileCopy {
 
         vec![
             Step {
-                atom: Box::new(Exec {
-                    command: String::from("mkdir"),
-                    arguments: vec![
-                        String::from("-p"),
-                        String::from(parent.parent().unwrap().to_str().unwrap()),
-                    ],
-                    ..Default::default()
+                atom: Box::new(DirCreate {
+                    path: parent.parent().unwrap().into(),
                 }),
                 initializers: vec![],
                 finalizers: vec![],

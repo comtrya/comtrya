@@ -23,7 +23,9 @@ impl FileAction for FileLink {}
 impl Action for FileLink {
     fn plan(&self, manifest: &Manifest, _: &Context) -> Vec<Step> {
         use crate::atoms::command::Exec;
+        use crate::atoms::directory::Create as DirCreate;
         use crate::atoms::file::Link;
+
         let from: PathBuf = match self.resolve(manifest, &self.source) {
             Ok(from) => from,
             Err(_) => {
@@ -37,13 +39,8 @@ impl Action for FileLink {
 
         vec![
             Step {
-                atom: Box::new(Exec {
-                    command: String::from("mkdir"),
-                    arguments: vec![
-                        String::from("-p"),
-                        String::from(parent.parent().unwrap().to_str().unwrap()),
-                    ],
-                    ..Default::default()
+                atom: Box::new(DirCreate {
+                    path: parent.parent().unwrap().into(),
                 }),
                 initializers: vec![],
                 finalizers: vec![],
