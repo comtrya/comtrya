@@ -68,7 +68,6 @@ impl Action for FileCopy {
             }
         };
 
-        use crate::atoms::command::Exec;
         use crate::atoms::directory::Create as DirCreate;
         use crate::atoms::file::{Chmod, Create, SetContents};
 
