@@ -22,7 +22,6 @@ impl FileAction for FileLink {}
 
 impl Action for FileLink {
     fn plan(&self, manifest: &Manifest, _: &Context) -> Vec<Step> {
-        use crate::atoms::command::Exec;
         use crate::atoms::directory::Create as DirCreate;
         use crate::atoms::file::Link;
 

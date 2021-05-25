@@ -6,7 +6,7 @@ mod package;
 use crate::manifests::Manifest;
 use crate::steps::Step;
 use command::run::RunCommand;
-use directory::copy::DirectoryCopy;
+use directory::{DirectoryCopy, DirectoryCreate};
 use file::copy::FileCopy;
 use file::link::FileLink;
 use package::install::PackageInstall;
@@ -18,12 +18,19 @@ use tera::Context;
 pub enum Actions {
     #[serde(alias = "command.run", alias = "cmd.run")]
     CommandRun(RunCommand),
+
     #[serde(alias = "directory.copy", alias = "dir.copy")]
     DirectoryCopy(DirectoryCopy),
+
+    #[serde(alias = "directory.create", alias = "dir.create")]
+    DirectoryCreate(DirectoryCreate),
+
     #[serde(alias = "file.copy")]
     FileCopy(FileCopy),
+
     #[serde(alias = "file.link")]
     FileLink(FileLink),
+
     #[serde(alias = "package.install", alias = "package.installed")]
     PackageInstall(PackageInstall),
 }
@@ -33,6 +40,7 @@ impl Actions {
         match self {
             Actions::CommandRun(a) => a,
             Actions::DirectoryCopy(a) => a,
+            Actions::DirectoryCreate(a) => a,
             Actions::FileCopy(a) => a,
             Actions::FileLink(a) => a,
             Actions::PackageInstall(a) => a,

@@ -1,8 +1,11 @@
-pub mod copy;
-use std::path::PathBuf;
-
 use crate::{actions::Action, manifests::Manifest};
 use anyhow::{anyhow, Result};
+use std::path::PathBuf;
+
+mod copy;
+mod create;
+pub use copy::DirectoryCopy;
+pub use create::DirectoryCreate;
 
 pub trait DirectoryAction: Action {
     fn resolve(&self, manifest: &Manifest, path: &str) -> Result<PathBuf> {
