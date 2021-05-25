@@ -1,5 +1,6 @@
 use super::super::Atom;
 use anyhow::anyhow;
+use tracing::trace;
 
 #[derive(Default)]
 pub struct Exec {
@@ -105,6 +106,10 @@ impl Atom for Exec {
                 self.status.code = output.status.code().unwrap();
                 self.status.stdout = String::from_utf8(output.stdout).unwrap();
                 self.status.stderr = String::from_utf8(output.stderr).unwrap();
+
+                trace!("exit code: {}", &self.status.code);
+                trace!("stdout: {}", &self.status.stdout);
+                trace!("stderr: {}", &self.status.stderr);
 
                 Ok(())
             }
