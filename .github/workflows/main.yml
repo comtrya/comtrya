@@ -13,7 +13,7 @@ on:
             - "*"
 
 jobs:
-    lint:
+    lint-test-release:
         runs-on: ubuntu-20.04
         steps:
             - name: Clone Repository
@@ -45,6 +45,19 @@ jobs:
 
             - name: Upload to codecov.io
               uses: codecov/codecov-action@v1
+
+            - name: Check for Release
+              id: is-release
+              shell: bash
+              run: |
+                  unset IS_RELEASE ; if [[ $GITHUB_REF =~ ^refs/tags/v[0-9].* ]]; then IS_RELEASE='true' ; fi
+                  echo ::set-output name=IS_RELEASE::${IS_RELEASE}
+
+            - name: Cargo Publish
+              uses: katyo/publish-crates@v1
+              if: steps.is-release.outputs.IS_RELEASE
+              with:
+                  registry-token: ${{ secrets.CARGO_REGISTRY_TOKEN }}
 
     build:
         name: ${{ matrix.job.os }} (${{ matrix.job.target }})
@@ -172,12 +185,6 @@ jobs:
               run: |
                   unset IS_RELEASE ; if [[ $GITHUB_REF =~ ^refs/tags/v[0-9].* ]]; then IS_RELEASE='true' ; fi
                   echo ::set-output name=IS_RELEASE::${IS_RELEASE}
-
-            - name: Cargo Publish
-              uses: katyo/publish-crates@v1
-              if: steps.is-release.outputs.IS_RELEASE
-              with:
-                  registry-token: ${{ secrets.CARGO_REGISTRY_TOKEN }}
 
             - name: Publish
               uses: softprops/action-gh-release@v1
