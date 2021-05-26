@@ -7,5 +7,5 @@ actions:
 
   # This will not be rendered with contexts
   - action: file.copy
-    from: some-file
-    to: /tmp/some-file
+    from: procs-config.toml
+    to: {{ user.config_dir }}/procs/config.toml

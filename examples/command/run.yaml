@@ -9,6 +9,11 @@ actions:
     command: whoami
     sudo: true
 
+  - action: cmd.run
+    command: ls
+    args:
+        - {{ user.home_dir }}
+
   - action: command.run
     command: sh
     args:
