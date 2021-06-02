@@ -2,7 +2,7 @@
 name: release
 
 env:
-    MIN_SUPPORTED_RUST_VERSION: "1.45.0"
+    MIN_SUPPORTED_RUST_VERSION: "1.52.0"
     CICD_INTERMEDIATES_DIR: "_cicd-intermediates"
 
 on:
@@ -110,7 +110,7 @@ jobs:
             - name: Install Rust Toolchain
               uses: actions-rs/toolchain@v1
               with:
-                  toolchain: stable
+                  toolchain: ${{ env.MIN_SUPPORTED_RUST_VERSION }}
                   target: ${{ matrix.job.target }}
                   override: true
                   profile: minimal

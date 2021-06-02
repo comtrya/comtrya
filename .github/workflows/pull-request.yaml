@@ -1,7 +1,7 @@
 name: pull-request
 
 env:
-  MIN_SUPPORTED_RUST_VERSION: "1.45.0"
+  MIN_SUPPORTED_RUST_VERSION: "1.52.0"
 
 on:
   pull_request:
@@ -27,7 +27,7 @@ jobs:
       - name: Install stable toolchain
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: stable
+          toolchain: ${{ env.MIN_SUPPORTED_RUST_VERSION }}
           profile: minimal
           components: clippy,rustfmt
           override: true
