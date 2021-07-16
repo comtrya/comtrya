@@ -1,18 +1,20 @@
 use super::super::Atom;
 use std::io::Write;
-use std::{
-    fs::File,
-    path::{Path, PathBuf},
-};
+use std::{fs::File, path::PathBuf};
 
 pub struct Download {
     pub url: String,
-    pub to: String,
+    pub to: PathBuf,
 }
 
 impl std::fmt::Display for Download {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "HttpDownload from {} to {}", self.url, self.to,)
+        write!(
+            f,
+            "HttpDownload from {} to {}",
+            self.url,
+            self.to.to_str().unwrap()
+        )
     }
 }
 
@@ -27,8 +29,7 @@ impl Atom for Download {
     fn execute(&mut self) -> anyhow::Result<()> {
         let response = reqwest::blocking::get(&self.url)?;
 
-        let path = Path::new(&self.to);
-        let mut file = File::create(&path)?;
+        let mut file = File::create(&self.to)?;
 
         let content = response.bytes()?;
         file.write_all(&content)?;
@@ -45,7 +46,7 @@ mod tests {
     #[test]
     fn it_can() {
         let tmpdir = tempdir().unwrap();
-        let to_file = String::from(tmpdir.path().join("download").to_str().unwrap());
+        let to_file = tmpdir.path().join("download");
 
         let mut atom = Download {
             url: String::from("https://www.google.com/images/branding/googlelogo/2x/googlelogo_color_272x92dp.png"),
