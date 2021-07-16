@@ -8,6 +8,7 @@ use crate::steps::Step;
 use command::run::RunCommand;
 use directory::{DirectoryCopy, DirectoryCreate};
 use file::copy::FileCopy;
+use file::download::FileDownload;
 use file::link::FileLink;
 use package::install::PackageInstall;
 use serde::{Deserialize, Serialize};
@@ -28,6 +29,9 @@ pub enum Actions {
     #[serde(alias = "file.copy")]
     FileCopy(FileCopy),
 
+    #[serde(alias = "file.download")]
+    FileDownload(FileDownload),
+
     #[serde(alias = "file.link")]
     FileLink(FileLink),
 
@@ -42,6 +46,7 @@ impl Actions {
             Actions::DirectoryCopy(a) => a,
             Actions::DirectoryCreate(a) => a,
             Actions::FileCopy(a) => a,
+            Actions::FileDownload(a) => a,
             Actions::FileLink(a) => a,
             Actions::PackageInstall(a) => a,
         }

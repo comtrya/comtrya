@@ -1,0 +1,5 @@
+actions:
+  # This will be rendered with contexts
+  - action: file.download
+    from: https://google.com/robots.txt
+    to: /tmp/google-robots.txt
