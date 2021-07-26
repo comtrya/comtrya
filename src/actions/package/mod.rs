@@ -45,7 +45,7 @@ where
     deserializer.deserialize_any(SingleOrManyNames)
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct Package {
     #[serde(
         deserialize_with = "deserialize_name_or_list",

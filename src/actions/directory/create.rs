@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use tera::Context;
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct DirectoryCreate {
     pub path: String,
 }
@@ -43,7 +43,7 @@ mod tests {
 
         match manifest.actions.pop() {
             Some(Actions::DirectoryCreate(action)) => {
-                assert_eq!("/some-directory", action.path);
+                assert_eq!("/some-directory", action.action.path);
             }
             _ => {
                 panic!("DirectoryCopy didn't deserialize to the correct type");

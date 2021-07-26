@@ -69,8 +69,8 @@ mod tests {
         let mut actions: Vec<Actions> = serde_yaml::from_str(yaml).unwrap();
 
         match actions.pop() {
-            Some(Actions::PackageInstall(package_install)) => {
-                assert_eq!(vec!["curl"], package_install.names);
+            Some(Actions::PackageInstall(action)) => {
+                assert_eq!(vec!["curl"], action.action.names);
             }
             _ => {
                 panic!("PackageInstall didn't deserialize to the correct type");
@@ -78,8 +78,8 @@ mod tests {
         };
 
         match actions.pop() {
-            Some(Actions::PackageInstall(package_install)) => {
-                assert_eq!(vec!["curl"], package_install.names);
+            Some(Actions::PackageInstall(action)) => {
+                assert_eq!(vec!["curl"], action.action.names);
             }
             _ => {
                 panic!("PackageInstall didn't deserialize to the correct type");

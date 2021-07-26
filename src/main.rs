@@ -1,6 +1,7 @@
 use crate::config::load_config;
 use anyhow::anyhow;
 use contexts::build_contexts;
+use evalexpr::*;
 use ignore::WalkBuilder;
 use manifests::Manifest;
 use petgraph::prelude::*;
@@ -129,6 +130,8 @@ fn main() -> anyhow::Result<()> {
 
     // Run Context Providers
     let contexts = build_contexts();
+
+    // let mut context = HashMapContext::from(contexts);
 
     let mut walker = WalkBuilder::new(manifest_directory);
     walker
