@@ -5,7 +5,7 @@ mod package;
 
 use crate::manifests::Manifest;
 use crate::steps::Step;
-use command::run::{Extended, RunCommand};
+use command::run::RunCommand;
 use directory::{DirectoryCopy, DirectoryCreate};
 use file::copy::FileCopy;
 use file::download::FileDownload;
@@ -14,29 +14,83 @@ use package::install::PackageInstall;
 use serde::{Deserialize, Serialize};
 use tera::Context;
 
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+pub struct ConditionalVariantAction<T> {
+    #[serde(flatten)]
+    pub action: T,
+
+    #[serde(rename = "only")]
+    pub condition: Option<String>,
+
+    #[serde(default)]
+    pub variants: Vec<Variant<T>>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct Variant<T> {
+    #[serde(flatten)]
+    pub action: T,
+
+    #[serde(rename = "where")]
+    pub condition: Option<String>,
+}
+
+impl<T> Action for ConditionalVariantAction<T>
+where
+    T: Action,
+{
+    fn plan(&self, manifest: &Manifest, context: &Context) -> Vec<Step> {
+        let variant = self.variants.iter().find(|variant| {
+            if variant.condition.is_none() {
+                return false;
+            }
+
+            let condition = variant.condition.clone().unwrap();
+
+            condition.eq("match me")
+        });
+
+        if variant.is_some() {
+            return variant.unwrap().action.plan(manifest, context);
+        }
+
+        if self.condition.is_none() {
+            return self.action.plan(manifest, context);
+        }
+
+        let condition = self.condition.clone().unwrap();
+
+        if condition.eq("match me") {
+            return self.action.plan(manifest, context);
+        }
+
+        vec![]
+    }
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(tag = "action")]
 pub enum Actions {
     #[serde(alias = "command.run", alias = "cmd.run")]
-    CommandRun(Extended<RunCommand>),
+    CommandRun(ConditionalVariantAction<RunCommand>),
 
     #[serde(alias = "directory.copy", alias = "dir.copy")]
-    DirectoryCopy(DirectoryCopy),
+    DirectoryCopy(ConditionalVariantAction<DirectoryCopy>),
 
     #[serde(alias = "directory.create", alias = "dir.create")]
-    DirectoryCreate(DirectoryCreate),
+    DirectoryCreate(ConditionalVariantAction<DirectoryCreate>),
 
     #[serde(alias = "file.copy")]
-    FileCopy(FileCopy),
+    FileCopy(ConditionalVariantAction<FileCopy>),
 
     #[serde(alias = "file.download")]
-    FileDownload(FileDownload),
+    FileDownload(ConditionalVariantAction<FileDownload>),
 
     #[serde(alias = "file.link")]
-    FileLink(FileLink),
+    FileLink(ConditionalVariantAction<FileLink>),
 
     #[serde(alias = "package.install", alias = "package.installed")]
-    PackageInstall(PackageInstall),
+    PackageInstall(ConditionalVariantAction<PackageInstall>),
 }
 
 impl Actions {
@@ -115,7 +169,7 @@ actions:
         );
 
         let variant = &ext.variants[0];
-        assert_eq!(variant.condition, "Debian");
+        assert_eq!(variant.condition, Some(String::from("Debian")));
         assert_eq!(variant.action.command, "halt");
     }
 }

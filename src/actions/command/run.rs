@@ -3,7 +3,7 @@ use crate::{actions::Action, manifests::Manifest};
 use serde::{Deserialize, Serialize};
 use tera::Context;
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct RunCommand {
     pub command: String,
 
@@ -14,37 +14,6 @@ pub struct RunCommand {
     pub sudo: bool,
 
     pub dir: Option<String>,
-}
-
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
-pub struct Extended<T> {
-    #[serde(rename = "only")]
-    pub condition: Option<Condition>,
-
-    #[serde(flatten)]
-    pub action: T,
-
-    #[serde(default)]
-    pub variants: Vec<Variant<T>>,
-}
-
-impl<T> Action for Extended<T>
-where
-    T: Action,
-{
-    fn plan(&self, manifest: &Manifest, context: &Context) -> Vec<Step> {
-        self.action.plan(manifest, context)
-    }
-}
-
-type Condition = String;
-
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct Variant<T> {
-    #[serde(rename = "where")]
-    pub condition: Condition,
-    #[serde(flatten)]
-    pub action: T,
 }
 
 fn get_false() -> bool {

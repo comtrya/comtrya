@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use tera::Context;
 use tracing::error;
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct DirectoryCopy {
     pub from: String,
     pub to: String,
@@ -72,9 +72,9 @@ mod tests {
         let mut manifest: Manifest = serde_yaml::from_reader(example_yaml).unwrap();
 
         match manifest.actions.pop() {
-            Some(Actions::DirectoryCopy(dir_copy)) => {
-                assert_eq!("mydir", dir_copy.from);
-                assert_eq!("/tmp/dircopy", dir_copy.to);
+            Some(Actions::DirectoryCopy(action)) => {
+                assert_eq!("mydir", action.action.from);
+                assert_eq!("/tmp/dircopy", action.action.to);
             }
             _ => {
                 panic!("DirectoryCopy didn't deserialize to the correct type");
