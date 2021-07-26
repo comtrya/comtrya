@@ -1,7 +1,4 @@
-use crate::config::load_config;
 use anyhow::anyhow;
-use contexts::build_contexts;
-use evalexpr::*;
 use ignore::WalkBuilder;
 use manifests::Manifest;
 use petgraph::prelude::*;
@@ -11,6 +8,9 @@ use structopt::StructOpt;
 use tera::Tera;
 use tracing::{debug, error, info, span, trace, Level, Subscriber};
 use tracing_subscriber::FmtSubscriber;
+
+use crate::config::load_config;
+use crate::contexts::{build_contexts, to_tera};
 
 mod actions;
 mod atoms;
@@ -131,8 +131,6 @@ fn main() -> anyhow::Result<()> {
     // Run Context Providers
     let contexts = build_contexts();
 
-    // let mut context = HashMapContext::from(contexts);
-
     let mut walker = WalkBuilder::new(manifest_directory);
     walker
         .standard_filters(true)
@@ -194,7 +192,7 @@ fn main() -> anyhow::Result<()> {
 
             trace!(template = template);
 
-            let yaml = Tera::one_off(template, &contexts, false).unwrap();
+            let yaml = Tera::one_off(template, &to_tera(&contexts), false).unwrap();
 
             trace!(rendered = yaml.as_str());
 
@@ -332,7 +330,7 @@ fn main() -> anyhow::Result<()> {
                 let action = action.inner_ref();
 
                 let mut steps = action
-                    .plan(m1, &contexts)
+                    .plan(&m1, &to_tera(&contexts))
                     .into_iter()
                     .filter(|step| step.do_initializers_allow_us_to_run())
                     .filter(|step| step.atom.plan())
