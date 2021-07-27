@@ -15,16 +15,18 @@ pub trait ContextProvider {
     fn get_contexts(&self) -> Vec<Context>;
 }
 
+pub type Contexts = BTreeMap<String, BTreeMap<String, Value>>;
+
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum Context {
     KeyValueContext(String, String),
     ListContext(String, Vec<String>),
 }
 
-pub fn build_contexts() -> tera::Context {
+pub fn build_contexts() -> Contexts {
     trace!("Building Contexts");
 
-    let mut contexts = tera::Context::new();
+    let mut contexts: Contexts = BTreeMap::new();
 
     let context_providers: Vec<Box<dyn ContextProvider>> = vec![
         Box::new(UserContextProvider {}),
@@ -59,8 +61,39 @@ pub fn build_contexts() -> tera::Context {
                 }
             });
 
-        contexts.insert(provider.get_prefix(), &values);
+        contexts.insert(provider.get_prefix(), values);
     });
 
     contexts
+}
+
+pub fn to_tera(contexts: &Contexts) -> tera::Context {
+    let mut context = tera::Context::new();
+
+    contexts.iter().for_each(|(m, v)| context.insert(m, v));
+    context
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use serde_yaml::Value;
+
+    #[test]
+    fn it_can_convert_to_tera() {
+        let mut contexts: Contexts = BTreeMap::new();
+        let mut user_context: BTreeMap<String, Value> = BTreeMap::new();
+
+        user_context.insert(String::from("username"), String::from("rawkode").into());
+        contexts.insert(String::from("user"), user_context);
+
+        let tera_context = to_tera(&contexts);
+        assert_eq!(true, tera_context.contains_key("user"));
+        let tera_user_context = tera_context.get("user").unwrap();
+        assert_eq!(true, tera_user_context.get("username").is_some());
+        assert_eq!(
+            String::from("rawkode"),
+            tera_user_context.get("username").unwrap().as_str().unwrap()
+        );
+    }
 }

@@ -1,13 +1,12 @@
 use super::FileAction;
-use crate::actions::Action;
 use crate::manifests::Manifest;
 use crate::steps::Step;
+use crate::{actions::Action, contexts::Contexts};
 use anyhow::Result;
 use serde::{de::Error, Deserialize, Deserializer, Serialize};
 use std::{path::PathBuf, u32};
-use tera::Context;
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct FileDownload {
     pub from: String,
     pub to: String,
@@ -40,7 +39,7 @@ impl FileDownload {}
 impl FileAction for FileDownload {}
 
 impl Action for FileDownload {
-    fn plan(&self, _manifest: &Manifest, _context: &Context) -> Vec<Step> {
+    fn plan(&self, _manifest: &Manifest, _context: &Contexts) -> Vec<Step> {
         use crate::atoms::directory::Create as DirCreate;
         use crate::atoms::file::Chmod;
         use crate::atoms::http::Download;
@@ -91,9 +90,9 @@ mod tests {
         let mut actions: Vec<Actions> = serde_yaml::from_str(yaml).unwrap();
 
         match actions.pop() {
-            Some(Actions::FileDownload(file_download)) => {
-                assert_eq!("a", file_download.from);
-                assert_eq!("b", file_download.to);
+            Some(Actions::FileDownload(action)) => {
+                assert_eq!("a", action.action.from);
+                assert_eq!("b", action.action.to);
             }
             _ => {
                 panic!("FileDownload didn't deserialize to the correct type");

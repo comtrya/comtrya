@@ -1,6 +1,4 @@
-use crate::config::load_config;
 use anyhow::anyhow;
-use contexts::build_contexts;
 use ignore::WalkBuilder;
 use manifests::Manifest;
 use petgraph::prelude::*;
@@ -10,6 +8,9 @@ use structopt::StructOpt;
 use tera::Tera;
 use tracing::{debug, error, info, span, trace, Level, Subscriber};
 use tracing_subscriber::FmtSubscriber;
+
+use crate::config::load_config;
+use crate::contexts::{build_contexts, to_tera};
 
 mod actions;
 mod atoms;
@@ -191,7 +192,7 @@ fn main() -> anyhow::Result<()> {
 
             trace!(template = template);
 
-            let yaml = Tera::one_off(template, &contexts, false).unwrap();
+            let yaml = Tera::one_off(template, &to_tera(&contexts), false).unwrap();
 
             trace!(rendered = yaml.as_str());
 

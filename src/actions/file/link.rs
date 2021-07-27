@@ -1,13 +1,12 @@
 use super::FileAction;
-use crate::actions::Action;
 use crate::manifests::Manifest;
 use crate::steps::Step;
+use crate::{actions::Action, contexts::Contexts};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
-use tera::Context;
 use tracing::error;
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct FileLink {
     #[serde(alias = "from")]
     pub source: String,
@@ -21,7 +20,7 @@ impl FileLink {}
 impl FileAction for FileLink {}
 
 impl Action for FileLink {
-    fn plan(&self, manifest: &Manifest, _: &Context) -> Vec<Step> {
+    fn plan(&self, manifest: &Manifest, _: &Contexts) -> Vec<Step> {
         use crate::atoms::directory::Create as DirCreate;
         use crate::atoms::file::Link;
 
@@ -71,9 +70,9 @@ mod tests {
         let mut actions: Vec<Actions> = serde_yaml::from_str(yaml).unwrap();
 
         match actions.pop() {
-            Some(Actions::FileLink(link)) => {
-                assert_eq!("a", link.source);
-                assert_eq!("b", link.target);
+            Some(Actions::FileLink(action)) => {
+                assert_eq!("a", action.action.source);
+                assert_eq!("b", action.action.target);
             }
             _ => {
                 panic!("FileLink didn't deserialize to the correct type");
@@ -90,9 +89,9 @@ mod tests {
         let mut actions: Vec<Actions> = serde_yaml::from_str(yaml).unwrap();
 
         match actions.pop() {
-            Some(Actions::FileLink(link)) => {
-                assert_eq!("a", link.source);
-                assert_eq!("b", link.target);
+            Some(Actions::FileLink(action)) => {
+                assert_eq!("a", action.action.source);
+                assert_eq!("b", action.action.target);
             }
             _ => {
                 panic!("FileLink didn't deserialize to the correct type");

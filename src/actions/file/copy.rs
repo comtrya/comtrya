@@ -1,14 +1,13 @@
 use super::FileAction;
-use crate::actions::Action;
 use crate::manifests::Manifest;
 use crate::steps::Step;
+use crate::{actions::Action, contexts::to_tera};
 use anyhow::Result;
 use serde::{de::Error, Deserialize, Deserializer, Serialize};
 use std::{path::PathBuf, u32};
-use tera::Context;
 use tracing::error;
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct FileCopy {
     pub from: String,
     pub to: String,
@@ -41,11 +40,11 @@ impl FileCopy {}
 impl FileAction for FileCopy {}
 
 impl Action for FileCopy {
-    fn plan(&self, manifest: &Manifest, context: &Context) -> Vec<Step> {
+    fn plan(&self, manifest: &Manifest, context: &crate::contexts::Contexts) -> Vec<Step> {
         let contents = match self.load(manifest, &self.from) {
             Ok(contents) => {
                 if self.template {
-                    match tera::Tera::one_off(contents.as_str(), &context, false) {
+                    match tera::Tera::one_off(contents.as_str(), &to_tera(&context), false) {
                         Ok(rendered) => rendered,
                         Err(err) => {
                             error!(
@@ -119,9 +118,9 @@ mod tests {
         let mut actions: Vec<Actions> = serde_yaml::from_str(yaml).unwrap();
 
         match actions.pop() {
-            Some(Actions::FileCopy(file_copy)) => {
-                assert_eq!("a", file_copy.from);
-                assert_eq!("b", file_copy.to);
+            Some(Actions::FileCopy(action)) => {
+                assert_eq!("a", action.action.from);
+                assert_eq!("b", action.action.to);
             }
             _ => {
                 panic!("FileCopy didn't deserialize to the correct type");
