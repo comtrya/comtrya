@@ -1,0 +1,14 @@
+actions:
+  - action: command.run
+    command: echo
+    args:
+      - hello, world!
+    variants:
+      - where: os.name == "linux"
+        command: reboot
+      - where: os.name == "macos"
+        command: echo
+        args: ["Hello", "macOS"]
+      - where: user.username == "rawkode"
+        command: echo
+        args: ["Hello", "rawkode!"]

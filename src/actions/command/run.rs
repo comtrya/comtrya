@@ -1,7 +1,7 @@
+use crate::contexts::Contexts;
 use crate::steps::Step;
 use crate::{actions::Action, manifests::Manifest};
 use serde::{Deserialize, Serialize};
-use tera::Context;
 
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct RunCommand {
@@ -21,7 +21,7 @@ fn get_false() -> bool {
 }
 
 impl Action for RunCommand {
-    fn plan(&self, _: &Manifest, _: &Context) -> Vec<Step> {
+    fn plan(&self, _: &Manifest, _: &Contexts) -> Vec<Step> {
         use crate::atoms::command::Exec;
 
         vec![Step {

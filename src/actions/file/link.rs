@@ -1,10 +1,9 @@
 use super::FileAction;
-use crate::actions::Action;
 use crate::manifests::Manifest;
 use crate::steps::Step;
+use crate::{actions::Action, contexts::Contexts};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
-use tera::Context;
 use tracing::error;
 
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
@@ -21,7 +20,7 @@ impl FileLink {}
 impl FileAction for FileLink {}
 
 impl Action for FileLink {
-    fn plan(&self, manifest: &Manifest, _: &Context) -> Vec<Step> {
+    fn plan(&self, manifest: &Manifest, _: &Contexts) -> Vec<Step> {
         use crate::atoms::directory::Create as DirCreate;
         use crate::atoms::file::Link;
 
