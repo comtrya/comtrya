@@ -311,6 +311,7 @@ dependencies = [
  "assert_cmd",
  "assert_fs",
  "dirs-next",
+ "eval",
  "file_diff",
  "fs_extra",
  "gitsync",
@@ -484,6 +485,17 @@ dependencies = [
  "log",
  "regex",
  "termcolor",
+]
+
+[[package]]
+name = "eval"
+version = "0.4.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ba90c19bed0c67afb0a24340b42d13ddddcb5413c4c17a04c11871bd6b572c42"
+dependencies = [
+ "quick-error",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

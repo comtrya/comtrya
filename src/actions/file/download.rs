@@ -1,11 +1,10 @@
 use super::FileAction;
-use crate::actions::Action;
 use crate::manifests::Manifest;
 use crate::steps::Step;
+use crate::{actions::Action, contexts::Contexts};
 use anyhow::Result;
 use serde::{de::Error, Deserialize, Deserializer, Serialize};
 use std::{path::PathBuf, u32};
-use tera::Context;
 
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct FileDownload {
@@ -40,7 +39,7 @@ impl FileDownload {}
 impl FileAction for FileDownload {}
 
 impl Action for FileDownload {
-    fn plan(&self, _manifest: &Manifest, _context: &Context) -> Vec<Step> {
+    fn plan(&self, _manifest: &Manifest, _context: &Contexts) -> Vec<Step> {
         use crate::atoms::directory::Create as DirCreate;
         use crate::atoms::file::Chmod;
         use crate::atoms::http::Download;

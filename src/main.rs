@@ -330,7 +330,7 @@ fn main() -> anyhow::Result<()> {
                 let action = action.inner_ref();
 
                 let mut steps = action
-                    .plan(&m1, &to_tera(&contexts))
+                    .plan(&m1, &contexts)
                     .into_iter()
                     .filter(|step| step.do_initializers_allow_us_to_run())
                     .filter(|step| step.atom.plan())

@@ -3,6 +3,7 @@ mod directory;
 mod file;
 mod package;
 
+use crate::contexts::Contexts;
 use crate::manifests::Manifest;
 use crate::steps::Step;
 use command::run::RunCommand;
@@ -12,7 +13,6 @@ use file::download::FileDownload;
 use file::link::FileLink;
 use package::install::PackageInstall;
 use serde::{Deserialize, Serialize};
-use tera::Context;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
 pub struct ConditionalVariantAction<T> {
@@ -39,7 +39,7 @@ impl<T> Action for ConditionalVariantAction<T>
 where
     T: Action,
 {
-    fn plan(&self, manifest: &Manifest, context: &Context) -> Vec<Step> {
+    fn plan(&self, manifest: &Manifest, context: &Contexts) -> Vec<Step> {
         let variant = self.variants.iter().find(|variant| {
             if variant.condition.is_none() {
                 return false;
@@ -47,7 +47,16 @@ where
 
             let condition = variant.condition.clone().unwrap();
 
-            condition.eq("match me")
+            let mut expr = eval::Expr::new(condition);
+
+            for (key, value) in context {
+                expr = expr.value(key, value)
+            }
+
+            match expr.exec().unwrap_or(eval::to_value(false)) {
+                eval::Value::Bool(true) => true,
+                _ => false,
+            }
         });
 
         if variant.is_some() {
@@ -60,11 +69,16 @@ where
 
         let condition = self.condition.clone().unwrap();
 
-        if condition.eq("match me") {
-            return self.action.plan(manifest, context);
+        let mut expr = eval::Expr::new(condition);
+
+        for (key, value) in context {
+            expr = expr.value(key, value)
         }
 
-        vec![]
+        match expr.exec().unwrap_or(eval::to_value(false)) {
+            eval::Value::Bool(true) => self.action.plan(manifest, context),
+            _ => vec![],
+        }
     }
 }
 
@@ -128,7 +142,7 @@ impl<E: std::error::Error> From<E> for ActionError {
 }
 
 pub trait Action {
-    fn plan(&self, manifest: &Manifest, context: &Context) -> Vec<Step>;
+    fn plan(&self, manifest: &Manifest, context: &Contexts) -> Vec<Step>;
 }
 
 #[cfg(test)]

@@ -1,9 +1,9 @@
 use super::DirectoryAction;
 use crate::actions::Action;
+use crate::contexts::Contexts;
 use crate::steps::Step;
 use crate::{atoms::command::Exec, manifests::Manifest};
 use serde::{Deserialize, Serialize};
-use tera::Context;
 use tracing::error;
 
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
@@ -17,7 +17,7 @@ impl DirectoryCopy {}
 impl DirectoryAction for DirectoryCopy {}
 
 impl Action for DirectoryCopy {
-    fn plan(&self, manifest: &Manifest, _context: &Context) -> Vec<Step> {
+    fn plan(&self, manifest: &Manifest, _context: &Contexts) -> Vec<Step> {
         let from: String = match self.resolve(manifest, &self.from) {
             Ok(from) => from,
             Err(_) => {

@@ -1,16 +1,16 @@
 use super::Package;
 use super::PackageVariant;
 use crate::actions::Action;
+use crate::contexts::Contexts;
 use crate::manifests::Manifest;
 use crate::steps::Step;
 use std::ops::Deref;
-use tera::Context;
 use tracing::{error, span};
 
 pub type PackageInstall = Package;
 
 impl Action for PackageInstall {
-    fn plan(&self, _manifest: &Manifest, _context: &Context) -> Vec<Step> {
+    fn plan(&self, _manifest: &Manifest, _context: &Contexts) -> Vec<Step> {
         let variant: PackageVariant = self.into();
         let box_provider = variant.provider.clone().get_provider();
         let provider = box_provider.deref();
