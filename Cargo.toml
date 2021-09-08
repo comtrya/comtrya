@@ -14,6 +14,10 @@ file_diff = "1.0.0"
 fs_extra = "1.2.0"
 gitsync = "0.1.6"
 ignore = "0.4.17"
+koto = { git = "https://github.com/koto-lang/koto", branch = "main" }
+koto_json = { git = "https://github.com/koto-lang/koto", branch = "main" }
+koto_runtime = { git = "https://github.com/koto-lang/koto", branch = "main" }
+koto_yaml = { git = "https://github.com/koto-lang/koto", branch = "main" }
 openssl = { version = "0.10", features = ["vendored"] }
 # Pending PR: https://github.com/stanislav-tkach/os_info/pull/250/files
 os_info = { version = "3.0.1", git = "https://github.com/rawkode/os_info", branch = "fix/serde-deserialize" }
@@ -25,7 +29,7 @@ reqwest = { version = "0.11.1", default-features = false, features = [
 ] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0.64"
-serde_yaml = "0.8"
+serde_yaml = "0.8.20"
 structopt = "0.3"
 tera = "1"
 tracing = "0.1.25"

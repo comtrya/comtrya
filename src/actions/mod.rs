@@ -3,7 +3,7 @@ mod directory;
 mod file;
 mod package;
 
-use crate::contexts::Contexts;
+use crate::contexts::{to_koto, Contexts};
 use crate::manifests::Manifest;
 use crate::steps::Step;
 use command::run::RunCommand;
@@ -11,6 +11,7 @@ use directory::{DirectoryCopy, DirectoryCreate};
 use file::copy::FileCopy;
 use file::download::FileDownload;
 use file::link::FileLink;
+use koto::{Koto, KotoSettings};
 use package::install::PackageInstall;
 use serde::{Deserialize, Serialize};
 
@@ -47,15 +48,24 @@ where
 
             let condition = variant.condition.clone().unwrap();
 
-            let mut expr = eval::Expr::new(condition);
+            let mut koto = Koto::with_settings(KotoSettings {
+                run_tests: false,
+                ..Default::default()
+            });
 
             for (key, value) in context {
-                expr = expr.value(key, value)
+                koto.prelude().add_value(key, to_koto(value));
             }
 
-            match expr.exec().unwrap_or(eval::to_value(false)) {
-                eval::Value::Bool(true) => true,
-                _ => false,
+            match koto.compile(&condition) {
+                Ok(_) => match koto.run() {
+                    Ok(result) => match result {
+                        koto_runtime::Value::Bool(result) => result,
+                        _ => false,
+                    },
+                    Err(_) => false,
+                },
+                Err(_) => false,
             }
         });
 
