@@ -1,4 +1,6 @@
 actions:
+  # This action has a "default" execution for when the variants don't overlay,
+  # as it does not provide its own "where"
   - action: command.run
     command: echo
     args:
@@ -12,3 +14,11 @@ actions:
       - where: user.username == "rawkode"
         command: echo
         args: ["Hello", "rawkode!"]
+
+  # This action has NO "default" execution for when the variants don't overlay,
+  # as it does provide its own "where"
+  - action: command.run
+    command: echo
+    args:
+      - hello, world!
+    where: os.name == "linux"
