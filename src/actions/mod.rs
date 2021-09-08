@@ -20,7 +20,7 @@ pub struct ConditionalVariantAction<T> {
     #[serde(flatten)]
     pub action: T,
 
-    #[serde(rename = "only")]
+    #[serde(rename = "where")]
     pub condition: Option<String>,
 
     #[serde(default)]
@@ -77,17 +77,27 @@ where
             return self.action.plan(manifest, context);
         }
 
-        let condition = self.condition.clone().unwrap();
-
-        let mut expr = eval::Expr::new(condition);
+        let mut koto = Koto::with_settings(KotoSettings {
+            run_tests: false,
+            ..Default::default()
+        });
 
         for (key, value) in context {
-            expr = expr.value(key, value)
+            koto.prelude().add_value(key, to_koto(value));
         }
 
-        match expr.exec().unwrap_or(eval::to_value(false)) {
-            eval::Value::Bool(true) => self.action.plan(manifest, context),
-            _ => vec![],
+        match koto.compile(self.condition.clone().unwrap().as_str()) {
+            Ok(_) => match koto.run() {
+                Ok(result) => match result {
+                    koto_runtime::Value::Bool(result) => match result {
+                        true => self.action.plan(manifest, context),
+                        false => vec![],
+                    },
+                    _ => vec![],
+                },
+                Err(_) => vec![],
+            },
+            Err(_) => vec![],
         }
     }
 }
