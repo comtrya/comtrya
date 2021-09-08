@@ -316,6 +316,10 @@ dependencies = [
  "fs_extra",
  "gitsync",
  "ignore",
+ "koto",
+ "koto_json",
+ "koto_runtime",
+ "koto_yaml",
  "openssl",
  "os_info",
  "petgraph",
@@ -450,6 +454,14 @@ checksum = "fea41bba32d969b513997752735605054bc0dfa92b4c56bf1189f2e174be7a10"
 [[package]]
 name = "either"
 version = "1.6.1"
+name = "downcast-rs"
+version = "1.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9ea835d29036a4087793836fa931b08837ad5e957da9e23886b29586fb9b6650"
+
+[[package]]
+name = "dtoa"
+version = "0.4.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e78d4f1cc4ae33bbfc157ed5d5a5ef3bc29227303d595861deb238fcec4e9457"
 
@@ -959,6 +971,9 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7a5bbe824c507c5da5956355e86a746d82e0e1464f65d862cc5e71da70e94b2c"
 dependencies = [
  "cfg-if 1.0.0",
+ "js-sys",
+ "wasm-bindgen",
+ "web-sys",
 ]
 
 [[package]]
@@ -1029,6 +1044,91 @@ checksum = "7507624b29483431c0ba2d82aece8ca6cdba9382bff4ddd0f7490560c056098d"
 dependencies = [
  "winapi 0.2.8",
  "winapi-build",
+]
+
+[[package]]
+name = "koto"
+version = "0.8.1"
+source = "git+https://github.com/koto-lang/koto?branch=main#63e71e8f888fff2ad66a70dbe765c4d1d9258bc5"
+dependencies = [
+ "koto_bytecode",
+ "koto_parser",
+ "koto_runtime",
+ "parking_lot",
+]
+
+[[package]]
+name = "koto_bytecode"
+version = "0.8.1"
+source = "git+https://github.com/koto-lang/koto?branch=main#63e71e8f888fff2ad66a70dbe765c4d1d9258bc5"
+dependencies = [
+ "koto_parser",
+ "smallvec",
+]
+
+[[package]]
+name = "koto_json"
+version = "0.8.1"
+source = "git+https://github.com/koto-lang/koto?branch=main#63e71e8f888fff2ad66a70dbe765c4d1d9258bc5"
+dependencies = [
+ "koto_runtime",
+ "koto_serialize",
+ "serde_json",
+]
+
+[[package]]
+name = "koto_lexer"
+version = "0.8.1"
+source = "git+https://github.com/koto-lang/koto?branch=main#63e71e8f888fff2ad66a70dbe765c4d1d9258bc5"
+dependencies = [
+ "unicode-width",
+ "unicode-xid",
+]
+
+[[package]]
+name = "koto_parser"
+version = "0.8.1"
+source = "git+https://github.com/koto-lang/koto?branch=main#63e71e8f888fff2ad66a70dbe765c4d1d9258bc5"
+dependencies = [
+ "koto_lexer",
+]
+
+[[package]]
+name = "koto_runtime"
+version = "0.8.1"
+source = "git+https://github.com/koto-lang/koto?branch=main#63e71e8f888fff2ad66a70dbe765c4d1d9258bc5"
+dependencies = [
+ "downcast-rs",
+ "indexmap",
+ "koto_bytecode",
+ "koto_lexer",
+ "koto_parser",
+ "lazy_static",
+ "num_cpus",
+ "parking_lot",
+ "rustc-hash",
+ "smallvec",
+ "unicode-segmentation",
+]
+
+[[package]]
+name = "koto_serialize"
+version = "0.8.1"
+source = "git+https://github.com/koto-lang/koto?branch=main#63e71e8f888fff2ad66a70dbe765c4d1d9258bc5"
+dependencies = [
+ "koto_runtime",
+ "serde",
+]
+
+[[package]]
+name = "koto_yaml"
+version = "0.8.1"
+source = "git+https://github.com/koto-lang/koto?branch=main#63e71e8f888fff2ad66a70dbe765c4d1d9258bc5"
+dependencies = [
+ "koto_runtime",
+ "koto_serialize",
+ "serde_json",
+ "serde_yaml",
 ]
 
 [[package]]
@@ -1843,6 +1943,14 @@ dependencies = [
 [[package]]
 name = "rustc_version"
 version = "0.4.0"
+name = "rustc-hash"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "08d43f7aa6b08d49f382cde6a7982047c3426db949b1424bc4b7ec9ae12c6ce2"
+
+[[package]]
+name = "rustls"
+version = "0.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bfa0f585226d2e68097d4f95d113b15b83a82e819ab25717ec0590d9584ef366"
 dependencies = [
@@ -1933,6 +2041,7 @@ version = "1.0.79"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8e8d9fa5c3b304765ce1fd9c4c8a3de2c8db365a5b91be52f186efc675681d95"
 dependencies = [
+ "indexmap",
  "itoa",
  "ryu",
  "serde",
@@ -1958,6 +2067,12 @@ checksum = "a4a521f2940385c165a24ee286aa8599633d162077a54bdcae2a6fd5a7bfa7a0"
 dependencies = [
  "indexmap",
  "ryu",
+version = "0.8.20"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ad104641f3c958dab30eb3010e834c2622d1f3f4c530fef1dee20ad9485f3c09"
+dependencies = [
+ "dtoa",
+ "indexmap",
  "serde",
  "yaml-rust",
 ]

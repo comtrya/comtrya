@@ -74,6 +74,10 @@ pub fn to_tera(contexts: &Contexts) -> tera::Context {
     context
 }
 
+pub fn to_koto(context: &BTreeMap<String, Value>) -> koto::runtime::Value {
+    koto_yaml::yaml_value_to_koto_value(&serde_yaml::to_value(context).unwrap()).unwrap()
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
