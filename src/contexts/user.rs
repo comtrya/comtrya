@@ -10,6 +10,7 @@ impl ContextProvider for UserContextProvider {
 
     fn get_contexts(&self) -> Vec<super::Context> {
         vec![
+            Context::KeyValueContext(String::from("id"), self.get_uid().to_string()),
             Context::KeyValueContext(String::from("name"), whoami::realname()),
             Context::KeyValueContext(String::from("username"), whoami::username()),
             Context::KeyValueContext(
@@ -25,5 +26,17 @@ impl ContextProvider for UserContextProvider {
                     .unwrap(),
             ),
         ]
+    }
+}
+
+impl UserContextProvider {
+    #[cfg(unix)]
+    fn get_uid(&self) -> u32 {
+        users::get_current_uid()
+    }
+
+    #[cfg(not(unix))]
+    fn get_uid(&self) -> u32 {
+        0
     }
 }
