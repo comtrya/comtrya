@@ -74,7 +74,7 @@ Provisioned Files: 34
 
 ### Async DAG
 
-We're using [petgraph](https://github.com/petgraph/petgraph) to build out the graph, but we're not travesing it in a way that will allow us to concurrently execute manifests at the same depth. This is something I wish to sort out pretty soon.
+We're using [petgraph](https://github.com/petgraph/petgraph) to build out the graph, but we're not traversing it in a way that will allow us to concurrently execute manifests at the same depth. This is something I wish to sort out pretty soon.
 
 ### Config
 
