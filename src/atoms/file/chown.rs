@@ -138,7 +138,7 @@ mod tests {
 
         let file_chown = Chown {
             path: temp_file.path().to_path_buf(),
-            owner: user.clone(),
+            owner: user,
             group: String::from("daemon"),
         };
 
@@ -147,7 +147,7 @@ mod tests {
         let file_chown = Chown {
             path: temp_file.path().to_path_buf(),
             owner: String::from("root"),
-            group: group.clone(),
+            group,
         };
 
         assert_eq!(true, file_chown.plan());

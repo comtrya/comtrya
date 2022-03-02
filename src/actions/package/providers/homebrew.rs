@@ -59,8 +59,8 @@ impl PackageProvider for Homebrew {
                 .stdout,
         )
         .unwrap()
-        .replace("\n", "")
-        .replace("\r", "");
+        .replace('\n', "")
+        .replace('\r', "");
 
         let cellar = Path::new(&prefix).join("Cellar");
         let caskroom = Path::new(&prefix).join("Caskroom");
