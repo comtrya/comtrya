@@ -54,13 +54,13 @@ impl ManifestProvider for GitManifestProvider {
             return Err(ManifestProviderError::NoResolution);
         }
 
-        Ok(cache_path.join(git_config.path.unwrap_or(String::from(""))))
+        Ok(cache_path.join(git_config.path.unwrap_or_else(|| String::from(""))))
     }
 }
 
 impl GitManifestProvider {
     fn parse_config_url(&self, uri: &str) -> GitConfig {
-        let (repository, parts) = match uri.split_once("#") {
+        let (repository, parts) = match uri.split_once('#') {
             Some(parts) => parts,
             None => {
                 return GitConfig {
@@ -71,7 +71,7 @@ impl GitManifestProvider {
             }
         };
 
-        let (reference, path) = match parts.split_once(":") {
+        let (reference, path) = match parts.split_once(':') {
             Some(("", path)) => (None, Some(path.to_string())),
             Some((reference, "")) => (Some(reference.to_string()), None),
             Some((reference, path)) => (Some(reference.to_string()), Some(path.to_string())),
@@ -84,20 +84,20 @@ impl GitManifestProvider {
             }
         };
 
-        return GitConfig {
+        GitConfig {
             repository: String::from(repository),
             branch: reference,
-            path: path,
-        };
+            path,
+        }
     }
 
     fn clean_git_url(&self, uri: &str) -> String {
         uri.to_string()
             .replace("https", "")
             .replace("http", "")
-            .replace(":", "")
-            .replace(".", "")
-            .replace("/", "")
+            .replace(':', "")
+            .replace('.', "")
+            .replace('/', "")
     }
 }
 

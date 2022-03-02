@@ -67,7 +67,7 @@ impl Entry {
             Entry::File { name, content } => {
                 use std::io::Write;
                 let new_path = parent.join(name);
-                let mut f = File::create(new_path.clone())?;
+                let mut f = File::create(new_path)?;
                 f.write_all(&content.into_bytes()[..])?;
             }
         }

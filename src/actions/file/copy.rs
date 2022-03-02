@@ -45,7 +45,7 @@ impl Action for FileCopy {
         let contents = match self.load(manifest, &self.from) {
             Ok(contents) => {
                 if self.template {
-                    match tera::Tera::one_off(contents.as_str(), &context, false) {
+                    match tera::Tera::one_off(contents.as_str(), context, false) {
                         Ok(rendered) => rendered,
                         Err(err) => {
                             error!(

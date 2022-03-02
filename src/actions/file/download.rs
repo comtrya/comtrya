@@ -66,7 +66,7 @@ impl Action for FileDownload {
             },
             Step {
                 atom: Box::new(Chmod {
-                    path: path.clone(),
+                    path,
                     mode: self.chmod,
                 }),
                 initializers: vec![],

@@ -95,13 +95,13 @@ fn main() -> anyhow::Result<()> {
 
     let manifest_directory = manifests::register_providers()
         .into_iter()
-        .filter(|provider| provider.deref().looks_familiar(&manifest_location))
+        .filter(|provider| provider.deref().looks_familiar(manifest_location))
         .fold(None, |path, provider| {
             if path.is_some() {
                 return path;
             }
 
-            match provider.resolve(&manifest_location) {
+            match provider.resolve(manifest_location) {
                 Ok(path) => Some(path),
                 Err(_) => None,
             }
@@ -329,7 +329,7 @@ fn main() -> anyhow::Result<()> {
                 let action = action.inner_ref();
 
                 let mut steps = action
-                    .plan(&m1, &contexts)
+                    .plan(m1, &contexts)
                     .into_iter()
                     .filter(|step| step.do_initializers_allow_us_to_run())
                     .filter(|step| step.atom.plan())
