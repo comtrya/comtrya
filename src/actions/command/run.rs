@@ -13,11 +13,20 @@ pub struct RunCommand {
     #[serde(default = "get_false")]
     pub sudo: bool,
 
-    pub dir: Option<String>,
+    #[serde(default = "get_cwd")]
+    pub dir: String,
 }
 
 fn get_false() -> bool {
     false
+}
+
+fn get_cwd() -> String {
+    std::env::current_dir()
+        .unwrap()
+        .into_os_string()
+        .into_string()
+        .unwrap()
 }
 
 impl Action for RunCommand {
@@ -29,7 +38,7 @@ impl Action for RunCommand {
                 command: self.command.clone(),
                 arguments: self.args.clone(),
                 privileged: self.sudo,
-                working_dir: self.dir.clone(),
+                working_dir: Some(self.dir.clone()),
                 ..Default::default()
             }),
             initializers: vec![],

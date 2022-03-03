@@ -197,7 +197,11 @@ actions:
                 command: "echo".into(),
                 args: vec!["hi".into()],
                 sudo: false,
-                dir: None,
+                dir: std::env::current_dir()
+                    .unwrap()
+                    .into_os_string()
+                    .into_string()
+                    .unwrap()
             }
         );
 
