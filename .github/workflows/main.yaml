@@ -110,7 +110,8 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           draft: true
           prerelease: false
-          generate_release_notes: true
+          name: Unreleased
+          generate_release_notes: false
           fail_on_unmatched_files: true
           files: |
             target/${{ matrix.job.target }}/release/comtrya-${{ matrix.job.target }}
@@ -149,7 +150,8 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           draft: true
           prerelease: false
-          generate_release_notes: true
+          name: Unreleased
+          generate_release_notes: false
           fail_on_unmatched_files: true
           files: |
             target/x86_64-unknown-linux-musl/release/comtrya-x86_64-unknown-linux-musl
