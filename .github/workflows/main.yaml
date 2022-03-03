@@ -102,7 +102,7 @@ jobs:
       - name: Rename Binary
         shell: bash
         run: |
-          mv target/${{ matrix.job.target }}/release/comtrya target/${{ matrix.job.target }}/release/comtrya-${{ matrix.job.target }}
+          mv target/release/comtrya target/release/comtrya-${{ matrix.job.target }}
 
       - name: Upload Artifact
         uses: softprops/action-gh-release@v1
@@ -114,7 +114,7 @@ jobs:
           generate_release_notes: false
           fail_on_unmatched_files: true
           files: |
-            target/${{ matrix.job.target }}/release/comtrya-${{ matrix.job.target }}
+            target/release/comtrya-${{ matrix.job.target }}
 
   build-musl:
     runs-on: ubuntu-latest
