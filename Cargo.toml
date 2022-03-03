@@ -1,6 +1,6 @@
 [package]
 name = "comtrya"
-version = "0.6.9"
+version = "0.7.1"
 authors = ["David McKay <david@rawkode.dev>"]
 edition = "2018"
 license = "MIT"
@@ -14,10 +14,10 @@ file_diff = "1.0.0"
 fs_extra = "1.2.0"
 gitsync = "0.1.6"
 ignore = "0.4.17"
-koto = { git = "https://github.com/koto-lang/koto", branch = "main" }
-koto_json = { git = "https://github.com/koto-lang/koto", branch = "main" }
-koto_runtime = { git = "https://github.com/koto-lang/koto", branch = "main" }
-koto_yaml = { git = "https://github.com/koto-lang/koto", branch = "main" }
+koto = "0.10.0"
+koto_json = "0.10.0"
+koto_runtime = "0.10.0"
+koto_yaml = "0.10.0"
 openssl = { version = "0.10", features = ["vendored"] }
 os_info = "3.2.0"
 petgraph = "0.5.1"
