@@ -103,13 +103,13 @@ jobs:
         if: matrix.job.target != 'x86_64-pc-windows-msvc'
         shell: bash
         run: |
-          mv target/release/comtrya target/release/comtrya-${{ matrix.job.target }}
+          mv target/release/comtrya comtrya-${{ matrix.job.target }}
 
       - name: Rename Binary.exe
         if: matrix.job.target == 'x86_64-pc-windows-msvc'
         shell: bash
         run: |
-          mv target/release/comtrya.exe target/release/comtrya-${{ matrix.job.target }}.exe
+          mv target/release/comtrya.exe comtrya-${{ matrix.job.target }}.exe
 
       - name: Upload Artifact
         if: matrix.job.target != 'x86_64-pc-windows-msvc'
@@ -122,7 +122,7 @@ jobs:
           generate_release_notes: false
           fail_on_unmatched_files: true
           files: |
-            target/release/comtrya-${{ matrix.job.target }}
+            comtrya-${{ matrix.job.target }}
 
       - name: Upload Artifact.exe
         if: matrix.job.target == 'x86_64-pc-windows-msvc'
@@ -135,7 +135,7 @@ jobs:
           generate_release_notes: false
           fail_on_unmatched_files: true
           files: |
-            target/release/comtrya-${{ matrix.job.target }}.exe
+            comtrya-${{ matrix.job.target }}.exe
 
   build-musl:
     runs-on: ubuntu-latest
