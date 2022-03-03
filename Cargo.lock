@@ -259,10 +259,12 @@ version = "0.4.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "670ad68c9088c2a963aaa298cb369688cf3f9465ce5e2d4ca10e6e0098a1ce73"
 dependencies = [
+ "js-sys",
  "libc",
  "num-integer",
  "num-traits",
  "time",
+ "wasm-bindgen",
  "winapi 0.3.9",
 ]
 
@@ -460,8 +462,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9ea835d29036a4087793836fa931b08837ad5e957da9e23886b29586fb9b6650"
 
 [[package]]
+<<<<<<< HEAD
 name = "dtoa"
 version = "0.4.7"
+=======
+name = "dunce"
+version = "1.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "453440c271cf5577fd2a40e4942540cb7d0d2f85e27c8d07dd0023c925a67541"
+
+[[package]]
+name = "either"
+version = "1.6.1"
+>>>>>>> 87cccb5 (fix: revert to upstream os_info)
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e78d4f1cc4ae33bbfc157ed5d5a5ef3bc29227303d595861deb238fcec4e9457"
 
@@ -1048,28 +1061,30 @@ dependencies = [
 
 [[package]]
 name = "koto"
-version = "0.8.1"
-source = "git+https://github.com/koto-lang/koto?branch=main#63e71e8f888fff2ad66a70dbe765c4d1d9258bc5"
+version = "0.10.0"
+source = "git+https://github.com/koto-lang/koto?branch=main#577a319185e8d8571a139ec59f37d64fd9059a7f"
 dependencies = [
+ "dunce",
  "koto_bytecode",
  "koto_parser",
  "koto_runtime",
- "parking_lot",
 ]
 
 [[package]]
 name = "koto_bytecode"
-version = "0.8.1"
-source = "git+https://github.com/koto-lang/koto?branch=main#63e71e8f888fff2ad66a70dbe765c4d1d9258bc5"
+version = "0.10.0"
+source = "git+https://github.com/koto-lang/koto?branch=main#577a319185e8d8571a139ec59f37d64fd9059a7f"
 dependencies = [
+ "dunce",
  "koto_parser",
+ "rustc-hash",
  "smallvec",
 ]
 
 [[package]]
 name = "koto_json"
-version = "0.8.1"
-source = "git+https://github.com/koto-lang/koto?branch=main#63e71e8f888fff2ad66a70dbe765c4d1d9258bc5"
+version = "0.10.0"
+source = "git+https://github.com/koto-lang/koto?branch=main#577a319185e8d8571a139ec59f37d64fd9059a7f"
 dependencies = [
  "koto_runtime",
  "koto_serialize",
@@ -1078,8 +1093,8 @@ dependencies = [
 
 [[package]]
 name = "koto_lexer"
-version = "0.8.1"
-source = "git+https://github.com/koto-lang/koto?branch=main#63e71e8f888fff2ad66a70dbe765c4d1d9258bc5"
+version = "0.10.0"
+source = "git+https://github.com/koto-lang/koto?branch=main#577a319185e8d8571a139ec59f37d64fd9059a7f"
 dependencies = [
  "unicode-width",
  "unicode-xid",
@@ -1087,25 +1102,24 @@ dependencies = [
 
 [[package]]
 name = "koto_parser"
-version = "0.8.1"
-source = "git+https://github.com/koto-lang/koto?branch=main#63e71e8f888fff2ad66a70dbe765c4d1d9258bc5"
+version = "0.10.0"
+source = "git+https://github.com/koto-lang/koto?branch=main#577a319185e8d8571a139ec59f37d64fd9059a7f"
 dependencies = [
  "koto_lexer",
 ]
 
 [[package]]
 name = "koto_runtime"
-version = "0.8.1"
-source = "git+https://github.com/koto-lang/koto?branch=main#63e71e8f888fff2ad66a70dbe765c4d1d9258bc5"
+version = "0.10.0"
+source = "git+https://github.com/koto-lang/koto?branch=main#577a319185e8d8571a139ec59f37d64fd9059a7f"
 dependencies = [
+ "chrono",
  "downcast-rs",
  "indexmap",
+ "instant",
  "koto_bytecode",
  "koto_lexer",
  "koto_parser",
- "lazy_static",
- "num_cpus",
- "parking_lot",
  "rustc-hash",
  "smallvec",
  "unicode-segmentation",
@@ -1113,8 +1127,8 @@ dependencies = [
 
 [[package]]
 name = "koto_serialize"
-version = "0.8.1"
-source = "git+https://github.com/koto-lang/koto?branch=main#63e71e8f888fff2ad66a70dbe765c4d1d9258bc5"
+version = "0.10.0"
+source = "git+https://github.com/koto-lang/koto?branch=main#577a319185e8d8571a139ec59f37d64fd9059a7f"
 dependencies = [
  "koto_runtime",
  "serde",
@@ -1122,8 +1136,8 @@ dependencies = [
 
 [[package]]
 name = "koto_yaml"
-version = "0.8.1"
-source = "git+https://github.com/koto-lang/koto?branch=main#63e71e8f888fff2ad66a70dbe765c4d1d9258bc5"
+version = "0.10.0"
+source = "git+https://github.com/koto-lang/koto?branch=main#577a319185e8d8571a139ec59f37d64fd9059a7f"
 dependencies = [
  "koto_runtime",
  "koto_serialize",
@@ -1437,8 +1451,9 @@ dependencies = [
 
 [[package]]
 name = "os_info"
-version = "3.0.1"
-source = "git+https://github.com/rawkode/os_info?branch=fix/serde-deserialize#bcdb0213bf5b8c701b103c72706ddb3a0508f74b"
+version = "3.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "023df84d545ef479cf67fd2f4459a613585c9db4852c2fad12ab70587859d340"
 dependencies = [
  "log",
  "serde",

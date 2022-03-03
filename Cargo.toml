@@ -19,8 +19,7 @@ koto_json = { git = "https://github.com/koto-lang/koto", branch = "main" }
 koto_runtime = { git = "https://github.com/koto-lang/koto", branch = "main" }
 koto_yaml = { git = "https://github.com/koto-lang/koto", branch = "main" }
 openssl = { version = "0.10", features = ["vendored"] }
-# Pending PR: https://github.com/stanislav-tkach/os_info/pull/250/files
-os_info = { version = "3.0.1", git = "https://github.com/rawkode/os_info", branch = "fix/serde-deserialize" }
+os_info = "3.2.0"
 petgraph = "0.5.1"
 regex = "1"
 reqwest = { version = "0.11.1", default-features = false, features = [

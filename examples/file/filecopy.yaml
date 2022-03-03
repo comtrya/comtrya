@@ -8,4 +8,4 @@ actions:
   # This will not be rendered with contexts
   - action: file.copy
     from: procs-config.toml
-    to: {{ user.config_dir }}/procs/config.toml
+    to: "{{ user.config_dir }}/procs/config.toml"
