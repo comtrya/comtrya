@@ -19,6 +19,8 @@ mod contexts;
 mod manifests;
 mod steps;
 
+use crate::manifests::get_manifest_name;
+
 const VERSION: Option<&'static str> = option_env!("CARGO_PKG_VERSION");
 
 #[derive(StructOpt, Clone, Debug)]
@@ -206,28 +208,7 @@ fn main() -> anyhow::Result<()> {
                 }
             };
 
-            let name = match &manifest.name {
-                Some(name) => name.clone(),
-                None => {
-                    let local_name = entry.strip_prefix(&manifest_directory).unwrap();
-                    let manifest_name = local_name.components().into_iter().fold(
-                        String::from(""),
-                        |mut s, next| {
-                            if !s.is_empty() {
-                                s.push('.');
-                            }
-                            s.push_str(next.as_os_str().to_str().unwrap());
-
-                            s
-                        },
-                    );
-
-                    let manifest_name = manifest_name.trim_end_matches(".yaml");
-                    let manifest_name = manifest_name.trim_end_matches(".yml");
-
-                    String::from(manifest_name.trim_end_matches(".main"))
-                }
-            };
+            let name = get_manifest_name(&manifest_directory, &entry);
 
             manifest.root_dir = Some(entry.parent().unwrap().to_path_buf());
 
