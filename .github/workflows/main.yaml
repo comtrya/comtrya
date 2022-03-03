@@ -99,15 +99,22 @@ jobs:
           command: build
           args: --release
 
+      - name: Rename Binary
+        shell: bash
+        run: |
+          mv target/${{ matrix.job.target }}/release/comtrya target/${{ matrix.job.target }}/release/comtrya-${{ matrix.job.target }}
+
       - name: Upload Artifact
         uses: softprops/action-gh-release@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           draft: true
           prerelease: false
+          name: Unreleased
+          generate_release_notes: true
           fail_on_unmatched_files: true
           files: |
-            target/${{ matrix.job.target }}/release/comtrya
+            target/${{ matrix.job.target }}/release/comtrya-${{ matrix.job.target }}
 
   build-musl:
     runs-on: ubuntu-latest
@@ -132,12 +139,19 @@ jobs:
           command: build
           args: --release
 
+      - name: Rename Binary
+        shell: bash
+        run: |
+          mv target/x86_64-unknown-linux-musl/release/comtrya target/x86_64-unknown-linux-musl/release/comtrya-x86_64-unknown-linux-musl
+
       - name: Upload release archive
         uses: softprops/action-gh-release@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           draft: true
           prerelease: false
+          name: Unreleased
+          generate_release_notes: true
           fail_on_unmatched_files: true
           files: |
-            target/x86_64-unknown-linux-musl/release/comtrya
+            target/x86_64-unknown-linux-musl/release/comtrya-x86_64-unknown-linux-musl
