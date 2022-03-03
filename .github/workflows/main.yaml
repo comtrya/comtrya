@@ -110,7 +110,6 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           draft: true
           prerelease: false
-          name: Unreleased
           generate_release_notes: true
           fail_on_unmatched_files: true
           files: |
@@ -150,7 +149,6 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           draft: true
           prerelease: false
-          name: Unreleased
           generate_release_notes: true
           fail_on_unmatched_files: true
           files: |
