@@ -112,6 +112,7 @@ jobs:
           mv target/release/comtrya.exe target/release/comtrya-${{ matrix.job.target }}.exe
 
       - name: Upload Artifact
+        if: matrix.job.target != 'x86_64-pc-windows-msvc'
         uses: softprops/action-gh-release@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -122,6 +123,19 @@ jobs:
           fail_on_unmatched_files: true
           files: |
             target/release/comtrya-${{ matrix.job.target }}
+
+      - name: Upload Artifact.exe
+        if: matrix.job.target == 'x86_64-pc-windows-msvc'
+        uses: softprops/action-gh-release@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          draft: true
+          prerelease: false
+          name: Unreleased
+          generate_release_notes: false
+          fail_on_unmatched_files: true
+          files: |
+            target/release/comtrya-${{ matrix.job.target }}.exe
 
   build-musl:
     runs-on: ubuntu-latest
