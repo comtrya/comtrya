@@ -8,14 +8,36 @@ use tracing::error;
 
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct FileLink {
-    #[serde(alias = "from")]
-    pub source: String,
+    pub from: Option<String>,
+    pub source: Option<String>,
 
-    #[serde(alias = "to")]
-    pub target: String,
+    pub target: Option<String>,
+    pub to: Option<String>,
 }
 
-impl FileLink {}
+impl FileLink {
+    fn source(&self) -> String {
+        if self.source.is_none() && self.from.is_none() {
+            error!("Field 'source' is required for file.link");
+        }
+        if self.source.is_none() {
+            return self.from.clone().unwrap();
+        }
+
+        return self.source.clone().unwrap();
+    }
+
+    fn target(&self) -> String {
+        if self.target.is_none() && self.to.is_none() {
+            error!("Field 'target' is required for file.link");
+        }
+        if self.target.is_none() {
+            return self.to.clone().unwrap();
+        }
+
+        return self.target.clone().unwrap();
+    }
+}
 
 impl FileAction for FileLink {}
 
@@ -24,7 +46,7 @@ impl Action for FileLink {
         use crate::atoms::directory::Create as DirCreate;
         use crate::atoms::file::Link;
 
-        let from: PathBuf = match self.resolve(manifest, &self.source) {
+        let from: PathBuf = match self.resolve(manifest, self.source().as_str()) {
             Ok(from) => from,
             Err(_) => {
                 error!("Failed to resolve path for file link");
@@ -32,7 +54,7 @@ impl Action for FileLink {
             }
         };
 
-        let to = PathBuf::from(&self.target);
+        let to = PathBuf::from(self.target());
         let parent = to.clone();
 
         vec![
@@ -71,8 +93,8 @@ mod tests {
 
         match actions.pop() {
             Some(Actions::FileLink(action)) => {
-                assert_eq!("a", action.action.source);
-                assert_eq!("b", action.action.target);
+                assert_eq!("a", action.action.source());
+                assert_eq!("b", action.action.target());
             }
             _ => {
                 panic!("FileLink didn't deserialize to the correct type");
@@ -90,8 +112,8 @@ mod tests {
 
         match actions.pop() {
             Some(Actions::FileLink(action)) => {
-                assert_eq!("a", action.action.source);
-                assert_eq!("b", action.action.target);
+                assert_eq!("a", action.action.source());
+                assert_eq!("b", action.action.target());
             }
             _ => {
                 panic!("FileLink didn't deserialize to the correct type");
