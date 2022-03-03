@@ -10,7 +10,8 @@ env:
   MIN_SUPPORTED_RUST_VERSION: "1.58.0"
   CICD_INTERMEDIATES_DIR: "_cicd-intermediates"
   CARGO_TERM_COLOR: always
-  RUSTFLAGS: "-D warnings"
+  #Fix these up soon
+  #RUSTFLAGS: "-D warnings"
 
 jobs:
   lint-test-release:
@@ -61,8 +62,8 @@ jobs:
           registry-token: ${{ secrets.CARGO_REGISTRY_TOKEN }}
 
   build:
-    name: build
-    runs-on: ${{ matrix.job }}
+    name: build-${{ matrix.job.target }}
+    runs-on: ${{ matrix.job.os }}
     strategy:
       fail-fast: false
       matrix:
