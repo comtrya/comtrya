@@ -1,0 +1,144 @@
+name: release
+
+on:
+  workflow_dispatch: {}
+  push:
+    branches:
+      - "main"
+    tags:
+      - "*"
+
+env:
+  MIN_SUPPORTED_RUST_VERSION: "1.58.0"
+  CICD_INTERMEDIATES_DIR: "_cicd-intermediates"
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: "-D warnings"
+
+jobs:
+  lint-test-release:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Clone Repository
+        uses: actions/checkout@v2
+
+      - name: Install Rust Toolchain (v${{ env.MIN_SUPPORTED_RUST_VERSION }})
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{ env.MIN_SUPPORTED_RUST_VERSION }}
+          default: true
+          profile: minimal
+          components: clippy
+
+      - uses: actions-rs/clippy-check@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          args: --all-features --all-targets
+
+      - name: Run Tests
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+
+      - name: Run Tarpaulin
+        uses: actions-rs/tarpaulin@v0.1
+        with:
+          version: "0.15.0"
+          args: "-- --test-threads 1"
+
+      - name: Upload to codecov.io
+        uses: codecov/codecov-action@v1
+
+      - name: Check for Release
+        id: is-release
+        shell: bash
+        run: |
+          unset IS_RELEASE ; if [[ $GITHUB_REF =~ ^refs/tags/v[0-9].* ]]; then IS_RELEASE='true' ; fi
+          echo ::set-output name=IS_RELEASE::${IS_RELEASE}
+
+      - name: Cargo Publish
+        uses: katyo/publish-crates@v1
+        if: steps.is-release.outputs.IS_RELEASE
+        with:
+          args: --allow-dirty
+          registry-token: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+
+  build:
+    name: build
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        job:
+          - { os: ubuntu-20.04, target: aarch64-unknown-linux-gnu }
+          - { os: ubuntu-20.04, target: x86_64-unknown-linux-gnu }
+
+          - { os: macos-10.15, target: x86_64-apple-darwin }
+          - { os: macos-11, target: aarch64-apple-darwin }
+
+          - { os: windows-2019, target: x86_64-pc-windows-msvc }
+    steps:
+      - name: Clone Repository
+        uses: actions/checkout@v2
+
+      - name: Install Rust Toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{ env.MIN_SUPPORTED_RUST_VERSION }}
+          target: ${{ matrix.job.target }}
+          override: true
+          default: true
+          profile: minimal
+
+      - name: Handle Rust Dependencies Caching
+        uses: Swatinem/rust-cache@v1
+        with:
+          key: v1-${{ matrix.job.target }}
+
+      - name: Build Release Binary
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release
+
+      - name: Upload Artifact
+        uses: softprops/action-gh-release@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          draft: true
+          prerelease: false
+          fail_on_unmatched_files: true
+          files: |
+            target/${{ matrix.job.target }}/release/comtrya
+
+  build-musl:
+    runs-on: ubuntu-latest
+    container: clux/muslrust:stable
+    steps:
+      - name: Clone Repository
+        uses: actions/checkout@v2
+
+      - name: Link to muscl Toolchain
+        run: |
+          ln -s /root/.cargo $HOME/.cargo
+          ln -s /root/.rustup $HOME/.rustup
+
+      - name: Handle Rust Dependencies Caching
+        uses: Swatinem/rust-cache@v1
+        with:
+          key: v1-linux-musl
+
+      - name: Build Release Binary
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release
+
+      - name: Upload release archive
+        uses: softprops/action-gh-release@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          draft: true
+          prerelease: false
+          fail_on_unmatched_files: true
+          files: |
+            target/x86_64-unknown-linux-musl/release/comtrya
