@@ -175,7 +175,6 @@ mod tests {
         let content = r#"
 actions:
 - action: command.run
-  only: user.username != "root"
   command: echo
   args:
     - hi
@@ -191,7 +190,7 @@ actions:
             Actions::CommandRun(cr) => cr,
             _ => panic!("did not get a command to run"),
         };
-        assert_eq!(ext.condition, Some("user.username != \"root\"".into()));
+
         assert_eq!(
             ext.action,
             RunCommand {
