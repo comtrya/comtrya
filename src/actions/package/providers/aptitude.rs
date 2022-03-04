@@ -149,9 +149,7 @@ mod test {
         let aptitude = Aptitude {};
         let steps = aptitude.add_repository(&package);
 
-        let expected_steps: Vec<Step> = vec![];
-
-        assert_eq!(steps.len(), expected_steps.len());
+        assert_eq!(steps.len(), 0);
     }
 
     #[test]
