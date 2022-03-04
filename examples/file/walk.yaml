@@ -1,0 +1,5 @@
+actions:
+  - action: file.link
+    source: walker
+    target: /tmp/walker-123
+    walk_dir: true
