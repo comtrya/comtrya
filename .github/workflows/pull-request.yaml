@@ -12,52 +12,36 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v2
+      - uses: actions/checkout@v2
 
-      - name: check-for-cc
-        id: check-for-cc
-        # PR can always be renamed at merge
+      - uses: agenthunt/conventional-commit-checker-action@v1.0.0
         continue-on-error: true
-        uses: agenthunt/conventional-commit-checker-action@v1.0.0
         with:
-          # Don't enforce a format for the body, lets rely on the title
           pr-body-regex: ".*"
 
-      - name: Install stable toolchain
-        uses: actions-rs/toolchain@v1
+      - uses: actions-rs/toolchain@v1
         with:
           toolchain: ${{ env.MIN_SUPPORTED_RUST_VERSION }}
           profile: minimal
           components: clippy,rustfmt
           override: true
 
-      - name: Run cargo fmt
-        uses: actions-rs/cargo@v1
+      - uses: actions-rs/cargo@v1
         with:
           command: fmt
           args: --all -- --check
-
-      # Cumbersome atm, will bring back when I know what I'm doing
-      # - uses: EmbarkStudios/cargo-deny-action@v1
-      #   with:
-      #     log-level: warn
-      #     command: check
-      #     arguments: --all-features
 
       - uses: actions-rs/clippy-check@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           args: --all-features --all-targets
 
-      - name: Run cargo-tarpaulin
-        uses: actions-rs/tarpaulin@v0.1
+      - uses: actions-rs/tarpaulin@v0.1
         with:
-          version: "0.15.0"
+          version: "0.19.1"
           args: "-- --test-threads 1"
 
-      - name: Upload to codecov.io
-        uses: codecov/codecov-action@v1
+      - uses: codecov/codecov-action@v2
 
   test:
     name: ${{ matrix.job.os }} (${{ matrix.job.target }})
@@ -87,34 +71,29 @@ jobs:
           - { os: macos-10.15, target: x86_64-apple-darwin }
           - { os: windows-2019, target: x86_64-pc-windows-msvc }
     steps:
-      - name: Checkout source code
-        uses: actions/checkout@v2
+      - uses: actions/checkout@v2
 
-      - name: Install prerequisites
-        shell: bash
+      - shell: bash
         run: |
           case ${{ matrix.job.target }} in
             aarch64-unknown-linux-gnu) sudo apt-get -y update ; sudo apt-get -y install gcc-aarch64-linux-gnu ;;
           esac
 
-      - name: Extract crate information
-        shell: bash
+      - shell: bash
         run: |
           echo "PROJECT_NAME=$(sed -n 's/^name = "\(.*\)"/\1/p' Cargo.toml)" >> $GITHUB_ENV
           echo "PROJECT_VERSION=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -n1)" >> $GITHUB_ENV
           echo "PROJECT_MAINTAINER=$(sed -n 's/^authors = \["\(.*\)"\]/\1/p' Cargo.toml)" >> $GITHUB_ENV
           echo "PROJECT_HOMEPAGE=$(sed -n 's/^homepage = "\(.*\)"/\1/p' Cargo.toml)" >> $GITHUB_ENV
 
-      - name: Install Rust toolchain
-        uses: actions-rs/toolchain@v1
+      - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
           target: ${{ matrix.job.target }}
           override: true
           profile: minimal
 
-      - name: Run tests
-        uses: actions-rs/cargo@v1
+      - uses: actions-rs/cargo@v1
         with:
           use-cross: ${{ matrix.job.use-cross }}
           command: test
