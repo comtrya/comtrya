@@ -38,6 +38,7 @@ impl PackageProvider for Aptitude {
         }
     }
 
+<<<<<<< Updated upstream
     fn bootstrap(&self) -> Result<(), crate::actions::ActionError> {
         // Apt should always be available on Debian / Ubuntu flavours.
         // Lets make sure software-properties-common is available
@@ -60,12 +61,33 @@ impl PackageProvider for Aptitude {
         span.exit();
 
         Ok(())
+=======
+    fn bootstrap(&self) -> Vec<Step> {
+        vec![Step {
+            atom: Box::new(Exec {
+                command: String::from("apt"),
+                arguments: vec![
+                    String::from("install"),
+                    String::from("--yes"),
+                    String::from("software-properties-common"),
+                    String::from("curl"),
+                    String::from("gpg"),
+                ],
+                environment: self.env(),
+                privileged: true,
+                ..Default::default()
+            }),
+            initializers: vec![],
+            finalizers: vec![],
+        }]
+>>>>>>> Stashed changes
     }
 
     fn has_repository(&self, _package: &PackageVariant) -> bool {
         false
     }
 
+<<<<<<< Updated upstream
     fn add_repository(&self, package: &PackageVariant) -> Result<(), ActionError> {
         run_command(Command {
             name: String::from("apt-add-repository"),
@@ -86,6 +108,61 @@ impl PackageProvider for Aptitude {
         })?;
 
         Ok(())
+=======
+    fn add_repository(&self, package: &PackageVariant) -> Vec<Step> {
+        if package.repository.is_none() {
+            return vec![];
+        }
+
+        let mut steps: Vec<Step> = vec![];
+
+        if package.key.is_some() {
+            steps.push(Step {
+                atom: Box::new(Exec {
+                    command: String::from("bash"),
+                    arguments: vec![
+                        String::from("-c"),
+                        String::from(format!(
+                            "curl {} | apt-key add -",
+                            package.key.clone().unwrap()
+                        )),
+                    ],
+                    environment: self.env(),
+                    privileged: true,
+                    ..Default::default()
+                }),
+                initializers: vec![],
+                finalizers: vec![],
+            });
+        }
+
+        steps.extend(vec![
+            Step {
+                atom: Box::new(Exec {
+                    command: String::from("apt-add-repository"),
+                    arguments: vec![String::from("-y"), package.repository.clone().unwrap()],
+                    environment: self.env(),
+                    privileged: true,
+                    ..Default::default()
+                }),
+                initializers: vec![],
+                finalizers: vec![],
+            },
+            Step {
+                atom: Box::new(Exec {
+                    command: String::from("apt"),
+                    arguments: vec![String::from("update")],
+                    environment: self.env(),
+                    privileged: true,
+                    ..Default::default()
+                }),
+                initializers: vec![],
+                finalizers: vec![],
+            },
+        ]);
+
+        steps
+>>>>>>> Stashed changes
     }
 
     fn query(&self, package: &PackageVariant) -> Vec<String> {
@@ -106,5 +183,58 @@ impl PackageProvider for Aptitude {
         })?;
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    // These tests are really weak at the moment, but that's because I'm not
+    // sure how to add derive(Debug,Default) to struct Step
+    // TODO: Learn how to fix this
+
+    #[test]
+    fn test_add_repository_simple() {
+        let package = PackageVariant {
+            name: Some(String::from("test")),
+            ..Default::default()
+        };
+
+        let aptitude = Aptitude {};
+        let steps = aptitude.add_repository(&package);
+
+        let expected_steps: Vec<Step> = vec![];
+
+        assert_eq!(steps.len(), expected_steps.len());
+    }
+
+    #[test]
+    fn test_add_repository_without_key() {
+        let package = PackageVariant {
+            name: Some(String::from("test")),
+            repository: Some(String::from("repository")),
+            ..Default::default()
+        };
+
+        let aptitude = Aptitude {};
+        let steps = aptitude.add_repository(&package);
+
+        assert_eq!(steps.len(), 2);
+    }
+
+    #[test]
+    fn test_add_repository_with_key() {
+        let package = PackageVariant {
+            name: Some(String::from("test")),
+            repository: Some(String::from("repository")),
+            key: Some(String::from("key")),
+            ..Default::default()
+        };
+
+        let aptitude = Aptitude {};
+        let steps = aptitude.add_repository(&package);
+
+        assert_eq!(steps.len(), 3);
     }
 }

@@ -20,13 +20,16 @@ pub struct Package {
     repository: Option<String>,
 
     #[serde(default)]
+    key: Option<String>,
+
+    #[serde(default)]
     extra_args: Vec<String>,
 
     #[serde(default)]
     variants: HashMap<os_info::Type, PackageVariant>,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct PackageVariant {
     name: Option<String>,
 
@@ -38,6 +41,9 @@ pub struct PackageVariant {
 
     #[serde(default)]
     repository: Option<String>,
+
+    #[serde(default)]
+    key: Option<String>,
 
     #[serde(default)]
     extra_args: Vec<String>,
@@ -71,6 +77,7 @@ impl From<&Package> for PackageVariant {
                 list: package.list.clone(),
                 provider: package.provider.clone(),
                 repository: package.repository.clone(),
+                key: package.repository.clone(),
                 extra_args: package.extra_args.clone(),
             };
         };
@@ -82,9 +89,16 @@ impl From<&Package> for PackageVariant {
         let mut package = PackageVariant {
             name: package.name.clone(),
             list: package.list.clone(),
+<<<<<<< Updated upstream
             provider: package.provider.clone(),
             repository: package.repository.clone(),
             extra_args: package.extra_args.clone(),
+=======
+            provider: variant.provider.clone(),
+            repository: variant.repository.clone(),
+            key: variant.repository.clone(),
+            extra_args: variant.extra_args.clone(),
+>>>>>>> Stashed changes
         };
 
         if variant.name.is_some() {
@@ -97,6 +111,10 @@ impl From<&Package> for PackageVariant {
 
         if variant.repository.is_some() {
             package.repository = variant.repository.clone();
+        };
+
+        if variant.key.is_some() {
+            package.key = variant.key.clone();
         };
 
         // I've been torn about this, but here's my logic.
