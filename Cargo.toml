@@ -18,6 +18,7 @@ koto = "0.10.0"
 koto_json = "0.10.0"
 koto_runtime = "0.10.0"
 koto_yaml = "0.10.0"
+normpath = "0.3.2"
 openssl = { version = "0.10", features = ["vendored"] }
 os_info = "3.2.0"
 petgraph = "0.5.1"

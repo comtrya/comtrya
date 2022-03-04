@@ -5,11 +5,21 @@ pub mod link;
 use crate::actions::Action;
 use crate::manifests::Manifest;
 use anyhow::{anyhow, Result};
+use normpath::PathExt;
 use std::path::PathBuf;
 
 pub trait FileAction: Action {
     fn resolve(&self, manifest: &Manifest, path: &str) -> PathBuf {
-        manifest.root_dir.clone().unwrap().join("files").join(path)
+        manifest
+            .root_dir
+            .clone()
+            .unwrap()
+            .join("files")
+            .join(path)
+            .normalize()
+            .unwrap()
+            .as_path()
+            .to_path_buf()
     }
 
     fn load(&self, manifest: &Manifest, path: &str) -> Result<String> {
