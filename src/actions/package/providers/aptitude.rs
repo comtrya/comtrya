@@ -58,6 +58,10 @@ impl PackageProvider for Aptitude {
     }
 
     fn add_repository(&self, package: &PackageVariant) -> Vec<Step> {
+        if package.repository.is_none() {
+            return vec![];
+        }
+
         let mut steps: Vec<Step> = vec![];
 
         if package.key.is_some() {
