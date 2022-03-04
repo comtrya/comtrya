@@ -27,6 +27,12 @@ impl std::fmt::Display for SetContents {
 
 impl Atom for SetContents {
     fn plan(&self) -> bool {
+        // If the file doesn't exist, assume it's because
+        // another atom is going to provide it.
+        if !self.path.exists() {
+            return true;
+        }
+
         let contents = match std::fs::read_to_string(&self.path) {
             Ok(contents) => contents,
             Err(error) => {
