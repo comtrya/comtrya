@@ -5,7 +5,7 @@ pub use providers::ManifestProvider;
 use crate::actions::Actions;
 use petgraph::prelude::*;
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Manifest {
@@ -25,7 +25,7 @@ pub struct Manifest {
     pub dag_index: Option<NodeIndex<u32>>,
 }
 
-pub fn get_manifest_name(manifest_directory: &PathBuf, location: &PathBuf) -> String {
+pub fn get_manifest_name(manifest_directory: &Path, location: &Path) -> String {
     let local_name = location.strip_prefix(&manifest_directory).unwrap();
     let manifest_name =
         local_name
