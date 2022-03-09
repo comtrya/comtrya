@@ -1,4 +1,5 @@
 use super::FileAction;
+use crate::atoms::file::Decrypt;
 use crate::manifests::Manifest;
 use crate::steps::Step;
 use crate::tera_functions::register_functions;
@@ -20,6 +21,8 @@ pub struct FileCopy {
 
     #[serde(default = "default_template")]
     pub template: bool,
+
+    pub passphrase: Option<String>,
 }
 
 fn from_octal<'de, D>(deserializer: D) -> Result<u32, D::Error>
@@ -87,7 +90,7 @@ impl Action for FileCopy {
         let path = PathBuf::from(&self.to);
         let parent = path.clone();
 
-        vec![
+        let mut steps = vec![
             Step {
                 atom: Box::new(DirCreate {
                     path: parent.parent().unwrap().into(),
@@ -108,12 +111,29 @@ impl Action for FileCopy {
                 initializers: vec![],
                 finalizers: vec![],
             },
-            Step {
+        ];
+
+        if let Some(passphrase) = self.passphrase.to_owned() {
+            steps.push(Step {
+                atom: Box::new(Decrypt {
+                    encrypted_content: contents.into_bytes(),
+                    path,
+                    passphrase,
+                }),
+                initializers: vec![],
+                finalizers: vec![],
+            });
+
+            steps
+        } else {
+            steps.push(Step {
                 atom: Box::new(SetContents { path, contents }),
                 initializers: vec![],
                 finalizers: vec![],
-            },
-        ]
+            });
+
+            steps
+        }
     }
 }
 

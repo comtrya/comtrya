@@ -3,6 +3,7 @@ mod chown;
 mod contents;
 mod copy;
 mod create;
+mod decrypt;
 mod link;
 
 use super::Atom;
@@ -11,6 +12,7 @@ pub use chown::Chown;
 pub use contents::SetContents;
 pub use copy::Copy;
 pub use create::Create;
+pub use decrypt::Decrypt;
 pub use link::Link;
 
 pub trait FileAtom: Atom {

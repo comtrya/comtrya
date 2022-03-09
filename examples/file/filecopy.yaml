@@ -5,7 +5,22 @@ actions:
     to: /tmp/some-file-rendered
     template: true
 
-  # This will not be rendered with contexts
   - action: file.copy
     from: procs-config.toml
     to: "{{ user.config_dir }}/procs/config.toml"
+
+  # Decrypt file
+  - action: file.copy
+    from: encrypted-file
+    to: /tmp/some-decrypted-file
+    passphrase: "1KZ2EXDHSQKZFQP43JK2LPXUFZ8D365CM5WQXRSH97U7N9WKRVFKS0TCS30"
+
+  - action: file.copy
+    from: encrypted-file
+    to: /tmp/some-decrypted-file-2
+    passphrase: '{{ read_file_contents(path="examples/file/files/age-passphrase") }}'
+
+  - action: file.copy
+    from: encrypted-file
+    to: /tmp/some-decrypted-file-3
+    passphrase: '{{ get_env(name="AGE_PASSPHRASE") }}'
