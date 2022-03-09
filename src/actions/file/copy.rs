@@ -1,10 +1,13 @@
 use super::FileAction;
 use crate::manifests::Manifest;
 use crate::steps::Step;
+use crate::tera_functions::register_functions;
 use crate::{actions::Action, contexts::to_tera};
 use anyhow::Result;
 use serde::{de::Error, Deserialize, Deserializer, Serialize};
+use std::error::Error as StdError;
 use std::{path::PathBuf, u32};
+use tera::Tera;
 use tracing::error;
 
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
@@ -44,13 +47,24 @@ impl Action for FileCopy {
         let contents = match self.load(manifest, &self.from) {
             Ok(contents) => {
                 if self.template {
-                    match tera::Tera::one_off(contents.as_str(), &to_tera(context), false) {
+                    let mut tera = Tera::default();
+                    register_functions(&mut tera);
+
+                    match tera.render_str(contents.as_str(), &to_tera(context)) {
                         Ok(rendered) => rendered,
                         Err(err) => {
-                            error!(
-                                "Failed to render contents for FileCopy action: {}",
-                                err.to_string()
-                            );
+                            match err.source() {
+                                Some(source) => {
+                                    error!(
+                                        "Failed to render contents for FileCopy action: {}",
+                                        source
+                                    )
+                                }
+                                None => {
+                                    error!("Failed to render contents for FileCopy action: {}", err)
+                                }
+                            }
+
                             return vec![];
                         }
                     }
