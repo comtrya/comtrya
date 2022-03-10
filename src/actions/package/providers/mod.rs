@@ -5,6 +5,8 @@ mod bsdpkg;
 use self::bsdpkg::BsdPkg;
 mod homebrew;
 use self::homebrew::Homebrew;
+mod pkgin;
+use self::pkgin::Pkgin;
 mod yay;
 use self::yay::Yay;
 mod winget;
@@ -23,6 +25,9 @@ pub enum PackageProviders {
     #[serde(alias = "homebrew", alias = "brew")]
     Homebrew,
 
+    #[serde(alias = "pkgin")]
+    Pkgin,
+
     #[serde(alias = "yay", alias = "pacman")]
     Yay,
 
@@ -36,6 +41,7 @@ impl PackageProviders {
             PackageProviders::Aptitude => Box::new(Aptitude {}),
             PackageProviders::BsdPkg => Box::new(BsdPkg {}),
             PackageProviders::Homebrew => Box::new(Homebrew {}),
+            PackageProviders::Pkgin => Box::new(Pkgin {}),
             PackageProviders::Yay => Box::new(Yay {}),
             PackageProviders::Winget => Box::new(Winget {}),
         }
@@ -53,6 +59,7 @@ impl Default for PackageProviders {
             // BSD operating systems
             os_info::Type::DragonFly=> PackageProviders::BsdPkg,
             os_info::Type::FreeBSD=> PackageProviders::BsdPkg,
+            os_info::Type::NetBSD => PackageProviders::Pkgin,
             // Debian / Ubuntu Variants
             os_info::Type::Debian => PackageProviders::Aptitude,
             os_info::Type::Mint => PackageProviders::Aptitude,
