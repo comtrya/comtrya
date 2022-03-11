@@ -5,6 +5,8 @@ mod bsdpkg;
 use self::bsdpkg::BsdPkg;
 mod homebrew;
 use self::homebrew::Homebrew;
+mod pkgin;
+use self::pkgin::Pkgin;
 mod yay;
 use self::yay::Yay;
 mod winget;
