@@ -18,7 +18,6 @@ koto = "0.10.0"
 koto_json = "0.10.0"
 koto_runtime = "0.10.0"
 koto_yaml = "0.10.0"
-openssl = { version = "0.10" }
 os_info = "3.2.0"
 petgraph = "0.5.1"
 regex = "1"
@@ -37,7 +36,11 @@ walkdir = "2"
 which = "4.0.2"
 whoami = "1.1.0"
 
+[target.'cfg(windows)'.dependencies]
+openssl = { version = "0.10", features = ["vendored"] }
+
 [target.'cfg(unix)'.dependencies]
+openssl = { version = "0.10" }
 users = "0.11.0"
 
 [dev-dependencies]
