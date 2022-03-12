@@ -36,11 +36,7 @@ walkdir = "2"
 which = "4.0.2"
 whoami = "1.1.0"
 
-[target.'cfg(windows)'.dependencies]
-openssl = { version = "0.10", features = ["vendored"] }
-
 [target.'cfg(unix)'.dependencies]
-openssl = { version = "0.10" }
 users = "0.11.0"
 
 [dev-dependencies]
