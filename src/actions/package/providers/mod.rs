@@ -5,6 +5,8 @@ mod bsdpkg;
 use self::bsdpkg::BsdPkg;
 mod homebrew;
 use self::homebrew::Homebrew;
+mod pkgin;
+use self::pkgin::Pkgin;
 mod yay;
 use self::yay::Yay;
 mod winget;
@@ -23,6 +25,9 @@ pub enum PackageProviders {
     #[serde(alias = "homebrew", alias = "brew")]
     Homebrew,
 
+    #[serde(alias = "pkgin")]
+    Pkgin,
+
     #[serde(alias = "yay", alias = "pacman")]
     Yay,
 
@@ -36,6 +41,7 @@ impl PackageProviders {
             PackageProviders::Aptitude => Box::new(Aptitude {}),
             PackageProviders::BsdPkg => Box::new(BsdPkg {}),
             PackageProviders::Homebrew => Box::new(Homebrew {}),
+            PackageProviders::Pkgin => Box::new(Pkgin {}),
             PackageProviders::Yay => Box::new(Yay {}),
             PackageProviders::Winget => Box::new(Winget {}),
         }
@@ -56,6 +62,7 @@ impl Default for PackageProviders {
             // its Debian based?
             os_info::Type::OracleLinux => PackageProviders::Aptitude,
             os_info::Type::Macos => PackageProviders::Homebrew,
+            os_info::Type::NetBSD => PackageProviders::Pkgin,
             os_info::Type::Windows => PackageProviders::Winget,
             // Arch Variants
             os_info::Type::Manjaro=> PackageProviders::Yay,
