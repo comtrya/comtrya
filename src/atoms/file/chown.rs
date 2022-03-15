@@ -33,6 +33,12 @@ use std::os::unix::prelude::MetadataExt;
 #[cfg(unix)]
 impl Atom for Chown {
     fn plan(&self) -> bool {
+        // If the file doesn't exist, assume it's because
+        // another atom is going to provide it.
+        if !self.path.exists() {
+            return true;
+        }
+
         let metadata = match std::fs::metadata(&self.path) {
             Ok(m) => m,
             Err(err) => {

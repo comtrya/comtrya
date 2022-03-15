@@ -70,10 +70,7 @@ impl PackageProvider for Aptitude {
                     command: String::from("bash"),
                     arguments: vec![
                         String::from("-c"),
-                        String::from(format!(
-                            "curl {} | apt-key add -",
-                            package.key.clone().unwrap()
-                        )),
+                        format!("curl {} | apt-key add -", package.key.clone().unwrap()),
                     ],
                     environment: self.env(),
                     privileged: true,

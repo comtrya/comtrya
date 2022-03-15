@@ -3,7 +3,10 @@ use crate::actions::package::PackageVariant;
 use crate::atoms::command::Exec;
 use crate::steps::Step;
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
+use std::process::Command;
 use tracing::warn;
+use tracing::{debug, trace};
 use which::which;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -76,10 +79,46 @@ impl PackageProvider for Yay {
     }
 
     fn query(&self, package: &PackageVariant) -> Vec<String> {
-        package.packages()
+        let requested_already_installed: HashSet<String> = String::from_utf8(
+            Command::new("yay")
+                .args(
+                    vec![String::from("-Q"), String::from("-q")]
+                        .into_iter()
+                        .chain(package.packages().into_iter()),
+                )
+                .output()
+                .unwrap()
+                .stdout,
+        )
+        .unwrap()
+        .split('\n')
+        .map(String::from)
+        .collect();
+
+        debug!(
+            "all requested installed packages: {:?}",
+            requested_already_installed
+        );
+        package
+            .packages()
+            .into_iter()
+            .filter(|p| {
+                if requested_already_installed.contains(p) {
+                    trace!("{}: already installed", p);
+                    false
+                } else {
+                    debug!("{}: doesn't appear to be installed", p);
+                    true
+                }
+            })
+            .collect()
     }
 
     fn install(&self, package: &PackageVariant) -> Vec<Step> {
+        let need_installed = self.query(package);
+        if need_installed.is_empty() {
+            return vec![];
+        }
         vec![Step {
             atom: Box::new(Exec {
                 command: String::from("yay"),
@@ -91,7 +130,7 @@ impl PackageProvider for Yay {
                         String::from("--nodiffmenu"),
                     ],
                     package.extra_args.clone(),
-                    package.packages(),
+                    need_installed,
                 ]
                 .concat(),
                 ..Default::default()

@@ -30,6 +30,12 @@ use {std::os::unix::prelude::PermissionsExt, tracing::error};
 #[cfg(unix)]
 impl Atom for Chmod {
     fn plan(&self) -> bool {
+        // If the file doesn't exist, assume it's because
+        // another atom is going to provide it.
+        if !self.path.exists() {
+            return true;
+        }
+
         let metadata = match std::fs::metadata(&self.path) {
             Ok(m) => m,
             Err(err) => {

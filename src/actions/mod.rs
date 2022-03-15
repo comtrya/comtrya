@@ -69,8 +69,8 @@ where
             }
         });
 
-        if variant.is_some() {
-            return variant.unwrap().action.plan(manifest, context);
+        if let Some(variant) = variant {
+            return variant.action.plan(manifest, context);
         }
 
         if self.condition.is_none() {

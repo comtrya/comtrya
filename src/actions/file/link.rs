@@ -30,22 +30,22 @@ impl FileLink {
         if self.source.is_none() && self.from.is_none() {
             error!("Field 'source' is required for file.link");
         }
-        if self.source.is_none() {
-            return self.from.clone().unwrap();
+        if let Some(ref source) = self.source {
+            source.to_string()
+        } else {
+            self.from.clone().unwrap()
         }
-
-        return self.source.clone().unwrap();
     }
 
     fn target(&self) -> String {
         if self.target.is_none() && self.to.is_none() {
             error!("Field 'target' is required for file.link");
         }
-        if self.target.is_none() {
-            return self.to.clone().unwrap();
+        if let Some(ref target) = self.target {
+            target.to_string()
+        } else {
+            self.to.clone().unwrap()
         }
-
-        return self.target.clone().unwrap();
     }
 
     pub fn plan_no_walk(from: PathBuf, to: PathBuf) -> Vec<Step> {

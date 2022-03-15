@@ -47,6 +47,12 @@ impl Default for PackageProviders {
         let info = os_info::get();
 
         match info.os_type() {
+            // Arch Variants
+            os_info::Type::Arch=> PackageProviders::Yay,
+            os_info::Type::Manjaro=> PackageProviders::Yay,
+            // BSD operating systems
+            os_info::Type::DragonFly=> PackageProviders::BsdPkg,
+            os_info::Type::FreeBSD=> PackageProviders::BsdPkg,
             // Debian / Ubuntu Variants
             os_info::Type::Debian => PackageProviders::Aptitude,
             os_info::Type::Mint => PackageProviders::Aptitude,
@@ -55,11 +61,9 @@ impl Default for PackageProviders {
             // For some reason, the Rust image is showing as this and
             // its Debian based?
             os_info::Type::OracleLinux => PackageProviders::Aptitude,
+            // Other
             os_info::Type::Macos => PackageProviders::Homebrew,
             os_info::Type::Windows => PackageProviders::Winget,
-            // Arch Variants
-            os_info::Type::Manjaro=> PackageProviders::Yay,
-            os_info::Type::Arch=> PackageProviders::Yay,
 
             _ => panic!("Sorry, but we don't have a default provider for {} OS. Please be explicit when requesting a package installation with `provider: XYZ`.", info.os_type()),
         }
