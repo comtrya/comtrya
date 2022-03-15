@@ -6,7 +6,7 @@ use crate::{actions::package::PackageVariant, atoms::command::Exec};
 use serde::{Deserialize, Serialize};
 use tracing::{instrument, warn};
 use which::which;
-use os_info;
+// use os_info;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Pkgin {}
