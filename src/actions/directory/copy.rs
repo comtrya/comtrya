@@ -4,7 +4,6 @@ use crate::contexts::Contexts;
 use crate::steps::Step;
 use crate::{atoms::command::Exec, manifests::Manifest};
 use serde::{Deserialize, Serialize};
-use tracing::error;
 
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct DirectoryCopy {

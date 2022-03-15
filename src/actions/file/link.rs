@@ -65,7 +65,7 @@ impl FileLink {
                     source: from.to_owned(),
                     target: to,
                 }),
-                initializers: vec![Ensure(Box::new(FileExists(from.to_owned())))],
+                initializers: vec![Ensure(Box::new(FileExists(from)))],
                 finalizers: vec![],
             },
         ]
@@ -86,7 +86,7 @@ impl FileLink {
         let paths = std::fs::read_dir(from).unwrap();
 
         steps.extend(paths.map(|path| {
-            let p = path.unwrap().path().to_path_buf();
+            let p = path.unwrap().path();
 
             Step {
                 atom: Box::new(Link {
@@ -125,6 +125,7 @@ impl Action for FileLink {
 mod tests {
     use crate::{
         actions::{Action, Actions},
+        config::Config,
         contexts::build_contexts,
         manifests::Manifest,
     };
@@ -189,7 +190,12 @@ mod tests {
             dag_index: None,
         };
 
-        let contexts = build_contexts();
+        let config = Config {
+            manifests: vec![],
+            variables: None,
+        };
+
+        let contexts = build_contexts(&config);
 
         let target: String = source_dir
             .path()
@@ -242,7 +248,12 @@ mod tests {
             dag_index: None,
         };
 
-        let contexts = build_contexts();
+        let config = Config {
+            manifests: vec![],
+            variables: None,
+        };
+
+        let contexts = build_contexts(&config);
 
         let target: String = source_dir
             .clone()
