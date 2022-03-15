@@ -1,5 +1,4 @@
 use crate::{actions::Action, manifests::Manifest};
-use anyhow::{anyhow, Result};
 use normpath::PathExt;
 use std::path::PathBuf;
 
