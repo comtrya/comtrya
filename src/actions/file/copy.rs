@@ -1,10 +1,14 @@
 use super::FileAction;
+use crate::atoms::file::Decrypt;
 use crate::manifests::Manifest;
 use crate::steps::Step;
+use crate::tera_functions::register_functions;
 use crate::{actions::Action, contexts::to_tera};
 use anyhow::Result;
 use serde::{de::Error, Deserialize, Deserializer, Serialize};
+use std::error::Error as StdError;
 use std::{path::PathBuf, u32};
+use tera::Tera;
 use tracing::error;
 
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
@@ -17,6 +21,8 @@ pub struct FileCopy {
 
     #[serde(default = "default_template")]
     pub template: bool,
+
+    pub passphrase: Option<String>,
 }
 
 fn from_octal<'de, D>(deserializer: D) -> Result<u32, D::Error>
@@ -44,13 +50,24 @@ impl Action for FileCopy {
         let contents = match self.load(manifest, &self.from) {
             Ok(contents) => {
                 if self.template {
-                    match tera::Tera::one_off(contents.as_str(), &to_tera(context), false) {
+                    let mut tera = Tera::default();
+                    register_functions(&mut tera);
+
+                    match tera.render_str(contents.as_str(), &to_tera(context)) {
                         Ok(rendered) => rendered,
                         Err(err) => {
-                            error!(
-                                "Failed to render contents for FileCopy action: {}",
-                                err.to_string()
-                            );
+                            match err.source() {
+                                Some(source) => {
+                                    error!(
+                                        "Failed to render contents for FileCopy action: {}",
+                                        source
+                                    )
+                                }
+                                None => {
+                                    error!("Failed to render contents for FileCopy action: {}", err)
+                                }
+                            }
+
                             return vec![];
                         }
                     }
@@ -73,7 +90,7 @@ impl Action for FileCopy {
         let path = PathBuf::from(&self.to);
         let parent = path.clone();
 
-        vec![
+        let mut steps = vec![
             Step {
                 atom: Box::new(DirCreate {
                     path: parent.parent().unwrap().into(),
@@ -94,12 +111,29 @@ impl Action for FileCopy {
                 initializers: vec![],
                 finalizers: vec![],
             },
-            Step {
+        ];
+
+        if let Some(passphrase) = self.passphrase.to_owned() {
+            steps.push(Step {
+                atom: Box::new(Decrypt {
+                    encrypted_content: contents.into_bytes(),
+                    path,
+                    passphrase,
+                }),
+                initializers: vec![],
+                finalizers: vec![],
+            });
+
+            steps
+        } else {
+            steps.push(Step {
                 atom: Box::new(SetContents { path, contents }),
                 initializers: vec![],
                 finalizers: vec![],
-            },
-        ]
+            });
+
+            steps
+        }
     }
 }
 

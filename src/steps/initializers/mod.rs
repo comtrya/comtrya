@@ -1,7 +1,12 @@
 mod command_found;
+pub use command_found::CommandFound;
+
+mod file_exists;
+pub use file_exists::FileExists;
 
 #[allow(dead_code)]
 pub enum FlowControl {
+    Ensure(Box<dyn Initializer>),
     SkipIf(Box<dyn Initializer>),
 }
 

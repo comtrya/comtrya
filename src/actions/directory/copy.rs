@@ -18,16 +18,7 @@ impl DirectoryAction for DirectoryCopy {}
 
 impl Action for DirectoryCopy {
     fn plan(&self, manifest: &Manifest, _context: &Contexts) -> Vec<Step> {
-        let from: String = match self.resolve(manifest, &self.from) {
-            Ok(from) => from,
-            Err(_) => {
-                error!("Failed to resolve path for file link");
-                return vec![];
-            }
-        }
-        .to_str()
-        .unwrap()
-        .into();
+        let from: String = self.resolve(manifest, &self.from).to_str().unwrap().into();
 
         vec![
             Step {
