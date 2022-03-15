@@ -4,11 +4,15 @@ use std::collections::BTreeMap;
 use tracing::{debug, trace};
 use user::UserContextProvider;
 
-use crate::contexts::os::OSContextProvider;
+use crate::{
+    config::Config,
+    contexts::{os::OSContextProvider, variables::VariablesContextProvider},
+};
 
 pub mod os;
 /// User context provider: understands the user running the command
 pub mod user;
+pub mod variables;
 
 pub trait ContextProvider {
     fn get_prefix(&self) -> String;
@@ -23,7 +27,7 @@ pub enum Context {
     ListContext(String, Vec<String>),
 }
 
-pub fn build_contexts() -> Contexts {
+pub fn build_contexts(config: &Config) -> Contexts {
     trace!("Building Contexts");
 
     let mut contexts: Contexts = BTreeMap::new();
@@ -31,6 +35,7 @@ pub fn build_contexts() -> Contexts {
     let context_providers: Vec<Box<dyn ContextProvider>> = vec![
         Box::new(UserContextProvider {}),
         Box::new(OSContextProvider {}),
+        Box::new(VariablesContextProvider { config }),
     ];
 
     context_providers.iter().for_each(|provider| {
@@ -99,5 +104,35 @@ mod test {
             String::from("rawkode"),
             tera_user_context.get("username").unwrap().as_str().unwrap()
         );
+    }
+
+    #[test]
+    fn variables_context_resolves_from_config() -> anyhow::Result<()> {
+        let mut variables = BTreeMap::new();
+        variables.insert("ship_name".to_string(), "Jack O'Neill".to_string());
+        variables.insert("ship_captain".to_string(), "Thor".to_string());
+
+        let config = Config {
+            manifests: vec![],
+            variables: Some(variables),
+        };
+
+        let contexts = build_contexts(&config);
+        let variables_context_values = contexts.get("variables");
+
+        assert_eq!(variables_context_values.is_some(), true);
+        assert_eq!(
+            variables_context_values.unwrap().get("ship_name").unwrap(),
+            "Jack O'Neill"
+        );
+        assert_eq!(
+            variables_context_values
+                .unwrap()
+                .get("ship_captain")
+                .unwrap(),
+            "Thor"
+        );
+
+        Ok(())
     }
 }

@@ -1,12 +1,14 @@
 use super::Opt;
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
+use std::{collections::BTreeMap, path::PathBuf};
 
 #[derive(Debug, Default, Deserialize, Serialize)]
 pub struct Config {
     #[serde(default)]
     pub manifests: Vec<String>,
+
+    pub variables: Option<BTreeMap<String, String>>,
 }
 
 /// Check the current working directory for a `Comtrya.yaml` file

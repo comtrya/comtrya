@@ -134,7 +134,7 @@ fn main() -> anyhow::Result<()> {
     );
 
     // Run Context Providers
-    let contexts = build_contexts();
+    let contexts = build_contexts(&config);
 
     let mut walker = WalkBuilder::new(&manifest_directory);
     walker
