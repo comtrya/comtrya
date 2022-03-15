@@ -2,6 +2,7 @@ use anyhow::anyhow;
 use ignore::WalkBuilder;
 use manifests::Manifest;
 use petgraph::prelude::*;
+use std::error::Error;
 use std::fs::canonicalize;
 use std::{collections::HashMap, ops::Deref};
 use structopt::StructOpt;
@@ -18,8 +19,10 @@ mod config;
 mod contexts;
 mod manifests;
 mod steps;
+mod tera_functions;
 
 use crate::manifests::get_manifest_name;
+use crate::tera_functions::register_functions;
 
 const VERSION: Option<&'static str> = option_env!("CARGO_PKG_VERSION");
 
@@ -194,7 +197,22 @@ fn main() -> anyhow::Result<()> {
 
             trace!(template = template);
 
-            let yaml = Tera::one_off(template, &to_tera(&contexts), false).unwrap();
+            let mut tera = Tera::default();
+            register_functions(&mut tera);
+
+            let yaml = match tera.render_str(template, &to_tera(&contexts)) {
+                Ok(template) => template,
+                Err(err) => {
+                    match err.source() {
+                        Some(err) => error!(message = err.source()),
+                        None => error!(message = err.to_string().as_str()),
+                    }
+
+                    span.exit();
+
+                    return;
+                }
+            };
 
             trace!(rendered = yaml.as_str());
 
