@@ -26,6 +26,19 @@ impl Step {
         self.initializers
             .iter()
             .fold(true, |_, flow_control| match flow_control {
+                initializers::FlowControl::Ensure(i) => {
+                    match i.initialize() {
+                        Ok(should) => should,
+                        Err(err) => {
+                            error!("Failed to run initializer: {}", err.to_string());
+
+                            // On an error, we can't really determine if this Atom should
+                            // run; so lets play it safe and filter it out too
+                            false
+                        }
+                    }
+                }
+
                 initializers::FlowControl::SkipIf(i) => {
                     match i.initialize() {
                         Ok(true) => {
@@ -85,6 +98,26 @@ mod tests {
 
     #[test]
     fn initializers_can_control_execution() {
+        let step = Step {
+            atom: Box::new(EchoAtom("hello-world")),
+            initializers: vec![InitializerFlowControl::Ensure(Box::new(EchoInitializer(
+                true,
+            )))],
+            finalizers: vec![],
+        };
+
+        assert_eq!(true, step.do_initializers_allow_us_to_run());
+
+        let step = Step {
+            atom: Box::new(EchoAtom("hello-world")),
+            initializers: vec![InitializerFlowControl::Ensure(Box::new(EchoInitializer(
+                false,
+            )))],
+            finalizers: vec![],
+        };
+
+        assert_eq!(false, step.do_initializers_allow_us_to_run());
+
         let step = Step {
             atom: Box::new(EchoAtom("hello-world")),
             initializers: vec![InitializerFlowControl::SkipIf(Box::new(EchoInitializer(

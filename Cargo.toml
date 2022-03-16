@@ -19,9 +19,10 @@ koto = "0.10.0"
 koto_json = "0.10.0"
 koto_runtime = "0.10.0"
 koto_yaml = "0.10.0"
-openssl = "0.10"
+normpath = "0.3.2"
 os_info = "3.2.0"
 petgraph = "0.5.1"
+rand = "0.8.5"
 regex = "1"
 reqwest = { version = "0.11.1", default-features = false, features = [
     "blocking",

@@ -4,3 +4,9 @@
 # However, only the first is used atm.
 manifests:
   - https://github.com/rawkode/rawkode
+
+# Used by the variables context provider:
+# context="variables" key="<key>" value="<value>"
+variables:
+  fkbr: "sxoe"
+  kuci: "xhpv"
