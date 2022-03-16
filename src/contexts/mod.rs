@@ -6,9 +6,12 @@ use user::UserContextProvider;
 
 use crate::{
     config::Config,
-    contexts::{os::OSContextProvider, variables::VariablesContextProvider},
+    contexts::{
+        env::EnvContextProvider, os::OSContextProvider, variables::VariablesContextProvider,
+    },
 };
 
+pub mod env;
 pub mod os;
 /// User context provider: understands the user running the command
 pub mod user;
@@ -35,6 +38,7 @@ pub fn build_contexts(config: &Config) -> Contexts {
     let context_providers: Vec<Box<dyn ContextProvider>> = vec![
         Box::new(UserContextProvider {}),
         Box::new(OSContextProvider {}),
+        Box::new(EnvContextProvider {}),
         Box::new(VariablesContextProvider { config }),
     ];
 
@@ -131,6 +135,32 @@ mod test {
                 .get("ship_captain")
                 .unwrap(),
             "Thor"
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn env_context() -> anyhow::Result<()> {
+        let config = Config {
+            manifests: vec![],
+            variables: None,
+        };
+
+        std::env::set_var("ASCENDED_NAME", "Morgan Le Fay");
+        std::env::set_var("REAL_NAME", "Ganos Lal");
+
+        let contexts = build_contexts(&config);
+        let env_context_values = contexts.get("env");
+
+        assert_eq!(env_context_values.is_some(), true);
+        assert_eq!(
+            env_context_values.unwrap().get("ASCENDED_NAME").unwrap(),
+            "Morgan Le Fay"
+        );
+        assert_eq!(
+            env_context_values.unwrap().get("REAL_NAME").unwrap(),
+            "Ganos Lal"
         );
 
         Ok(())
