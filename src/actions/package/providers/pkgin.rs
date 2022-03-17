@@ -80,7 +80,7 @@ impl PackageProvider for Pkgin {
             Step {
                 atom: Box::new(Exec {
                     command: String::from("/usr/pkg/bin/pkgin"),
-                    arguments: vec![String::from("install")]
+                    arguments: vec![String::from("install"), String::from("-y")]
                         .into_iter()
                         .chain(package.extra_args.clone())
                         .chain(package.packages())
