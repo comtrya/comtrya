@@ -26,7 +26,7 @@ impl PackageProvider for Pkgin {
         match which("/usr/pkg/bin/pkgin") {
             Ok(_) => true,
             Err(_) => {
-                warn!(message = "/usr/local/sbin/pkg is not available");
+                warn!(message = "/usr/pkg/bin/pkgin is not available");
                 false
             }
         }
