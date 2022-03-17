@@ -59,6 +59,7 @@ impl Default for PackageProviders {
             // BSD operating systems
             os_info::Type::DragonFly=> PackageProviders::BsdPkg,
             os_info::Type::FreeBSD=> PackageProviders::BsdPkg,
+            os_info::Type::NetBSD => PackageProviders::Pkgin,
             // Debian / Ubuntu Variants
             os_info::Type::Debian => PackageProviders::Aptitude,
             os_info::Type::Mint => PackageProviders::Aptitude,
@@ -69,7 +70,6 @@ impl Default for PackageProviders {
             os_info::Type::OracleLinux => PackageProviders::Aptitude,
             // Other
             os_info::Type::Macos => PackageProviders::Homebrew,
-            os_info::Type::NetBSD => PackageProviders::Pkgin,
             os_info::Type::Windows => PackageProviders::Winget,
 
             _ => panic!("Sorry, but we don't have a default provider for {} OS. Please be explicit when requesting a package installation with `provider: XYZ`.", info.os_type()),
