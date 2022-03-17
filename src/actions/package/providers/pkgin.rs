@@ -35,17 +35,7 @@ impl PackageProvider for Pkgin {
     #[instrument(name = "bootstrap", level = "info", skip(self))]
     fn bootstrap(&self) -> Vec<Step> {
         // TODO: Adjust for boot strapping pkgin
-        vec![Step {
-            atom: Box::new(Exec {
-                command: String::from("/usr/sbin/pkg"),
-                arguments: vec![String::from("bootstrap")],
-                environment: self.env(),
-                privileged: true,
-                ..Default::default()
-            }),
-            initializers: vec![],
-            finalizers: vec![],
-        }]
+        vec![]
     }
 
     fn has_repository(&self, _package: &PackageVariant) -> bool {
