@@ -11,12 +11,6 @@ use which::which;
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Pkgin {}
 
-impl Pkgin {
-    fn env(&self) -> Vec<(String, String)> {
-        vec![(String::from("ASSUME_ALWAYS_YES"), String::from("true"))]
-    }
-}
-
 impl PackageProvider for Pkgin {
     fn name(&self) -> &str {
         "Pkgin"
@@ -35,17 +29,7 @@ impl PackageProvider for Pkgin {
     #[instrument(name = "bootstrap", level = "info", skip(self))]
     fn bootstrap(&self) -> Vec<Step> {
         // TODO: Adjust for boot strapping pkgin
-        vec![Step {
-            atom: Box::new(Exec {
-                command: String::from("/usr/sbin/pkg"),
-                arguments: vec![String::from("bootstrap")],
-                environment: self.env(),
-                privileged: true,
-                ..Default::default()
-            }),
-            initializers: vec![],
-            finalizers: vec![],
-        }]
+        vec![]
     }
 
     fn has_repository(&self, _package: &PackageVariant) -> bool {
