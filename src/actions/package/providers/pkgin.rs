@@ -11,11 +11,11 @@ use which::which;
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Pkgin {}
 
-impl Pkgin {
-    fn env(&self) -> Vec<(String, String)> {
-        vec![(String::from("ASSUME_ALWAYS_YES"), String::from("true"))]
-    }
-}
+// impl Pkgin {
+//     fn env(&self) -> Vec<(String, String)> {
+//         vec![(String::from("ASSUME_ALWAYS_YES"), String::from("true"))]
+//     }
+// }
 
 impl PackageProvider for Pkgin {
     fn name(&self) -> &str {
