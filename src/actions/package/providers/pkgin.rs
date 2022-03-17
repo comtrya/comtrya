@@ -65,20 +65,20 @@ impl PackageProvider for Pkgin {
 
     fn install(&self, package: &PackageVariant) -> Vec<Step> {
         vec![
-            Step {
-                atom: Box::new(Exec {
-                    command: String::from("/usr/pkg/bin/pkgin"),
-                    arguments: vec![String::from("install"), String::from("-n")]
-                        .into_iter()
-                        .chain(package.extra_args.clone())
-                        .chain(package.packages())
-                        .collect(),
-                    privileged: true,
-                    ..Default::default()
-                }),
-                initializers: vec![],
-                finalizers: vec![StopIf(Box::new(OutputContains("removed")))],
-            },
+            // Step {
+            //     atom: Box::new(Exec {
+            //         command: String::from("/usr/pkg/bin/pkgin"),
+            //         arguments: vec![String::from("install"), String::from("-n")]
+            //             .into_iter()
+            //             .chain(package.extra_args.clone())
+            //             .chain(package.packages())
+            //             .collect(),
+            //         privileged: true,
+            //         ..Default::default()
+            //     }),
+            //     initializers: vec![],
+            //     finalizers: vec![StopIf(Box::new(OutputContains("removed")))],
+            // },
             Step {
                 atom: Box::new(Exec {
                     command: String::from("/usr/pkg/bin/pkgin"),
