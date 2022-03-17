@@ -34,6 +34,7 @@ impl PackageProvider for Pkgin {
 
     #[instrument(name = "bootstrap", level = "info", skip(self))]
     fn bootstrap(&self) -> Vec<Step> {
+        // TODO: Adjust for boot strapping pkgin
         vec![Step {
             atom: Box::new(Exec {
                 command: String::from("/usr/sbin/pkg"),
@@ -55,6 +56,7 @@ impl PackageProvider for Pkgin {
         vec![]
     }
 
+    // TODO: Handle query pkgs with pkgin search
     fn query(&self, package: &PackageVariant) -> Vec<String> {
         // Install all packages for now, don't get smart about which
         // already are
