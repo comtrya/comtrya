@@ -27,8 +27,8 @@ impl PackageProvider for Yay {
         }
     }
 
-    fn bootstrap(&self) -> Vec<Step> {
-        vec![
+    fn bootstrap(&self) -> Option<Vec<Step>> {
+        Some(vec![
             Step {
                 atom: Box::new(Exec {
                     command: String::from("pacman"),
@@ -67,18 +67,19 @@ impl PackageProvider for Yay {
                 initializers: vec![],
                 finalizers: vec![],
             },
-        ]
+        ])
     }
 
     fn has_repository(&self, _package: &PackageVariant) -> bool {
         false
     }
 
-    fn add_repository(&self, _package: &PackageVariant) -> Vec<Step> {
-        vec![]
+    fn add_repository(&self, _package: &PackageVariant) -> Option<Vec<Step>> {
+        // vec![]
+        None
     }
 
-    fn query(&self, package: &PackageVariant) -> Vec<String> {
+    fn query(&self, package: &PackageVariant) -> Option<Vec<String>> {
         let requested_already_installed: HashSet<String> = String::from_utf8(
             Command::new("yay")
                 .args(
@@ -99,7 +100,7 @@ impl PackageProvider for Yay {
             "all requested installed packages: {:?}",
             requested_already_installed
         );
-        package
+        Some(package
             .packages()
             .into_iter()
             .filter(|p| {
@@ -111,15 +112,15 @@ impl PackageProvider for Yay {
                     true
                 }
             })
-            .collect()
+            .collect())
     }
 
-    fn install(&self, package: &PackageVariant) -> Vec<Step> {
+    fn install(&self, package: &PackageVariant) -> Option<Vec<Step>> {
         let need_installed = self.query(package);
-        if need_installed.is_empty() {
-            return vec![];
+        if need_installed.unwrap().is_empty() {
+            return None;
         }
-        vec![Step {
+        Some(vec![Step {
             atom: Box::new(Exec {
                 command: String::from("yay"),
                 arguments: [
@@ -130,13 +131,13 @@ impl PackageProvider for Yay {
                         String::from("--nodiffmenu"),
                     ],
                     package.extra_args.clone(),
-                    need_installed,
+                    need_installed.unwrap(),
                 ]
                 .concat(),
                 ..Default::default()
             }),
             initializers: vec![],
             finalizers: vec![],
-        }]
+        }])
     }
 }

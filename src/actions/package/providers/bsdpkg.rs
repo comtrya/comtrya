@@ -32,8 +32,8 @@ impl PackageProvider for BsdPkg {
     }
 
     #[instrument(name = "bootstrap", level = "info", skip(self))]
-    fn bootstrap(&self) -> Vec<Step> {
-        vec![Step {
+    fn bootstrap(&self) -> Option<Vec<Step>> {
+        Some(vec![Step {
             atom: Box::new(Exec {
                 command: String::from("/usr/sbin/pkg"),
                 arguments: vec![String::from("bootstrap")],
@@ -43,25 +43,25 @@ impl PackageProvider for BsdPkg {
             }),
             initializers: vec![],
             finalizers: vec![],
-        }]
+        }])
     }
 
     fn has_repository(&self, _package: &PackageVariant) -> bool {
         false
     }
 
-    fn add_repository(&self, _package: &PackageVariant) -> Vec<Step> {
-        vec![]
+    fn add_repository(&self, _package: &PackageVariant) -> Option<Vec<Step>> {
+        None
     }
 
-    fn query(&self, package: &PackageVariant) -> Vec<String> {
+    fn query(&self, package: &PackageVariant) -> Option<Vec<String>> {
         // Install all packages for now, don't get smart about which
         // already are
-        package.packages()
+        Some(package.packages())
     }
 
-    fn install(&self, package: &PackageVariant) -> Vec<Step> {
-        vec![
+    fn install(&self, package: &PackageVariant) -> Option<Vec<Step>> {
+        Some(vec![
             Step {
                 atom: Box::new(Exec {
                     command: String::from("/usr/sbin/pkg"),
@@ -90,6 +90,6 @@ impl PackageProvider for BsdPkg {
                 initializers: vec![],
                 finalizers: vec![],
             },
-        ]
+        ])
     }
 }

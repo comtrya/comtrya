@@ -23,25 +23,27 @@ impl PackageProvider for Winget {
         }
     }
 
-    fn bootstrap(&self) -> Vec<Step> {
-        vec![]
+    fn bootstrap(&self) -> Option<Vec<Step>> {
+        // vec![]
+        None
     }
 
     fn has_repository(&self, _package: &PackageVariant) -> bool {
         true
     }
 
-    fn add_repository(&self, _package: &PackageVariant) -> Vec<Step> {
-        vec![]
+    fn add_repository(&self, _package: &PackageVariant) -> Option<Vec<Step>> {
+        // vec![]
+        None
     }
 
-    fn query(&self, package: &PackageVariant) -> Vec<String> {
+    fn query(&self, package: &PackageVariant) -> Option<Vec<String>> {
         // Install all packages, make this smarter soon
-        package.packages()
+        Some(package.packages())
     }
 
-    fn install(&self, package: &PackageVariant) -> Vec<Step> {
-        package
+    fn install(&self, package: &PackageVariant) -> Option<Vec<Step>> {
+        Some(package
             .packages()
             .iter()
             .map::<Step, _>(|p| Step {
@@ -58,6 +60,6 @@ impl PackageProvider for Winget {
                 initializers: vec![],
                 finalizers: vec![],
             })
-            .collect()
+            .collect())
     }
 }

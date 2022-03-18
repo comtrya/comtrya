@@ -26,7 +26,7 @@ impl Action for PackageInstall {
 
         // If the provider isn't available, see if we can bootstrap it
         if !provider.available() {
-            if provider.bootstrap().is_empty() {
+            if provider.bootstrap().unwrap().is_empty() {
                 error!(
                     "Package Provider, {}, isn't available. Skipping action",
                     provider.name()
@@ -34,16 +34,16 @@ impl Action for PackageInstall {
                 return vec![];
             }
 
-            atoms.append(&mut provider.bootstrap());
+            atoms.append(&mut provider.bootstrap().unwrap());
         }
 
         if let Some(ref _repo) = variant.repository {
             if !provider.has_repository(&variant) {
-                atoms.append(&mut provider.add_repository(&variant));
+                atoms.append(&mut provider.add_repository(&variant).unwrap());
             }
         }
 
-        atoms.append(&mut provider.install(&variant));
+        atoms.append(&mut provider.install(&variant).unwrap());
 
         span.exit();
 

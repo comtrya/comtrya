@@ -18,15 +18,15 @@ impl PackageProvider for Homebrew {
         which("brew").is_ok()
     }
 
-    fn bootstrap(&self) -> Vec<Step> {
-        vec![Step { atom: Box::new(Exec {
+    fn bootstrap(&self) -> Option<Vec<Step>> {
+        Some(vec![Step { atom: Box::new(Exec {
             command: String::from("bash"),
             arguments: vec![
                 String::from("-c"),
                 String::from("$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)")
             ],
             ..Default::default()
-        }), initializers: vec![], finalizers: vec![] },]
+        }), initializers: vec![], finalizers: vec![] },])
     }
 
     fn has_repository(&self, _: &PackageVariant) -> bool {
@@ -36,10 +36,10 @@ impl PackageProvider for Homebrew {
         false
     }
 
-    fn add_repository(&self, package: &PackageVariant) -> Vec<Step> {
+    fn add_repository(&self, package: &PackageVariant) -> Option<Vec<Step>> {
         let repository = package.repository.clone().unwrap();
 
-        vec![Step {
+        Some(vec![Step {
             atom: Box::new(Exec {
                 command: String::from("brew"),
                 arguments: vec![String::from("tap"), repository],
@@ -47,10 +47,10 @@ impl PackageProvider for Homebrew {
             }),
             initializers: vec![],
             finalizers: vec![],
-        }]
+        }])
     }
 
-    fn query(&self, package: &PackageVariant) -> Vec<String> {
+    fn query(&self, package: &PackageVariant) -> Option<Vec<String>> {
         let prefix = String::from_utf8(
             Command::new("brew")
                 .arg("--prefix")
@@ -65,7 +65,7 @@ impl PackageProvider for Homebrew {
         let cellar = Path::new(&prefix).join("Cellar");
         let caskroom = Path::new(&prefix).join("Caskroom");
 
-        package
+        Some(package
             .packages()
             .into_iter()
             .filter(|p| {
@@ -84,29 +84,29 @@ impl PackageProvider for Homebrew {
                 Some(repository) => format!("{}/{}", repository, p),
                 None => p,
             })
-            .collect()
+            .collect())
     }
 
-    fn install(&self, package: &PackageVariant) -> Vec<Step> {
+    fn install(&self, package: &PackageVariant) -> Option<Vec<Step>> {
         let need_installed = self.query(package);
 
-        if need_installed.is_empty() {
-            return vec![];
+        if need_installed.unwrap().is_empty() {
+            return None;
         }
 
-        vec![Step {
+        Some(vec![Step {
             atom: Box::new(Exec {
                 command: String::from("brew"),
                 arguments: [
                     vec![String::from("install")],
                     package.extra_args.clone(),
-                    need_installed,
+                    need_installed.unwrap(),
                 ]
                 .concat(),
                 ..Default::default()
             }),
             initializers: vec![],
             finalizers: vec![],
-        }]
+        }])
     }
 }

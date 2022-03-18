@@ -80,9 +80,9 @@ impl Default for PackageProviders {
 pub trait PackageProvider {
     fn name(&self) -> &str;
     fn available(&self) -> bool;
-    fn bootstrap(&self) -> Vec<Step>;
+    fn bootstrap(&self) -> Option<Vec<Step>>;
     fn has_repository(&self, package: &PackageVariant) -> bool;
-    fn add_repository(&self, package: &PackageVariant) -> Vec<Step>;
-    fn query(&self, package: &PackageVariant) -> Vec<String>;
-    fn install(&self, package: &PackageVariant) -> Vec<Step>;
+    fn add_repository(&self, package: &PackageVariant) -> Option<Vec<Step>>;
+    fn query(&self, package: &PackageVariant) -> Option<Vec<String>>;
+    fn install(&self, package: &PackageVariant) -> Option<Vec<Step>>;
 }

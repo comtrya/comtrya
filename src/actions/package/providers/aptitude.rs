@@ -33,8 +33,8 @@ impl PackageProvider for Aptitude {
         }
     }
 
-    fn bootstrap(&self) -> Vec<Step> {
-        vec![Step {
+    fn bootstrap(&self) -> Option<Vec<Step>> {
+        Some(vec![Step {
             atom: Box::new(Exec {
                 command: String::from("apt"),
                 arguments: vec![
@@ -50,16 +50,16 @@ impl PackageProvider for Aptitude {
             }),
             initializers: vec![],
             finalizers: vec![],
-        }]
+        }])
     }
 
     fn has_repository(&self, _package: &PackageVariant) -> bool {
         false
     }
 
-    fn add_repository(&self, package: &PackageVariant) -> Vec<Step> {
+    fn add_repository(&self, package: &PackageVariant) -> Option<Vec<Step>> {
         if package.repository.is_none() {
-            return vec![];
+            return None;
         }
 
         let mut steps: Vec<Step> = vec![];
@@ -106,15 +106,15 @@ impl PackageProvider for Aptitude {
             },
         ]);
 
-        steps
+        Some(steps)
     }
 
-    fn query(&self, package: &PackageVariant) -> Vec<String> {
-        package.packages()
+    fn query(&self, package: &PackageVariant) -> Option<Vec<String>> {
+        Some(package.packages())
     }
 
-    fn install(&self, package: &PackageVariant) -> Vec<Step> {
-        vec![Step {
+    fn install(&self, package: &PackageVariant) -> Option<Vec<Step>> {
+        Some(vec![Step {
             atom: Box::new(Exec {
                 command: String::from("apt"),
                 arguments: vec![String::from("install"), String::from("--yes")]
@@ -128,7 +128,7 @@ impl PackageProvider for Aptitude {
             }),
             initializers: vec![],
             finalizers: vec![],
-        }]
+        }])
     }
 }
 
@@ -150,7 +150,7 @@ mod test {
         let aptitude = Aptitude {};
         let steps = aptitude.add_repository(&package);
 
-        assert_eq!(steps.len(), 0);
+        assert_eq!(steps.unwrap().len(), 0);
     }
 
     #[test]
@@ -164,7 +164,7 @@ mod test {
         let aptitude = Aptitude {};
         let steps = aptitude.add_repository(&package);
 
-        assert_eq!(steps.len(), 2);
+        assert_eq!(steps.unwrap().len(), 2);
     }
 
     #[test]
@@ -179,6 +179,6 @@ mod test {
         let aptitude = Aptitude {};
         let steps = aptitude.add_repository(&package);
 
-        assert_eq!(steps.len(), 3);
+        assert_eq!(steps.unwrap().len(), 3);
     }
 }
