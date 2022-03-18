@@ -93,7 +93,7 @@ mod tests {
         };
 
         match git_clone.execute() {
-            Ok(result) => assert_eq!(result, ()),
+            Ok(_) => (),
             Err(_) => assert_eq!(false, true),
         }
     }
