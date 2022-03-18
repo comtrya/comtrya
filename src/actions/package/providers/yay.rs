@@ -116,10 +116,17 @@ impl PackageProvider for Yay {
     }
 
     fn install(&self, package: &PackageVariant) -> Option<Vec<Step>> {
-        let need_installed = self.query(package);
-        if need_installed.unwrap().is_empty() {
-            return None;
-        }
+        // let need_installed = self.query(package);
+
+        //if need_installed.unwrap().is_empty() {
+            // return None;
+        //}
+
+        let need_installed = match self.query(package) {
+            Some(packages) => packages,
+            None => return None, 
+        };
+
         Some(vec![Step {
             atom: Box::new(Exec {
                 command: String::from("yay"),
@@ -131,7 +138,7 @@ impl PackageProvider for Yay {
                         String::from("--nodiffmenu"),
                     ],
                     package.extra_args.clone(),
-                    need_installed.unwrap(),
+                    need_installed,
                 ]
                 .concat(),
                 ..Default::default()

@@ -88,11 +88,16 @@ impl PackageProvider for Homebrew {
     }
 
     fn install(&self, package: &PackageVariant) -> Option<Vec<Step>> {
-        let need_installed = self.query(package);
+        // let need_installed = self.query(package);
 
-        if need_installed.unwrap().is_empty() {
-            return None;
-        }
+        // if need_installed.unwrap().is_empty() {
+            // return None;
+        // }
+
+        let need_installed: Vec<String> = match self.query(package) {
+            Some(packages) => packages,
+            None => return None,
+        };
 
         Some(vec![Step {
             atom: Box::new(Exec {
@@ -100,7 +105,7 @@ impl PackageProvider for Homebrew {
                 arguments: [
                     vec![String::from("install")],
                     package.extra_args.clone(),
-                    need_installed.unwrap(),
+                    need_installed,
                 ]
                 .concat(),
                 ..Default::default()
