@@ -114,7 +114,7 @@ fn main() -> anyhow::Result<()> {
         });
 
     let manifest_directory = match manifest_directory {
-        Some(dir) => dir,
+        Some(dir) => dir.canonicalize().unwrap(),
         None => {
             error!("Failed to find manifests at {}", &manifest_location);
             panic!();
