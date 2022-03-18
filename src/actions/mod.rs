@@ -1,6 +1,7 @@
 mod command;
 mod directory;
 mod file;
+mod git;
 mod package;
 
 use crate::contexts::{to_koto, Contexts};
@@ -11,6 +12,7 @@ use directory::{DirectoryCopy, DirectoryCreate};
 use file::copy::FileCopy;
 use file::download::FileDownload;
 use file::link::FileLink;
+use git::GitClone;
 use koto::{Koto, KotoSettings};
 use package::install::PackageInstall;
 use serde::{Deserialize, Serialize};
@@ -123,6 +125,9 @@ pub enum Actions {
     #[serde(alias = "file.link")]
     FileLink(ConditionalVariantAction<FileLink>),
 
+    #[serde(alias = "git.clone")]
+    GitClone(ConditionalVariantAction<GitClone>),
+
     #[serde(alias = "package.install", alias = "package.installed")]
     PackageInstall(ConditionalVariantAction<PackageInstall>),
 }
@@ -136,6 +141,7 @@ impl Actions {
             Actions::FileCopy(a) => a,
             Actions::FileDownload(a) => a,
             Actions::FileLink(a) => a,
+            Actions::GitClone(a) => a,
             Actions::PackageInstall(a) => a,
         }
     }

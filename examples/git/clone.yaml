@@ -1,0 +1,4 @@
+actions:
+  - action: git.clone
+    repository: https://github.com/comtrya/comtrya
+    directory: ./.build/comtrya

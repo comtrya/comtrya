@@ -1,6 +1,7 @@
 pub mod command;
 pub mod directory;
 pub mod file;
+pub mod git;
 pub mod http;
 
 pub trait Atom: std::fmt::Display {
