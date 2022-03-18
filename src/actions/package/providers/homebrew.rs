@@ -65,33 +65,35 @@ impl PackageProvider for Homebrew {
         let cellar = Path::new(&prefix).join("Cellar");
         let caskroom = Path::new(&prefix).join("Caskroom");
 
-        Some(package
-            .packages()
-            .into_iter()
-            .filter(|p| {
-                if cellar.join(&p).is_dir() {
-                    trace!("{}: found in Cellar", p);
-                    false
-                } else if caskroom.join(&p).is_dir() {
-                    trace!("{}: found in Caskroom", p);
-                    false
-                } else {
-                    debug!("{}: doesn't appear to be installed", p);
-                    true
-                }
-            })
-            .map(|p| match &package.repository {
-                Some(repository) => format!("{}/{}", repository, p),
-                None => p,
-            })
-            .collect())
+        Some(
+            package
+                .packages()
+                .into_iter()
+                .filter(|p| {
+                    if cellar.join(&p).is_dir() {
+                        trace!("{}: found in Cellar", p);
+                        false
+                    } else if caskroom.join(&p).is_dir() {
+                        trace!("{}: found in Caskroom", p);
+                        false
+                    } else {
+                        debug!("{}: doesn't appear to be installed", p);
+                        true
+                    }
+                })
+                .map(|p| match &package.repository {
+                    Some(repository) => format!("{}/{}", repository, p),
+                    None => p,
+                })
+                .collect(),
+        )
     }
 
     fn install(&self, package: &PackageVariant) -> Option<Vec<Step>> {
         // let need_installed = self.query(package);
 
         // if need_installed.unwrap().is_empty() {
-            // return None;
+        // return None;
         // }
 
         let need_installed: Vec<String> = match self.query(package) {

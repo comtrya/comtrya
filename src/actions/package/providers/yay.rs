@@ -100,31 +100,33 @@ impl PackageProvider for Yay {
             "all requested installed packages: {:?}",
             requested_already_installed
         );
-        Some(package
-            .packages()
-            .into_iter()
-            .filter(|p| {
-                if requested_already_installed.contains(p) {
-                    trace!("{}: already installed", p);
-                    false
-                } else {
-                    debug!("{}: doesn't appear to be installed", p);
-                    true
-                }
-            })
-            .collect())
+        Some(
+            package
+                .packages()
+                .into_iter()
+                .filter(|p| {
+                    if requested_already_installed.contains(p) {
+                        trace!("{}: already installed", p);
+                        false
+                    } else {
+                        debug!("{}: doesn't appear to be installed", p);
+                        true
+                    }
+                })
+                .collect(),
+        )
     }
 
     fn install(&self, package: &PackageVariant) -> Option<Vec<Step>> {
         // let need_installed = self.query(package);
 
         //if need_installed.unwrap().is_empty() {
-            // return None;
+        // return None;
         //}
 
         let need_installed = match self.query(package) {
             Some(packages) => packages,
-            None => return None, 
+            None => return None,
         };
 
         Some(vec![Step {

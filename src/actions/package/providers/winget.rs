@@ -43,23 +43,25 @@ impl PackageProvider for Winget {
     }
 
     fn install(&self, package: &PackageVariant) -> Option<Vec<Step>> {
-        Some(package
-            .packages()
-            .iter()
-            .map::<Step, _>(|p| Step {
-                atom: Box::new(Exec {
-                    command: String::from("winget"),
-                    arguments: [
-                        vec![String::from("install"), String::from("--silent")],
-                        package.extra_args.clone(),
-                        vec![p.clone()],
-                    ]
-                    .concat(),
-                    ..Default::default()
-                }),
-                initializers: vec![],
-                finalizers: vec![],
-            })
-            .collect())
+        Some(
+            package
+                .packages()
+                .iter()
+                .map::<Step, _>(|p| Step {
+                    atom: Box::new(Exec {
+                        command: String::from("winget"),
+                        arguments: [
+                            vec![String::from("install"), String::from("--silent")],
+                            package.extra_args.clone(),
+                            vec![p.clone()],
+                        ]
+                        .concat(),
+                        ..Default::default()
+                    }),
+                    initializers: vec![],
+                    finalizers: vec![],
+                })
+                .collect(),
+        )
     }
 }
