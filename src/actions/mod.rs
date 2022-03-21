@@ -4,9 +4,11 @@ mod file;
 mod git;
 mod macos;
 mod package;
+mod plugin;
 
 use crate::contexts::{to_koto, Contexts};
 use crate::manifests::Manifest;
+use crate::plugins::Plugin;
 use crate::steps::Step;
 use command::run::RunCommand;
 use directory::{DirectoryCopy, DirectoryCreate};
@@ -18,6 +20,8 @@ use koto::{Koto, KotoSettings};
 use macos::MacOSDefault;
 use package::install::PackageInstall;
 use serde::{Deserialize, Serialize};
+
+use self::plugin::PluginCommand;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
 pub struct ConditionalVariantAction<T> {
@@ -44,7 +48,7 @@ impl<T> Action for ConditionalVariantAction<T>
 where
     T: Action,
 {
-    fn plan(&self, manifest: &Manifest, context: &Contexts) -> Vec<Step> {
+    fn plan(&self, manifest: &Manifest, context: &Contexts, plugins: &[Plugin]) -> Vec<Step> {
         let variant = self.variants.iter().find(|variant| {
             if variant.condition.is_none() {
                 return false;
@@ -53,7 +57,8 @@ where
             let condition = variant.condition.clone().unwrap();
 
             let mut koto = Koto::with_settings(KotoSettings {
-                run_tests: false,
+                run_tests: true,
+                run_import_tests: true,
                 ..Default::default()
             });
 
@@ -74,11 +79,11 @@ where
         });
 
         if let Some(variant) = variant {
-            return variant.action.plan(manifest, context);
+            return variant.action.plan(manifest, context, plugins);
         }
 
         if self.condition.is_none() {
-            return self.action.plan(manifest, context);
+            return self.action.plan(manifest, context, plugins);
         }
 
         let mut koto = Koto::with_settings(KotoSettings {
@@ -94,7 +99,7 @@ where
             Ok(_) => match koto.run() {
                 Ok(result) => match result {
                     koto_runtime::Value::Bool(result) => match result {
-                        true => self.action.plan(manifest, context),
+                        true => self.action.plan(manifest, context, plugins),
                         false => vec![],
                     },
                     _ => vec![],
@@ -135,6 +140,9 @@ pub enum Actions {
 
     #[serde(alias = "package.install", alias = "package.installed")]
     PackageInstall(ConditionalVariantAction<PackageInstall>),
+
+    #[serde(alias = "plugin")]
+    PluginRun(ConditionalVariantAction<PluginCommand>),
 }
 
 impl Actions {
@@ -149,6 +157,7 @@ impl Actions {
             Actions::GitClone(a) => a,
             Actions::MacOSDefault(a) => a,
             Actions::PackageInstall(a) => a,
+            Actions::PluginRun(a) => a,
         }
     }
 }
@@ -174,7 +183,7 @@ impl<E: std::error::Error> From<E> for ActionError {
 }
 
 pub trait Action {
-    fn plan(&self, manifest: &Manifest, context: &Contexts) -> Vec<Step>;
+    fn plan(&self, manifest: &Manifest, context: &Contexts, plugins: &[Plugin]) -> Vec<Step>;
 }
 
 #[cfg(test)]

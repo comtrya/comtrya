@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use serde_yaml::Value;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 use tracing::{debug, trace};
 use user::UserContextProvider;
 
@@ -87,6 +87,25 @@ pub fn to_koto(context: &BTreeMap<String, Value>) -> koto::runtime::Value {
     koto_yaml::yaml_value_to_koto_value(&serde_yaml::to_value(context).unwrap()).unwrap()
 }
 
+pub fn to_env_vars(contexts: &Contexts) -> HashMap<String, String> {
+    let mut env_vars = HashMap::new();
+
+    for (context, values) in contexts {
+        for (key, value) in values {
+            let name = format!("{}_{}", context.to_uppercase(), key.to_uppercase());
+
+            let value1 = match value.as_str() {
+                Some(result) => result.to_string(),
+                None => "lel".to_string(), // TODO: change to something useful
+            };
+
+            env_vars.insert(name, value1);
+        }
+    }
+
+    env_vars
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -164,5 +183,20 @@ mod test {
         );
 
         Ok(())
+    }
+
+    #[test]
+    fn convert_contexts_to_env_vars() {
+        let mut contexts = BTreeMap::new();
+        let mut values = BTreeMap::new();
+        values.insert("value".to_string(), Value::String("fkbr".to_string()));
+        contexts.insert("some".to_string(), values);
+
+        let env_vars = to_env_vars(&contexts);
+
+        assert_eq!(
+            env_vars.get(&"SOME_VALUE".to_string()),
+            Some(&"fkbr".to_string())
+        );
     }
 }

@@ -18,10 +18,12 @@ mod atoms;
 mod config;
 mod contexts;
 mod manifests;
+mod plugins;
 mod steps;
 mod tera_functions;
 
 use crate::manifests::get_manifest_name;
+use crate::plugins::locate_plugins;
 use crate::tera_functions::register_functions;
 
 const VERSION: Option<&'static str> = option_env!("CARGO_PKG_VERSION");
@@ -96,6 +98,31 @@ fn main() -> anyhow::Result<()> {
             return Err(anyhow!("No manifest location provided"));
         }
     };
+
+    let plugins = match dirs_next::config_dir()
+        .map(|config_dir| config_dir.join("comtrya").join("plugins"))
+    {
+        Some(plugins_dir) => match locate_plugins(&plugins_dir) {
+            Ok(plugins) => plugins,
+            Err(_) => vec![],
+        },
+        None => {
+            info!("To use plugins please create the plugins dir");
+
+            vec![]
+        }
+    };
+
+    debug!(
+        plugins = plugins
+            .clone()
+            .into_iter()
+            .map(|p| p.name)
+            .collect::<Vec<String>>()
+            .join(",")
+            .as_str(),
+        message = "Enabled plugins"
+    );
 
     let mut manifests: HashMap<String, Manifest> = HashMap::new();
 
@@ -332,7 +359,7 @@ fn main() -> anyhow::Result<()> {
                 let action = action.inner_ref();
 
                 let mut steps = action
-                    .plan(m1, &contexts)
+                    .plan(m1, &contexts, &plugins)
                     .into_iter()
                     .filter(|step| step.do_initializers_allow_us_to_run())
                     .filter(|step| step.atom.plan())

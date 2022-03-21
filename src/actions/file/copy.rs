@@ -1,6 +1,7 @@
 use super::FileAction;
 use crate::atoms::file::Decrypt;
 use crate::manifests::Manifest;
+use crate::plugins::Plugin;
 use crate::steps::Step;
 use crate::tera_functions::register_functions;
 use crate::{actions::Action, contexts::to_tera};
@@ -46,7 +47,12 @@ impl FileCopy {}
 impl FileAction for FileCopy {}
 
 impl Action for FileCopy {
-    fn plan(&self, manifest: &Manifest, context: &crate::contexts::Contexts) -> Vec<Step> {
+    fn plan(
+        &self,
+        manifest: &Manifest,
+        context: &crate::contexts::Contexts,
+        _: &[Plugin],
+    ) -> Vec<Step> {
         let contents = match self.load(manifest, &self.from) {
             Ok(contents) => {
                 if self.template {

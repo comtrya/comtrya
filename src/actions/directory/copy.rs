@@ -1,6 +1,7 @@
 use super::DirectoryAction;
 use crate::actions::Action;
 use crate::contexts::Contexts;
+use crate::plugins::Plugin;
 use crate::steps::Step;
 use crate::{atoms::command::Exec, manifests::Manifest};
 use serde::{Deserialize, Serialize};
@@ -16,7 +17,7 @@ impl DirectoryCopy {}
 impl DirectoryAction for DirectoryCopy {}
 
 impl Action for DirectoryCopy {
-    fn plan(&self, manifest: &Manifest, _context: &Contexts) -> Vec<Step> {
+    fn plan(&self, manifest: &Manifest, _context: &Contexts, _: &[Plugin]) -> Vec<Step> {
         let from: String = self.resolve(manifest, &self.from).to_str().unwrap().into();
 
         vec![

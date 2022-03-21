@@ -1,5 +1,6 @@
 use super::FileAction;
 use crate::manifests::Manifest;
+use crate::plugins::Plugin;
 use crate::steps::Step;
 use crate::{actions::Action, contexts::Contexts};
 use anyhow::Result;
@@ -39,7 +40,7 @@ impl FileDownload {}
 impl FileAction for FileDownload {}
 
 impl Action for FileDownload {
-    fn plan(&self, _manifest: &Manifest, _context: &Contexts) -> Vec<Step> {
+    fn plan(&self, _manifest: &Manifest, _context: &Contexts, _: &[Plugin]) -> Vec<Step> {
         use crate::atoms::directory::Create as DirCreate;
         use crate::atoms::file::Chmod;
         use crate::atoms::http::Download;

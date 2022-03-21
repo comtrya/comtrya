@@ -1,5 +1,6 @@
 use super::FileAction;
 use crate::manifests::Manifest;
+use crate::plugins::Plugin;
 use crate::steps::initializers::FileExists;
 use crate::steps::initializers::FlowControl::Ensure;
 use crate::steps::Step;
@@ -105,7 +106,7 @@ impl FileLink {
 impl FileAction for FileLink {}
 
 impl Action for FileLink {
-    fn plan(&self, manifest: &Manifest, _: &Contexts) -> Vec<Step> {
+    fn plan(&self, manifest: &Manifest, _: &Contexts, _: &[Plugin]) -> Vec<Step> {
         let from: PathBuf = self.resolve(manifest, self.source().as_str());
         let to = PathBuf::from(self.target());
 
@@ -211,7 +212,7 @@ mod tests {
             ..Default::default()
         };
 
-        let steps = file_link_action.plan(&manifest, &contexts);
+        let steps = file_link_action.plan(&manifest, &contexts, &vec![]);
         assert_eq!(steps.len(), 2);
     }
 
@@ -270,7 +271,7 @@ mod tests {
             ..Default::default()
         };
 
-        let steps = file_link_action.plan(&manifest, &contexts);
+        let steps = file_link_action.plan(&manifest, &contexts, &vec![]);
         assert_eq!(steps.len(), number_of_files + 1);
     }
 }

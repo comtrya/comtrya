@@ -3,6 +3,7 @@ pub mod directory;
 pub mod file;
 pub mod git;
 pub mod http;
+pub mod plugin;
 
 pub trait Atom: std::fmt::Display {
     // Determine if this atom needs to run

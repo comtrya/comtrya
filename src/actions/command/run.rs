@@ -1,4 +1,5 @@
 use crate::contexts::Contexts;
+use crate::plugins::Plugin;
 use crate::steps::Step;
 use crate::{actions::Action, manifests::Manifest};
 use serde::{Deserialize, Serialize};
@@ -30,7 +31,7 @@ fn get_cwd() -> String {
 }
 
 impl Action for RunCommand {
-    fn plan(&self, _: &Manifest, _: &Contexts) -> Vec<Step> {
+    fn plan(&self, _: &Manifest, _: &Contexts, _: &[Plugin]) -> Vec<Step> {
         use crate::atoms::command::Exec;
 
         vec![Step {
