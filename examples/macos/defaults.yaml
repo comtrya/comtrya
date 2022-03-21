@@ -1,0 +1,18 @@
+actions:
+  - action: macos.default
+    domain: com.apple.dock
+    key: orientation
+    kind: string
+    value: right
+
+  - action: macos.default
+    domain: com.apple.screencapture
+    key: include-date
+    kind: bool
+    value: "false"
+
+  - action: macos.default
+    domain: NSGlobalDomain
+    key: "NSTableViewDefaultSizeMode"
+    kind: int
+    value: "1"

@@ -2,6 +2,7 @@ mod command;
 mod directory;
 mod file;
 mod git;
+mod macos;
 mod package;
 
 use crate::contexts::{to_koto, Contexts};
@@ -14,6 +15,7 @@ use file::download::FileDownload;
 use file::link::FileLink;
 use git::GitClone;
 use koto::{Koto, KotoSettings};
+use macos::MacOSDefault;
 use package::install::PackageInstall;
 use serde::{Deserialize, Serialize};
 
@@ -128,6 +130,9 @@ pub enum Actions {
     #[serde(alias = "git.clone")]
     GitClone(ConditionalVariantAction<GitClone>),
 
+    #[serde(alias = "macos.default")]
+    MacOSDefault(ConditionalVariantAction<MacOSDefault>),
+
     #[serde(alias = "package.install", alias = "package.installed")]
     PackageInstall(ConditionalVariantAction<PackageInstall>),
 }
@@ -142,6 +147,7 @@ impl Actions {
             Actions::FileDownload(a) => a,
             Actions::FileLink(a) => a,
             Actions::GitClone(a) => a,
+            Actions::MacOSDefault(a) => a,
             Actions::PackageInstall(a) => a,
         }
     }
