@@ -1,4 +1,5 @@
 use crate::contexts::Contexts;
+use crate::plugins::Plugin;
 use crate::steps::Step;
 use crate::{actions::Action, manifests::Manifest};
 use serde::{Deserialize, Serialize};
@@ -12,13 +13,12 @@ pub struct GitClone {
 }
 
 impl Action for GitClone {
-    fn plan(&self, _: &Manifest, _: &Contexts) -> Vec<Step> {
+    fn plan(&self, _: &Manifest, _: &Contexts, _: &[Plugin]) -> Vec<Step> {
         vec![Step {
             atom: Box::new(crate::atoms::git::Clone {
                 repository: self.repository.clone(),
                 reference: self.reference.clone(),
                 directory: PathBuf::from(self.directory.clone()),
-                ..Default::default()
             }),
             initializers: vec![],
             finalizers: vec![],

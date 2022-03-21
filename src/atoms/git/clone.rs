@@ -17,7 +17,9 @@ impl std::fmt::Display for Clone {
             f,
             "GitClone {}#{} to {:?}",
             self.repository,
-            self.reference.clone().unwrap_or(String::from("main")),
+            self.reference
+                .clone()
+                .unwrap_or_else(|| String::from("main")),
             self.directory,
         )
     }
