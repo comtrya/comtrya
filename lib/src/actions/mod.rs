@@ -1,3 +1,4 @@
+mod binary;
 mod command;
 mod directory;
 mod file;
@@ -9,6 +10,7 @@ mod user;
 use crate::contexts::Contexts;
 use crate::manifests::Manifest;
 use crate::steps::Step;
+use binary::BinaryGitHub;
 use command::run::RunCommand;
 use directory::{DirectoryCopy, DirectoryCreate};
 use file::copy::FileCopy;
@@ -111,6 +113,14 @@ pub enum Actions {
     #[serde(rename = "file.link")]
     FileLink(ConditionalVariantAction<FileLink>),
 
+    #[serde(
+        rename = "binary.github",
+        alias = "binary.gh",
+        alias = "bin.github",
+        alias = "bin.gh"
+    )]
+    BinaryGitHub(ConditionalVariantAction<BinaryGitHub>),
+
     #[serde(rename = "git.clone")]
     GitClone(ConditionalVariantAction<GitClone>),
 
@@ -130,6 +140,7 @@ pub enum Actions {
 impl Actions {
     pub fn inner_ref(&self) -> &dyn Action {
         match self {
+            Actions::BinaryGitHub(a) => a,
             Actions::CommandRun(a) => a,
             Actions::DirectoryCopy(a) => a,
             Actions::DirectoryCreate(a) => a,
