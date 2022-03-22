@@ -1,6 +1,5 @@
 actions:
   - action: binary.github
-    name: comtrya
+    name: pulumi
     directory: /tmp
-    repository: comtrya/comtrya
-    version: v0.7.4
+    repository: pulumi/pulumi

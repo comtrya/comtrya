@@ -1,5 +1,3 @@
-use std::path::PathBuf;
-
 use crate::actions::Action;
 use crate::atoms::file::Chmod;
 use crate::atoms::http::Download;
@@ -7,6 +5,7 @@ use crate::contexts::Contexts;
 use crate::manifests::Manifest;
 use crate::steps::Step;
 use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
 use tokio::runtime::Runtime;
 use tracing::error;
 
@@ -56,21 +55,38 @@ impl Action for BinaryGitHub {
         let asset: Option<GitHubAsset> = release.assets.into_iter().fold(None, |acc, asset| {
             let mut score = 0;
 
-            if asset
-                .name
-                .to_lowercase()
-                .contains(&std::env::consts::OS.to_lowercase())
-            {
-                score = score + 10;
-            }
+            let os = os_info::get();
+            let os_type = if os.os_type() == os_info::Type::Macos {
+                "darwin".to_string()
+            } else {
+                os.os_type().to_string()
+            };
 
-            if asset
-                .name
-                .to_lowercase()
-                .contains(&std::env::consts::ARCH.to_lowercase())
-            {
-                score = score + 20;
-            }
+            let simple_bitness = if os.bitness() == os_info::Bitness::X32 {
+                "32".to_string()
+            } else {
+                "64".to_string()
+            };
+
+            let simple_aarch = if std::env::consts::ARCH == "aarch64" {
+                "arm".to_string()
+            } else {
+                "unknown".to_string()
+            };
+
+            vec![
+                &std::env::consts::OS.to_lowercase(),
+                &os_type,
+                &std::env::consts::ARCH.to_lowercase(),
+                &simple_bitness,
+                &simple_aarch,
+            ]
+            .iter()
+            .for_each(|term| {
+                if asset.name.to_lowercase().contains(term.as_str()) {
+                    score += 1;
+                }
+            });
 
             match acc {
                 Some(ass) => {
@@ -98,7 +114,7 @@ impl Action for BinaryGitHub {
             }
         };
 
-        vec![
+        let steps = vec![
             Step {
                 atom: Box::new(Download {
                     url: asset.url,
@@ -115,6 +131,8 @@ impl Action for BinaryGitHub {
                 initializers: vec![],
                 finalizers: vec![],
             },
-        ]
+        ];
+
+        steps
     }
 }
