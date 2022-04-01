@@ -31,7 +31,7 @@ I've also tried Ansible, Chef, Puppet, mgmt, and probably anything else you're a
 
 ## Installing
 
-You'll find binaries over on the [releases page](https://github.com/rawkode/comtrya/releases/latest).
+You'll find binaries over on the [releases page](https://github.com/comtrya/comtrya/releases/latest).
 
 If you're not feeling risk-averse, you can use this one-liner:
 
