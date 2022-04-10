@@ -3,6 +3,8 @@ use self::aptitude::Aptitude;
 use crate::steps::Step;
 mod bsdpkg;
 use self::bsdpkg::BsdPkg;
+mod dnf;
+use self::dnf::Dnf;
 mod homebrew;
 use self::homebrew::Homebrew;
 mod pkgin;
@@ -22,6 +24,9 @@ pub enum PackageProviders {
     #[serde(alias = "bsdpkg")]
     BsdPkg,
 
+    #[serde(alias = "dnf", alias = "yum")]
+    Dnf,
+
     #[serde(alias = "homebrew", alias = "brew")]
     Homebrew,
 
@@ -40,6 +45,7 @@ impl PackageProviders {
         match self {
             PackageProviders::Aptitude => Box::new(Aptitude {}),
             PackageProviders::BsdPkg => Box::new(BsdPkg {}),
+            PackageProviders::Dnf => Box::new(Dnf {}),
             PackageProviders::Homebrew => Box::new(Homebrew {}),
             PackageProviders::Pkgin => Box::new(Pkgin {}),
             PackageProviders::Yay => Box::new(Yay {}),
@@ -68,6 +74,11 @@ impl Default for PackageProviders {
             // For some reason, the Rust image is showing as this and
             // its Debian based?
             os_info::Type::OracleLinux => PackageProviders::Aptitude,
+            // Red-Hat Variants
+            os_info::Type::Fedora => PackageProviders::Dnf,
+            os_info::Type::Redhat => PackageProviders::Dnf,
+            os_info::Type::RedHatEnterprise => PackageProviders::Dnf,
+            os_info::Type::CentOS => PackageProviders::Dnf,
             // Other
             os_info::Type::Macos => PackageProviders::Homebrew,
             os_info::Type::Windows => PackageProviders::Winget,
