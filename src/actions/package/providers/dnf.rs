@@ -101,57 +101,9 @@ impl PackageProvider for Dnf {
         steps
     }
 
-    // TODO: What is the desired state for query(): to be package.packages() or to write custom code for each manager(like yay.rs and homebrew.rs, but not aptitude.rs)?
-    // I tried to implement query() for dnf by getting all installed packages "dnf list installed | awk '{print $1}'" and checking if they existed in package.packages,
-    // but I'm not entirely sure what the goal of query() is so for now I've left it as package.packages() and left the commented out code below
     fn query(&self, package: &PackageVariant) -> Vec<String> {
         package.packages()
     }
-
-    // TODO: remove this commented out code, leaving here for now so reviewer can read
-    /*
-    fn query(&self, package: &PackageVariant) -> Vec<String> {
-        let requested_already_installed: HashSet<String> = String::from_utf8(
-            // dnf unfortunately doesn't have a package-name-only list option,
-            // so I used awk here to only print the package-names https://unix.stackexchange.com/questions/698003/how-to-tell-dnf-search-to-list-only-matches-in-the-pacakge-name-or-name-and-s
-            // TODO: should this below command be getting all installed packages?? Or is it meant to get dependencies of the package?
-            Command::new("dnf")
-                .args(vec![
-                    String::from("list"),
-                    String::from("installed"),
-                    // TODO: any better alternative to bash pipe or awk here?
-                    String::from("|"),
-                    String::from("awk"),
-                    String::from("'{print $1}'"),
-                ])
-                .output()
-                .unwrap()
-                .stdout,
-        )
-        .unwrap()
-        .sprint('\n')
-        .map(String::from)
-        .collect();
-
-        debug!(
-            "all requested installed packages: {:?}",
-            requested_already_installed
-        );
-        package
-            .packages()
-            .into_iter()
-            .filter(|p| {
-                if requested_already_installed.contains(p) {
-                    trace!("{}: already installed", p);
-                    false
-                } else {
-                    debug!("{}: doesn't appear to bew installed", p);
-                    true
-                }
-            })
-            .collect()
-    }
-    */
 
     fn install(&self, package: &PackageVariant) -> Vec<Step> {
         vec![Step {
@@ -164,7 +116,6 @@ impl PackageProvider for Dnf {
                 ]
                 .into_iter()
                 .chain(package.extra_args.clone())
-                // TODO: OK to call self.query(package) directly here?
                 .chain(self.query(package))
                 .collect(),
                 privileged: true,
@@ -179,8 +130,6 @@ impl PackageProvider for Dnf {
 #[cfg(test)]
 mod test {
     use super::*;
-
-    // TODO: Same as aptitude.rs, weak tests that should be updated in future
 
     #[test]
     fn test_add_repository_simple() {
