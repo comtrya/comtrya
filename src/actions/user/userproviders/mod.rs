@@ -19,7 +19,7 @@ impl UserProviders {
     pub fn get_provider(self) -> Box<dyn UserProvider> {
         match self {
             UserProviders::FreeBSDUserProvider => Box::new(FreeBSDUserProvider {}),
-	    UserProviders::NoneUserProvider => Box::new(NoneUserProvider {}),
+            UserProviders::NoneUserProvider => Box::new(NoneUserProvider {}),
         }
     }
 }
@@ -29,11 +29,10 @@ impl Default for UserProviders {
         let info = os_info::get();
 
         match info.os_type() {
-	    // BSD Operating systems
-            os_info::Type::FreeBSD=> UserProviders::FreeBSDUserProvider,
-	    _ => UserProviders::NoneUserProvider,
-
-        //     _ => panic!("Sorry, but we don't have a default provider for {} OS. Please be explicit when requesting a package installation with `provider: XYZ`.", info.os_type()),
+            // BSD Operating systems
+            os_info::Type::FreeBSD => UserProviders::FreeBSDUserProvider,
+            _ => UserProviders::NoneUserProvider,
+            //     _ => panic!("Sorry, but we don't have a default provider for {} OS. Please be explicit when requesting a package installation with `provider: XYZ`.", info.os_type()),
         }
     }
 }

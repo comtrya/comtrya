@@ -24,25 +24,6 @@ impl Action for UserAdd {
 
         let mut atoms: Vec<Step> = vec![];
 
-        // If the provider isn't available, see if we can bootstrap it
-        // if !provider.available() {
-        //     if provider.bootstrap().is_empty() {
-        //         error!(
-        //             "User Provider, {}, isn't available. Skipping action",
-        //             provider.name()
-        //         );
-        //         return vec![];
-        //     }
-
-        //     atoms.append(&mut provider.bootstrap());
-        // }
-
-        // if let Some(ref _repo) = variant.repository {
-        //     if !provider.has_repository(&variant) {
-        //         atoms.append(&mut provider.add_repository(&variant));
-        //     }
-        // }
-
         atoms.append(&mut provider.add_user(&variant));
 
         span.exit();
@@ -50,40 +31,3 @@ impl Action for UserAdd {
         atoms
     }
 }
-
-// #[cfg(test)]
-// mod tests {
-//     use crate::actions::Actions;
-
-//     #[test]
-//     fn it_can_be_deserialized() {
-//         let yaml = r#"
-// - action: package.install
-//   name: curl
-
-// - action: package.install
-//   list:
-//     - bash
-// "#;
-
-//         let mut actions: Vec<Actions> = serde_yaml::from_str(yaml).unwrap();
-
-//         match actions.pop() {
-//             Some(Actions::UserAdd(action)) => {
-//                 assert_eq!(vec!["bash"], action.action.list);
-//             }
-//             _ => {
-//                 panic!("UserAdd didn't deserialize to the correct type");
-//             }
-//         };
-
-//         match actions.pop() {
-//             Some(Actions::UserAdd(action)) => {
-//                 assert_eq!("curl", action.action.name.unwrap());
-//             }
-//             _ => {
-//                 panic!("UserAdd didn't deserialize to the correct type");
-//             }
-//         };
-//     }
-// }
