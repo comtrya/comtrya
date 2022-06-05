@@ -1,0 +1,6 @@
+actions:
+  - action: user.add
+    username: test
+    shell: sh
+    home_dir: /home/test
+    
