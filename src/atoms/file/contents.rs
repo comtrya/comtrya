@@ -5,7 +5,7 @@ use tracing::error;
 
 pub struct SetContents {
     pub path: PathBuf,
-    pub contents: String,
+    pub contents: Vec<u8>,
 }
 
 impl FileAtom for SetContents {
@@ -18,9 +18,8 @@ impl std::fmt::Display for SetContents {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "The file {} contents needs to be set to {}",
+            "The file {} contents need to be set",
             self.path.to_str().unwrap(),
-            self.contents,
         )
     }
 }
@@ -33,7 +32,7 @@ impl Atom for SetContents {
             return true;
         }
 
-        let contents = match std::fs::read_to_string(&self.path) {
+        let contents = match std::fs::read(&self.path) {
             Ok(contents) => contents,
             Err(error) => {
                 error!(
@@ -71,14 +70,14 @@ mod tests {
 
         let file_contents = SetContents {
             path: file.path().to_path_buf(),
-            contents: String::from(""),
+            contents: String::from("").into_bytes(),
         };
 
         assert_eq!(false, file_contents.plan());
 
         let mut file_contents = SetContents {
             path: file.path().to_path_buf(),
-            contents: String::from("Hello, world!"),
+            contents: String::from("Hello, world!").into_bytes(),
         };
 
         assert_eq!(true, file_contents.plan());

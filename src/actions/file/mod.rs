@@ -22,11 +22,11 @@ pub trait FileAction: Action {
             .to_path_buf()
     }
 
-    fn load(&self, manifest: &Manifest, path: &str) -> Result<String> {
+    fn load(&self, manifest: &Manifest, path: &str) -> Result<Vec<u8>> {
         use std::io::ErrorKind;
         let file_path = manifest.root_dir.clone().unwrap().join("files").join(path);
 
-        std::fs::read_to_string(file_path.clone()).map_err(|e| match e.kind() {
+        std::fs::read(file_path.clone()).map_err(|e| match e.kind() {
             ErrorKind::NotFound => anyhow!(
                 "Failed because {} was not found",
                 file_path.to_string_lossy()
