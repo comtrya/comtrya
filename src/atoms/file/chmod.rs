@@ -17,7 +17,7 @@ impl std::fmt::Display for Chmod {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "The permissions on {} need to be set to {}",
+            "The permissions on {} need to be set to {:o}",
             self.path.to_str().unwrap(),
             self.mode
         )

@@ -28,3 +28,8 @@ actions:
   - action: file.copy
     from: comtrya.jpg
     to: /tmp/comtrya.jpg
+
+  - action: file.copy
+    from: comtrya.jpg
+    chmod: "0500"
+    to: /tmp/comtrya2.jpg
