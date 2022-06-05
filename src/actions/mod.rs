@@ -4,6 +4,7 @@ mod file;
 mod git;
 mod macos;
 mod package;
+mod user;
 
 use crate::contexts::{to_koto, Contexts};
 use crate::manifests::Manifest;
@@ -17,6 +18,7 @@ use git::GitClone;
 use koto::{Koto, KotoSettings};
 use macos::MacOSDefault;
 use package::install::PackageInstall;
+use user::add::UserAdd;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
@@ -135,6 +137,9 @@ pub enum Actions {
 
     #[serde(alias = "package.install", alias = "package.installed")]
     PackageInstall(ConditionalVariantAction<PackageInstall>),
+
+    #[serde(alias="user.add")]
+    UserAdd(ConditionalVariantAction<UserAdd>),
 }
 
 impl Actions {
@@ -149,6 +154,7 @@ impl Actions {
             Actions::GitClone(a) => a,
             Actions::MacOSDefault(a) => a,
             Actions::PackageInstall(a) => a,
+	    Actions::UserAdd(a) => a,
         }
     }
 }
