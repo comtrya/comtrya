@@ -1,9 +1,9 @@
 use super::FileAction;
+use super::{default_chmod, from_octal};
 use crate::manifests::Manifest;
 use crate::steps::Step;
 use crate::{actions::Action, contexts::Contexts};
-use anyhow::Result;
-use serde::{de::Error, Deserialize, Deserializer, Serialize};
+use serde::{Deserialize, Serialize};
 use std::{path::PathBuf, u32};
 
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
@@ -16,18 +16,6 @@ pub struct FileDownload {
 
     #[serde(default = "default_template")]
     pub template: bool,
-}
-
-fn from_octal<'de, D>(deserializer: D) -> Result<u32, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let chmod: u32 = Deserialize::deserialize(deserializer)?;
-    u32::from_str_radix(&chmod.to_string(), 8).map_err(D::Error::custom)
-}
-
-fn default_chmod() -> u32 {
-    0o644
 }
 
 fn default_template() -> bool {

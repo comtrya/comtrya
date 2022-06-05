@@ -1,11 +1,11 @@
 use super::FileAction;
+use super::{default_chmod, from_octal};
 use crate::atoms::file::Decrypt;
 use crate::manifests::Manifest;
 use crate::steps::Step;
 use crate::tera_functions::register_functions;
 use crate::{actions::Action, contexts::to_tera};
-use anyhow::Result;
-use serde::{de::Error, Deserialize, Deserializer, Serialize};
+use serde::{Deserialize, Serialize};
 use std::error::Error as StdError;
 use std::{path::PathBuf, u32};
 use tera::Tera;
@@ -23,18 +23,6 @@ pub struct FileCopy {
     pub template: bool,
 
     pub passphrase: Option<String>,
-}
-
-fn from_octal<'de, D>(deserializer: D) -> Result<u32, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let chmod: u32 = Deserialize::deserialize(deserializer)?;
-    u32::from_str_radix(&chmod.to_string(), 8).map_err(D::Error::custom)
-}
-
-fn default_chmod() -> u32 {
-    0o644
 }
 
 fn default_template() -> bool {
@@ -151,6 +139,7 @@ mod tests {
 - action: file.copy
   from: a
   to: b
+  chmod: "0777"
 "#;
 
         let mut actions: Vec<Actions> = serde_yaml::from_str(yaml).unwrap();
@@ -159,6 +148,7 @@ mod tests {
             Some(Actions::FileCopy(action)) => {
                 assert_eq!("a", action.action.from);
                 assert_eq!("b", action.action.to);
+                assert_eq!(0o777, action.action.chmod);
             }
             _ => {
                 panic!("FileCopy didn't deserialize to the correct type");

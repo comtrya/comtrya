@@ -6,6 +6,7 @@ use crate::actions::Action;
 use crate::manifests::Manifest;
 use anyhow::{anyhow, Result};
 use normpath::PathExt;
+use serde::{de::Error, Deserialize, Deserializer};
 use std::path::PathBuf;
 
 pub trait FileAction: Action {
@@ -34,4 +35,16 @@ pub trait FileAction: Action {
             _ => anyhow!("Failed because {}", e.to_string()),
         })
     }
+}
+
+fn from_octal<'de, D>(deserializer: D) -> Result<u32, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let chmod = String::deserialize(deserializer)?;
+    u32::from_str_radix(&chmod, 8).map_err(D::Error::custom)
+}
+
+fn default_chmod() -> u32 {
+    0o644
 }
