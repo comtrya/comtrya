@@ -24,3 +24,7 @@ actions:
     from: encrypted-file
     to: /tmp/some-decrypted-file-3
     passphrase: '{{ get_env(name="AGE_PASSPHRASE") }}'
+
+  - action: file.copy
+    from: comtrya.jpg
+    to: /tmp/comtrya.jpg

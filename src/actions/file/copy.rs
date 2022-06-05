@@ -53,7 +53,9 @@ impl Action for FileCopy {
                     let mut tera = Tera::default();
                     register_functions(&mut tera);
 
-                    match tera.render_str(contents.as_str(), &to_tera(context)) {
+                    let content_as_str = std::str::from_utf8(&contents).unwrap();
+
+                    match tera.render_str(content_as_str, &to_tera(context)) {
                         Ok(rendered) => rendered,
                         Err(err) => {
                             match err.source() {
@@ -71,6 +73,8 @@ impl Action for FileCopy {
                             return vec![];
                         }
                     }
+                    .as_bytes()
+                    .to_vec()
                 } else {
                     contents
                 }
@@ -116,7 +120,7 @@ impl Action for FileCopy {
         if let Some(passphrase) = self.passphrase.to_owned() {
             steps.push(Step {
                 atom: Box::new(Decrypt {
-                    encrypted_content: contents.into_bytes(),
+                    encrypted_content: contents,
                     path,
                     passphrase,
                 }),
