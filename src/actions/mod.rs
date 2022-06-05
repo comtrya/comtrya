@@ -18,8 +18,8 @@ use git::GitClone;
 use koto::{Koto, KotoSettings};
 use macos::MacOSDefault;
 use package::install::PackageInstall;
-use user::add::UserAdd;
 use serde::{Deserialize, Serialize};
+use user::add::UserAdd;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
 pub struct ConditionalVariantAction<T> {
@@ -138,7 +138,7 @@ pub enum Actions {
     #[serde(alias = "package.install", alias = "package.installed")]
     PackageInstall(ConditionalVariantAction<PackageInstall>),
 
-    #[serde(alias="user.add")]
+    #[serde(alias = "user.add")]
     UserAdd(ConditionalVariantAction<UserAdd>),
 }
 
@@ -154,7 +154,7 @@ impl Actions {
             Actions::GitClone(a) => a,
             Actions::MacOSDefault(a) => a,
             Actions::PackageInstall(a) => a,
-	    Actions::UserAdd(a) => a,
+            Actions::UserAdd(a) => a,
         }
     }
 }
