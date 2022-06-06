@@ -18,7 +18,6 @@ impl Action for GitClone {
                 repository: self.repository.clone(),
                 reference: self.reference.clone(),
                 directory: PathBuf::from(self.directory.clone()),
-                ..Default::default()
             }),
             initializers: vec![],
             finalizers: vec![],
