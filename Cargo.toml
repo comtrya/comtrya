@@ -2,7 +2,7 @@
 name = "comtrya"
 version = "0.7.4"
 authors = ["David McKay <david@rawkode.dev>"]
-edition = "2018"
+edition = "2021"
 license = "MIT"
 description = "A tool to simplify reprovisioning a fresh OS. Installs packages and manages dotfiles."
 
