@@ -38,7 +38,7 @@ actions:
     .create_in(&path)
     .expect("should have create test directories");
 
-    let assert = cd(path).run("comtrya directory/copy/main.yaml --dry-run --no-color");
+    let assert = cd(path).run("comtrya --no-color -d ./directory apply -m copy --dry-run");
 
     assert.success();
 }

@@ -142,7 +142,7 @@ mod test {
 
     #[test]
     fn env_context() -> anyhow::Result<()> {
-        let mut variables = BTreeMap::new();
+        let variables = BTreeMap::new();
 
         let config = Config {
             manifest_paths: vec![],

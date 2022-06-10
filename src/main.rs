@@ -55,14 +55,14 @@ pub(crate) fn execute(runtime: Runtime) -> anyhow::Result<()> {
     }
 }
 
-fn configure_subscriber(opt: &GlobalArgs) -> impl Subscriber {
+fn configure_subscriber(args: &GlobalArgs) -> impl Subscriber {
     let builder = FmtSubscriber::builder()
         .with_max_level(Level::INFO)
-        .with_ansi(!opt.no_color)
+        .with_ansi(!args.no_color)
         .with_target(false)
         .without_time();
 
-    match opt.verbose {
+    match args.verbose {
         0 => builder,
         1 => builder.with_max_level(Level::DEBUG),
         2 => builder.with_max_level(Level::TRACE),
