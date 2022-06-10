@@ -1,10 +1,10 @@
-use crate::{contexts::build_contexts, manifests::load};
+use crate::manifests::load;
+use crate::manifests::Manifest;
+use crate::Runtime;
 use petgraph::{visit::DfsPostOrder, Graph};
 use std::{collections::HashMap, ops::Deref};
 use structopt::StructOpt;
 use tracing::{debug, error, info, span, trace};
-
-use crate::{config::Config, manifests::Manifest};
 
 #[derive(Clone, Debug, StructOpt)]
 pub(crate) struct Apply {
@@ -17,16 +17,17 @@ pub(crate) struct Apply {
     dry_run: bool,
 }
 
-pub(crate) fn execute(args: Apply, config: Config) -> anyhow::Result<()> {
-    let manifest_path = match crate::manifests::resolve(config.manifest_paths.first().unwrap()) {
-        Some(path) => path,
-        None => {
-            return Err(anyhow::anyhow!(
-                "Manifest location, {:?}, could be resolved",
-                config.manifest_paths.first().unwrap()
-            ))
-        }
-    };
+pub(crate) fn execute(args: &Apply, runtime: &Runtime) -> anyhow::Result<()> {
+    let manifest_path =
+        match crate::manifests::resolve(runtime.config.manifest_paths.first().unwrap()) {
+            Some(path) => path,
+            None => {
+                return Err(anyhow::anyhow!(
+                    "Manifest location, {:?}, could be resolved",
+                    runtime.config.manifest_paths.first().unwrap()
+                ))
+            }
+        };
 
     trace!(
         manifest_path = manifest_path.to_str().unwrap(),
@@ -40,7 +41,7 @@ pub(crate) fn execute(args: Apply, config: Config) -> anyhow::Result<()> {
         OS = os_info::get().os_type().to_string().as_str()
     );
 
-    let contexts = build_contexts(&config);
+    let contexts = &runtime.contexts;
 
     let manifests = load(manifest_path, &contexts);
 

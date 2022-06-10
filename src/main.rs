@@ -1,16 +1,10 @@
-use anyhow::anyhow;
-use ignore::WalkBuilder;
-use manifests::Manifest;
-use petgraph::prelude::*;
-use std::error::Error;
-use std::fs::canonicalize;
-use std::{collections::HashMap, ops::Deref};
-use tera::Tera;
-use tracing::{debug, error, info, span, trace, Level, Subscriber};
-use tracing_subscriber::FmtSubscriber;
-
 use crate::config::load_config;
-use crate::contexts::{build_contexts, to_tera};
+use crate::contexts::build_contexts;
+use config::Config;
+use contexts::Contexts;
+use structopt::StructOpt;
+use tracing::{error, Level, Subscriber};
+use tracing_subscriber::FmtSubscriber;
 
 mod actions;
 mod atoms;
@@ -21,12 +15,47 @@ mod manifests;
 mod steps;
 mod tera_functions;
 
-use crate::manifests::get_manifest_name;
-use crate::tera_functions::register_functions;
+#[derive(Clone, Debug, structopt::StructOpt)]
+#[structopt(name = "comtrya")]
+pub(crate) struct GlobalArgs {
+    /// Directory
+    #[structopt(short = "d", long)]
+    pub manifest_directory: Option<String>,
 
-use commands::Args;
+    /// Disable color printing
+    #[structopt(long = "no-color")]
+    pub no_color: bool,
 
-fn configure_subscriber(opt: &Args) -> impl Subscriber {
+    /// Debug & tracing mode (-v, -vv)
+    #[structopt(short = "v", long = "verbose", parse(from_occurrences))]
+    pub verbose: u8,
+
+    #[structopt(subcommand)]
+    pub command: Commands,
+}
+
+#[derive(Clone, Debug, StructOpt)]
+pub(crate) enum Commands {
+    #[structopt(aliases = &["do", "run"])]
+    Apply(commands::Apply),
+    Version(commands::Version),
+}
+
+#[derive(Clone, Debug)]
+pub(crate) struct Runtime {
+    pub(crate) args: GlobalArgs,
+    pub(crate) config: Config,
+    pub(crate) contexts: Contexts,
+}
+
+pub(crate) fn execute(runtime: Runtime) -> anyhow::Result<()> {
+    match &runtime.args.command {
+        Commands::Apply(a) => commands::apply(a, &runtime),
+        Commands::Version(a) => commands::version(a, &runtime),
+    }
+}
+
+fn configure_subscriber(opt: &GlobalArgs) -> impl Subscriber {
     let builder = FmtSubscriber::builder()
         .with_max_level(Level::INFO)
         .with_ansi(!opt.no_color)
@@ -43,7 +72,7 @@ fn configure_subscriber(opt: &Args) -> impl Subscriber {
 }
 
 #[paw::main]
-fn main(args: Args) -> anyhow::Result<()> {
+fn main(args: GlobalArgs) -> anyhow::Result<()> {
     let subscriber = configure_subscriber(&args);
 
     tracing::subscriber::set_global_default(subscriber).expect("setting default subscriber failed");
@@ -56,15 +85,14 @@ fn main(args: Args) -> anyhow::Result<()> {
         }
     };
 
-    let manifest_path = match config.manifest_paths.first() {
-        Some(l) => l,
-        None => {
-            return Err(anyhow!("No manifest location provided"));
-        }
-    };
-
     // Run Context Providers
     let contexts = build_contexts(&config);
 
-    commands::execute(args, config)
+    let runtime = Runtime {
+        args: args,
+        config: config,
+        contexts: contexts,
+    };
+
+    execute(runtime)
 }
