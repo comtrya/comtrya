@@ -18,8 +18,6 @@ pub(crate) struct Apply {
 }
 
 pub(crate) fn execute(args: &Apply, runtime: &Runtime) -> anyhow::Result<()> {
-    println!("{:?}", runtime.config);
-
     let manifest_path =
         match crate::manifests::resolve(runtime.config.manifest_paths.first().unwrap()) {
             Some(path) => path,

@@ -239,7 +239,6 @@ mod tests {
             let path = source_dir.clone().join(format!("{}.txt", i));
             let mut file = std::fs::File::create(path).unwrap();
             writeln!(file, "Random {}", i).unwrap();
-            println!("Done {}", i);
         }
 
         let manifest: Manifest = Manifest {
