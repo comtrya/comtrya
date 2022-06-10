@@ -21,6 +21,7 @@ koto_runtime = "0.10.0"
 koto_yaml = "0.10.0"
 normpath = "0.3.2"
 os_info = "3.4.0"
+paw = "1.0"
 petgraph = "0.6.2"
 rand = "0.8.5"
 regex = "1"
@@ -31,7 +32,7 @@ reqwest = { version = "0.11.10", default-features = false, features = [
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0.81"
 serde_yaml = "0.8.24"
-structopt = "0.3"
+structopt = { version = "0.3", features = ["paw"] }
 tera = "1"
 tracing = "0.1.34"
 tracing-subscriber = "0.3.11"
