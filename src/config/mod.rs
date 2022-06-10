@@ -6,18 +6,19 @@ use std::{collections::BTreeMap, path::PathBuf};
 #[derive(Debug, Default, Deserialize, Serialize)]
 pub struct Config {
     #[serde(default)]
-    pub manifests: Vec<String>,
+    pub manifest_paths: Vec<String>,
 
-    pub variables: Option<BTreeMap<String, String>>,
+    #[serde(default)]
+    pub variables: BTreeMap<String, String>,
 }
 
 /// Check the current working directory for a `Comtrya.yaml` file
 /// If that doesn't exist, we'll check the platforms config directory
 /// for comtrya/Comtrya.yaml
-pub(crate) fn load_config(opts: Args) -> Result<Config> {
-    let mut config = match find_configs() {
-        Some(file) => {
-            let yaml = std::fs::read_to_string(file)
+pub(crate) fn load_config(args: Args) -> Result<Config> {
+    let config = match find_configs() {
+        Some(config_path) => {
+            let yaml = std::fs::read_to_string(&config_path)
                 .with_context(|| "Found Comtrya.yaml, but was unable to read the contents.")?;
 
             let mut config = match yaml.trim().is_empty() {
@@ -30,8 +31,11 @@ pub(crate) fn load_config(opts: Args) -> Result<Config> {
             };
 
             // The existence of the config file allows an implicit manifests location of .
-            if config.manifests.is_empty() {
-                config.manifests.push(String::from("."));
+            if config.manifest_paths.is_empty() {
+                config.manifest_paths.push(match args.manifest_directory {
+                    Some(path) => path,
+                    None => config_path.parent().unwrap().display().to_string(),
+                });
             }
 
             config
