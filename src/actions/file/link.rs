@@ -123,6 +123,8 @@ impl Action for FileLink {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::BTreeMap;
+
     use crate::{
         actions::{Action, Actions},
         config::Config,
@@ -191,8 +193,8 @@ mod tests {
         };
 
         let config = Config {
-            manifests: vec![],
-            variables: None,
+            manifest_paths: vec![],
+            variables: BTreeMap::new(),
         };
 
         let contexts = build_contexts(&config);
@@ -249,8 +251,8 @@ mod tests {
         };
 
         let config = Config {
-            manifests: vec![],
-            variables: None,
+            manifest_paths: vec![],
+            variables: BTreeMap::new(),
         };
 
         let contexts = build_contexts(&config);

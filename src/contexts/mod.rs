@@ -117,8 +117,8 @@ mod test {
         variables.insert("ship_captain".to_string(), "Thor".to_string());
 
         let config = Config {
-            manifests: vec![],
-            variables: Some(variables),
+            manifest_paths: vec![],
+            variables: variables,
         };
 
         let contexts = build_contexts(&config);
@@ -142,9 +142,11 @@ mod test {
 
     #[test]
     fn env_context() -> anyhow::Result<()> {
+        let mut variables = BTreeMap::new();
+
         let config = Config {
-            manifests: vec![],
-            variables: None,
+            manifest_paths: vec![],
+            variables: variables,
         };
 
         std::env::set_var("ASCENDED_NAME", "Morgan Le Fay");
