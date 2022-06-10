@@ -1,0 +1,8 @@
+[package]
+name = "comtrya-lib"
+version = "0.7.4"
+authors = ["David McKay <david@rawkode.dev>"]
+edition = "2021"
+license = "MIT"
+description = "Contains the interfaces for comtrya plugins"
+
