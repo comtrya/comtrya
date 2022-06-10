@@ -1,9 +1,9 @@
-use super::Args;
+use super::GlobalArgs;
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, path::PathBuf};
 
-#[derive(Debug, Default, Deserialize, Serialize)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct Config {
     #[serde(default)]
     pub manifest_paths: Vec<String>,
@@ -15,7 +15,7 @@ pub struct Config {
 /// Check the current working directory for a `Comtrya.yaml` file
 /// If that doesn't exist, we'll check the platforms config directory
 /// for comtrya/Comtrya.yaml
-pub(crate) fn load_config(args: Args) -> Result<Config> {
+pub(crate) fn load_config(args: GlobalArgs) -> Result<Config> {
     let config = match find_configs() {
         Some(config_path) => {
             let yaml = std::fs::read_to_string(&config_path)
