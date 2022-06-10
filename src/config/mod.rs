@@ -1,4 +1,4 @@
-use super::Opt;
+use super::Args;
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, path::PathBuf};
@@ -14,7 +14,7 @@ pub struct Config {
 /// Check the current working directory for a `Comtrya.yaml` file
 /// If that doesn't exist, we'll check the platforms config directory
 /// for comtrya/Comtrya.yaml
-pub fn load_config(opts: Opt) -> Result<Config> {
+pub(crate) fn load_config(opts: Args) -> Result<Config> {
     let mut config = match find_configs() {
         Some(file) => {
             let yaml = std::fs::read_to_string(file)
@@ -42,9 +42,9 @@ pub fn load_config(opts: Opt) -> Result<Config> {
         },
     };
 
-    if opts.manifest_location.is_some() {
-        config.manifests = vec![opts.manifest_location.unwrap()];
-    }
+    // if opts.manifest_location.is_some() {
+    //     config.manifests = vec![opts.manifest_location.unwrap()];
+    // }
 
     Ok(config)
 }
