@@ -1,7 +1,7 @@
 use super::GlobalArgs;
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
-use std::{collections::BTreeMap, path::PathBuf};
+use std::{collections::BTreeMap, path::PathBuf, vec};
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct Config {
@@ -32,23 +32,25 @@ pub(crate) fn load_config(args: GlobalArgs) -> Result<Config> {
 
             // The existence of the config file allows an implicit manifests location of .
             if config.manifest_paths.is_empty() {
-                config.manifest_paths.push(match args.manifest_directory {
-                    Some(path) => path,
-                    None => config_path.parent().unwrap().display().to_string(),
-                });
+                config
+                    .manifest_paths
+                    .push(config_path.parent().unwrap().display().to_string());
             }
 
             config
         }
 
-        None => Config {
-            ..Default::default()
+        None => match args.manifest_directory {
+            Some(path) => Config {
+                manifest_paths: vec![path],
+                ..Default::default()
+            },
+            None => Config {
+                manifest_paths: vec![String::from(".")],
+                ..Default::default()
+            },
         },
     };
-
-    // if opts.manifest_location.is_some() {
-    //     config.manifests = vec![opts.manifest_location.unwrap()];
-    // }
 
     Ok(config)
 }
