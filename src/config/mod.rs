@@ -1,23 +1,24 @@
-use super::Opt;
+use super::GlobalArgs;
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
-use std::{collections::BTreeMap, path::PathBuf};
+use std::{collections::BTreeMap, path::PathBuf, vec};
 
-#[derive(Debug, Default, Deserialize, Serialize)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct Config {
     #[serde(default)]
-    pub manifests: Vec<String>,
+    pub manifest_paths: Vec<String>,
 
-    pub variables: Option<BTreeMap<String, String>>,
+    #[serde(default)]
+    pub variables: BTreeMap<String, String>,
 }
 
 /// Check the current working directory for a `Comtrya.yaml` file
 /// If that doesn't exist, we'll check the platforms config directory
 /// for comtrya/Comtrya.yaml
-pub fn load_config(opts: Opt) -> Result<Config> {
-    let mut config = match find_configs() {
-        Some(file) => {
-            let yaml = std::fs::read_to_string(file)
+pub(crate) fn load_config(args: GlobalArgs) -> Result<Config> {
+    let config = match find_configs() {
+        Some(config_path) => {
+            let yaml = std::fs::read_to_string(&config_path)
                 .with_context(|| "Found Comtrya.yaml, but was unable to read the contents.")?;
 
             let mut config = match yaml.trim().is_empty() {
@@ -30,21 +31,26 @@ pub fn load_config(opts: Opt) -> Result<Config> {
             };
 
             // The existence of the config file allows an implicit manifests location of .
-            if config.manifests.is_empty() {
-                config.manifests.push(String::from("."));
+            if config.manifest_paths.is_empty() {
+                config
+                    .manifest_paths
+                    .push(config_path.parent().unwrap().display().to_string());
             }
 
             config
         }
 
-        None => Config {
-            ..Default::default()
+        None => match args.manifest_directory {
+            Some(path) => Config {
+                manifest_paths: vec![path],
+                ..Default::default()
+            },
+            None => Config {
+                manifest_paths: vec![String::from(".")],
+                ..Default::default()
+            },
         },
     };
-
-    if opts.manifest_location.is_some() {
-        config.manifests = vec![opts.manifest_location.unwrap()];
-    }
 
     Ok(config)
 }

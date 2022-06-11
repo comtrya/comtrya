@@ -123,6 +123,8 @@ impl Action for FileLink {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::BTreeMap;
+
     use crate::{
         actions::{Action, Actions},
         config::Config,
@@ -191,8 +193,8 @@ mod tests {
         };
 
         let config = Config {
-            manifests: vec![],
-            variables: None,
+            manifest_paths: vec![],
+            variables: BTreeMap::new(),
         };
 
         let contexts = build_contexts(&config);
@@ -237,7 +239,6 @@ mod tests {
             let path = source_dir.clone().join(format!("{}.txt", i));
             let mut file = std::fs::File::create(path).unwrap();
             writeln!(file, "Random {}", i).unwrap();
-            println!("Done {}", i);
         }
 
         let manifest: Manifest = Manifest {
@@ -249,8 +250,8 @@ mod tests {
         };
 
         let config = Config {
-            manifests: vec![],
-            variables: None,
+            manifest_paths: vec![],
+            variables: BTreeMap::new(),
         };
 
         let contexts = build_contexts(&config);

@@ -1,3 +1,5 @@
+mod load;
+pub(crate) use load::load;
 mod providers;
 pub use providers::register_providers;
 pub use providers::ManifestProvider;
@@ -6,6 +8,7 @@ use crate::actions::Actions;
 use petgraph::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
+use tracing::error;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Manifest {
@@ -23,6 +26,32 @@ pub struct Manifest {
 
     #[serde(skip)]
     pub dag_index: Option<NodeIndex<u32>>,
+}
+
+pub fn resolve(uri: &String) -> Option<PathBuf> {
+    let manifest_directory = register_providers()
+        .into_iter()
+        .filter(|provider| std::ops::Deref::deref(&provider).looks_familiar(uri))
+        .fold(None, |path, provider| {
+            if path.is_some() {
+                return path;
+            }
+
+            match provider.resolve(uri.as_str()) {
+                Ok(path) => Some(path),
+                Err(_) => None,
+            }
+        });
+
+    let manifest_directory = match manifest_directory {
+        Some(dir) => dir.canonicalize().unwrap(),
+        None => {
+            error!("Failed to find manifests at {}", &uri);
+            panic!();
+        }
+    };
+
+    Some(manifest_directory)
 }
 
 pub fn get_manifest_name(manifest_directory: &Path, location: &Path) -> String {
