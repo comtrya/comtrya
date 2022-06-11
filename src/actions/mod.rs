@@ -15,7 +15,7 @@ use file::download::FileDownload;
 use file::link::FileLink;
 use git::GitClone;
 use macos::MacOSDefault;
-use package::install::PackageInstall;
+use package::{PackageInstall, PackageRepository};
 use rhai::Engine;
 use serde::{Deserialize, Serialize};
 use tracing::error;
@@ -115,6 +115,9 @@ pub enum Actions {
 
     #[serde(alias = "package.install", alias = "package.installed")]
     PackageInstall(ConditionalVariantAction<PackageInstall>),
+
+    #[serde(alias = "package.repository", alias = "package.repo")]
+    PackageRepository(ConditionalVariantAction<PackageRepository>),
 }
 
 impl Actions {
@@ -129,6 +132,7 @@ impl Actions {
             Actions::GitClone(a) => a,
             Actions::MacOSDefault(a) => a,
             Actions::PackageInstall(a) => a,
+            Actions::PackageRepository(a) => a,
         }
     }
 }
