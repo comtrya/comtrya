@@ -44,17 +44,14 @@ If this doesn't work for your OS and architecture, please open an issue and we'l
 ## Usage
 
 ```shell
-# Run all manifests within a directory
-comtrya <directory with manifests>
+# Run all manifests within your current directory
+comtrya apply
 
 # --manifests, or -m, will run a subset of your manifests
-comtrya . -m one,two,three
+comtrya apply -m one,two,three
 
-# Show command usage
-comtrya --help
-
-# Prints version information
-comtrya --version
+# Run all manifests within a specified directory
+comtrya -d ./manifests apply
 ```
 
 ## What's Next?
@@ -75,10 +72,6 @@ Provisioned Files: 34
 ### Async DAG
 
 We're using [petgraph](https://github.com/petgraph/petgraph) to build out the graph, but we're not traversing it in a way that will allow us to concurrently execute manifests at the same depth. This is something I wish to sort out pretty soon.
-
-### Config
-
-TODO: Allow manifest directory and variables to be configured in a `Comtrya.yaml` file. This will allow for `comtrya` with no arguments to function, as in the initial versions.
 
 ### Package Provider Enhancements
 
