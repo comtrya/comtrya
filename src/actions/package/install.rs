@@ -37,12 +37,6 @@ impl Action for PackageInstall {
             atoms.append(&mut provider.bootstrap());
         }
 
-        if let Some(ref _repo) = variant.repository {
-            if !provider.has_repository(&variant) {
-                atoms.append(&mut provider.add_repository(&variant));
-            }
-        }
-
         atoms.append(&mut provider.install(&variant));
 
         span.exit();

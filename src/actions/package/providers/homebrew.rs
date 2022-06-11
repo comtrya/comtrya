@@ -1,4 +1,5 @@
 use super::PackageProvider;
+use crate::actions::package::repository::PackageRepository;
 use crate::steps::Step;
 use crate::{actions::package::PackageVariant, atoms::command::Exec};
 use serde::{Deserialize, Serialize};
@@ -29,20 +30,18 @@ impl PackageProvider for Homebrew {
         }), initializers: vec![], finalizers: vec![] },]
     }
 
-    fn has_repository(&self, _: &PackageVariant) -> bool {
+    fn has_repository(&self, _: &PackageRepository) -> bool {
         // Brew doesn't make it easy to check if the repository is already added
         // except by running `brew tap` and grepping.
         // Fortunately, adding an exist tap is pretty fast.
         false
     }
 
-    fn add_repository(&self, package: &PackageVariant) -> Vec<Step> {
-        let repository = package.repository.clone().unwrap();
-
+    fn add_repository(&self, repository: &PackageRepository) -> Vec<Step> {
         vec![Step {
             atom: Box::new(Exec {
                 command: String::from("brew"),
-                arguments: vec![String::from("tap"), repository],
+                arguments: vec![String::from("tap"), repository.name.clone()],
                 ..Default::default()
             }),
             initializers: vec![],
@@ -79,10 +78,6 @@ impl PackageProvider for Homebrew {
                     debug!("{}: doesn't appear to be installed", p);
                     true
                 }
-            })
-            .map(|p| match &package.repository {
-                Some(repository) => format!("{}/{}", repository, p),
-                None => p,
             })
             .collect()
     }

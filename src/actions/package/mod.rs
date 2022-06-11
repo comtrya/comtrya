@@ -1,5 +1,6 @@
 pub mod install;
 pub mod providers;
+mod repository;
 
 use providers::PackageProviders;
 use serde::{Deserialize, Serialize};
@@ -40,12 +41,6 @@ pub struct PackageVariant {
     provider: PackageProviders,
 
     #[serde(default)]
-    repository: Option<String>,
-
-    #[serde(default)]
-    key: Option<String>,
-
-    #[serde(default)]
     extra_args: Vec<String>,
 }
 
@@ -71,8 +66,6 @@ impl From<&Package> for PackageVariant {
                 name: package.name.clone(),
                 list: package.list.clone(),
                 provider: package.provider.clone(),
-                repository: package.repository.clone(),
-                key: package.key.clone(),
                 extra_args: package.extra_args.clone(),
             };
         };
@@ -85,8 +78,6 @@ impl From<&Package> for PackageVariant {
             name: package.name.clone(),
             list: package.list.clone(),
             provider: variant.provider.clone(),
-            repository: variant.repository.clone(),
-            key: package.key.clone(),
             extra_args: variant.extra_args.clone(),
         };
 
@@ -96,14 +87,6 @@ impl From<&Package> for PackageVariant {
 
         if !variant.list.is_empty() {
             package.list = variant.list.clone();
-        }
-
-        if variant.repository.is_some() {
-            package.repository = variant.repository.clone();
-        };
-
-        if variant.key.is_some() {
-            package.key = variant.key.clone();
         }
 
         // I've been torn about this, but here's my logic.

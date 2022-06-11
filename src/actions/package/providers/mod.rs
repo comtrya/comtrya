@@ -13,7 +13,7 @@ mod yay;
 use self::yay::Yay;
 mod winget;
 use self::winget::Winget;
-use super::PackageVariant;
+use super::{repository::PackageRepository, PackageVariant};
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -92,8 +92,8 @@ pub trait PackageProvider {
     fn name(&self) -> &str;
     fn available(&self) -> bool;
     fn bootstrap(&self) -> Vec<Step>;
-    fn has_repository(&self, package: &PackageVariant) -> bool;
-    fn add_repository(&self, package: &PackageVariant) -> Vec<Step>;
+    fn has_repository(&self, package: &PackageRepository) -> bool;
+    fn add_repository(&self, package: &PackageRepository) -> Vec<Step>;
     fn query(&self, package: &PackageVariant) -> Vec<String>;
     fn install(&self, package: &PackageVariant) -> Vec<Step>;
 }
