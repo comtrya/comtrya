@@ -2,6 +2,7 @@ use super::GlobalArgs;
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, path::PathBuf, vec};
+use tracing::{debug, instrument, trace};
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct Config {
@@ -15,6 +16,7 @@ pub struct Config {
 /// Check the current working directory for a `Comtrya.yaml` file
 /// If that doesn't exist, we'll check the platforms config directory
 /// for comtrya/Comtrya.yaml
+#[instrument(name = "load_config", level = "info", skip(args))]
 pub(crate) fn load_config(args: GlobalArgs) -> Result<Config> {
     let config = match find_configs() {
         Some(config_path) => {
@@ -61,8 +63,10 @@ fn find_configs() -> Option<PathBuf> {
         let local_config = cwd.join("Comtrya.yaml");
 
         if local_config.is_file() {
+            debug!("Comtrya.yaml found in current working directory");
             return Some(local_config);
         }
+        trace!("No Comtrya.yaml found in current working directory");
     }
 
     // Check platform's config dir
@@ -70,8 +74,10 @@ fn find_configs() -> Option<PathBuf> {
         let local_config = config_dir.join("Comtrya.yaml");
 
         if local_config.is_file() {
+            debug!("Comtrya.yaml found in users config directory");
             return Some(local_config);
         }
+        trace!("No Comtrya.yaml found in users config directory");
     };
 
     None

@@ -2,7 +2,7 @@ use rhai::Scope;
 use serde::{Deserialize, Serialize};
 use serde_yaml::Value;
 use std::collections::BTreeMap;
-use tracing::{debug, trace};
+use tracing::{debug, instrument};
 use user::UserContextProvider;
 
 use crate::{
@@ -31,9 +31,8 @@ pub enum Context {
     ListContext(String, Vec<String>),
 }
 
+#[instrument(skip(config))]
 pub fn build_contexts(config: &Config) -> Contexts {
-    trace!("Building Contexts");
-
     let mut contexts: Contexts = BTreeMap::new();
 
     let context_providers: Vec<Box<dyn ContextProvider>> = vec![

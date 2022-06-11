@@ -18,6 +18,7 @@ use macos::MacOSDefault;
 use package::{PackageInstall, PackageRepository};
 use rhai::Engine;
 use serde::{Deserialize, Serialize};
+use std::fmt::Display;
 use tracing::error;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
@@ -134,6 +135,24 @@ impl Actions {
             Actions::PackageInstall(a) => a,
             Actions::PackageRepository(a) => a,
         }
+    }
+}
+
+impl Display for Actions {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let name = match self {
+            Actions::CommandRun(_) => "command.run",
+            Actions::DirectoryCopy(_) => "directory.copy",
+            Actions::DirectoryCreate(_) => "directory.create",
+            Actions::FileCopy(_) => "file.copy",
+            Actions::FileDownload(_) => "file.download",
+            Actions::FileLink(_) => "file.link",
+            Actions::GitClone(_) => "git.clone",
+            Actions::MacOSDefault(_) => "macos.default",
+            Actions::PackageInstall(_) => "package.install",
+        };
+
+        write!(f, "{}", name)
     }
 }
 

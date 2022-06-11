@@ -4,7 +4,7 @@ use crate::Runtime;
 use petgraph::{visit::DfsPostOrder, Graph};
 use std::{collections::HashMap, ops::Deref};
 use structopt::StructOpt;
-use tracing::{debug, error, info, span, trace};
+use tracing::{debug, error, info, instrument, span, trace};
 
 #[derive(Clone, Debug, StructOpt)]
 pub(crate) struct Apply {
@@ -17,6 +17,7 @@ pub(crate) struct Apply {
     dry_run: bool,
 }
 
+#[instrument(skip(args, runtime))]
 pub(crate) fn execute(args: &Apply, runtime: &Runtime) -> anyhow::Result<()> {
     let manifest_path =
         match crate::manifests::resolve(runtime.config.manifest_paths.first().unwrap()) {
@@ -29,17 +30,7 @@ pub(crate) fn execute(args: &Apply, runtime: &Runtime) -> anyhow::Result<()> {
             }
         };
 
-    trace!(
-        manifest_path = manifest_path.to_str().unwrap(),
-        manifests = args.manifests.join(",").deref(),
-        message = "Comtrya execution started"
-    );
-
-    // This should be exposed as a context
-    debug!(
-        message = "OS Detected",
-        OS = os_info::get().os_type().to_string().as_str()
-    );
+    trace!(manifests = args.manifests.join(",").deref(),);
 
     let contexts = &runtime.contexts;
 
@@ -105,8 +96,6 @@ pub(crate) fn execute(args: &Apply, runtime: &Runtime) -> anyhow::Result<()> {
             .collect::<Vec<String>>()
     };
 
-    debug!(manifests = run_manifests.join(",").as_str());
-
     let dry_run = args.dry_run;
     run_manifests.iter().for_each(|m| {
         let start = if m.eq(&String::from("")) {
@@ -127,7 +116,7 @@ pub(crate) fn execute(args: &Apply, runtime: &Runtime) -> anyhow::Result<()> {
 
             let span_manifest = span!(
                 tracing::Level::INFO,
-                "manifest_run",
+                "",
                 manifest = m1.name.clone().unwrap().as_str()
             )
             .entered();
@@ -135,6 +124,8 @@ pub(crate) fn execute(args: &Apply, runtime: &Runtime) -> anyhow::Result<()> {
             let mut successful = true;
 
             m1.actions.iter().for_each(|action| {
+                let span_action = span!(tracing::Level::INFO, "", %action).entered();
+
                 let action = action.inner_ref();
 
                 let mut steps = action
@@ -145,13 +136,12 @@ pub(crate) fn execute(args: &Apply, runtime: &Runtime) -> anyhow::Result<()> {
                     .peekable();
 
                 if steps.peek().is_none() {
-                    info!("Nothing to be done to reconcile manifest");
+                    info!("nothing to be done to reconcile action");
+                    span_action.exit();
                     return;
                 }
 
                 for mut step in steps {
-                    info!("{}", step);
-
                     if dry_run {
                         continue;
                     }
@@ -171,6 +161,7 @@ pub(crate) fn execute(args: &Apply, runtime: &Runtime) -> anyhow::Result<()> {
                         break;
                     }
                 }
+                span_action.exit();
             });
 
             if dry_run {
