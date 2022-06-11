@@ -1,13 +1,12 @@
-use ignore::WalkBuilder;
-use std::{collections::HashMap, error::Error, fs::canonicalize, ops::Deref, path::PathBuf};
-use tera::Tera;
-use tracing::{error, span, trace};
-
 use crate::{
     contexts::{to_tera, Contexts},
     manifests::get_manifest_name,
     tera_functions::register_functions,
 };
+use ignore::WalkBuilder;
+use std::{collections::HashMap, error::Error, fs::canonicalize, ops::Deref, path::PathBuf};
+use tera::Tera;
+use tracing::{error, span};
 
 use super::Manifest;
 
@@ -65,16 +64,9 @@ pub(crate) fn load(manifest_path: PathBuf, contexts: &Contexts) -> HashMap<Strin
             )
             .entered();
 
-            trace!(manifest = filename.file_name().to_str().unwrap());
-
             let entry = canonicalize(filename.into_path()).unwrap();
-
-            trace!(absolute_path = entry.to_str().unwrap());
-
             let contents = std::fs::read_to_string(entry.clone()).unwrap();
             let template = contents.as_str();
-
-            trace!(template = template);
 
             let mut tera = Tera::default();
             register_functions(&mut tera);
@@ -93,8 +85,6 @@ pub(crate) fn load(manifest_path: PathBuf, contexts: &Contexts) -> HashMap<Strin
                 }
             };
 
-            trace!(rendered = yaml.as_str());
-
             let mut manifest: Manifest = match serde_yaml::from_str(yaml.deref()) {
                 Ok(manifest) => manifest,
                 Err(e) => {
@@ -108,8 +98,6 @@ pub(crate) fn load(manifest_path: PathBuf, contexts: &Contexts) -> HashMap<Strin
             let name = get_manifest_name(&manifest_path, &entry);
 
             manifest.root_dir = Some(entry.parent().unwrap().to_path_buf());
-
-            trace!(message = "Registered Manifest", manifest = name.as_str());
 
             manifest.name = Some(name.clone());
 
