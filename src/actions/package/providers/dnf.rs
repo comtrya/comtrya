@@ -1,6 +1,6 @@
 use super::PackageProvider;
 
-use crate::actions::package::PackageVariant;
+use crate::actions::package::{repository::PackageRepository, PackageVariant};
 use crate::atoms::command::Exec;
 use crate::steps::Step;
 use serde::{Deserialize, Serialize};
@@ -42,22 +42,20 @@ impl PackageProvider for Dnf {
         }]
     }
 
-    fn has_repository(&self, _package: &PackageVariant) -> bool {
+    fn has_repository(&self, _: &PackageRepository) -> bool {
         false
     }
 
-    fn add_repository(&self, package: &PackageVariant) -> Vec<Step> {
-        if package.repository.is_none() {
-            return vec![];
-        }
-
+    fn add_repository(&self, repository: &PackageRepository) -> Vec<Step> {
         let mut steps: Vec<Step> = vec![];
 
-        if package.key.is_some() {
+        if repository.key.is_some() {
+            let key = repository.clone().key.unwrap();
+
             steps.extend(vec![Step {
                 atom: Box::new(Exec {
                     command: String::from("rpm"),
-                    arguments: vec![String::from("--import"), package.key.clone().unwrap()],
+                    arguments: vec![String::from("--import"), key.url],
                     privileged: true,
                     ..Default::default()
                 }),
@@ -74,7 +72,7 @@ impl PackageProvider for Dnf {
                         String::from("config-manager"),
                         String::from("--assumeyes"),
                         String::from("--add-repo"),
-                        package.repository.clone().unwrap(),
+                        repository.name.clone(),
                     ],
                     privileged: true,
                     ..Default::default()
@@ -129,46 +127,34 @@ impl PackageProvider for Dnf {
 
 #[cfg(test)]
 mod test {
+    use crate::actions::package::{providers::PackageProviders, repository::RepositoryKey};
+
     use super::*;
 
     #[test]
-    fn test_add_repository_simple() {
-        let package = PackageVariant {
-            name: Some(String::from("test")),
-            ..Default::default()
-        };
-
-        let dnf = Dnf {};
-        let steps = dnf.add_repository(&package);
-
-        assert_eq!(steps.len(), 0);
-    }
-
-    #[test]
     fn test_add_repository_without_key() {
-        let package = PackageVariant {
-            name: Some(String::from("test")),
-            repository: Some(String::from("repository")),
-            ..Default::default()
-        };
-
         let dnf = Dnf {};
-        let steps = dnf.add_repository(&package);
+        let steps = dnf.add_repository(&PackageRepository {
+            name: String::from("test"),
+            provider: PackageProviders::Dnf,
+            ..Default::default()
+        });
 
         assert_eq!(steps.len(), 2);
     }
 
     #[test]
     fn test_repository_with_key() {
-        let package = PackageVariant {
-            name: Some(String::from("test")),
-            repository: Some(String::from("repository")),
-            key: Some(String::from("key")),
-            ..Default::default()
-        };
-
         let dnf = Dnf {};
-        let steps = dnf.add_repository(&package);
+        let steps = dnf.add_repository(&PackageRepository {
+            name: String::from("test"),
+            key: Some(RepositoryKey {
+                url: String::from("abc"),
+                ..Default::default()
+            }),
+            provider: PackageProviders::Dnf,
+            ..Default::default()
+        });
 
         assert_eq!(steps.len(), 3);
     }

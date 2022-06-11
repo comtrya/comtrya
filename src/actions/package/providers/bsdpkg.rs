@@ -1,4 +1,5 @@
 use super::PackageProvider;
+use crate::actions::package::repository::PackageRepository;
 use crate::steps::finalizers::FlowControl::StopIf;
 use crate::steps::finalizers::OutputContains;
 use crate::steps::Step;
@@ -46,11 +47,11 @@ impl PackageProvider for BsdPkg {
         }]
     }
 
-    fn has_repository(&self, _package: &PackageVariant) -> bool {
+    fn has_repository(&self, _: &PackageRepository) -> bool {
         false
     }
 
-    fn add_repository(&self, _package: &PackageVariant) -> Vec<Step> {
+    fn add_repository(&self, _: &PackageRepository) -> Vec<Step> {
         vec![]
     }
 

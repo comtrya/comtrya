@@ -1,8 +1,9 @@
 use super::PackageProvider;
-use crate::actions::package::PackageVariant;
+use crate::actions::package::{repository::PackageRepository, PackageVariant};
 use crate::atoms::command::Exec;
 use crate::steps::Step;
 use serde::{Deserialize, Serialize};
+use sha256::digest;
 use tracing::warn;
 use which::which;
 
@@ -53,25 +54,27 @@ impl PackageProvider for Aptitude {
         }]
     }
 
-    fn has_repository(&self, _package: &PackageVariant) -> bool {
+    fn has_repository(&self, _: &PackageRepository) -> bool {
         false
     }
 
-    fn add_repository(&self, package: &PackageVariant) -> Vec<Step> {
-        if package.repository.is_none() {
-            return vec![];
-        }
-
+    fn add_repository(&self, repository: &PackageRepository) -> Vec<Step> {
         let mut steps: Vec<Step> = vec![];
 
-        if package.key.is_some() {
+        let mut signed_by = String::from("");
+
+        if repository.key.is_some() {
+            let key = repository.clone().key.unwrap();
+
+            let key_name = key.name.unwrap_or(digest(&key.url));
+            let key_path = format!("/usr/sharekeyrings/{}.asc", key_name);
+
+            signed_by = format!("signed-by={}", key_path);
+
             steps.push(Step {
                 atom: Box::new(Exec {
-                    command: String::from("bash"),
-                    arguments: vec![
-                        String::from("-c"),
-                        format!("curl {} | apt-key add -", package.key.clone().unwrap()),
-                    ],
+                    command: String::from("curl"),
+                    arguments: vec![String::from("-o"), key_path, key.url],
                     environment: self.env(),
                     privileged: true,
                     ..Default::default()
@@ -81,11 +84,19 @@ impl PackageProvider for Aptitude {
             });
         }
 
+        //sudo apt-add-repository "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/<myrepository>-archive-keyring.gpg] https://repository.example.com/debian/ $(lsb_release -cs) stable main "
         steps.extend(vec![
             Step {
                 atom: Box::new(Exec {
                     command: String::from("apt-add-repository"),
-                    arguments: vec![String::from("-y"), package.repository.clone().unwrap()],
+                    arguments: vec![
+                        String::from("-y"),
+                        format!(
+                            "deb [arch=$(dpkg --print-architecture) {}] {}",
+                            signed_by,
+                            repository.name.clone()
+                        ),
+                    ],
                     environment: self.env(),
                     privileged: true,
                     ..Default::default()
@@ -134,6 +145,8 @@ impl PackageProvider for Aptitude {
 
 #[cfg(test)]
 mod test {
+    use crate::actions::package::repository::RepositoryKey;
+
     use super::*;
 
     // These tests are really weak at the moment, but that's because I'm not
@@ -141,43 +154,43 @@ mod test {
     // TODO: Learn how to fix this
 
     #[test]
-    fn test_add_repository_simple() {
-        let package = PackageVariant {
-            name: Some(String::from("test")),
-            ..Default::default()
-        };
-
-        let aptitude = Aptitude {};
-        let steps = aptitude.add_repository(&package);
-
-        assert_eq!(steps.len(), 0);
-    }
-
-    #[test]
     fn test_add_repository_without_key() {
-        let package = PackageVariant {
-            name: Some(String::from("test")),
-            repository: Some(String::from("repository")),
-            ..Default::default()
-        };
-
         let aptitude = Aptitude {};
-        let steps = aptitude.add_repository(&package);
+        let steps = aptitude.add_repository(&PackageRepository {
+            name: String::from("test"),
+            ..Default::default()
+        });
 
         assert_eq!(steps.len(), 2);
     }
 
     #[test]
     fn test_add_repository_with_key() {
-        let package = PackageVariant {
-            name: Some(String::from("test")),
-            repository: Some(String::from("repository")),
-            key: Some(String::from("key")),
-            ..Default::default()
-        };
-
         let aptitude = Aptitude {};
-        let steps = aptitude.add_repository(&package);
+        let steps = aptitude.add_repository(&PackageRepository {
+            name: String::from("test"),
+            key: Some(RepositoryKey {
+                url: String::from("abc"),
+                ..Default::default()
+            }),
+            ..Default::default()
+        });
+
+        assert_eq!(steps.len(), 3);
+    }
+
+    #[test]
+    fn test_add_repository_with_key_and_fingerprint() {
+        let aptitude = Aptitude {};
+        let steps = aptitude.add_repository(&PackageRepository {
+            name: String::from("test"),
+            key: Some(RepositoryKey {
+                url: String::from("abc"),
+                fingerprint: Some(String::from("abc")),
+                ..Default::default()
+            }),
+            ..Default::default()
+        });
 
         assert_eq!(steps.len(), 3);
     }

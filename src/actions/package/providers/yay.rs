@@ -1,4 +1,5 @@
 use super::PackageProvider;
+use crate::actions::package::repository::PackageRepository;
 use crate::actions::package::PackageVariant;
 use crate::atoms::command::Exec;
 use crate::steps::Step;
@@ -70,11 +71,11 @@ impl PackageProvider for Yay {
         ]
     }
 
-    fn has_repository(&self, _package: &PackageVariant) -> bool {
+    fn has_repository(&self, _: &PackageRepository) -> bool {
         false
     }
 
-    fn add_repository(&self, _package: &PackageVariant) -> Vec<Step> {
+    fn add_repository(&self, _: &PackageRepository) -> Vec<Step> {
         vec![]
     }
 

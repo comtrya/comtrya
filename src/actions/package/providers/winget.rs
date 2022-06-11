@@ -1,4 +1,5 @@
 use super::PackageProvider;
+use crate::actions::package::repository::PackageRepository;
 use crate::steps::Step;
 use crate::{actions::package::PackageVariant, atoms::command::Exec};
 use serde::{Deserialize, Serialize};
@@ -27,11 +28,11 @@ impl PackageProvider for Winget {
         vec![]
     }
 
-    fn has_repository(&self, _package: &PackageVariant) -> bool {
+    fn has_repository(&self, _: &PackageRepository) -> bool {
         true
     }
 
-    fn add_repository(&self, _package: &PackageVariant) -> Vec<Step> {
+    fn add_repository(&self, _: &PackageRepository) -> Vec<Step> {
         vec![]
     }
 
