@@ -5,7 +5,7 @@ mod git;
 mod macos;
 mod package;
 
-use crate::contexts::{to_koto, Contexts};
+use crate::contexts::Contexts;
 use crate::manifests::Manifest;
 use crate::steps::Step;
 use command::run::RunCommand;
@@ -14,10 +14,11 @@ use file::copy::FileCopy;
 use file::download::FileDownload;
 use file::link::FileLink;
 use git::GitClone;
-use koto::{Koto, KotoSettings};
 use macos::MacOSDefault;
 use package::install::PackageInstall;
+use rhai::Engine;
 use serde::{Deserialize, Serialize};
+use tracing::error;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
 pub struct ConditionalVariantAction<T> {
@@ -45,6 +46,9 @@ where
     T: Action,
 {
     fn plan(&self, manifest: &Manifest, context: &Contexts) -> Vec<Step> {
+        let engine = Engine::new();
+        let mut scope = crate::contexts::to_rhai(context);
+
         let variant = self.variants.iter().find(|variant| {
             if variant.condition.is_none() {
                 return false;
@@ -52,24 +56,12 @@ where
 
             let condition = variant.condition.clone().unwrap();
 
-            let mut koto = Koto::with_settings(KotoSettings {
-                run_tests: false,
-                ..Default::default()
-            });
-
-            for (key, value) in context {
-                koto.prelude().add_value(key, to_koto(value));
-            }
-
-            match koto.compile(&condition) {
-                Ok(_) => match koto.run() {
-                    Ok(result) => match result {
-                        koto_runtime::Value::Bool(result) => result,
-                        _ => false,
-                    },
-                    Err(_) => false,
-                },
-                Err(_) => false,
+            match engine.eval_with_scope::<bool>(&mut scope, condition.as_str()) {
+                Ok(b) => b,
+                Err(error) => {
+                    error!("Failed execution condition for action: {}", error);
+                    false
+                }
             }
         });
 
@@ -81,27 +73,15 @@ where
             return self.action.plan(manifest, context);
         }
 
-        let mut koto = Koto::with_settings(KotoSettings {
-            run_tests: false,
-            ..Default::default()
-        });
+        let condition = self.condition.clone().unwrap();
 
-        for (key, value) in context {
-            koto.prelude().add_value(key, to_koto(value));
-        }
-
-        match koto.compile(self.condition.clone().unwrap().as_str()) {
-            Ok(_) => match koto.run() {
-                Ok(result) => match result {
-                    koto_runtime::Value::Bool(result) => match result {
-                        true => self.action.plan(manifest, context),
-                        false => vec![],
-                    },
-                    _ => vec![],
-                },
-                Err(_) => vec![],
-            },
-            Err(_) => vec![],
+        match engine.eval_with_scope::<bool>(&mut scope, condition.as_str()) {
+            Ok(true) => self.action.plan(manifest, context),
+            Ok(false) => vec![],
+            Err(error) => {
+                error!("Failed execution condition for action: {}", error);
+                vec![]
+            }
         }
     }
 }

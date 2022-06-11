@@ -15,10 +15,6 @@ file_diff = "1.0.0"
 fs_extra = "1.2.0"
 gitsync = "0.1.6"
 ignore = "0.4.18"
-koto = "0.10.0"
-koto_json = "0.10.0"
-koto_runtime = "0.10.0"
-koto_yaml = "0.10.0"
 normpath = "0.3.2"
 os_info = "3.4.0"
 paw = "1.0"
@@ -29,6 +25,7 @@ reqwest = { version = "0.11.10", default-features = false, features = [
     "blocking",
     "rustls-tls"
 ] }
+rhai = { version = "1.7.0", features = ["serde"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0.81"
 serde_yaml = "0.8.24"
