@@ -1,6 +1,8 @@
-pub mod install;
-pub mod providers;
+mod install;
+mod providers;
+pub(crate) use install::PackageInstall;
 mod repository;
+pub(crate) use repository::PackageRepository;
 
 use providers::PackageProviders;
 use serde::{Deserialize, Serialize};
