@@ -5,14 +5,14 @@ actions:
     args:
       - hi
 
-  - action: cmd.run
+  - action: command.run
     command: whoami
     sudo: true
 
-  - action: cmd.run
+  - action: command.run
     command: ls
     args:
-        - {{ user.home_dir }}
+      - "{{ user.home_dir }}"
 
   - action: command.run
     command: sh

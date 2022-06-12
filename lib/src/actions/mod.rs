@@ -91,34 +91,34 @@ where
 #[derive(JsonSchema, Clone, Debug, Serialize, Deserialize)]
 #[serde(tag = "action")]
 pub enum Actions {
-    #[serde(alias = "command.run", alias = "cmd.run")]
+    #[serde(rename = "command.run", alias = "cmd.run")]
     CommandRun(ConditionalVariantAction<RunCommand>),
 
-    #[serde(alias = "directory.copy", alias = "dir.copy")]
+    #[serde(rename = "directory.copy", alias = "dir.copy")]
     DirectoryCopy(ConditionalVariantAction<DirectoryCopy>),
 
-    #[serde(alias = "directory.create", alias = "dir.create")]
+    #[serde(rename = "directory.create", alias = "dir.create")]
     DirectoryCreate(ConditionalVariantAction<DirectoryCreate>),
 
-    #[serde(alias = "file.copy")]
+    #[serde(rename = "file.copy")]
     FileCopy(ConditionalVariantAction<FileCopy>),
 
-    #[serde(alias = "file.download")]
+    #[serde(rename = "file.download")]
     FileDownload(ConditionalVariantAction<FileDownload>),
 
-    #[serde(alias = "file.link")]
+    #[serde(rename = "file.link")]
     FileLink(ConditionalVariantAction<FileLink>),
 
-    #[serde(alias = "git.clone")]
+    #[serde(rename = "git.clone")]
     GitClone(ConditionalVariantAction<GitClone>),
 
-    #[serde(alias = "macos.default")]
+    #[serde(rename = "macos.default")]
     MacOSDefault(ConditionalVariantAction<MacOSDefault>),
 
-    #[serde(alias = "package.install", alias = "package.installed")]
+    #[serde(rename = "package.install", alias = "package.installed")]
     PackageInstall(ConditionalVariantAction<PackageInstall>),
 
-    #[serde(alias = "package.repository", alias = "package.repo")]
+    #[serde(rename = "package.repository", alias = "package.repo")]
     PackageRepository(ConditionalVariantAction<PackageRepository>),
 }
 
