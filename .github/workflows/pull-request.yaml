@@ -38,8 +38,8 @@ jobs:
 
       - uses: actions-rs/tarpaulin@v0.1
         with:
-          version: "0.19.1"
-          args: "-- --test-threads 1"
+          version: "0.20.1"
+          args: "--workspace -- --test-threads 1"
 
       - uses: codecov/codecov-action@v2
 
