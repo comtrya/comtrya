@@ -19,25 +19,25 @@ use serde::{Deserialize, Serialize};
 
 #[derive(JsonSchema, Clone, Debug, Serialize, Deserialize)]
 pub enum PackageProviders {
-    #[serde(alias = "aptitude", alias = "apt", alias = "apt-get")]
+    #[serde(rename = "aptitude", alias = "apt", alias = "apt-get")]
     Aptitude,
 
-    #[serde(alias = "bsdpkg")]
+    #[serde(rename = "bsdpkg")]
     BsdPkg,
 
-    #[serde(alias = "dnf", alias = "yum")]
+    #[serde(rename = "dnf", alias = "yum")]
     Dnf,
 
-    #[serde(alias = "homebrew", alias = "brew")]
+    #[serde(rename = "homebrew", alias = "brew")]
     Homebrew,
 
-    #[serde(alias = "pkgin")]
+    #[serde(rename = "pkgin")]
     Pkgin,
 
-    #[serde(alias = "yay", alias = "pacman")]
+    #[serde(rename = "yay", alias = "pacman")]
     Yay,
 
-    #[serde(alias = "winget")]
+    #[serde(rename = "winget")]
     Winget,
 }
 
