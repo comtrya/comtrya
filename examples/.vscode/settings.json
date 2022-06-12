@@ -1,5 +1,0 @@
-{
-    "yaml.schemas": {
-        "https://schema.comtrya.dev/schema.json": "**/*yaml"
-    }
-}

@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 use std::{path::PathBuf, u32};
 
 #[derive(JsonSchema, Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[serde(rename = "file.download")]
 pub struct FileDownload {
     pub from: String,
     pub to: String,

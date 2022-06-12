@@ -48,12 +48,14 @@ mod test {
             .unwrap()
             .canonicalize()
             .unwrap()
+            .parent()
+            .unwrap()
             .join("examples");
 
         assert_eq!(
             cwd,
             local_manifest_provider
-                .resolve(&String::from("./examples"))
+                .resolve(&String::from("../examples"))
                 .unwrap()
         );
 

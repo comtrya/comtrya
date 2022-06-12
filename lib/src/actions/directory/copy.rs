@@ -52,6 +52,8 @@ mod tests {
     fn get_manifest_dir() -> PathBuf {
         std::env::current_dir()
             .unwrap()
+            .parent()
+            .unwrap()
             .join("examples")
             .join("directory")
             .join("copy")

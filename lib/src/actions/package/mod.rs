@@ -11,6 +11,7 @@ use std::collections::HashMap;
 use tracing::debug;
 
 #[derive(JsonSchema, Clone, Debug, Default, Serialize, Deserialize)]
+#[serde(rename = "package.install")]
 pub struct Package {
     name: Option<String>,
 
