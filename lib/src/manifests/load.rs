@@ -70,7 +70,7 @@ pub fn load(manifest_path: PathBuf, contexts: &Contexts) -> HashMap<String, Mani
             let mut tera = Tera::default();
             register_functions(&mut tera);
 
-            let yaml = match tera.render_str(template, &to_tera(&contexts)) {
+            let yaml = match tera.render_str(template, &to_tera(contexts)) {
                 Ok(template) => template,
                 Err(err) => {
                     match err.source() {
@@ -105,5 +105,5 @@ pub fn load(manifest_path: PathBuf, contexts: &Contexts) -> HashMap<String, Mani
             span.exit();
         });
 
-    return manifests;
+    manifests
 }

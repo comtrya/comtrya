@@ -33,7 +33,7 @@ pub(crate) fn execute(args: &Apply, runtime: &Runtime) -> anyhow::Result<()> {
 
     let contexts = &runtime.contexts;
 
-    let manifests = load(manifest_path, &contexts);
+    let manifests = load(manifest_path, contexts);
 
     // Build DAG
     let mut dag: Graph<Manifest, u32, petgraph::Directed> = Graph::new();
@@ -128,7 +128,7 @@ pub(crate) fn execute(args: &Apply, runtime: &Runtime) -> anyhow::Result<()> {
                 let action = action.inner_ref();
 
                 let mut steps = action
-                    .plan(m1, &contexts)
+                    .plan(m1, contexts)
                     .into_iter()
                     .filter(|step| step.do_initializers_allow_us_to_run())
                     .filter(|step| step.atom.plan())
