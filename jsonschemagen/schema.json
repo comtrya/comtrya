@@ -1,0 +1,892 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Manifest",
+  "type": "object",
+  "properties": {
+    "actions": {
+      "default": [],
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/Actions"
+      }
+    },
+    "depends": {
+      "default": [],
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "name": {
+      "default": null,
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  },
+  "definitions": {
+    "Actions": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "action",
+            "command"
+          ],
+          "properties": {
+            "action": {
+              "type": "string",
+              "enum": [
+                "CommandRun"
+              ]
+            },
+            "args": {
+              "default": [],
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "command": {
+              "type": "string"
+            },
+            "dir": {
+              "default": "/Users/rawkode/Code/src/github.com/comtrya/comtrya/jsonschemagen",
+              "type": "string"
+            },
+            "sudo": {
+              "default": false,
+              "type": "boolean"
+            },
+            "variants": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Variant_for_RunCommand"
+              }
+            },
+            "where": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "action",
+            "from",
+            "to"
+          ],
+          "properties": {
+            "action": {
+              "type": "string",
+              "enum": [
+                "DirectoryCopy"
+              ]
+            },
+            "from": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "variants": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Variant_for_DirectoryCopy"
+              }
+            },
+            "where": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "action",
+            "path"
+          ],
+          "properties": {
+            "action": {
+              "type": "string",
+              "enum": [
+                "DirectoryCreate"
+              ]
+            },
+            "path": {
+              "type": "string"
+            },
+            "variants": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Variant_for_DirectoryCreate"
+              }
+            },
+            "where": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "action",
+            "from",
+            "to"
+          ],
+          "properties": {
+            "action": {
+              "type": "string",
+              "enum": [
+                "FileCopy"
+              ]
+            },
+            "chmod": {
+              "default": 420,
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0.0
+            },
+            "from": {
+              "type": "string"
+            },
+            "passphrase": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "template": {
+              "default": false,
+              "type": "boolean"
+            },
+            "to": {
+              "type": "string"
+            },
+            "variants": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Variant_for_FileCopy"
+              }
+            },
+            "where": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "action",
+            "from",
+            "to"
+          ],
+          "properties": {
+            "action": {
+              "type": "string",
+              "enum": [
+                "FileDownload"
+              ]
+            },
+            "chmod": {
+              "default": 420,
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0.0
+            },
+            "from": {
+              "type": "string"
+            },
+            "template": {
+              "default": false,
+              "type": "boolean"
+            },
+            "to": {
+              "type": "string"
+            },
+            "variants": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Variant_for_FileDownload"
+              }
+            },
+            "where": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "action"
+          ],
+          "properties": {
+            "action": {
+              "type": "string",
+              "enum": [
+                "FileLink"
+              ]
+            },
+            "from": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "source": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "target": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "to": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "variants": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Variant_for_FileLink"
+              }
+            },
+            "walk_dir": {
+              "default": false,
+              "type": "boolean"
+            },
+            "where": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "action",
+            "directory",
+            "repository"
+          ],
+          "properties": {
+            "action": {
+              "type": "string",
+              "enum": [
+                "GitClone"
+              ]
+            },
+            "directory": {
+              "type": "string"
+            },
+            "reference": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "repository": {
+              "type": "string"
+            },
+            "variants": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Variant_for_GitClone"
+              }
+            },
+            "where": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "action",
+            "domain",
+            "key",
+            "kind",
+            "value"
+          ],
+          "properties": {
+            "action": {
+              "type": "string",
+              "enum": [
+                "MacOSDefault"
+              ]
+            },
+            "domain": {
+              "type": "string"
+            },
+            "key": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "value": {
+              "type": "string"
+            },
+            "variants": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Variant_for_MacOSDefault"
+              }
+            },
+            "where": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "action"
+          ],
+          "properties": {
+            "action": {
+              "type": "string",
+              "enum": [
+                "PackageInstall"
+              ]
+            },
+            "extra_args": {
+              "default": [],
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "key": {
+              "default": null,
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "list": {
+              "default": [],
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "provider": {
+              "default": "Homebrew",
+              "allOf": [
+                {
+                  "$ref": "#/definitions/PackageProviders"
+                }
+              ]
+            },
+            "repository": {
+              "default": null,
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "variants": {
+              "default": {},
+              "type": "object",
+              "additionalProperties": {
+                "$ref": "#/definitions/PackageVariant"
+              }
+            },
+            "where": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "action",
+            "name"
+          ],
+          "properties": {
+            "action": {
+              "type": "string",
+              "enum": [
+                "PackageRepository"
+              ]
+            },
+            "key": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/RepositoryKey"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "name": {
+              "type": "string"
+            },
+            "provider": {
+              "default": "Homebrew",
+              "allOf": [
+                {
+                  "$ref": "#/definitions/PackageProviders"
+                }
+              ]
+            },
+            "variants": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Variant_for_PackageRepository"
+              }
+            },
+            "where": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "PackageProviders": {
+      "type": "string",
+      "enum": [
+        "Aptitude",
+        "BsdPkg",
+        "Dnf",
+        "Homebrew",
+        "Pkgin",
+        "Yay",
+        "Winget"
+      ]
+    },
+    "PackageVariant": {
+      "type": "object",
+      "properties": {
+        "extra_args": {
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "list": {
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "provider": {
+          "default": "Homebrew",
+          "allOf": [
+            {
+              "$ref": "#/definitions/PackageProviders"
+            }
+          ]
+        }
+      }
+    },
+    "RepositoryKey": {
+      "type": "object",
+      "required": [
+        "url"
+      ],
+      "properties": {
+        "fingerprint": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "key": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "url": {
+          "type": "string"
+        }
+      }
+    },
+    "Variant_for_DirectoryCopy": {
+      "type": "object",
+      "required": [
+        "from",
+        "to"
+      ],
+      "properties": {
+        "from": {
+          "type": "string"
+        },
+        "to": {
+          "type": "string"
+        },
+        "where": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "Variant_for_DirectoryCreate": {
+      "type": "object",
+      "required": [
+        "path"
+      ],
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "where": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "Variant_for_FileCopy": {
+      "type": "object",
+      "required": [
+        "from",
+        "to"
+      ],
+      "properties": {
+        "chmod": {
+          "default": 420,
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0.0
+        },
+        "from": {
+          "type": "string"
+        },
+        "passphrase": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "template": {
+          "default": false,
+          "type": "boolean"
+        },
+        "to": {
+          "type": "string"
+        },
+        "where": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "Variant_for_FileDownload": {
+      "type": "object",
+      "required": [
+        "from",
+        "to"
+      ],
+      "properties": {
+        "chmod": {
+          "default": 420,
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0.0
+        },
+        "from": {
+          "type": "string"
+        },
+        "template": {
+          "default": false,
+          "type": "boolean"
+        },
+        "to": {
+          "type": "string"
+        },
+        "where": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "Variant_for_FileLink": {
+      "type": "object",
+      "properties": {
+        "from": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "target": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "to": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "walk_dir": {
+          "default": false,
+          "type": "boolean"
+        },
+        "where": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "Variant_for_GitClone": {
+      "type": "object",
+      "required": [
+        "directory",
+        "repository"
+      ],
+      "properties": {
+        "directory": {
+          "type": "string"
+        },
+        "reference": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "repository": {
+          "type": "string"
+        },
+        "where": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "Variant_for_MacOSDefault": {
+      "type": "object",
+      "required": [
+        "domain",
+        "key",
+        "kind",
+        "value"
+      ],
+      "properties": {
+        "domain": {
+          "type": "string"
+        },
+        "key": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "value": {
+          "type": "string"
+        },
+        "where": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "Variant_for_Package": {
+      "type": "object",
+      "properties": {
+        "extra_args": {
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "key": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "list": {
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "provider": {
+          "default": "Homebrew",
+          "allOf": [
+            {
+              "$ref": "#/definitions/PackageProviders"
+            }
+          ]
+        },
+        "repository": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "variants": {
+          "default": {},
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/PackageVariant"
+          }
+        },
+        "where": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "Variant_for_PackageRepository": {
+      "type": "object",
+      "required": [
+        "name"
+      ],
+      "properties": {
+        "key": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/RepositoryKey"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "provider": {
+          "default": "Homebrew",
+          "allOf": [
+            {
+              "$ref": "#/definitions/PackageProviders"
+            }
+          ]
+        },
+        "where": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "Variant_for_RunCommand": {
+      "type": "object",
+      "required": [
+        "command"
+      ],
+      "properties": {
+        "args": {
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "command": {
+          "type": "string"
+        },
+        "dir": {
+          "default": "/Users/rawkode/Code/src/github.com/comtrya/comtrya/jsonschemagen",
+          "type": "string"
+        },
+        "sudo": {
+          "default": false,
+          "type": "boolean"
+        },
+        "where": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    }
+  }
+}

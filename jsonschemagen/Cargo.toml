@@ -1,0 +1,9 @@
+[package]
+name = "jsonschemagen"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+comtrya-lib = { path = "../lib" }
+schemars = "0.8.10"
+serde_json = "1.0.81"

@@ -1,0 +1,8 @@
+{
+    "json.schemas": [
+        {
+            "fileMatch": ["examples/**.yaml"],
+            "url": "/schema.json"
+        }
+    ]
+}
