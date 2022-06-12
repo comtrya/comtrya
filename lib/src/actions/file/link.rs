@@ -257,16 +257,10 @@ mod tests {
 
         let contexts = build_contexts(&config);
 
-        let target: String = source_dir
-            .clone()
-            .parent()
-            .unwrap()
-            .to_str()
-            .unwrap()
-            .to_string();
+        let target: String = source_dir.parent().unwrap().to_str().unwrap().to_string();
 
         let file_link_action: FileLink = FileLink {
-            source: Some(source_dir.clone().to_str().unwrap().to_string()),
+            source: Some(source_dir.to_str().unwrap().to_string()),
             target: Some(target),
             walk_dir: true,
             ..Default::default()

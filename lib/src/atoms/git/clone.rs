@@ -71,7 +71,7 @@ mod tests {
 
         let git_clone = Clone {
             repository: String::from("https://github.com/comtrya/comtrya"),
-            directory: temp_dir.path().join("nonexistent").to_path_buf(),
+            directory: temp_dir.path().join("nonexistent"),
             ..Default::default()
         };
 
@@ -90,7 +90,7 @@ mod tests {
 
         let mut git_clone = Clone {
             repository: String::from("https://github.com/comtrya/comtrya"),
-            directory: temp_dir.path().join("clone").to_path_buf(),
+            directory: temp_dir.path().join("clone"),
             ..Default::default()
         };
 

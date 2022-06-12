@@ -95,8 +95,6 @@ pub fn to_rhai(context: &Contexts) -> rhai::Scope {
         };
 
         scope.push_constant(m.clone(), dynamic);
-
-        ()
     });
 
     scope
@@ -135,7 +133,7 @@ mod test {
 
         let config = Config {
             manifest_paths: vec![],
-            variables: variables,
+            variables,
         };
 
         let contexts = build_contexts(&config);
@@ -163,7 +161,7 @@ mod test {
 
         let config = Config {
             manifest_paths: vec![],
-            variables: variables,
+            variables,
         };
 
         std::env::set_var("ASCENDED_NAME", "Morgan Le Fay");

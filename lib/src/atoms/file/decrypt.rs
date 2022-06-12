@@ -96,7 +96,7 @@ mod tests {
         let decrypt = Decrypt {
             encrypted_content: encrypted_content.to_owned(),
             path: file.path().to_path_buf(),
-            passphrase: passphrase.to_owned(),
+            passphrase: passphrase,
         };
 
         // plan
@@ -130,7 +130,7 @@ mod tests {
         let mut decrypt = Decrypt {
             encrypted_content: encrypted_content.to_owned(),
             path: file.path().to_path_buf(),
-            passphrase: passphrase.to_owned(),
+            passphrase: passphrase,
         };
 
         // plan, execute

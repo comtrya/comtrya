@@ -84,9 +84,9 @@ fn main(args: GlobalArgs) -> anyhow::Result<()> {
     let contexts = build_contexts(&config);
 
     let runtime = Runtime {
-        args: args,
-        config: config,
-        contexts: contexts,
+        args,
+        config,
+        contexts,
     };
 
     execute(runtime)

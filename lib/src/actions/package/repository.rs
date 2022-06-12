@@ -54,8 +54,8 @@ impl Action for PackageRepository {
             atoms.append(&mut provider.bootstrap());
         }
 
-        if !provider.has_repository(&self) {
-            atoms.append(&mut provider.add_repository(&self));
+        if !provider.has_repository(self) {
+            atoms.append(&mut provider.add_repository(self));
         }
 
         span.exit();
