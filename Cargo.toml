@@ -1,2 +1,2 @@
 [workspace]
-members = ["application", "lib"]
+members = ["app", "jsonschemagen", "lib"]

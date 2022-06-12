@@ -1,21 +1,21 @@
 [package]
-name = "comtrya-lib"
+name = "comtrya"
 version = "0.7.4"
 authors = ["David McKay <david@rawkode.dev>"]
 edition = "2021"
 license = "MIT"
-description = "Contains the interfaces for comtrya plugins"
+description = "A tool to simplify reprovisioning a fresh OS. Installs packages and manages dotfiles."
 
 [dependencies]
 anyhow = "1.0.57"
 age = { version = "0.8.0", features = ["armor"] }
+comtrya-lib = { path = "../lib" }
 dirs-next = "2.0.0"
 eval = "0.4.3"
 file_diff = "1.0.0"
 fs_extra = "1.2.0"
 gitsync = "0.1.6"
 ignore = "0.4.18"
-normpath = "0.3.2"
 os_info = "3.4.0"
 paw = "1.0"
 petgraph = "0.6.2"
@@ -37,7 +37,6 @@ walkdir = "2"
 which = "4.2.5"
 whoami = "1.2.1"
 sha256 = "1.0.3"
-schemars = "0.8.10"
 
 [target.'cfg(unix)'.dependencies]
 users = "0.11.0"
