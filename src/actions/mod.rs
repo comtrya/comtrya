@@ -150,6 +150,7 @@ impl Display for Actions {
             Actions::GitClone(_) => "git.clone",
             Actions::MacOSDefault(_) => "macos.default",
             Actions::PackageInstall(_) => "package.install",
+            Actions::PackageRepository(_) => "package.repository",
         };
 
         write!(f, "{}", name)
