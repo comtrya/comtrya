@@ -1,8 +1,8 @@
 use super::providers::PackageProviders;
-use crate::actions::Action;
 use crate::contexts::Contexts;
 use crate::manifests::Manifest;
 use crate::steps::Step;
+use crate::{actions::Action, plugins::PluginFunctions};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::ops::Deref;
@@ -28,7 +28,7 @@ pub struct RepositoryKey {
 }
 
 impl Action for PackageRepository {
-    fn plan(&self, _manifest: &Manifest, _context: &Contexts) -> Vec<Step> {
+    fn plan(&self, _manifest: &Manifest, _context: &Contexts, _: &PluginFunctions) -> Vec<Step> {
         let box_provider = self.provider.clone().get_provider();
         let provider = box_provider.deref();
 

@@ -1,3 +1,5 @@
+use std::alloc::System;
+
 use comtrya_lib::contexts::build_contexts;
 use comtrya_lib::contexts::Contexts;
 use comtrya_lib::manifests;
@@ -15,6 +17,10 @@ pub(crate) struct GlobalArgs {
     /// Directory
     #[structopt(short = "d", long)]
     pub manifest_directory: Option<String>,
+
+    /// Plugins
+    #[structopt(short = "p", long)]
+    pub plugins_directory: Option<String>,
 
     /// Disable color printing
     #[structopt(long = "no-color")]
@@ -65,6 +71,9 @@ fn configure_subscriber(args: &GlobalArgs) -> impl Subscriber {
     }
     .finish()
 }
+
+#[global_allocator]
+static ALLOCATOR: System = System;
 
 #[paw::main]
 fn main(args: GlobalArgs) -> anyhow::Result<()> {

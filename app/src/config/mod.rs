@@ -6,14 +6,17 @@ use tracing::instrument;
 
 #[instrument(name = "load_config", level = "info")]
 pub(crate) fn load_config(args: GlobalArgs) -> Result<Config> {
-    match lib_config() {
-        Ok(config) => match args.manifest_directory {
-            Some(manifest_path) => Ok(Config {
-                manifest_paths: vec![manifest_path],
-                ..config
-            }),
-            None => Ok(Config { ..config }),
-        },
-        Err(error) => Err(error),
-    }
+    let config = lib_config()?;
+
+    let plugins_directory = args.plugins_directory.unwrap_or(config.plugins_path);
+    let manifest_directory = args
+        .manifest_directory
+        .map(|dir| vec![dir])
+        .unwrap_or(config.manifest_paths);
+
+    Ok(Config {
+        plugins_path: plugins_directory,
+        manifest_paths: manifest_directory,
+        ..config
+    })
 }

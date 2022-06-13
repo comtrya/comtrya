@@ -1,0 +1,10 @@
+actions:
+  - action: plugin
+    name: example
+    arguments:
+      - this
+      - is
+      - a
+      - list
+      - of
+      - arguments

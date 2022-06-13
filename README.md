@@ -54,6 +54,12 @@ comtrya apply -m one,two,three
 comtrya -d ./manifests apply
 ```
 
+## Plugins (WIP)
+To test the feature with our "example" - plugin:
+
+* `cargo build --release`
+* `cargo run --bin comtrya -- -p target/release -d examples/plugins apply`
+
 ## What's Next?
 
 You should take a look at the issues page to see what's available to contribute. Below is a short list of the major features that are upcoming.

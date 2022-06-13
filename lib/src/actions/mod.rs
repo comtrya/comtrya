@@ -4,10 +4,11 @@ mod file;
 mod git;
 mod macos;
 mod package;
+mod plugins;
 
-use crate::contexts::Contexts;
 use crate::manifests::Manifest;
 use crate::steps::Step;
+use crate::{contexts::Contexts, plugins::PluginFunctions};
 use command::run::RunCommand;
 use directory::{DirectoryCopy, DirectoryCreate};
 use file::copy::FileCopy;
@@ -21,6 +22,8 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use tracing::error;
+
+use self::plugins::PluginAction;
 
 #[derive(JsonSchema, Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
 pub struct ConditionalVariantAction<T> {
@@ -47,7 +50,12 @@ impl<T> Action for ConditionalVariantAction<T>
 where
     T: Action,
 {
-    fn plan(&self, manifest: &Manifest, context: &Contexts) -> Vec<Step> {
+    fn plan(
+        &self,
+        manifest: &Manifest,
+        context: &Contexts,
+        plugin_functions: &PluginFunctions,
+    ) -> Vec<Step> {
         let engine = Engine::new();
         let mut scope = crate::contexts::to_rhai(context);
 
@@ -68,17 +76,17 @@ where
         });
 
         if let Some(variant) = variant {
-            return variant.action.plan(manifest, context);
+            return variant.action.plan(manifest, context, plugin_functions);
         }
 
         if self.condition.is_none() {
-            return self.action.plan(manifest, context);
+            return self.action.plan(manifest, context, plugin_functions);
         }
 
         let condition = self.condition.clone().unwrap();
 
         match engine.eval_with_scope::<bool>(&mut scope, condition.as_str()) {
-            Ok(true) => self.action.plan(manifest, context),
+            Ok(true) => self.action.plan(manifest, context, plugin_functions),
             Ok(false) => vec![],
             Err(error) => {
                 error!("Failed execution condition for action: {}", error);
@@ -91,6 +99,9 @@ where
 #[derive(JsonSchema, Clone, Debug, Serialize, Deserialize)]
 #[serde(tag = "action")]
 pub enum Actions {
+    #[serde(rename = "plugin")]
+    PluginAction(ConditionalVariantAction<PluginAction>),
+
     #[serde(rename = "command.run", alias = "cmd.run")]
     CommandRun(ConditionalVariantAction<RunCommand>),
 
@@ -135,6 +146,7 @@ impl Actions {
             Actions::MacOSDefault(a) => a,
             Actions::PackageInstall(a) => a,
             Actions::PackageRepository(a) => a,
+            Actions::PluginAction(a) => a,
         }
     }
 }
@@ -152,6 +164,7 @@ impl Display for Actions {
             Actions::MacOSDefault(_) => "macos.default",
             Actions::PackageInstall(_) => "package.install",
             Actions::PackageRepository(_) => "package.repository",
+            Actions::PluginAction(_) => "plugin",
         };
 
         write!(f, "{}", name)
@@ -179,7 +192,12 @@ impl<E: std::error::Error> From<E> for ActionError {
 }
 
 pub trait Action {
-    fn plan(&self, manifest: &Manifest, context: &Contexts) -> Vec<Step>;
+    fn plan(
+        &self,
+        manifest: &Manifest,
+        context: &Contexts,
+        plugin_functions: &PluginFunctions,
+    ) -> Vec<Step>;
 }
 
 #[cfg(test)]

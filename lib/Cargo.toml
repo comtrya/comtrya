@@ -4,7 +4,7 @@ version = "0.7.4"
 authors = ["David McKay <david@rawkode.dev>"]
 edition = "2021"
 license = "MIT"
-description = "Contains the interfaces for comtrya plugins"
+description = "Library for comtrya"
 
 [dependencies]
 anyhow = "1.0.57"
@@ -38,6 +38,8 @@ which = "4.2.5"
 whoami = "1.2.1"
 sha256 = "1.0.3"
 schemars = "0.8.10"
+libloading = "0.7.3"
+comtrya-plugins = { path = "../plugins" }
 
 [target.'cfg(unix)'.dependencies]
 users = "0.11.0"

@@ -134,6 +134,7 @@ mod test {
         let config = Config {
             manifest_paths: vec![],
             variables,
+            plugins_path: String::default(),
         };
 
         let contexts = build_contexts(&config);
@@ -162,6 +163,7 @@ mod test {
         let config = Config {
             manifest_paths: vec![],
             variables,
+            plugins_path: String::default(),
         };
 
         std::env::set_var("ASCENDED_NAME", "Morgan Le Fay");

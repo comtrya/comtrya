@@ -1,5 +1,6 @@
 use crate::atoms::command::Exec;
 use crate::contexts::Contexts;
+use crate::plugins::PluginFunctions;
 use crate::steps::Step;
 use crate::{actions::Action, manifests::Manifest};
 use schemars::JsonSchema;
@@ -17,7 +18,7 @@ pub struct MacOSDefault {
 }
 
 impl Action for MacOSDefault {
-    fn plan(&self, _: &Manifest, _: &Contexts) -> Vec<Step> {
+    fn plan(&self, _: &Manifest, _: &Contexts, _: &PluginFunctions) -> Vec<Step> {
         vec![Step {
             atom: Box::new(Exec {
                 command: String::from("defaults"),

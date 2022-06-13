@@ -1,6 +1,7 @@
 use super::FileAction;
 use super::{default_chmod, from_octal};
 use crate::manifests::Manifest;
+use crate::plugins::PluginFunctions;
 use crate::steps::Step;
 use crate::{actions::Action, contexts::Contexts};
 use schemars::JsonSchema;
@@ -29,7 +30,7 @@ impl FileDownload {}
 impl FileAction for FileDownload {}
 
 impl Action for FileDownload {
-    fn plan(&self, _manifest: &Manifest, _context: &Contexts) -> Vec<Step> {
+    fn plan(&self, _manifest: &Manifest, _context: &Contexts, _: &PluginFunctions) -> Vec<Step> {
         use crate::atoms::directory::Create as DirCreate;
         use crate::atoms::file::Chmod;
         use crate::atoms::http::Download;

@@ -1,5 +1,6 @@
 use crate::atoms::directory::Create as DirectoryCreateAtom;
 use crate::manifests::Manifest;
+use crate::plugins::PluginFunctions;
 use crate::steps::Step;
 use crate::{actions::Action, contexts::Contexts};
 use schemars::JsonSchema;
@@ -12,7 +13,7 @@ pub struct DirectoryCreate {
 }
 
 impl Action for DirectoryCreate {
-    fn plan(&self, _: &Manifest, _context: &Contexts) -> Vec<Step> {
+    fn plan(&self, _: &Manifest, _context: &Contexts, _: &PluginFunctions) -> Vec<Step> {
         vec![Step {
             atom: Box::new(DirectoryCreateAtom {
                 path: PathBuf::from(&self.path),

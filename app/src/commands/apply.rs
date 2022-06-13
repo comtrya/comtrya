@@ -1,5 +1,8 @@
 use crate::Runtime;
-use comtrya_lib::manifests::{load, Manifest};
+use comtrya_lib::{
+    manifests::{load, Manifest},
+    plugins::load_plugin_functions,
+};
 use petgraph::{visit::DfsPostOrder, Graph};
 use std::{collections::HashMap, ops::Deref};
 use structopt::StructOpt;
@@ -30,6 +33,8 @@ pub(crate) fn execute(args: &Apply, runtime: &Runtime) -> anyhow::Result<()> {
         };
 
     trace!(manifests = args.manifests.join(",").deref(),);
+
+    let plugin_functions = &load_plugin_functions(&runtime.config.plugins_path)?;
 
     let contexts = &runtime.contexts;
 
@@ -128,7 +133,7 @@ pub(crate) fn execute(args: &Apply, runtime: &Runtime) -> anyhow::Result<()> {
                 let action = action.inner_ref();
 
                 let mut steps = action
-                    .plan(m1, contexts)
+                    .plan(m1, contexts, plugin_functions)
                     .into_iter()
                     .filter(|step| step.do_initializers_allow_us_to_run())
                     .filter(|step| step.atom.plan())

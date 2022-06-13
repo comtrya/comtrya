@@ -1,0 +1,12 @@
+[package]
+name = "example_plugin"
+version = "0.1.0"
+authors = ["David McKay <david@rawkode.dev>"]
+edition = "2021"
+license = "MIT"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+comtrya-plugins = { path = "../plugins" }
