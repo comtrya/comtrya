@@ -56,8 +56,6 @@ fn configure_subscriber(args: &GlobalArgs) -> impl Subscriber {
         .with_target(false)
         .without_time();
 
-    println!("Args: {}", args.verbose);
-
     match args.verbose {
         0 => builder,
         1 => builder.with_max_level(Level::DEBUG),
