@@ -13,6 +13,8 @@ mod yay;
 use self::yay::Yay;
 mod winget;
 use self::winget::Winget;
+mod xbps;
+use self::xbps::Xbps;
 use super::{repository::PackageRepository, PackageVariant};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -39,6 +41,9 @@ pub enum PackageProviders {
 
     #[serde(rename = "winget")]
     Winget,
+
+    #[serde(rename = "xbps")]
+    Xbps,
 }
 
 impl PackageProviders {
@@ -51,6 +56,7 @@ impl PackageProviders {
             PackageProviders::Pkgin => Box::new(Pkgin {}),
             PackageProviders::Yay => Box::new(Yay {}),
             PackageProviders::Winget => Box::new(Winget {}),
+            PackageProviders::Xbps => Box::new(Xbps {}),
         }
     }
 }
