@@ -4,6 +4,7 @@ mod file;
 mod git;
 mod macos;
 mod package;
+mod user;
 
 use crate::contexts::Contexts;
 use crate::manifests::Manifest;
@@ -21,6 +22,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use tracing::error;
+use user::add::UserAdd;
 
 #[derive(JsonSchema, Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
 pub struct ConditionalVariantAction<T> {
@@ -120,6 +122,9 @@ pub enum Actions {
 
     #[serde(rename = "package.repository", alias = "package.repo")]
     PackageRepository(ConditionalVariantAction<PackageRepository>),
+
+    #[serde(rename = "user.add", alias = "add.user")]
+    UserAdd(ConditionalVariantAction<UserAdd>),
 }
 
 impl Actions {
@@ -135,6 +140,7 @@ impl Actions {
             Actions::MacOSDefault(a) => a,
             Actions::PackageInstall(a) => a,
             Actions::PackageRepository(a) => a,
+            Actions::UserAdd(a) => a,
         }
     }
 }
@@ -152,6 +158,7 @@ impl Display for Actions {
             Actions::MacOSDefault(_) => "macos.default",
             Actions::PackageInstall(_) => "package.install",
             Actions::PackageRepository(_) => "package.repository",
+            Actions::UserAdd(_) => "user.add",
         };
 
         write!(f, "{}", name)
