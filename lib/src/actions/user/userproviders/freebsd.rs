@@ -21,7 +21,7 @@ impl UserProvider for FreeBSDUserProvider {
         if !user.home_dir.is_empty() {
             args.push(String::from("-m"));
             args.push(String::from("-d"));
-	    args.push(user.home_dir.clone());
+            args.push(user.home_dir.clone());
         }
 
         if !user.shell.is_empty() {
@@ -31,7 +31,7 @@ impl UserProvider for FreeBSDUserProvider {
 
         if !user.fullname.is_empty() {
             args.push(String::from("-c"));
-	    args.push(user.fullname.clone());
+            args.push(user.fullname.clone());
         }
 
         // default to setting a randomly generated password

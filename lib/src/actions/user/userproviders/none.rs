@@ -1,6 +1,6 @@
 use super::UserProvider;
-use crate::{actions::user::UserVariant, atoms::command::Exec};
 use crate::steps::Step;
+use crate::{actions::user::UserVariant, atoms::command::Exec};
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
