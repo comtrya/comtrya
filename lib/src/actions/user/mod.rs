@@ -47,7 +47,7 @@ pub struct UserVariant {
 }
 
 impl UserVariant {
-    fn users(&self) -> Vec<String> {
+    fn _users(&self) -> Vec<String> {
         let string: Vec<String> = vec![];
         string
     }

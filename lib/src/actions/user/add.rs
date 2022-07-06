@@ -5,7 +5,7 @@ use crate::contexts::Contexts;
 use crate::manifests::Manifest;
 use crate::steps::Step;
 use std::ops::Deref;
-use tracing::{error, span};
+use tracing::{span};
 
 pub type UserAdd = User;
 
