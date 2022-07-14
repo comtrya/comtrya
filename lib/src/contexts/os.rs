@@ -1,4 +1,5 @@
 use crate::contexts::{Context, ContextProvider};
+use gethostname::gethostname;
 use os_info;
 
 pub struct OSContextProvider {}
@@ -12,6 +13,10 @@ impl ContextProvider for OSContextProvider {
         let osinfo = os_info::get();
 
         vec![
+            Context::KeyValueContext(
+                String::from("hostname"),
+                gethostname().into_string().unwrap(),
+            ),
             Context::KeyValueContext(String::from("family"), std::env::consts::FAMILY.to_string()),
             Context::KeyValueContext(String::from("name"), std::env::consts::OS.to_string()),
             Context::KeyValueContext(
