@@ -123,7 +123,7 @@ pub enum Actions {
     #[serde(rename = "package.repository", alias = "package.repo")]
     PackageRepository(ConditionalVariantAction<PackageRepository>),
 
-    #[serde(rename="user.add")]
+    #[serde(rename = "user.add")]
     UserAdd(ConditionalVariantAction<UserAdd>),
 }
 

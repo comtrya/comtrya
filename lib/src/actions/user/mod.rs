@@ -1,11 +1,11 @@
 pub mod add;
 pub mod providers;
 
+use providers::UserProviders;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use tracing::debug;
-use providers::UserProviders;
 
 #[derive(JsonSchema, Clone, Debug, Default, Serialize, Deserialize)]
 pub struct User {
