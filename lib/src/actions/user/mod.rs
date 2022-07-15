@@ -1,11 +1,11 @@
 pub mod add;
-pub mod userproviders;
+pub mod providers;
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use tracing::debug;
-use userproviders::UserProviders;
+use providers::UserProviders;
 
 #[derive(JsonSchema, Clone, Debug, Default, Serialize, Deserialize)]
 pub struct User {
@@ -44,13 +44,6 @@ pub struct UserVariant {
 
     #[serde(default)]
     shell: String,
-}
-
-impl UserVariant {
-    fn _users(&self) -> Vec<String> {
-        let string: Vec<String> = vec![];
-        string
-    }
 }
 
 impl From<&User> for UserVariant {
