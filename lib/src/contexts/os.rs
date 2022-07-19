@@ -1,4 +1,5 @@
 use crate::contexts::{Context, ContextProvider};
+use anyhow::Result;
 use gethostname::gethostname;
 use os_info;
 
@@ -9,10 +10,10 @@ impl ContextProvider for OSContextProvider {
         String::from("os")
     }
 
-    fn get_contexts(&self) -> Vec<super::Context> {
+    fn get_contexts(&self) -> Result<Vec<super::Context>> {
         let osinfo = os_info::get();
 
-        vec![
+        Ok(vec![
             Context::KeyValueContext(
                 String::from("hostname"),
                 gethostname().into_string().unwrap(),
@@ -33,7 +34,7 @@ impl ContextProvider for OSContextProvider {
                 String::from("edition"),
                 String::from(osinfo.edition().unwrap_or("unknown")),
             ),
-        ]
+        ])
     }
 }
 
@@ -88,7 +89,7 @@ mod test {
     #[cfg(target_os = "linux")]
     fn it_can_linux() {
         let oscontext = OSContextProvider {};
-        let keyvaluepairs = oscontext.get_contexts();
+        let keyvaluepairs = oscontext.get_contexts().unwrap();
 
         keyvaluepairs.iter().for_each(|context| match context {
             Context::KeyValueContext(k, v) => match k.as_ref() {

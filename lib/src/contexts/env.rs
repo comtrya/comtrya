@@ -1,3 +1,5 @@
+use anyhow::Result;
+
 use super::ContextProvider;
 use crate::contexts::Context;
 
@@ -8,13 +10,13 @@ impl ContextProvider for EnvContextProvider {
         String::from("env")
     }
 
-    fn get_contexts(&self) -> Vec<super::Context> {
+    fn get_contexts(&self) -> Result<Vec<super::Context>> {
         let mut contexts = vec![];
 
         for (key, value) in std::env::vars() {
             contexts.push(Context::KeyValueContext(key, value));
         }
 
-        contexts
+        Ok(contexts)
     }
 }
