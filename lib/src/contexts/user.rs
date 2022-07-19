@@ -1,4 +1,5 @@
 use crate::contexts::{Context, ContextProvider};
+use anyhow::Result;
 use dirs_next::{config_dir, home_dir};
 
 pub struct UserContextProvider {}
@@ -8,8 +9,8 @@ impl ContextProvider for UserContextProvider {
         String::from("user")
     }
 
-    fn get_contexts(&self) -> Vec<super::Context> {
-        vec![
+    fn get_contexts(&self) -> Result<Vec<super::Context>> {
+        Ok(vec![
             Context::KeyValueContext(String::from("id"), self.get_uid().to_string()),
             Context::KeyValueContext(String::from("name"), whoami::realname()),
             Context::KeyValueContext(String::from("username"), whoami::username()),
@@ -25,7 +26,7 @@ impl ContextProvider for UserContextProvider {
                     .into_string()
                     .unwrap(),
             ),
-        ]
+        ])
     }
 }
 

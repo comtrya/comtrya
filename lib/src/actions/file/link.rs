@@ -193,10 +193,7 @@ mod tests {
             dag_index: None,
         };
 
-        let config = Config {
-            manifest_paths: vec![],
-            variables: BTreeMap::new(),
-        };
+        let config = Config::default();
 
         let contexts = build_contexts(&config);
 
@@ -250,10 +247,7 @@ mod tests {
             dag_index: None,
         };
 
-        let config = Config {
-            manifest_paths: vec![],
-            variables: BTreeMap::new(),
-        };
+        let config = Config::default();
 
         let contexts = build_contexts(&config);
 

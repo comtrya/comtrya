@@ -1,14 +1,16 @@
+use anyhow::Result;
 use rhai::Scope;
 use serde::{Deserialize, Serialize};
 use serde_yaml::Value;
 use std::collections::BTreeMap;
-use tracing::{debug, instrument};
+use tracing::{debug, instrument, warn};
 use user::UserContextProvider;
 
 use crate::{
     config::Config,
     contexts::{
         env::EnvContextProvider, os::OSContextProvider, variables::VariablesContextProvider,
+        variables_source::VariablesSourceContextProvider,
     },
 };
 
@@ -17,10 +19,11 @@ pub mod os;
 /// User context provider: understands the user running the command
 pub mod user;
 pub mod variables;
+pub mod variables_source;
 
 pub trait ContextProvider {
     fn get_prefix(&self) -> String;
-    fn get_contexts(&self) -> Vec<Context>;
+    fn get_contexts(&self) -> Result<Vec<Context>>;
 }
 
 pub type Contexts = BTreeMap<String, BTreeMap<String, Value>>;
@@ -40,6 +43,7 @@ pub fn build_contexts(config: &Config) -> Contexts {
         Box::new(OSContextProvider {}),
         Box::new(EnvContextProvider {}),
         Box::new(VariablesContextProvider { config }),
+        Box::new(VariablesSourceContextProvider { config }),
     ];
 
     context_providers.iter().for_each(|provider| {
@@ -47,6 +51,15 @@ pub fn build_contexts(config: &Config) -> Contexts {
 
         provider
             .get_contexts()
+            .map_err(|e| {
+                warn!(
+                    "Error getting contexts from provider: {} -> {}",
+                    provider.get_prefix(),
+                    e
+                );
+                e
+            })
+            .unwrap_or_default()
             .iter()
             .for_each(|context| match context {
                 Context::KeyValueContext(k, v) => {
@@ -132,8 +145,8 @@ mod test {
         variables.insert("ship_captain".to_string(), "Thor".to_string());
 
         let config = Config {
-            manifest_paths: vec![],
             variables,
+            ..Default::default()
         };
 
         let contexts = build_contexts(&config);
@@ -160,8 +173,8 @@ mod test {
         let variables = BTreeMap::new();
 
         let config = Config {
-            manifest_paths: vec![],
             variables,
+            ..Default::default()
         };
 
         std::env::set_var("ASCENDED_NAME", "Morgan Le Fay");

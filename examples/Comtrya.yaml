@@ -10,3 +10,6 @@ manifests:
 variables:
   fkbr: "sxoe"
   kuci: "xhpv"
+
+variables_source:
+ - "dns+txt://comtrya.icepuma.dev"

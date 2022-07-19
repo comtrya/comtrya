@@ -1,3 +1,5 @@
+use anyhow::Result;
+
 use crate::{
     config::Config,
     contexts::{Context, ContextProvider},
@@ -12,13 +14,13 @@ impl<'a> ContextProvider for VariablesContextProvider<'a> {
         String::from("variables")
     }
 
-    fn get_contexts(&self) -> Vec<super::Context> {
+    fn get_contexts(&self) -> Result<Vec<super::Context>> {
         let mut contexts = vec![];
 
         for (key, value) in self.config.variables.iter() {
             contexts.push(Context::KeyValueContext(key.to_owned(), value.to_owned()));
         }
 
-        contexts
+        Ok(contexts)
     }
 }

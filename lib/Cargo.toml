@@ -39,6 +39,8 @@ which = "4.2.5"
 whoami = "1.2.1"
 sha256 = "1.0.3"
 schemars = "0.8.10"
+trust-dns-resolver = "0.21.2"
+toml = "0.5.9"
 
 [target.'cfg(unix)'.dependencies]
 users = "0.11.0"
