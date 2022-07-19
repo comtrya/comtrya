@@ -53,7 +53,7 @@ mod test {
     #[cfg(target_os = "macos")]
     fn it_can_macos() {
         let oscontext = OSContextProvider {};
-        let keyvaluepairs = oscontext.get_contexts();
+        let keyvaluepairs = oscontext.get_contexts().unwrap();
 
         keyvaluepairs.iter().for_each(|context| match context {
             Context::KeyValueContext(k, v) => match k.as_ref() {
@@ -71,7 +71,7 @@ mod test {
     #[cfg(windows)]
     fn it_can_windows() {
         let oscontext = OSContextProvider {};
-        let keyvaluepairs = oscontext.get_contexts();
+        let keyvaluepairs = oscontext.get_contexts().unwrap();
 
         keyvaluepairs.iter().for_each(|context| match context {
             Context::KeyValueContext(k, v) => match k.as_ref() {
@@ -107,7 +107,7 @@ mod test {
     #[cfg(target_os = "freebsd")]
     fn it_can_linux() {
         let oscontext = OSContextProvider {};
-        let keyvaluepairs = oscontext.get_contexts();
+        let keyvaluepairs = oscontext.get_contexts().unwrap();
 
         keyvaluepairs.iter().for_each(|context| match context {
             Context::KeyValueContext(k, v) => match k.as_ref() {
