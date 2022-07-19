@@ -124,8 +124,6 @@ impl Action for FileLink {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::BTreeMap;
-
     use crate::{
         actions::{Action, Actions},
         config::Config,
