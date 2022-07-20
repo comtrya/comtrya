@@ -9,8 +9,8 @@ use user::UserContextProvider;
 use crate::{
     config::Config,
     contexts::{
-        env::EnvContextProvider, os::OSContextProvider, variables::VariablesContextProvider,
-        variables_source::VariablesSourceContextProvider,
+        env::EnvContextProvider, os::OSContextProvider,
+        variable_include::VariableIncludeContextProvider, variables::VariablesContextProvider,
     },
 };
 
@@ -18,8 +18,8 @@ pub mod env;
 pub mod os;
 /// User context provider: understands the user running the command
 pub mod user;
+pub mod variable_include;
 pub mod variables;
-pub mod variables_source;
 
 pub trait ContextProvider {
     fn get_prefix(&self) -> String;
@@ -43,7 +43,7 @@ pub fn build_contexts(config: &Config) -> Contexts {
         Box::new(OSContextProvider {}),
         Box::new(EnvContextProvider {}),
         Box::new(VariablesContextProvider { config }),
-        Box::new(VariablesSourceContextProvider { config }),
+        Box::new(VariableIncludeContextProvider { config }),
     ];
 
     context_providers.iter().for_each(|provider| {

@@ -8,21 +8,21 @@ use crate::{config::Config, contexts::Context, contexts::ContextProvider};
 pub mod dns;
 pub mod file;
 
-pub struct VariablesSourceContextProvider<'a> {
+pub struct VariableIncludeContextProvider<'a> {
     pub config: &'a Config,
 }
 
-impl<'a> ContextProvider for VariablesSourceContextProvider<'a> {
+impl<'a> ContextProvider for VariableIncludeContextProvider<'a> {
     fn get_prefix(&self) -> String {
-        String::from("variables_source")
+        String::from("include_variables")
     }
 
     fn get_contexts(&self) -> Result<Vec<super::Context>> {
         let mut contexts = HashMap::<String, String>::new();
 
-        if let Some(variable_sources) = &self.config.variables_source {
-            for variable_source in variable_sources {
-                let url = Url::parse(variable_source)?;
+        if let Some(variable_includes) = &self.config.include_variables {
+            for variable_include in variable_includes {
+                let url = Url::parse(variable_include)?;
 
                 if url.scheme() == "dns+txt" {
                     dns::txt_record_values(&url, &mut contexts)?;
@@ -32,7 +32,7 @@ impl<'a> ContextProvider for VariablesSourceContextProvider<'a> {
                     file::yaml_values(&url, &mut contexts)?;
                 } else {
                     return Err(anyhow::anyhow!(
-                        "Unknown variables source scheme: {}",
+                        "Unknown variable include scheme: {}",
                         url.scheme()
                     ));
                 }

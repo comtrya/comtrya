@@ -11,5 +11,5 @@ variables:
   fkbr: "sxoe"
   kuci: "xhpv"
 
-variables_source:
+include_variables:
  - "dns+txt://comtrya.icepuma.dev"

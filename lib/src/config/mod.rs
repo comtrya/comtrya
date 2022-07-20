@@ -12,7 +12,7 @@ pub struct Config {
     pub variables: BTreeMap<String, String>,
 
     #[serde(default)]
-    pub variables_source: Option<Vec<String>>,
+    pub include_variables: Option<Vec<String>>,
 }
 
 /// Check the current working directory for a `Comtrya.yaml` file
