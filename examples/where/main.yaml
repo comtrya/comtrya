@@ -1,0 +1,7 @@
+where: variables.fkbr == "sxoe" && variables.kuci == "xhpv"
+
+actions:
+  - action: command.run
+    command: echo
+    args:
+      - hello, world!

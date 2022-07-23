@@ -3,7 +3,7 @@ use rhai::Scope;
 use serde::{Deserialize, Serialize};
 use serde_yaml::Value;
 use std::collections::BTreeMap;
-use tracing::{debug, instrument, warn};
+use tracing::{debug, instrument, trace, warn};
 use user::UserContextProvider;
 
 use crate::{
@@ -106,6 +106,8 @@ pub fn to_rhai(context: &Contexts) -> rhai::Scope {
                 panic!("Failed to convert context value to dynamic: {}", error);
             }
         };
+
+        trace!("Add dynamic constant '{}' -> {}", &m, &dynamic);
 
         scope.push_constant(m.clone(), dynamic);
     });

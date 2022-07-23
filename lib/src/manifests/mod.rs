@@ -13,6 +13,9 @@ use tracing::error;
 #[derive(JsonSchema, Clone, Debug, Serialize, Deserialize)]
 pub struct Manifest {
     #[serde(default)]
+    pub r#where: Option<String>,
+
+    #[serde(default)]
     pub name: Option<String>,
 
     #[serde(default)]

@@ -1,9 +1,11 @@
 use crate::Runtime;
+use comtrya_lib::contexts::to_rhai;
 use comtrya_lib::manifests::{load, Manifest};
 use petgraph::{visit::DfsPostOrder, Graph};
+use rhai::Engine;
 use std::{collections::HashMap, ops::Deref};
 use structopt::StructOpt;
-use tracing::{debug, error, info, instrument, span, trace};
+use tracing::{debug, error, info, instrument, span, trace, warn};
 
 #[derive(Clone, Debug, StructOpt)]
 pub(crate) struct Apply {
@@ -39,6 +41,7 @@ pub(crate) fn execute(args: &Apply, runtime: &Runtime) -> anyhow::Result<()> {
     let mut dag: Graph<Manifest, u32, petgraph::Directed> = Graph::new();
 
     let manifest_root = Manifest {
+        r#where: None,
         root_dir: None,
         dag_index: None,
         name: None,
@@ -96,6 +99,10 @@ pub(crate) fn execute(args: &Apply, runtime: &Runtime) -> anyhow::Result<()> {
     };
 
     let dry_run = args.dry_run;
+
+    let engine = Engine::new();
+    let mut scope = to_rhai(contexts);
+
     run_manifests.iter().for_each(|m| {
         let start = if m.eq(&String::from("")) {
             root_index
@@ -121,6 +128,30 @@ pub(crate) fn execute(args: &Apply, runtime: &Runtime) -> anyhow::Result<()> {
             .entered();
 
             let mut successful = true;
+
+            if let Some(where_condition) = &m1.r#where {
+                let where_result = match engine.eval_with_scope::<bool>(&mut scope, where_condition)
+                {
+                    Ok(result) => {
+                        debug!(
+                            "Result of 'where' condition '{}' -> '{}'",
+                            where_condition, result
+                        );
+
+                        result
+                    }
+                    Err(err) => {
+                        warn!("'where' condition '{}' failed: {}", where_condition, err);
+                        false
+                    }
+                };
+
+                if !where_result {
+                    info!("Skip manifest, because 'where' conditions were false!");
+                    span_manifest.exit();
+                    return;
+                }
+            }
 
             m1.actions.iter().for_each(|action| {
                 let span_action = span!(tracing::Level::INFO, "", %action).entered();
