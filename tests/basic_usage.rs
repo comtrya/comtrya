@@ -32,6 +32,18 @@ actions:
     to: mydircopy
 "#,
                 ),
+                f(
+                    "where_condition.yaml",
+                    r#"
+where: non.existing.variable == true
+
+actions:
+  - action: command.run
+    command: echo
+    args:
+      - hello, world!
+                    "#,
+                ),
             ],
         )],
     )
