@@ -7,7 +7,7 @@ use super::UserVariant;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 mod linux;
-use linux::LinuxUserProvider;
+use self::linux::LinuxUserProvider;
 
 #[derive(JsonSchema, Clone, Debug, Serialize, Deserialize)]
 pub enum UserProviders {
