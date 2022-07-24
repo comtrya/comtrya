@@ -3,6 +3,7 @@ use self::freebsd::FreeBSDUserProvider;
 use crate::steps::Step;
 mod none;
 use self::none::NoneUserProvider;
+mod linux;
 use self::linux::LinuxUserProvider;
 use super::UserVariant;
 use schemars::JsonSchema;
@@ -31,17 +32,18 @@ impl UserProviders {
 }
 
 impl Default for UserProviders {
+    #[cfg(target_os = "linux")]
+    fn default() -> Self {
+	return UserProviders::LinuxUserProvider;
+    }
+    
     fn default() -> Self {
         let info = os_info::get();
-
-	#[cfg(target_os = "linux")]
-	return UserProviders::LinuxUserProvider;
 
         match info.os_type() {
             // BSD Operating systems
             os_info::Type::FreeBSD => UserProviders::FreeBSDUserProvider,
             _ => UserProviders::NoneUserProvider,
-            //     _ => panic!("Sorry, but we don't have a default provider for {} OS. Please be explicit when requesting a package installation with `provider: XYZ`.", info.os_type()),
         }
     }
 }
