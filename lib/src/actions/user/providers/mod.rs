@@ -32,11 +32,14 @@ impl UserProviders {
 }
 
 impl Default for UserProviders {
+    #[cfg(target_os = "linux")]
+    fn default() -> Self {
+        UserProviders::LinuxUserProvider
+    }
+
+    #[cfg(not(target_os = "linux"))]
     fn default() -> Self {
         let info = os_info::get();
-
-        #[cfg(any(target_os = "linux"))]
-        return UserProviders::LinuxUserProvider;
 
         match info.os_type() {
             // BSD Operating systems
