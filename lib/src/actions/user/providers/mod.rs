@@ -3,6 +3,7 @@ use self::freebsd::FreeBSDUserProvider;
 use crate::steps::Step;
 mod none;
 use self::none::NoneUserProvider;
+use self::linux::LinuxUserProvider;
 use super::UserVariant;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -14,6 +15,9 @@ pub enum UserProviders {
 
     #[serde(alias = "none")]
     NoneUserProvider,
+
+    #[serde(alias = "linux")]
+    LinuxUserProvider,
 }
 
 impl UserProviders {
@@ -21,6 +25,7 @@ impl UserProviders {
         match self {
             UserProviders::FreeBSDUserProvider => Box::new(FreeBSDUserProvider {}),
             UserProviders::NoneUserProvider => Box::new(NoneUserProvider {}),
+	    UserProviders::LinuxUserProvider => Box::new(LinuxUserProvider {}),
         }
     }
 }
@@ -28,6 +33,9 @@ impl UserProviders {
 impl Default for UserProviders {
     fn default() -> Self {
         let info = os_info::get();
+
+	#[cfg(target_os = "linux")]
+	return UserProviders::LinuxUserProvider;
 
         match info.os_type() {
             // BSD Operating systems
