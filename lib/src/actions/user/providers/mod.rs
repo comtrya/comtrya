@@ -35,7 +35,7 @@ impl Default for UserProviders {
     fn default() -> Self {
         let info = os_info::get();
 
-        #[cfg(target_os = "linux")]
+        #[cfg(any(target_os = "linux"))]
         return UserProviders::LinuxUserProvider;
 
         match info.os_type() {
