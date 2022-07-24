@@ -3,11 +3,11 @@ use self::freebsd::FreeBSDUserProvider;
 use crate::steps::Step;
 mod none;
 use self::none::NoneUserProvider;
-mod linux;
-use self::linux::LinuxUserProvider;
 use super::UserVariant;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+mod linux;
+use linux::LinuxUserProvider;
 
 #[derive(JsonSchema, Clone, Debug, Serialize, Deserialize)]
 pub enum UserProviders {
@@ -26,7 +26,7 @@ impl UserProviders {
         match self {
             UserProviders::FreeBSDUserProvider => Box::new(FreeBSDUserProvider {}),
             UserProviders::NoneUserProvider => Box::new(NoneUserProvider {}),
-	    UserProviders::LinuxUserProvider => Box::new(LinuxUserProvider {}),
+	        UserProviders::LinuxUserProvider => Box::new(LinuxUserProvider {}),
         }
     }
 }
