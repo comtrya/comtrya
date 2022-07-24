@@ -32,11 +32,6 @@ impl UserProviders {
 }
 
 impl Default for UserProviders {
-    #[cfg(target_os = "linux")]
-    fn default() -> Self {
-	return UserProviders::LinuxUserProvider;
-    }
-    
     fn default() -> Self {
         let info = os_info::get();
 
