@@ -65,26 +65,6 @@ mod test {
 
     use super::*;
 
-    // These tests are really weak at the moment, but that's because I'm not
-    // sure how to add derive(Debug,Default) to struct Step
-    // TODO: Learn how to fix this
-
-    // #[test]
-    // fn test_add_repository_with_key_and_fingerprint() {
-    //     let aptitude = Aptitude {};
-    //     let steps = aptitude.add_repository(&PackageRepository {
-    //         name: String::from("test"),
-    //         key: Some(RepositoryKey {
-    //             url: String::from("abc"),
-    //             fingerprint: Some(String::from("abc")),
-    //             ..Default::default()
-    //         }),
-    //         ..Default::default()
-    //     });
-
-    //     assert_eq!(steps.len(), 3);
-    // }
-
     #[test]
     fn test_install() {
         let zypper = Zypper {};
