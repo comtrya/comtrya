@@ -3,7 +3,6 @@ use crate::actions::package::{repository::PackageRepository, PackageVariant};
 use crate::atoms::command::Exec;
 use crate::steps::Step;
 use serde::{Deserialize, Serialize};
-use sha256::digest;
 use tracing::warn;
 use which::which;
 
