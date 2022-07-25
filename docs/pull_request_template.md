@@ -2,6 +2,7 @@
 
 - [ ] bug fix
 - [ ] feature
+- [ ] documentation addition
 
 ## What is the current behaviour?
 
