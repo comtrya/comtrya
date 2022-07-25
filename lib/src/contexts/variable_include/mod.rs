@@ -6,8 +6,8 @@ use reqwest::Url;
 use crate::{config::Config, contexts::Context, contexts::ContextProvider};
 
 pub mod dns;
+pub mod doppler;
 pub mod file;
-
 pub struct VariableIncludeContextProvider<'a> {
     pub config: &'a Config,
 }
@@ -30,6 +30,8 @@ impl<'a> ContextProvider for VariableIncludeContextProvider<'a> {
                     file::toml_values(&url, &mut contexts)?;
                 } else if url.scheme() == "file+yaml" {
                     file::yaml_values(&url, &mut contexts)?;
+                } else if url.scheme() == "doppler" {
+                    doppler::secrets(&url, &mut contexts)?;
                 } else {
                     return Err(anyhow::anyhow!(
                         "Unknown variable include scheme: {}",
