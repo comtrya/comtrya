@@ -2,6 +2,7 @@ use super::UserProvider;
 use crate::steps::Step;
 use crate::{actions::user::UserVariant, atoms::command::Exec};
 use serde::{Deserialize, Serialize};
+use which;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct LinuxUserProvider {}
