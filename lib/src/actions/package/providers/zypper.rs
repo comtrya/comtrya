@@ -34,7 +34,7 @@ impl PackageProvider for Zypper {
     }
 
     fn add_repository(&self, _repository: &PackageRepository) -> Vec<Step> {
-	vec![]
+        vec![]
     }
 
     fn query(&self, package: &PackageVariant) -> Vec<String> {
@@ -61,7 +61,7 @@ impl PackageProvider for Zypper {
 
 #[cfg(test)]
 mod test {
-    use crate::actions::package::{providers::PackageProviders};
+    use crate::actions::package::providers::PackageProviders;
 
     use super::*;
 
@@ -87,8 +87,8 @@ mod test {
 
     #[test]
     fn test_install() {
-	    let zypper = Zypper {};
-	    let steps = zypper.install(&PackageVariant {
+        let zypper = Zypper {};
+        let steps = zypper.install(&PackageVariant {
             name: Some(String::from("")),
             list: vec![],
             extra_args: vec![],
