@@ -3,6 +3,7 @@ use crate::steps::Step;
 use crate::{actions::user::UserVariant, atoms::command::Exec};
 use serde::{Deserialize, Serialize};
 use which::which;
+use tracing::warn;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct LinuxUserProvider {}
@@ -10,9 +11,22 @@ pub struct LinuxUserProvider {}
 impl UserProvider for LinuxUserProvider {
     fn add_user(&self, user: &UserVariant) -> Vec<Step> {
         let mut args: Vec<String> = vec![];
+        let cli = match which("useradd") {
+            Ok(c) => c,
+            Err(_) => {
+                match which("adduser") {
+                    Ok(c) => c,
+                    Err(_) => {
+                        warn!(message = "Could not get the proper user add tool");
+                        return vec![];
+                    }
+                }
+            },
+        };
 
         // is a user name isn't provided, cant create a new user
         if user.username.is_empty() {
+            warn!(message = "Unable to create user without a username");
             return vec![];
         }
 
@@ -36,7 +50,7 @@ impl UserProvider for LinuxUserProvider {
 
         vec![Step {
             atom: Box::new(Exec {
-                command: String::from(which::which("useradd").unwrap().to_str().unwrap()),
+                command: String::from(cli.to_str().unwrap()),
                 arguments: vec![]
                     .into_iter()
                     .chain(args.clone())
