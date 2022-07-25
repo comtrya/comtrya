@@ -18,7 +18,7 @@ impl PackageProvider for Zypper {
         match which("zypper") {
             Ok(_) => true,
             Err(_) => {
-                warn!(message = "zypper not availiable");
+                warn!(message = "zypper not available");
                 false
             }
         }
