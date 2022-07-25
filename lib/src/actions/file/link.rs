@@ -184,6 +184,7 @@ mod tests {
         };
 
         let manifest: Manifest = Manifest {
+            r#where: None,
             root_dir: Some(source_dir.path().to_path_buf()),
             actions: vec![],
             depends: vec![],
@@ -238,6 +239,7 @@ mod tests {
         }
 
         let manifest: Manifest = Manifest {
+            r#where: None,
             root_dir: Some(source_dir.clone()),
             actions: vec![],
             depends: vec![],
