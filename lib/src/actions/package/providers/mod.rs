@@ -15,6 +15,8 @@ mod winget;
 use self::winget::Winget;
 mod xbps;
 use self::xbps::Xbps;
+mod zypper;
+use self::zypper::Zypper;
 use super::{repository::PackageRepository, PackageVariant};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -44,6 +46,9 @@ pub enum PackageProviders {
 
     #[serde(rename = "xbps")]
     Xbps,
+
+    #[serde(rename = "zypper")]
+    Zypper,
 }
 
 impl PackageProviders {
@@ -57,6 +62,7 @@ impl PackageProviders {
             PackageProviders::Yay => Box::new(Yay {}),
             PackageProviders::Winget => Box::new(Winget {}),
             PackageProviders::Xbps => Box::new(Xbps {}),
+            PackageProviders::Zypper => Box::new(Zypper {}),
         }
     }
 }
@@ -81,6 +87,9 @@ impl Default for PackageProviders {
             // For some reason, the Rust image is showing as this and
             // its Debian based?
             os_info::Type::OracleLinux => PackageProviders::Aptitude,
+            // OpenSUSE and SUSE
+            os_info::Type::openSUSE => PackageProviders::Zypper,
+            os_info::Type::SUSE => PackageProviders::Zypper,
             // Red-Hat Variants
             os_info::Type::Fedora => PackageProviders::Dnf,
             os_info::Type::Redhat => PackageProviders::Dnf,
