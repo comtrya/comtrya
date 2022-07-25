@@ -2,7 +2,7 @@ use super::UserProvider;
 use crate::steps::Step;
 use crate::{actions::user::UserVariant, atoms::command::Exec};
 use serde::{Deserialize, Serialize};
-use which;
+use which::which;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct LinuxUserProvider {}
@@ -36,7 +36,7 @@ impl UserProvider for LinuxUserProvider {
 
         vec![Step {
             atom: Box::new(Exec {
-                command: String::from("/usr/sbin/useradd"),
+                command: String::from(which::which("useradd").unwrap().to_str().unwrap()),
                 arguments: vec![]
                     .into_iter()
                     .chain(args.clone())
