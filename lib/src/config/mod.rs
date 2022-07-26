@@ -13,6 +13,9 @@ pub struct Config {
 
     #[serde(default)]
     pub include_variables: Option<Vec<String>>,
+
+    #[serde(default)]
+    pub disable_update_check: bool,
 }
 
 /// Check the current working directory for a `Comtrya.yaml` file
