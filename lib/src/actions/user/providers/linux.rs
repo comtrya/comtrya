@@ -2,8 +2,8 @@ use super::UserProvider;
 use crate::steps::Step;
 use crate::{actions::user::UserVariant, atoms::command::Exec};
 use serde::{Deserialize, Serialize};
-use which::which;
 use tracing::warn;
+use which::which;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct LinuxUserProvider {}
@@ -13,13 +13,11 @@ impl UserProvider for LinuxUserProvider {
         let mut args: Vec<String> = vec![];
         let cli = match which("useradd") {
             Ok(c) => c,
-            Err(_) => {
-                match which("adduser") {
-                    Ok(c) => c,
-                    Err(_) => {
-                        warn!(message = "Could not get the proper user add tool");
-                        return vec![];
-                    }
+            Err(_) => match which("adduser") {
+                Ok(c) => c,
+                Err(_) => {
+                    warn!(message = "Could not get the proper user add tool");
+                    return vec![];
                 }
             },
         };
@@ -51,15 +49,37 @@ impl UserProvider for LinuxUserProvider {
         vec![Step {
             atom: Box::new(Exec {
                 command: String::from(cli.to_str().unwrap()),
-                arguments: vec![]
-                    .into_iter()
-                    .chain(args.clone())
-                    .collect(),
+                arguments: vec![].into_iter().chain(args.clone()).collect(),
                 privileged: true,
                 ..Default::default()
             }),
             initializers: vec![],
             finalizers: vec![],
         }]
+    }
+}
+
+#[cfg(tests)]
+mod test {
+    use crate::actions::user::*;
+
+    #[test]
+    fn test_add_user() {
+        let user_provider = LinuxUserProvider {};
+        let steps = user_provider.add_user(&UserVariant {
+            username: test,
+        });
+
+        assert_eq!(steps.len(), 1);
+    }
+
+    #[test]
+    fn test_add_user_no_username() {
+        let user_provider = LinuxUserProvider {};
+        let steps = user_provider.add_user(&UserVariant {
+            // empty for test purposes
+        });
+
+        assert_eq!(steps.len(), 0);
     }
 }

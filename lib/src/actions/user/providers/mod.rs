@@ -26,7 +26,7 @@ impl UserProviders {
         match self {
             UserProviders::FreeBSDUserProvider => Box::new(FreeBSDUserProvider {}),
             UserProviders::NoneUserProvider => Box::new(NoneUserProvider {}),
-	        UserProviders::LinuxUserProvider => Box::new(LinuxUserProvider {}),
+            UserProviders::LinuxUserProvider => Box::new(LinuxUserProvider {}),
         }
     }
 }
