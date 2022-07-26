@@ -13,13 +13,10 @@ impl UserProvider for LinuxUserProvider {
         let mut args: Vec<String> = vec![];
         let cli = match which("useradd") {
             Ok(c) => c,
-            Err(_) => match which("adduser") {
-                Ok(c) => c,
-                Err(_) => {
-                    warn!(message = "Could not get the proper user add tool");
-                    return vec![];
-                }
-            },
+            Err(_) => {
+                warn!(message = "Could not get the proper user add tool");
+                return vec![];
+            }
         };
 
         // is a user name isn't provided, cant create a new user
