@@ -66,9 +66,7 @@ mod test {
     #[test]
     fn test_add_user() {
         let user_provider = LinuxUserProvider {};
-        let steps = user_provider.add_user(&UserVariant {
-            username: test,
-        });
+        let steps = user_provider.add_user(&UserVariant { username: test });
 
         assert_eq!(steps.len(), 1);
     }
