@@ -6,6 +6,8 @@ use self::none::NoneUserProvider;
 use super::UserVariant;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+mod linux;
+use self::linux::LinuxUserProvider;
 
 #[derive(JsonSchema, Clone, Debug, Serialize, Deserialize)]
 pub enum UserProviders {
@@ -14,6 +16,9 @@ pub enum UserProviders {
 
     #[serde(alias = "none")]
     NoneUserProvider,
+
+    #[serde(alias = "linux")]
+    LinuxUserProvider,
 }
 
 impl UserProviders {
@@ -21,11 +26,18 @@ impl UserProviders {
         match self {
             UserProviders::FreeBSDUserProvider => Box::new(FreeBSDUserProvider {}),
             UserProviders::NoneUserProvider => Box::new(NoneUserProvider {}),
+            UserProviders::LinuxUserProvider => Box::new(LinuxUserProvider {}),
         }
     }
 }
 
 impl Default for UserProviders {
+    #[cfg(target_os = "linux")]
+    fn default() -> Self {
+        UserProviders::LinuxUserProvider
+    }
+
+    #[cfg(not(target_os = "linux"))]
     fn default() -> Self {
         let info = os_info::get();
 
@@ -33,7 +45,6 @@ impl Default for UserProviders {
             // BSD Operating systems
             os_info::Type::FreeBSD => UserProviders::FreeBSDUserProvider,
             _ => UserProviders::NoneUserProvider,
-            //     _ => panic!("Sorry, but we don't have a default provider for {} OS. Please be explicit when requesting a package installation with `provider: XYZ`.", info.os_type()),
         }
     }
 }
