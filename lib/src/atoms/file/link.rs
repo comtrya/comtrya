@@ -55,8 +55,11 @@ impl Atom for Link {
             }
         };
 
+        const PREFIX: &str = r#"\\?\"#;
+        let source = PathBuf::from(&self.source.to_str().unwrap().replace(PREFIX, ""));
+
         // If this file doesn't link to what we expect, lets make it so
-        !link.eq(&self.source)
+        !link.eq(&source)
     }
 
     #[cfg(unix)]
