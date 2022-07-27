@@ -55,8 +55,12 @@ impl Atom for Link {
             }
         };
 
-        const PREFIX: &str = r#"\\?\"#;
-        let source = PathBuf::from(&self.source.to_str().unwrap().replace(PREFIX, ""));
+        let source = if cfg!(target_os = "windows") {
+            const PREFIX: &str = r#"\\?\"#;
+            PathBuf::from(&self.source.display().to_string().replace(PREFIX, ""))
+        } else {
+            self.source.to_owned()
+        };
 
         // If this file doesn't link to what we expect, lets make it so
         !link.eq(&source)
