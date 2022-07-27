@@ -68,7 +68,7 @@ jobs:
           #     target: x86_64-unknown-linux-musl,
           #     use-cross: true,
           #   }
-          - { os: macos-10.15, target: x86_64-apple-darwin }
+          - { os: macos-11, target: x86_64-apple-darwin }
           - { os: windows-2019, target: x86_64-pc-windows-msvc }
     steps:
       - uses: actions/checkout@v2
