@@ -165,6 +165,7 @@ impl Display for Actions {
             Actions::FileCopy(_) => "file.copy",
             Actions::FileDownload(_) => "file.download",
             Actions::FileLink(_) => "file.link",
+            Actions::BinaryGitHub(_) => "github.binary",
             Actions::GitClone(_) => "git.clone",
             Actions::MacOSDefault(_) => "macos.default",
             Actions::PackageInstall(_) => "package.install",

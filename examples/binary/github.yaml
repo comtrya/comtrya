@@ -1,5 +1,5 @@
 actions:
   - action: binary.github
-    name: pulumi
+    name: comtrya
     directory: /tmp
-    repository: pulumi/pulumi
+    repository: comtrya/comtrya
