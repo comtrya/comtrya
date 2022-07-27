@@ -4,12 +4,13 @@ use crate::atoms::http::Download;
 use crate::contexts::Contexts;
 use crate::manifests::Manifest;
 use crate::steps::Step;
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use tokio::runtime::Runtime;
-use tracing::error;
+use tracing::{debug, error};
 
-#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, JsonSchema, PartialEq, Serialize, Deserialize)]
 pub struct BinaryGitHub {
     pub name: String,
     pub directory: String,
@@ -55,34 +56,33 @@ impl Action for BinaryGitHub {
         let asset: Option<GitHubAsset> = release.assets.into_iter().fold(None, |acc, asset| {
             let mut score = 0;
 
+            let mut score_terms = vec![
+                std::env::consts::OS.to_lowercase(),
+                std::env::consts::ARCH.to_lowercase(),
+            ];
+
             let os = os_info::get();
-            let os_type = if os.os_type() == os_info::Type::Macos {
-                "darwin".to_string()
+            if os.os_type() == os_info::Type::Macos {
+                score_terms.push(String::from("darwin"));
+                score_terms.push(String::from("apple"));
             } else {
-                os.os_type().to_string()
+                score_terms.push(os.os_type().to_string());
             };
 
-            let simple_bitness = if os.bitness() == os_info::Bitness::X32 {
-                "32".to_string()
+            if std::env::consts::ARCH == "aarch64" {
+                score_terms.push("arm".to_string());
+                score_terms.push("aarch".to_string());
             } else {
-                "64".to_string()
+                score_terms.push("unknown".to_string());
             };
 
-            let simple_aarch = if std::env::consts::ARCH == "aarch64" {
-                "arm".to_string()
+            if os.bitness() == os_info::Bitness::X32 {
+                score_terms.push("32".to_string());
             } else {
-                "unknown".to_string()
+                score_terms.push("64".to_string());
             };
 
-            vec![
-                &std::env::consts::OS.to_lowercase(),
-                &os_type,
-                &std::env::consts::ARCH.to_lowercase(),
-                &simple_bitness,
-                &simple_aarch,
-            ]
-            .iter()
-            .for_each(|term| {
+            score_terms.iter().for_each(|term| {
                 if asset.name.to_lowercase().contains(term.as_str()) {
                     score += 1;
                 }
@@ -107,7 +107,10 @@ impl Action for BinaryGitHub {
         });
 
         let asset = match asset {
-            Some(asset) => asset,
+            Some(asset) => {
+                debug!("Downloading {:?}", asset.url);
+                asset
+            }
             None => {
                 error!("Failed to find a downloadable asset");
                 return vec![];
