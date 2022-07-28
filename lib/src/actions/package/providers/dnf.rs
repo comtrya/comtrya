@@ -153,7 +153,6 @@ mod test {
                 ..Default::default()
             }),
             provider: PackageProviders::Dnf,
-            ..Default::default()
         });
 
         assert_eq!(steps.len(), 3);

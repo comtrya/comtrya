@@ -12,21 +12,21 @@ use self::linux::LinuxUserProvider;
 #[derive(JsonSchema, Clone, Debug, Serialize, Deserialize)]
 pub enum UserProviders {
     #[serde(alias = "freebsd")]
-    FreeBSDUserProvider,
+    FreeBSD,
 
     #[serde(alias = "none")]
-    NoneUserProvider,
+    None,
 
     #[serde(alias = "linux")]
-    LinuxUserProvider,
+    Linux,
 }
 
 impl UserProviders {
     pub fn get_provider(self) -> Box<dyn UserProvider> {
         match self {
-            UserProviders::FreeBSDUserProvider => Box::new(FreeBSDUserProvider {}),
-            UserProviders::NoneUserProvider => Box::new(NoneUserProvider {}),
-            UserProviders::LinuxUserProvider => Box::new(LinuxUserProvider {}),
+            UserProviders::FreeBSD => Box::new(FreeBSDUserProvider {}),
+            UserProviders::None => Box::new(NoneUserProvider {}),
+            UserProviders::Linux => Box::new(LinuxUserProvider {}),
         }
     }
 }
@@ -34,7 +34,7 @@ impl UserProviders {
 impl Default for UserProviders {
     #[cfg(target_os = "linux")]
     fn default() -> Self {
-        UserProviders::LinuxUserProvider
+        UserProviders::Linux
     }
 
     #[cfg(not(target_os = "linux"))]
@@ -43,8 +43,8 @@ impl Default for UserProviders {
 
         match info.os_type() {
             // BSD Operating systems
-            os_info::Type::FreeBSD => UserProviders::FreeBSDUserProvider,
-            _ => UserProviders::NoneUserProvider,
+            os_info::Type::FreeBSD => UserProviders::FreeBSD,
+            _ => UserProviders::None,
         }
     }
 }
