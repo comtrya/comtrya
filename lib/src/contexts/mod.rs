@@ -118,6 +118,7 @@ pub fn to_rhai(context: &Contexts) -> rhai::Scope {
 #[cfg(test)]
 mod test {
     use super::*;
+    use pretty_assertions::assert_eq;
     use rhai::Engine;
     use serde_yaml::Value;
 

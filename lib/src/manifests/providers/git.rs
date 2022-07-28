@@ -109,6 +109,7 @@ mod test {
 
     use super::super::ManifestProvider;
     use super::GitManifestProvider;
+    use pretty_assertions::assert_eq;
 
     #[test]
     fn test_clean_git_url() {

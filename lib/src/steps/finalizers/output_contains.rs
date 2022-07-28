@@ -14,6 +14,7 @@ impl Finalizer for OutputContains {
 mod tests {
     use super::*;
     use crate::atoms::Echo;
+    use pretty_assertions::assert_eq;
 
     #[test]
     fn it_returns_false_when_not_found() {

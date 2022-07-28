@@ -32,6 +32,7 @@ mod tests {
     use std::env::temp_dir;
 
     use super::*;
+    use pretty_assertions::assert_eq;
 
     #[test]
     fn it_can_plan() {

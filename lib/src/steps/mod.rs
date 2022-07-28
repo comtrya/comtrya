@@ -82,6 +82,7 @@ mod tests {
     use super::initializers::test::Error as ErrorInitializer;
     use super::initializers::FlowControl as InitializerFlowControl;
     use crate::atoms::Echo as EchoAtom;
+    use pretty_assertions::assert_eq;
 
     use super::*;
 

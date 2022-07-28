@@ -40,6 +40,7 @@ impl Atom for Copy {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use pretty_assertions::assert_eq;
     use std::io::Write;
 
     #[test]
