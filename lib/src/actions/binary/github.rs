@@ -25,6 +25,11 @@ struct GitHubAsset {
 
 impl Action for BinaryGitHub {
     fn plan(&self, _: &Manifest, _: &Contexts) -> Vec<Step> {
+        // Don't need to do anything if something already exists at the path
+        if (std::path::Path::new(format!("{}/{}", self.directory, self.name).as_str()).exists()) {
+            return vec![];
+        };
+
         let async_runtime = match Runtime::new() {
             Ok(runtime) => runtime,
             Err(e) => {
@@ -76,11 +81,11 @@ impl Action for BinaryGitHub {
                 score_terms.push("unknown".to_string());
             };
 
-            if os.bitness() == os_info::Bitness::X32 {
-                score_terms.push("32".to_string());
-            } else {
-                score_terms.push("64".to_string());
-            };
+            match os.bitness() {
+                os_info::Bitness::X32 => score_terms.push("32".to_string()),
+                os_info::Bitness::X64 => score_terms.push("64".to_string()),
+                _ => (),
+            }
 
             score_terms.iter().for_each(|term| {
                 if asset.name.to_lowercase().contains(term.as_str()) {
@@ -117,25 +122,23 @@ impl Action for BinaryGitHub {
             }
         };
 
-        let steps = vec![
+        vec![
             Step {
                 atom: Box::new(Download {
                     url: asset.url,
-                    to: PathBuf::from(format!("{}/{}", &self.directory, &self.name)),
+                    to: PathBuf::from(format!("{}/{}", self.directory, self.name)),
                 }),
                 initializers: vec![],
                 finalizers: vec![],
             },
             Step {
                 atom: Box::new(Chmod {
-                    path: PathBuf::from(format!("{}/{}", &self.directory, &self.name)),
+                    path: PathBuf::from(format!("{}/{}", self.directory, self.name)),
                     mode: 0o755,
                 }),
                 initializers: vec![],
                 finalizers: vec![],
             },
-        ];
-
-        steps
+        ]
     }
 }
