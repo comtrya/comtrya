@@ -14,7 +14,7 @@ impl ContextProvider for EnvContextProvider {
         let mut contexts = vec![];
 
         for (key, value) in std::env::vars() {
-            contexts.push(Context::KeyValueContext(key, value));
+            contexts.push(Context::KeyValueContext(key, value.into()));
         }
 
         Ok(contexts)

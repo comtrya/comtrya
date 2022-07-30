@@ -1,7 +1,6 @@
 use anyhow::Result;
 use rhai::Scope;
 use serde::{Deserialize, Serialize};
-use serde_yaml::Value;
 use std::collections::BTreeMap;
 use tracing::{debug, instrument, trace, warn};
 use user::UserContextProvider;
@@ -12,6 +11,7 @@ use crate::{
         env::EnvContextProvider, os::OSContextProvider,
         variable_include::VariableIncludeContextProvider, variables::VariablesContextProvider,
     },
+    values::Value,
 };
 
 pub mod env;
@@ -30,8 +30,8 @@ pub type Contexts = BTreeMap<String, BTreeMap<String, Value>>;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum Context {
-    KeyValueContext(String, String),
-    ListContext(String, Vec<String>),
+    KeyValueContext(String, Value),
+    ListContext(String, Vec<Value>),
 }
 
 #[instrument(skip(config))]
@@ -66,16 +66,16 @@ pub fn build_contexts(config: &Config) -> Contexts {
                     debug!(
                         context = provider.get_prefix().as_str(),
                         key = k.clone().as_str(),
-                        value = v.clone().as_str(),
+                        value = v.clone().to_string(),
                         message = ""
                     );
-                    values.insert(k.clone(), v.clone().into());
+                    values.insert(k.clone(), v.clone());
                 }
                 Context::ListContext(k, v) => {
                     debug!(
                         context = provider.get_prefix().as_str(),
                         key = k.clone().as_str(),
-                        values = v.clone().join(",").as_str(),
+                        values = format!("{:?}", v), // debug of the vector values is good enough
                         message = ""
                     );
 
@@ -120,7 +120,6 @@ mod test {
     use super::*;
     use pretty_assertions::assert_eq;
     use rhai::Engine;
-    use serde_yaml::Value;
 
     #[test]
     fn it_can_convert_to_rhai() {
@@ -157,15 +156,20 @@ mod test {
 
         assert_eq!(variables_context_values.is_some(), true);
         assert_eq!(
-            variables_context_values.unwrap().get("ship_name").unwrap(),
-            "Jack O'Neill"
+            variables_context_values
+                .unwrap()
+                .get("ship_name")
+                .unwrap()
+                .to_string(),
+            "Jack O'Neill".to_string()
         );
         assert_eq!(
             variables_context_values
                 .unwrap()
                 .get("ship_captain")
-                .unwrap(),
-            "Thor"
+                .unwrap()
+                .to_string(),
+            "Thor".to_string()
         );
 
         Ok(())
@@ -188,12 +192,20 @@ mod test {
 
         assert_eq!(env_context_values.is_some(), true);
         assert_eq!(
-            env_context_values.unwrap().get("ASCENDED_NAME").unwrap(),
-            "Morgan Le Fay"
+            env_context_values
+                .unwrap()
+                .get("ASCENDED_NAME")
+                .unwrap()
+                .to_string(),
+            "Morgan Le Fay".to_string()
         );
         assert_eq!(
-            env_context_values.unwrap().get("REAL_NAME").unwrap(),
-            "Ganos Lal"
+            env_context_values
+                .unwrap()
+                .get("REAL_NAME")
+                .unwrap()
+                .to_string(),
+            "Ganos Lal".to_string()
         );
 
         Ok(())

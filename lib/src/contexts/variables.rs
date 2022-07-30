@@ -18,7 +18,10 @@ impl<'a> ContextProvider for VariablesContextProvider<'a> {
         let mut contexts = vec![];
 
         for (key, value) in self.config.variables.iter() {
-            contexts.push(Context::KeyValueContext(key.to_owned(), value.to_owned()));
+            contexts.push(Context::KeyValueContext(
+                key.to_owned(),
+                value.to_owned().into(),
+            ));
         }
 
         Ok(contexts)
