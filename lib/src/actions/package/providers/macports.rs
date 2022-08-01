@@ -55,21 +55,19 @@ impl PackageProvider for Macports {
             }
         };
 
-        vec![
-            Step {
-                atom: Box::new(Exec {
-                    command: String::from(cli.to_str().unwrap()),
-                    arguments: vec![String::from("install")]
-                        .into_iter()
-                        .chain(package.extra_args.clone())
-                        .chain(package.packages())
-                        .collect(),
-                    privileged: true,
-                    ..Default::default()
-                }),
-                initializers: vec![],
-                finalizers: vec![],
-            }
-        ]
+        vec![Step {
+            atom: Box::new(Exec {
+                command: String::from(cli.to_str().unwrap()),
+                arguments: vec![String::from("install")]
+                    .into_iter()
+                    .chain(package.extra_args.clone())
+                    .chain(package.packages())
+                    .collect(),
+                privileged: true,
+                ..Default::default()
+            }),
+            initializers: vec![],
+            finalizers: vec![],
+        }]
     }
 }
