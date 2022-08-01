@@ -7,6 +7,8 @@ mod dnf;
 use self::dnf::Dnf;
 mod homebrew;
 use self::homebrew::Homebrew;
+mod macports;
+use self::macports::Macports;
 mod pkgin;
 use self::pkgin::Pkgin;
 mod yay;
@@ -35,6 +37,9 @@ pub enum PackageProviders {
     #[serde(rename = "homebrew", alias = "brew")]
     Homebrew,
 
+    #[serde(rename = "macports", alias = "port")]
+    Macports,
+
     #[serde(rename = "pkgin")]
     Pkgin,
 
@@ -58,6 +63,7 @@ impl PackageProviders {
             PackageProviders::BsdPkg => Box::new(BsdPkg {}),
             PackageProviders::Dnf => Box::new(Dnf {}),
             PackageProviders::Homebrew => Box::new(Homebrew {}),
+            PackageProviders::Macports => Box::new(Macports {}),
             PackageProviders::Pkgin => Box::new(Pkgin {}),
             PackageProviders::Yay => Box::new(Yay {}),
             PackageProviders::Winget => Box::new(Winget {}),
