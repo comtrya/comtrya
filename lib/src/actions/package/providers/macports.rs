@@ -1,12 +1,9 @@
 use super::PackageProvider;
 use crate::actions::package::repository::PackageRepository;
-use crate::atoms::directory::Create;
-use crate::atoms::git::Clone;
 use crate::steps::Step;
 use crate::{actions::package::PackageVariant, atoms::command::Exec};
 use serde::{Deserialize, Serialize};
-use std::{path::Path, process::Command};
-use tracing::{debug, trace, warn};
+use tracing::warn;
 use which::which;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
