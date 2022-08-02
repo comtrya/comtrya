@@ -26,7 +26,7 @@ struct GitHubAsset {
 impl Action for BinaryGitHub {
     fn plan(&self, _: &Manifest, _: &Contexts) -> Vec<Step> {
         // Don't need to do anything if something already exists at the path
-        if (std::path::Path::new(format!("{}/{}", self.directory, self.name).as_str()).exists()) {
+        if std::path::Path::new(format!("{}/{}", self.directory, self.name).as_str()).exists() {
             return vec![];
         };
 
@@ -38,7 +38,7 @@ impl Action for BinaryGitHub {
             }
         };
 
-        let (owner, repo) = self.repository.split_once("/").unwrap();
+        let (owner, repo) = self.repository.split_once('/').unwrap();
 
         let octocrab = octocrab::instance();
 
@@ -98,7 +98,7 @@ impl Action for BinaryGitHub {
                     if score > ass.score {
                         Some(GitHubAsset {
                             url: asset.browser_download_url.into(),
-                            score: score,
+                            score,
                         })
                     } else {
                         Some(ass)
@@ -106,7 +106,7 @@ impl Action for BinaryGitHub {
                 }
                 None => Some(GitHubAsset {
                     url: asset.browser_download_url.into(),
-                    score: score,
+                    score,
                 }),
             }
         });

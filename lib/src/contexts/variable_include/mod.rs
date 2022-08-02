@@ -41,7 +41,7 @@ impl<'a> ContextProvider for VariableIncludeContextProvider<'a> {
 
         let contexts = contexts
             .into_iter()
-            .map(|(key, value)| Context::KeyValueContext(key, value))
+            .map(|(key, value)| Context::KeyValueContext(key, value.into()))
             .collect::<Vec<_>>();
 
         Ok(contexts)

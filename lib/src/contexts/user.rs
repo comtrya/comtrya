@@ -11,20 +11,20 @@ impl ContextProvider for UserContextProvider {
 
     fn get_contexts(&self) -> Result<Vec<super::Context>> {
         Ok(vec![
-            Context::KeyValueContext(String::from("id"), self.get_uid().to_string()),
-            Context::KeyValueContext(String::from("name"), whoami::realname()),
-            Context::KeyValueContext(String::from("username"), whoami::username()),
+            Context::KeyValueContext(String::from("id"), self.get_uid().to_string().into()),
+            Context::KeyValueContext(String::from("name"), whoami::realname().into()),
+            Context::KeyValueContext(String::from("username"), whoami::username().into()),
             Context::KeyValueContext(
                 String::from("home_dir"),
-                home_dir().unwrap().into_os_string().into_string().unwrap(),
+                home_dir()
+                    .map(Into::into)
+                    .unwrap_or_else(|| "unknown".into()),
             ),
             Context::KeyValueContext(
                 String::from("config_dir"),
                 config_dir()
-                    .unwrap()
-                    .into_os_string()
-                    .into_string()
-                    .unwrap(),
+                    .map(Into::into)
+                    .unwrap_or_else(|| "unknown".into()),
             ),
         ])
     }

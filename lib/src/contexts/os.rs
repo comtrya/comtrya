@@ -14,25 +14,28 @@ impl ContextProvider for OSContextProvider {
         let osinfo = os_info::get();
 
         Ok(vec![
-            Context::KeyValueContext(
-                String::from("hostname"),
-                gethostname().into_string().unwrap(),
-            ),
-            Context::KeyValueContext(String::from("family"), std::env::consts::FAMILY.to_string()),
-            Context::KeyValueContext(String::from("name"), std::env::consts::OS.to_string()),
+            Context::KeyValueContext(String::from("hostname"), gethostname().into()),
+            Context::KeyValueContext(String::from("family"), std::env::consts::FAMILY.into()),
+            Context::KeyValueContext(String::from("name"), std::env::consts::OS.into()),
             Context::KeyValueContext(
                 String::from("distribution"),
-                format!("{}", osinfo.os_type()),
+                format!("{}", osinfo.os_type()).into(),
             ),
             Context::KeyValueContext(
                 String::from("codename"),
-                String::from(osinfo.codename().unwrap_or("unknown")),
+                String::from(osinfo.codename().unwrap_or("unknown")).into(),
             ),
-            Context::KeyValueContext(String::from("bitness"), format!("{}", osinfo.bitness())),
-            Context::KeyValueContext(String::from("version"), format!("{}", osinfo.version())),
+            Context::KeyValueContext(
+                String::from("bitness"),
+                format!("{}", osinfo.bitness()).into(),
+            ),
+            Context::KeyValueContext(
+                String::from("version"),
+                format!("{}", osinfo.version()).into(),
+            ),
             Context::KeyValueContext(
                 String::from("edition"),
-                String::from(osinfo.edition().unwrap_or("unknown")),
+                String::from(osinfo.edition().unwrap_or("unknown")).into(),
             ),
         ])
     }
@@ -57,8 +60,8 @@ mod test {
 
         keyvaluepairs.iter().for_each(|context| match context {
             Context::KeyValueContext(k, v) => match k.as_ref() {
-                "family" => assert_eq!(v, &String::from("unix")),
-                "name" => assert_eq!(v, &String::from("macos")),
+                "family" => assert_eq!(v.to_string(), String::from("unix")),
+                "name" => assert_eq!(v.to_string(), String::from("macos")),
                 _ => (),
             },
             Context::ListContext(_, _) => {
@@ -75,8 +78,8 @@ mod test {
 
         keyvaluepairs.iter().for_each(|context| match context {
             Context::KeyValueContext(k, v) => match k.as_ref() {
-                "family" => assert_eq!(v, &String::from("windows")),
-                "name" => assert_eq!(v, &String::from("windows")),
+                "family" => assert_eq!(v.to_string(), String::from("windows")),
+                "name" => assert_eq!(v.to_string(), String::from("windows")),
                 _ => (),
             },
             Context::ListContext(_, _) => {
@@ -93,8 +96,8 @@ mod test {
 
         keyvaluepairs.iter().for_each(|context| match context {
             Context::KeyValueContext(k, v) => match k.as_ref() {
-                "family" => assert_eq!(v, &String::from("unix")),
-                "name" => assert_eq!(v, &String::from("linux")),
+                "family" => assert_eq!(v.to_string(), String::from("unix")),
+                "name" => assert_eq!(v.to_string(), String::from("linux")),
                 _ => (),
             },
             Context::ListContext(_, _) => {
@@ -111,8 +114,8 @@ mod test {
 
         keyvaluepairs.iter().for_each(|context| match context {
             Context::KeyValueContext(k, v) => match k.as_ref() {
-                "family" => assert_eq!(v, &String::from("unix")),
-                "name" => assert_eq!(v, &String::from("freebsd")),
+                "family" => assert_eq!(v.to_string(), String::from("unix")),
+                "name" => assert_eq!(v.to_string(), String::from("freebsd")),
                 _ => (),
             },
             Context::ListContext(_, _) => {
