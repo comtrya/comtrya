@@ -18,6 +18,14 @@ pub trait FileAction: Action {
             .join("files")
             .join(path)
             .normalize()
+            .map_err(|e| {
+                anyhow!(
+                    "Resolution of {} failed in manifest {} because {}",
+                    path.to_string(),
+                    manifest.name.as_ref().unwrap(),
+                    e.to_string()
+                )
+            })
             .unwrap()
             .as_path()
             .to_path_buf()
