@@ -7,7 +7,7 @@ Thanks for reading this document!
 - Cargo (with `fmt`, `clippy` and `nextest`):
   - `rustup component add rustfmt`
   - `rustup component add clippy`
-  - `cargo install nextest`
+  - `cargo install cargo-nextest`
 
 ## Code style
 Before you create a PR, just run `check.sh`:
