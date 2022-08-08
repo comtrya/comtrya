@@ -10,8 +10,8 @@ use serde::{de::Error, Deserialize, Deserializer};
 use std::path::PathBuf;
 
 pub trait FileAction: Action {
-    fn resolve(&self, manifest: &Manifest, path: &str) -> PathBuf {
-        manifest
+    fn resolve(&self, manifest: &Manifest, path: &str) -> Result<PathBuf, anyhow::Error> {
+        Ok(manifest
             .root_dir
             .clone()
             .unwrap()
@@ -25,10 +25,9 @@ pub trait FileAction: Action {
                     manifest.name.as_ref().unwrap(),
                     e.to_string()
                 )
-            })
-            .unwrap()
+            })?
             .as_path()
-            .to_path_buf()
+            .to_path_buf())
     }
 
     fn load(&self, manifest: &Manifest, path: &str) -> Result<Vec<u8>> {
