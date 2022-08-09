@@ -196,7 +196,7 @@ impl<E: std::error::Error> From<E> for ActionError {
 }
 
 pub trait Action {
-    fn plan(&self, manifest: &Manifest, context: &Contexts) -> Result<Vec<Step>, anyhow::Error>;
+    fn plan(&self, manifest: &Manifest, context: &Contexts) -> anyhow::Result<Vec<Step>>;
 }
 
 #[cfg(test)]
