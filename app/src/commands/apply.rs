@@ -5,7 +5,8 @@ use petgraph::{visit::DfsPostOrder, Graph};
 use rhai::Engine;
 use std::{collections::HashMap, ops::Deref};
 use structopt::StructOpt;
-use tracing::{debug, error, info, instrument, span, trace, warn};
+use tracing::{debug, error, info, instrument, span, trace, warn, event};
+use core::ops::ControlFlow::Continue;
 
 #[derive(Clone, Debug, StructOpt)]
 pub(crate) struct Apply {
@@ -158,9 +159,17 @@ pub(crate) fn execute(args: &Apply, runtime: &Runtime) -> anyhow::Result<()> {
 
                 let action = action.inner_ref();
 
-                let mut steps = action
-                    .plan(m1, contexts)
-                    .into_iter()
+                let plan =  match action
+                    .plan(m1, contexts) {
+                        Ok(steps) => {
+                            steps
+                        },
+                        Err(err) => {
+                            info!("Action failed to get plan: {:?}", err)
+                        }
+                    };
+
+                let mut steps = plan.into_iter()
                     .filter(|step| step.do_initializers_allow_us_to_run())
                     .filter(|step| step.atom.plan())
                     .peekable();
