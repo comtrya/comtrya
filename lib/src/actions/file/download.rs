@@ -29,7 +29,7 @@ impl FileDownload {}
 impl FileAction for FileDownload {}
 
 impl Action for FileDownload {
-    fn plan(&self, _manifest: &Manifest, _context: &Contexts) -> Vec<Step> {
+    fn plan(&self, _manifest: &Manifest, _context: &Contexts) -> anyhow::Result<Vec<Step>> {
         use crate::atoms::directory::Create as DirCreate;
         use crate::atoms::file::Chmod;
         use crate::atoms::http::Download;
@@ -37,7 +37,7 @@ impl Action for FileDownload {
         let path = PathBuf::from(&self.to);
         let parent = path.clone();
 
-        vec![
+        Ok(vec![
             Step {
                 atom: Box::new(DirCreate {
                     path: parent.parent().unwrap().into(),
@@ -61,7 +61,7 @@ impl Action for FileDownload {
                 initializers: vec![],
                 finalizers: vec![],
             },
-        ]
+        ])
     }
 }
 

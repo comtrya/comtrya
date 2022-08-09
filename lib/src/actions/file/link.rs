@@ -106,18 +106,19 @@ impl FileLink {
 impl FileAction for FileLink {}
 
 impl Action for FileLink {
-    fn plan(&self, manifest: &Manifest, _: &Contexts) -> Vec<Step> {
-        let from: PathBuf = self.resolve(manifest, self.source().as_str());
+    fn plan(&self, manifest: &Manifest, _: &Contexts) -> anyhow::Result<Vec<Step>> {
+        let from: PathBuf = self.resolve(manifest, self.source().as_str())?;
+
         let to = PathBuf::from(self.target());
 
         // Can't walk a file
         if from.is_file() {
-            return FileLink::plan_no_walk(from, to);
+            return Ok(FileLink::plan_no_walk(from, to));
         }
 
         match self.walk_dir {
-            false => FileLink::plan_no_walk(from, to),
-            true => FileLink::plan_walk(from, to),
+            false => Ok(FileLink::plan_no_walk(from, to)),
+            true => Ok(FileLink::plan_walk(from, to)),
         }
     }
 }
@@ -210,7 +211,7 @@ mod tests {
             ..Default::default()
         };
 
-        let steps = file_link_action.plan(&manifest, &contexts);
+        let steps = file_link_action.plan(&manifest, &contexts).unwrap();
         assert_eq!(steps.len(), 2);
     }
 
@@ -260,7 +261,7 @@ mod tests {
             ..Default::default()
         };
 
-        let steps = file_link_action.plan(&manifest, &contexts);
+        let steps = file_link_action.plan(&manifest, &contexts).unwrap();
         assert_eq!(steps.len(), number_of_files + 1);
     }
 }

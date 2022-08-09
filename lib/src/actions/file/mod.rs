@@ -10,7 +10,7 @@ use serde::{de::Error, Deserialize, Deserializer};
 use std::path::PathBuf;
 
 pub trait FileAction: Action {
-    fn resolve(&self, manifest: &Manifest, path: &str) -> Result<PathBuf, anyhow::Error> {
+    fn resolve(&self, manifest: &Manifest, path: &str) -> anyhow::Result<PathBuf> {
         Ok(manifest
             .root_dir
             .clone()

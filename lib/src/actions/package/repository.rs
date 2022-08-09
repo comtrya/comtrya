@@ -6,7 +6,8 @@ use crate::steps::Step;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::ops::Deref;
-use tracing::{error, span};
+use tracing::span;
+use anyhow::anyhow;
 
 #[derive(JsonSchema, Clone, Debug, Default, Serialize, Deserialize)]
 pub struct PackageRepository {
@@ -28,7 +29,7 @@ pub struct RepositoryKey {
 }
 
 impl Action for PackageRepository {
-    fn plan(&self, _manifest: &Manifest, _context: &Contexts) -> Vec<Step> {
+    fn plan(&self, _manifest: &Manifest, _context: &Contexts) -> anyhow::Result<Vec<Step>> {
         let box_provider = self.provider.clone().get_provider();
         let provider = box_provider.deref();
 
@@ -44,11 +45,10 @@ impl Action for PackageRepository {
         // If the provider isn't available, see if we can bootstrap it
         if !provider.available() {
             if provider.bootstrap().is_empty() {
-                error!(
+                return Err(anyhow!(
                     "Package Provider, {}, isn't available. Skipping action",
                     provider.name()
-                );
-                return vec![];
+                ));                
             }
 
             atoms.append(&mut provider.bootstrap());
@@ -60,7 +60,7 @@ impl Action for PackageRepository {
 
         span.exit();
 
-        atoms
+        Ok(atoms)
     }
 }
 
