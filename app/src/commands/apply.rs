@@ -162,6 +162,7 @@ pub(crate) fn execute(args: &Apply, runtime: &Runtime) -> anyhow::Result<()> {
                     Ok(steps) => steps,
                     Err(err) => {
                         info!("Action failed to get plan: {:?}", err);
+                        successful = false;
                         continue;
                     }
                 };
