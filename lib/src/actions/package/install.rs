@@ -4,9 +4,9 @@ use crate::actions::Action;
 use crate::contexts::Contexts;
 use crate::manifests::Manifest;
 use crate::steps::Step;
+use anyhow::anyhow;
 use std::ops::Deref;
 use tracing::span;
-use anyhow::anyhow;
 
 pub type PackageInstall = Package;
 
@@ -31,7 +31,7 @@ impl Action for PackageInstall {
                 return Err(anyhow!(
                     "Package Provider, {}, isn't available. Skipping action",
                     provider.name()
-                ));                
+                ));
             }
 
             atoms.append(&mut provider.bootstrap());

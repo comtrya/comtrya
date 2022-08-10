@@ -12,7 +12,6 @@ use std::error::Error as StdError;
 use std::{path::PathBuf, u32};
 use tera::Tera;
 
-
 #[derive(JsonSchema, Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct FileCopy {
     pub from: String,

@@ -3,11 +3,11 @@ use crate::actions::Action;
 use crate::contexts::Contexts;
 use crate::manifests::Manifest;
 use crate::steps::Step;
+use anyhow::anyhow;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::ops::Deref;
 use tracing::span;
-use anyhow::anyhow;
 
 #[derive(JsonSchema, Clone, Debug, Default, Serialize, Deserialize)]
 pub struct PackageRepository {
@@ -48,7 +48,7 @@ impl Action for PackageRepository {
                 return Err(anyhow!(
                     "Package Provider, {}, isn't available. Skipping action",
                     provider.name()
-                ));                
+                ));
             }
 
             atoms.append(&mut provider.bootstrap());
