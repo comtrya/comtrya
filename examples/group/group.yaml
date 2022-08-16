@@ -1,0 +1,3 @@
+actions:
+  - action: group.add
+    group_name: testgroup
