@@ -153,13 +153,21 @@ pub(crate) fn execute(args: &Apply, runtime: &Runtime) -> anyhow::Result<()> {
                 }
             }
 
-            m1.actions.iter().for_each(|action| {
+            for action in m1.actions.iter() {
                 let span_action = span!(tracing::Level::INFO, "", %action).entered();
 
                 let action = action.inner_ref();
 
-                let mut steps = action
-                    .plan(m1, contexts)
+                let plan = match action.plan(m1, contexts) {
+                    Ok(steps) => steps,
+                    Err(err) => {
+                        info!("Action failed to get plan: {:?}", err);
+                        successful = false;
+                        continue;
+                    }
+                };
+
+                let mut steps = plan
                     .into_iter()
                     .filter(|step| step.do_initializers_allow_us_to_run())
                     .filter(|step| step.atom.plan())
@@ -192,7 +200,7 @@ pub(crate) fn execute(args: &Apply, runtime: &Runtime) -> anyhow::Result<()> {
                     }
                 }
                 span_action.exit();
-            });
+            }
 
             if dry_run {
                 span_manifest.exit();

@@ -4,13 +4,14 @@ use crate::actions::Action;
 use crate::contexts::Contexts;
 use crate::manifests::Manifest;
 use crate::steps::Step;
+use anyhow::anyhow;
 use std::ops::Deref;
-use tracing::{error, span};
+use tracing::span;
 
 pub type PackageInstall = Package;
 
 impl Action for PackageInstall {
-    fn plan(&self, _manifest: &Manifest, _context: &Contexts) -> Vec<Step> {
+    fn plan(&self, _manifest: &Manifest, _context: &Contexts) -> anyhow::Result<Vec<Step>> {
         let variant: PackageVariant = self.into();
         let box_provider = variant.provider.clone().get_provider();
         let provider = box_provider.deref();
@@ -27,11 +28,10 @@ impl Action for PackageInstall {
         // If the provider isn't available, see if we can bootstrap it
         if !provider.available() {
             if provider.bootstrap().is_empty() {
-                error!(
+                return Err(anyhow!(
                     "Package Provider, {}, isn't available. Skipping action",
                     provider.name()
-                );
-                return vec![];
+                ));
             }
 
             atoms.append(&mut provider.bootstrap());
@@ -41,7 +41,7 @@ impl Action for PackageInstall {
 
         span.exit();
 
-        atoms
+        Ok(atoms)
     }
 }
 

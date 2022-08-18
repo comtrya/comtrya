@@ -9,7 +9,7 @@ use std::ops::Deref;
 pub type UserAdd = User;
 
 impl Action for UserAdd {
-    fn plan(&self, _manifest: &Manifest, _context: &Contexts) -> Vec<Step> {
+    fn plan(&self, _manifest: &Manifest, _context: &Contexts) -> anyhow::Result<Vec<Step>> {
         let variant: UserVariant = self.into();
         let box_provider = variant.provider.clone().get_provider();
         let provider = box_provider.deref();
@@ -18,6 +18,6 @@ impl Action for UserAdd {
 
         atoms.append(&mut provider.add_user(&variant));
 
-        atoms
+        Ok(atoms)
     }
 }

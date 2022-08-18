@@ -17,10 +17,10 @@ impl DirectoryCopy {}
 impl DirectoryAction for DirectoryCopy {}
 
 impl Action for DirectoryCopy {
-    fn plan(&self, manifest: &Manifest, _context: &Contexts) -> Vec<Step> {
+    fn plan(&self, manifest: &Manifest, _context: &Contexts) -> anyhow::Result<Vec<Step>> {
         let from: String = self.resolve(manifest, &self.from).to_str().unwrap().into();
 
-        vec![
+        Ok(vec![
             Step {
                 atom: Box::new(Exec {
                     command: String::from("mkdir"),
@@ -39,7 +39,7 @@ impl Action for DirectoryCopy {
                 initializers: vec![],
                 finalizers: vec![],
             },
-        ]
+        ])
     }
 }
 

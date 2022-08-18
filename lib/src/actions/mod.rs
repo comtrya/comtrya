@@ -11,6 +11,7 @@ mod user;
 use crate::contexts::Contexts;
 use crate::manifests::Manifest;
 use crate::steps::Step;
+use anyhow::anyhow;
 use binary::BinaryGitHub;
 use command::run::RunCommand;
 use directory::{DirectoryCopy, DirectoryCreate};
@@ -53,7 +54,7 @@ impl<T> Action for ConditionalVariantAction<T>
 where
     T: Action,
 {
-    fn plan(&self, manifest: &Manifest, context: &Contexts) -> Vec<Step> {
+    fn plan(&self, manifest: &Manifest, context: &Contexts) -> Result<Vec<Step>, anyhow::Error> {
         let engine = Engine::new();
         let mut scope = crate::contexts::to_rhai(context);
 
@@ -85,11 +86,8 @@ where
 
         match engine.eval_with_scope::<bool>(&mut scope, condition.as_str()) {
             Ok(true) => self.action.plan(manifest, context),
-            Ok(false) => vec![],
-            Err(error) => {
-                error!("Failed execution condition for action: {}", error);
-                vec![]
-            }
+            Ok(false) => Ok(vec![]),
+            Err(error) => Err(anyhow!("Failed execution condition for action: {}", error)),
         }
     }
 }
@@ -205,7 +203,7 @@ impl<E: std::error::Error> From<E> for ActionError {
 }
 
 pub trait Action {
-    fn plan(&self, manifest: &Manifest, context: &Contexts) -> Vec<Step>;
+    fn plan(&self, manifest: &Manifest, context: &Contexts) -> anyhow::Result<Vec<Step>>;
 }
 
 #[cfg(test)]

@@ -4,11 +4,12 @@ use crate::atoms::http::Download;
 use crate::contexts::Contexts;
 use crate::manifests::Manifest;
 use crate::steps::Step;
+use anyhow::anyhow;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use tokio::runtime::Runtime;
-use tracing::{debug, error};
+use tracing::debug;
 
 #[derive(Clone, Debug, Default, JsonSchema, PartialEq, Serialize, Deserialize)]
 pub struct BinaryGitHub {
@@ -24,17 +25,16 @@ struct GitHubAsset {
 }
 
 impl Action for BinaryGitHub {
-    fn plan(&self, _: &Manifest, _: &Contexts) -> Vec<Step> {
+    fn plan(&self, _: &Manifest, _: &Contexts) -> anyhow::Result<Vec<Step>> {
         // Don't need to do anything if something already exists at the path
         if std::path::Path::new(format!("{}/{}", self.directory, self.name).as_str()).exists() {
-            return vec![];
+            return Ok(vec![]);
         };
 
         let async_runtime = match Runtime::new() {
             Ok(runtime) => runtime,
             Err(e) => {
-                error!("Failed to create async runtime: {}", e);
-                return vec![];
+                return Err(anyhow!("Failed to create async runtime: {}", e));
             }
         };
 
@@ -53,8 +53,7 @@ impl Action for BinaryGitHub {
         let release = match result {
             Ok(release) => release,
             Err(e) => {
-                error!("Failed to find a release: {}", e);
-                return vec![];
+                return Err(anyhow!("Failed to find a release: {}", e));
             }
         };
 
@@ -117,12 +116,11 @@ impl Action for BinaryGitHub {
                 asset
             }
             None => {
-                error!("Failed to find a downloadable asset");
-                return vec![];
+                return Err(anyhow!("Failed to find a downloadable asset"));
             }
         };
 
-        vec![
+        Ok(vec![
             Step {
                 atom: Box::new(Download {
                     url: asset.url,
@@ -139,6 +137,6 @@ impl Action for BinaryGitHub {
                 initializers: vec![],
                 finalizers: vec![],
             },
-        ]
+        ])
     }
 }

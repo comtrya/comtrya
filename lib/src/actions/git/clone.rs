@@ -13,8 +13,8 @@ pub struct GitClone {
 }
 
 impl Action for GitClone {
-    fn plan(&self, _: &Manifest, _: &Contexts) -> Vec<Step> {
-        vec![Step {
+    fn plan(&self, _: &Manifest, _: &Contexts) -> anyhow::Result<Vec<Step>> {
+        Ok(vec![Step {
             atom: Box::new(crate::atoms::git::Clone {
                 repository: self.repository.clone(),
                 reference: self.reference.clone(),
@@ -22,6 +22,6 @@ impl Action for GitClone {
             }),
             initializers: vec![],
             finalizers: vec![],
-        }]
+        }])
     }
 }

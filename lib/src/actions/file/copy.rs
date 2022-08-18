@@ -5,12 +5,12 @@ use crate::manifests::Manifest;
 use crate::steps::Step;
 use crate::tera_functions::register_functions;
 use crate::{actions::Action, contexts::to_tera};
+use anyhow::anyhow;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::error::Error as StdError;
 use std::{path::PathBuf, u32};
 use tera::Tera;
-use tracing::error;
 
 #[derive(JsonSchema, Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct FileCopy {
@@ -35,7 +35,11 @@ impl FileCopy {}
 impl FileAction for FileCopy {}
 
 impl Action for FileCopy {
-    fn plan(&self, manifest: &Manifest, context: &crate::contexts::Contexts) -> Vec<Step> {
+    fn plan(
+        &self,
+        manifest: &Manifest,
+        context: &crate::contexts::Contexts,
+    ) -> anyhow::Result<Vec<Step>> {
         let contents = match self.load(manifest, &self.from) {
             Ok(contents) => {
                 if self.template {
@@ -46,21 +50,20 @@ impl Action for FileCopy {
 
                     match tera.render_str(content_as_str, &to_tera(context)) {
                         Ok(rendered) => rendered,
-                        Err(err) => {
-                            match err.source() {
-                                Some(source) => {
-                                    error!(
-                                        "Failed to render contents for FileCopy action: {}",
-                                        source
-                                    )
-                                }
-                                None => {
-                                    error!("Failed to render contents for FileCopy action: {}", err)
-                                }
+                        Err(err) => match err.source() {
+                            Some(source) => {
+                                return Err(anyhow!(
+                                    "Failed to render contents for FileCopy action: {}",
+                                    source
+                                ));
                             }
-
-                            return vec![];
-                        }
+                            None => {
+                                return Err(anyhow!(
+                                    "Failed to render contents for FileCopy action: {}",
+                                    err
+                                ));
+                            }
+                        },
                     }
                     .as_bytes()
                     .to_vec()
@@ -69,11 +72,10 @@ impl Action for FileCopy {
                 }
             }
             Err(err) => {
-                error!(
+                return Err(anyhow!(
                     "Failed to get contents for FileCopy action: {}",
                     err.to_string()
-                );
-                return vec![];
+                ));
             }
         };
 
@@ -117,7 +119,7 @@ impl Action for FileCopy {
                 finalizers: vec![],
             });
 
-            steps
+            Ok(steps)
         } else {
             steps.push(Step {
                 atom: Box::new(SetContents { path, contents }),
@@ -125,7 +127,7 @@ impl Action for FileCopy {
                 finalizers: vec![],
             });
 
-            steps
+            Ok(steps)
         }
     }
 }

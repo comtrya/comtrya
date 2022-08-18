@@ -17,8 +17,8 @@ pub struct MacOSDefault {
 }
 
 impl Action for MacOSDefault {
-    fn plan(&self, _: &Manifest, _: &Contexts) -> Vec<Step> {
-        vec![Step {
+    fn plan(&self, _: &Manifest, _: &Contexts) -> anyhow::Result<Vec<Step>> {
+        Ok(vec![Step {
             atom: Box::new(Exec {
                 command: String::from("defaults"),
                 arguments: vec![
@@ -32,6 +32,6 @@ impl Action for MacOSDefault {
             }),
             initializers: vec![],
             finalizers: vec![],
-        }]
+        }])
     }
 }
