@@ -12,14 +12,14 @@ pub struct DirectoryCreate {
 }
 
 impl Action for DirectoryCreate {
-    fn plan(&self, _: &Manifest, _context: &Contexts) -> Vec<Step> {
-        vec![Step {
+    fn plan(&self, _: &Manifest, _context: &Contexts) -> anyhow::Result<Vec<Step>> {
+        Ok(vec![Step {
             atom: Box::new(DirectoryCreateAtom {
                 path: PathBuf::from(&self.path),
             }),
             initializers: vec![],
             finalizers: vec![],
-        }]
+        }])
     }
 }
 

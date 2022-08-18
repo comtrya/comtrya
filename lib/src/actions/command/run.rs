@@ -31,10 +31,10 @@ fn get_cwd() -> String {
 }
 
 impl Action for RunCommand {
-    fn plan(&self, _: &Manifest, _: &Contexts) -> Vec<Step> {
+    fn plan(&self, _: &Manifest, _: &Contexts) -> anyhow::Result<Vec<Step>> {
         use crate::atoms::command::Exec;
 
-        vec![Step {
+        Ok(vec![Step {
             atom: Box::new(Exec {
                 command: self.command.clone(),
                 arguments: self.args.clone(),
@@ -44,6 +44,6 @@ impl Action for RunCommand {
             }),
             initializers: vec![],
             finalizers: vec![],
-        }]
+        }])
     }
 }
