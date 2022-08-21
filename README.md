@@ -45,13 +45,10 @@ If this doesn't work for your OS and architecture, please open an issue and we'l
 
 ```shell
 # Run all manifests within your current directory
-comtrya apply
+comtrya .
 
 # --manifests, or -m, will run a subset of your manifests
-comtrya apply -m one,two,three
-
-# Run all manifests within a specified directory
-comtrya -d ./manifests apply
+comtrya . -m one,two,three
 ```
 
 ## What's Next?
