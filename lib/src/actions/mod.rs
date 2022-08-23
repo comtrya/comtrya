@@ -3,6 +3,7 @@ mod command;
 mod directory;
 mod file;
 mod git;
+mod group;
 mod macos;
 mod package;
 mod user;
@@ -18,6 +19,7 @@ use file::copy::FileCopy;
 use file::download::FileDownload;
 use file::link::FileLink;
 use git::GitClone;
+use group::add::GroupAdd;
 use macos::MacOSDefault;
 use package::{PackageInstall, PackageRepository};
 use rhai::Engine;
@@ -122,6 +124,9 @@ pub enum Actions {
     #[serde(rename = "git.clone")]
     GitClone(ConditionalVariantAction<GitClone>),
 
+    #[serde(rename = "group.add")]
+    GroupAdd(ConditionalVariantAction<GroupAdd>),
+
     #[serde(rename = "macos.default")]
     MacOSDefault(ConditionalVariantAction<MacOSDefault>),
 
@@ -146,6 +151,7 @@ impl Actions {
             Actions::FileDownload(a) => a,
             Actions::FileLink(a) => a,
             Actions::GitClone(a) => a,
+            Actions::GroupAdd(a) => a,
             Actions::MacOSDefault(a) => a,
             Actions::PackageInstall(a) => a,
             Actions::PackageRepository(a) => a,
@@ -165,6 +171,7 @@ impl Display for Actions {
             Actions::FileLink(_) => "file.link",
             Actions::BinaryGitHub(_) => "github.binary",
             Actions::GitClone(_) => "git.clone",
+            Actions::GroupAdd(_) => "group.add",
             Actions::MacOSDefault(_) => "macos.default",
             Actions::PackageInstall(_) => "package.install",
             Actions::PackageRepository(_) => "package.repository",
