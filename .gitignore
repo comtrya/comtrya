@@ -1,4 +1,3 @@
 /target
 /_cicd-intermediates
-/Cargo.lock
 /.build
