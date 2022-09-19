@@ -12,4 +12,9 @@ impl UserProvider for NoneUserProvider {
         warn!("This system does not have a provider for users");
         vec![]
     }
+
+    fn add_to_group(&self, _user: &UserVariant) -> Vec<Step> {
+        warn!(message = "This system does not have a provider for users");
+        vec![]
+    }
 }
