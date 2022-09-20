@@ -101,14 +101,22 @@ impl UserProvider for LinuxUserProvider {
     }
 }
 
-#[cfg(tests)]
+#[cfg(test)]
 mod test {
-    use crate::actions::user::*;
+    use crate::actions::user::providers::{LinuxUserProvider, UserProvider};
+    use crate::actions::user::UserVariant;
 
     #[test]
     fn test_add_user() {
         let user_provider = LinuxUserProvider {};
-        let steps = user_provider.add_user(&UserVariant { username: test });
+        let steps = user_provider.add_user(&UserVariant {
+            username: String::from("test"),
+            shell: String::from("sh"),
+            home_dir: String::from("/home/test"),
+            fullname: String::from("Test User"),
+            group: vec![],
+            ..Default::default()
+        });
 
         assert_eq!(steps.len(), 1);
     }
@@ -117,7 +125,12 @@ mod test {
     fn test_add_user_no_username() {
         let user_provider = LinuxUserProvider {};
         let steps = user_provider.add_user(&UserVariant {
-            // empty for test purposes
+            username: String::from(""),
+            shell: String::from("sh"),
+            home_dir: String::from("/home/test"),
+            fullname: String::from("Test User"),
+            group: vec![],
+            ..Default::default()
         });
 
         assert_eq!(steps.len(), 0);
@@ -127,8 +140,27 @@ mod test {
     fn test_add_to_group() {
         let user_provider = LinuxUserProvider {};
         let steps = user_provider.add_to_group(&UserVariant {
-            username: test,
+            username: String::from("test"),
+            shell: String::from("sh"),
+            home_dir: String::from("/home/test"),
+            fullname: String::from("Test User"),
             group: vec![String::from("testgroup"), String::from("wheel")],
+            ..Default::default()
+        });
+
+        assert_eq!(steps.len(), 2);
+    }
+
+    #[test]
+    fn test_create_user_add_to_group() {
+        let user_provider = LinuxUserProvider {};
+        let steps = user_provider.add_user(&UserVariant {
+            username: String::from("test"),
+            shell: String::from(""),
+            home_dir: String::from(""),
+            fullname: String::from(""),
+            group: vec![String::from("testgroup")],
+            ..Default::default()
         });
 
         assert_eq!(steps.len(), 2);
