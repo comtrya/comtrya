@@ -26,7 +26,7 @@ impl GroupProvider for LinuxGroupProvider {
         vec![Step {
             atom: Box::new(Exec {
                 command: String::from(cli.to_str().unwrap()),
-                arguments: vec![String::from(group.group_name.clone())],
+                arguments: vec![group.group_name.clone()],
                 privileged: true,
                 ..Default::default()
             }),
