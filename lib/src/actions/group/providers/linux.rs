@@ -38,13 +38,13 @@ impl GroupProvider for LinuxGroupProvider {
 
 #[cfg(test)]
 mod test {
-    use crate::actions::group::providers::{LinuxGroupProvider, GroupProvider};
+    use crate::actions::group::providers::{GroupProvider, LinuxGroupProvider};
     use crate::actions::group::GroupVariant;
 
     #[test]
     fn test_add_group() {
         let group_provider = LinuxGroupProvider {};
-        let steps = group_provider.add_group(&GroupVariant { 
+        let steps = group_provider.add_group(&GroupVariant {
             group_name: String::from("test"),
             ..Default::default()
         });
