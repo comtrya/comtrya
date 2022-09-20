@@ -101,6 +101,7 @@ impl UserProvider for LinuxUserProvider {
     }
 }
 
+#[cfg(target_os = "linux")]
 #[cfg(test)]
 mod test {
     use crate::actions::user::providers::{LinuxUserProvider, UserProvider};

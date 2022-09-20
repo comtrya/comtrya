@@ -36,6 +36,7 @@ impl GroupProvider for LinuxGroupProvider {
     }
 }
 
+#[cfg(target_os = "linux")]
 #[cfg(test)]
 mod test {
     use crate::actions::group::providers::{GroupProvider, LinuxGroupProvider};
