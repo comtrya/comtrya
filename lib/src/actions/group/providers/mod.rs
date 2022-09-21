@@ -2,17 +2,21 @@
 // use self::freebsd::FreeBSDUserProvider;
 use crate::steps::Step;
 mod none;
-use self::none::NoneGroupProvider;
+use self::{none::NoneGroupProvider, freebsd::FreeBSDGroupProvider};
 use super::GroupVariant;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 mod linux;
+mod freebsd;
 use self::linux::LinuxGroupProvider;
 
 #[derive(JsonSchema, Clone, Debug, Serialize, Deserialize)]
 pub enum GroupProviders {
     #[serde(alias = "none")]
     None,
+
+    #[serde(alias = "freebsd")]
+    FreeBSD,
 
     #[serde(alias = "linux")]
     Linux,
@@ -22,6 +26,7 @@ impl GroupProviders {
     pub fn get_provider(self) -> Box<dyn GroupProvider> {
         match self {
             GroupProviders::None => Box::new(NoneGroupProvider {}),
+            GroupProviders::FreeBSD => Box::new(FreeBSDGroupProvider {}),
             GroupProviders::Linux => Box::new(LinuxGroupProvider {}),
         }
     }
@@ -38,11 +43,12 @@ impl Default for GroupProviders {
         let info = os_info::get();
 
         match info.os_type() {
+            os_info::Type::FreeBSD => GroupProviders::FreeBSD,
             _ => GroupProviders::None,
         }
     }
 }
 
 pub trait GroupProvider {
-    fn add_group(&self, gorup: &GroupVariant) -> Vec<Step>;
+    fn add_group(&self, group: &GroupVariant) -> Vec<Step>;
 }
