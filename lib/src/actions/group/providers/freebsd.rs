@@ -20,7 +20,7 @@ impl GroupProvider for FreeBSDGroupProvider {
                 command: String::from("/usr/bin/pw"),
                 arguments: vec![String::from("groupadd")]
                     .into_iter()
-                    .chain(args.clone())
+                    .chain(group.group_name.clone())
                     .collect(),
                 privileged: true,
                 ..Default::default()
