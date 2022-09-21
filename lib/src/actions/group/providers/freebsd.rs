@@ -28,7 +28,7 @@ impl GroupProvider for FreeBSDGroupProvider {
     }
 }
 
-#[cfg(target_os = 'freebsd')]
+#[cfg(target_os = "freebsd")]
 #[cfg(tests)]
 mod test {
     use crate::actions::group::*;
