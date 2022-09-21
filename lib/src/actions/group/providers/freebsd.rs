@@ -3,7 +3,6 @@ use crate::steps::Step;
 use crate::{actions::group::GroupVariant, atoms::command::Exec};
 use serde::{Deserialize, Serialize};
 use tracing::warn;
-use which::which;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct FreeBSDGroupProvider {}
