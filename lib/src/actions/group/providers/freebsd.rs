@@ -10,14 +10,6 @@ pub struct FreeBSDGroupProvider {}
 
 impl GroupProvider for FreeBSDGroupProvider {
     fn add_group(&self, group: &GroupVariant) -> Vec<Step> {
-        let cli = match which("groupadd") {
-            Ok(c) => c,
-            Err(_) => {
-                warn!(message = "Could not get the proper group add tool");
-                return vec![];
-            }
-        };
-
         if group.group_name.is_empty() {
             warn!(message = "Unable to create group without a group name");
             return vec![];
@@ -25,7 +17,7 @@ impl GroupProvider for FreeBSDGroupProvider {
 
         vec![Step {
             atom: Box::new(Exec {
-                command: String::from(cli.to_str().unwrap()),
+                command: String::from("/usr/bin/pw"),
                 arguments: vec![String::from("groupadd")],
                 privileged: true,
                 ..Default::default()
