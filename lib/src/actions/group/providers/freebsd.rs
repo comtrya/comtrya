@@ -18,7 +18,10 @@ impl GroupProvider for FreeBSDGroupProvider {
         vec![Step {
             atom: Box::new(Exec {
                 command: String::from("/usr/bin/pw"),
-                arguments: vec![String::from("groupadd")],
+                arguments: vec![String::from("groupadd")]
+                    .into_iter()
+                    .chain(args.clone())
+                    .collect(),
                 privileged: true,
                 ..Default::default()
             }),
