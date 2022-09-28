@@ -43,7 +43,7 @@ impl UserProvider for LinuxUserProvider {
             args.push(user.fullname.clone());
         }
 
-        vec![Step {
+        let mut steps: Vec<Step> = vec![Step {
             atom: Box::new(Exec {
                 command: String::from(cli.to_str().unwrap()),
                 arguments: vec![].into_iter().chain(args.clone()).collect(),
@@ -52,18 +52,72 @@ impl UserProvider for LinuxUserProvider {
             }),
             initializers: vec![],
             finalizers: vec![],
-        }]
+        }];
+
+        if !user.group.is_empty() {
+            for group in self.add_to_group(user) {
+                steps.push(group);
+            }
+        }
+
+        steps
+    }
+
+    fn add_to_group(&self, user: &UserVariant) -> Vec<Step> {
+        let cli = match which("usermod") {
+            Ok(c) => c,
+            Err(_) => {
+                warn!(message = "Could not get the proper user add tool");
+                return vec![];
+            }
+        };
+
+        if user.group.is_empty() {
+            warn!(message = "No groups listed to add user to");
+            return vec![];
+        }
+
+        if user.username.is_empty() {
+            warn!(message = "No user specified to add to group(s)");
+            return vec![];
+        }
+
+        let mut steps: Vec<Step> = vec![];
+
+        for group in user.group.iter() {
+            steps.push(Step {
+                atom: Box::new(Exec {
+                    command: String::from(cli.to_str().unwrap()),
+                    arguments: vec![String::from("-a"), String::from("-G"), String::from(group)],
+                    privileged: true,
+                    ..Default::default()
+                }),
+                initializers: vec![],
+                finalizers: vec![],
+            });
+        }
+
+        steps
     }
 }
 
-#[cfg(tests)]
+#[cfg(target_os = "linux")]
+#[cfg(test)]
 mod test {
-    use crate::actions::user::*;
+    use crate::actions::user::providers::{LinuxUserProvider, UserProvider};
+    use crate::actions::user::UserVariant;
 
     #[test]
     fn test_add_user() {
         let user_provider = LinuxUserProvider {};
-        let steps = user_provider.add_user(&UserVariant { username: test });
+        let steps = user_provider.add_user(&UserVariant {
+            username: String::from("test"),
+            shell: String::from("sh"),
+            home_dir: String::from("/home/test"),
+            fullname: String::from("Test User"),
+            group: vec![],
+            ..Default::default()
+        });
 
         assert_eq!(steps.len(), 1);
     }
@@ -72,9 +126,44 @@ mod test {
     fn test_add_user_no_username() {
         let user_provider = LinuxUserProvider {};
         let steps = user_provider.add_user(&UserVariant {
-            // empty for test purposes
+            username: String::from(""),
+            shell: String::from("sh"),
+            home_dir: String::from("/home/test"),
+            fullname: String::from("Test User"),
+            group: vec![],
+            ..Default::default()
         });
 
         assert_eq!(steps.len(), 0);
+    }
+
+    #[test]
+    fn test_add_to_group() {
+        let user_provider = LinuxUserProvider {};
+        let steps = user_provider.add_to_group(&UserVariant {
+            username: String::from("test"),
+            shell: String::from("sh"),
+            home_dir: String::from("/home/test"),
+            fullname: String::from("Test User"),
+            group: vec![String::from("testgroup"), String::from("wheel")],
+            ..Default::default()
+        });
+
+        assert_eq!(steps.len(), 2);
+    }
+
+    #[test]
+    fn test_create_user_add_to_group() {
+        let user_provider = LinuxUserProvider {};
+        let steps = user_provider.add_user(&UserVariant {
+            username: String::from("test"),
+            shell: String::from(""),
+            home_dir: String::from(""),
+            fullname: String::from(""),
+            group: vec![String::from("testgroup")],
+            ..Default::default()
+        });
+
+        assert_eq!(steps.len(), 2);
     }
 }

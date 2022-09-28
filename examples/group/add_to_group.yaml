@@ -1,0 +1,12 @@
+depends:
+  - group
+
+actions:
+  - action: user.add
+    fullname: testuser
+    home_dir: /home/test
+    username: test
+    shell: sh
+    group: 
+      - testgroup
+

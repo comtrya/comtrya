@@ -25,6 +25,9 @@ pub struct User {
     shell: String,
 
     #[serde(default)]
+    group: Vec<String>,
+
+    #[serde(default)]
     variants: HashMap<os_info::Type, UserVariant>,
 }
 
@@ -44,6 +47,9 @@ pub struct UserVariant {
 
     #[serde(default)]
     shell: String,
+
+    #[serde(default)]
+    group: Vec<String>,
 }
 
 impl From<&User> for UserVariant {
@@ -61,6 +67,7 @@ impl From<&User> for UserVariant {
                 home_dir: user.home_dir.clone(),
                 fullname: user.fullname.clone(),
                 shell: user.shell.clone(),
+                group: user.group.clone(),
             };
         };
 
@@ -74,6 +81,7 @@ impl From<&User> for UserVariant {
             home_dir: user.home_dir.clone(),
             fullname: user.fullname.clone(),
             shell: user.shell.clone(),
+            group: user.group.clone(),
         };
 
         user.provider = variant.provider.clone();
