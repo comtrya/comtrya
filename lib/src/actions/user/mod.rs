@@ -1,4 +1,5 @@
 pub mod add;
+pub mod add_group;
 pub mod providers;
 
 use providers::UserProviders;

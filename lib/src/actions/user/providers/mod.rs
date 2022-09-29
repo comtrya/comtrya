@@ -3,7 +3,7 @@ use self::freebsd::FreeBSDUserProvider;
 use crate::steps::Step;
 mod none;
 use self::none::NoneUserProvider;
-use super::UserVariant;
+use super::{add_group::UserAddGroup, UserVariant};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 mod linux;
@@ -51,5 +51,5 @@ impl Default for UserProviders {
 
 pub trait UserProvider {
     fn add_user(&self, user: &UserVariant) -> Vec<Step>;
-    fn add_to_group(&self, user: &UserVariant) -> Vec<Step>;
+    fn add_to_group(&self, user: &UserAddGroup) -> Vec<Step>;
 }

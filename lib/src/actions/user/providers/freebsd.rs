@@ -1,6 +1,7 @@
 use super::UserProvider;
 use crate::steps::Step;
-use crate::{actions::user::UserVariant, atoms::command::Exec};
+use crate::atoms::command::Exec;
+use crate::actions::user::{add_group::UserAddGroup, UserVariant};
 use serde::{Deserialize, Serialize};
 use tracing::warn;
 
@@ -54,7 +55,7 @@ impl UserProvider for FreeBSDUserProvider {
         }]
     }
 
-    fn add_to_group(&self, _user: &UserVariant) -> Vec<Step> {
+    fn add_to_group(&self, _user: &UserAddGroup) -> Vec<Step> {
         warn!(message = "Functionality not implemented for platform");
         vec![]
     }
