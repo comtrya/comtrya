@@ -1,7 +1,7 @@
 use super::UserProvider;
-use crate::steps::Step;
-use crate::atoms::command::Exec;
 use crate::actions::user::{add_group::UserAddGroup, UserVariant};
+use crate::atoms::command::Exec;
+use crate::steps::Step;
 use serde::{Deserialize, Serialize};
 use tracing::warn;
 

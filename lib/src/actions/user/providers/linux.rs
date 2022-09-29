@@ -1,6 +1,8 @@
 use super::UserProvider;
 use crate::steps::Step;
-use crate::{actions::user::add_group::UserAddGroup, actions::user::UserVariant, atoms::command::Exec};
+use crate::{
+    actions::user::add_group::UserAddGroup, actions::user::UserVariant, atoms::command::Exec,
+};
 use serde::{Deserialize, Serialize};
 use tracing::warn;
 use which::which;
@@ -55,11 +57,11 @@ impl UserProvider for LinuxUserProvider {
         }];
 
         if !user.group.is_empty() {
-	    let user_groups = UserAddGroup {
-		username: user.username.clone(),
-		group: user.group.clone(),
-		provider: user.provider.clone(),
-	    };
+            let user_groups = UserAddGroup {
+                username: user.username.clone(),
+                group: user.group.clone(),
+                provider: user.provider.clone(),
+            };
             for group in self.add_to_group(&user_groups) {
                 steps.push(group);
             }

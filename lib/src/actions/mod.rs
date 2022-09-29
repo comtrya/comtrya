@@ -161,7 +161,7 @@ impl Actions {
             Actions::PackageInstall(a) => a,
             Actions::PackageRepository(a) => a,
             Actions::UserAdd(a) => a,
-	    Actions::UserAddGroup(a) => a,
+            Actions::UserAddGroup(a) => a,
         }
     }
 }
@@ -182,7 +182,7 @@ impl Display for Actions {
             Actions::PackageInstall(_) => "package.install",
             Actions::PackageRepository(_) => "package.repository",
             Actions::UserAdd(_) => "user.add",
-	    Actions::UserAddGroup(_) => "user.group",
+            Actions::UserAddGroup(_) => "user.group",
         };
 
         write!(f, "{}", name)

@@ -3,9 +3,9 @@ use crate::actions::Action;
 use crate::contexts::Contexts;
 use crate::manifests::Manifest;
 use crate::steps::Step;
-use std::ops::Deref;
-use serde::{Deserialize, Serialize};
 use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
+use std::ops::Deref;
 
 // pub type UserAddGroup = User;
 #[derive(JsonSchema, Clone, Debug, Default, Serialize, Deserialize)]
