@@ -1,0 +1,10 @@
+actions:
+  - action: user.add
+    fullname: testuser
+    home_dir: /home/test
+    username: test
+    shell: sh
+  - action: user.group
+    username: testuser
+    group:
+      - wheel

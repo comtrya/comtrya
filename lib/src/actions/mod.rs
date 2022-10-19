@@ -29,6 +29,8 @@ use std::fmt::Display;
 use tracing::error;
 use user::add::UserAdd;
 
+use self::user::add_group::UserAddGroup;
+
 #[derive(JsonSchema, Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
 pub struct ConditionalVariantAction<T> {
     #[serde(flatten)]
@@ -138,6 +140,9 @@ pub enum Actions {
 
     #[serde(rename = "user.add")]
     UserAdd(ConditionalVariantAction<UserAdd>),
+
+    #[serde(rename = "user.group")]
+    UserAddGroup(ConditionalVariantAction<UserAddGroup>),
 }
 
 impl Actions {
@@ -156,6 +161,7 @@ impl Actions {
             Actions::PackageInstall(a) => a,
             Actions::PackageRepository(a) => a,
             Actions::UserAdd(a) => a,
+            Actions::UserAddGroup(a) => a,
         }
     }
 }
@@ -176,6 +182,7 @@ impl Display for Actions {
             Actions::PackageInstall(_) => "package.install",
             Actions::PackageRepository(_) => "package.repository",
             Actions::UserAdd(_) => "user.add",
+            Actions::UserAddGroup(_) => "user.group",
         };
 
         write!(f, "{}", name)

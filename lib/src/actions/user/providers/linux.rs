@@ -1,6 +1,8 @@
 use super::UserProvider;
 use crate::steps::Step;
-use crate::{actions::user::UserVariant, atoms::command::Exec};
+use crate::{
+    actions::user::add_group::UserAddGroup, actions::user::UserVariant, atoms::command::Exec,
+};
 use serde::{Deserialize, Serialize};
 use tracing::warn;
 use which::which;
@@ -55,7 +57,12 @@ impl UserProvider for LinuxUserProvider {
         }];
 
         if !user.group.is_empty() {
-            for group in self.add_to_group(user) {
+            let user_groups = UserAddGroup {
+                username: user.username.clone(),
+                group: user.group.clone(),
+                provider: user.provider.clone(),
+            };
+            for group in self.add_to_group(&user_groups) {
                 steps.push(group);
             }
         }
@@ -63,7 +70,7 @@ impl UserProvider for LinuxUserProvider {
         steps
     }
 
-    fn add_to_group(&self, user: &UserVariant) -> Vec<Step> {
+    fn add_to_group(&self, user: &UserAddGroup) -> Vec<Step> {
         let cli = match which("usermod") {
             Ok(c) => c,
             Err(_) => {
@@ -105,7 +112,7 @@ impl UserProvider for LinuxUserProvider {
 #[cfg(test)]
 mod test {
     use crate::actions::user::providers::{LinuxUserProvider, UserProvider};
-    use crate::actions::user::UserVariant;
+    use crate::actions::user::{add_group::UserAddGroup, UserVariant};
 
     #[test]
     fn test_add_user() {
@@ -140,11 +147,8 @@ mod test {
     #[test]
     fn test_add_to_group() {
         let user_provider = LinuxUserProvider {};
-        let steps = user_provider.add_to_group(&UserVariant {
+        let steps = user_provider.add_to_group(&UserAddGroup {
             username: String::from("test"),
-            shell: String::from("sh"),
-            home_dir: String::from("/home/test"),
-            fullname: String::from("Test User"),
             group: vec![String::from("testgroup"), String::from("wheel")],
             ..Default::default()
         });
