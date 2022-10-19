@@ -95,7 +95,12 @@ impl UserProvider for LinuxUserProvider {
             steps.push(Step {
                 atom: Box::new(Exec {
                     command: String::from(cli.to_str().unwrap()),
-                    arguments: vec![String::from("-a"), String::from("-G"), String::from(group)],
+                    arguments: vec![
+                        String::from("-a"),
+                        String::from("-G"),
+                        String::from(group),
+                        user.username.clone(),
+                    ],
                     privileged: true,
                     ..Default::default()
                 }),
