@@ -99,7 +99,7 @@ mod test {
 
     #[test]
     fn test_add_user() {
-        let user_provider = LinuxUserProvider {};
+        let user_provider = FreeBSDUserProvider {};
         let steps = user_provider.add_user(&UserVariant {
             username: String::from("test"),
             shell: String::from("sh"),
