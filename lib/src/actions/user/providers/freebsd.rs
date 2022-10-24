@@ -40,7 +40,7 @@ impl UserProvider for FreeBSDUserProvider {
         args.push(String::from("-w"));
         args.push(String::from("random"));
 
-        vec![Step {
+        let mut steps: Vec<Step> = vec![Step {
             atom: Box::new(Exec {
                 command: String::from("/usr/sbin/pw"),
                 arguments: vec![String::from("useradd")]
@@ -52,7 +52,20 @@ impl UserProvider for FreeBSDUserProvider {
             }),
             initializers: vec![],
             finalizers: vec![],
-        }]
+        }];
+
+	if !user.group.is_empty() {
+	    let user_groups = UserAddGroup {
+		username: user.username.clone(),
+		group: user.group.clone(),
+		provider: user.provider.clone(),
+	    };
+	    for group in self.add_to_group(&user_groups) {
+		steps.push(group);
+	    }
+	}
+
+	steps
     }
 
     fn add_to_group(&self, user: &UserAddGroup) -> Vec<Step> {
