@@ -54,18 +54,18 @@ impl UserProvider for FreeBSDUserProvider {
             finalizers: vec![],
         }];
 
-        if !user.group.is_empty() {
-            let user_groups = UserAddGroup {
-                username: user.username.clone(),
-                group: user.group.clone(),
-                provider: user.provider.clone(),
-            };
-            for group in self.add_to_group(&user_groups) {
-                steps.push(group);
-            }
-        }
+         if !user.group.is_empty() {
+             let user_groups = UserAddGroup {
+                 username: user.username.clone(),
+                 group: user.group.clone(),
+                 provider: user.provider.clone(),
+             };
+             for group in self.add_to_group(&user_groups) {
+                 steps.push(group);
+             }
+         }
 
-        steps
+         steps
     }
 
     fn add_to_group(&self, user: &UserAddGroup) -> Vec<Step> {
