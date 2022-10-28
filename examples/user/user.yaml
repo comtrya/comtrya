@@ -5,6 +5,6 @@ actions:
     username: test
     shell: sh
   - action: user.group
-    username: testuser
+    username: test
     group:
       - wheel
