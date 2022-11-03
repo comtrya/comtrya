@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use tracing::{instrument, warn};
 use which::which;
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct BsdPkg {}
 
 impl BsdPkg {

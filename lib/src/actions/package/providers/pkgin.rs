@@ -9,7 +9,7 @@ use tracing::{instrument, warn};
 use which::which;
 // use os_info;
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Pkgin {}
 
 impl PackageProvider for Pkgin {

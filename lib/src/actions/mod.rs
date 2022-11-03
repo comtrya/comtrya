@@ -31,7 +31,7 @@ use user::add::UserAdd;
 
 use self::user::add_group::UserAddGroup;
 
-#[derive(JsonSchema, Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+#[derive(JsonSchema, Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub struct ConditionalVariantAction<T> {
     #[serde(flatten)]
     pub action: T,
@@ -43,7 +43,7 @@ pub struct ConditionalVariantAction<T> {
     pub variants: Vec<Variant<T>>,
 }
 
-#[derive(JsonSchema, Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(JsonSchema, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Variant<T> {
     #[serde(flatten)]
     pub action: T,

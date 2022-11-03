@@ -6,7 +6,7 @@ use crate::{atoms::command::Exec, manifests::Manifest};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-#[derive(JsonSchema, Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[derive(JsonSchema, Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct DirectoryCopy {
     pub from: String,
     pub to: String,

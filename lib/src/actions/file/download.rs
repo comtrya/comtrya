@@ -7,7 +7,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::{path::PathBuf, u32};
 
-#[derive(JsonSchema, Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[derive(JsonSchema, Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename = "file.download")]
 pub struct FileDownload {
     pub from: String,

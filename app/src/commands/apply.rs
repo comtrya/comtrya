@@ -86,7 +86,7 @@ pub(crate) fn execute(args: &Apply, runtime: &Runtime) -> anyhow::Result<()> {
 
     let clone_m = args.manifests.clone();
 
-    let run_manifests = if (&args.manifests).is_empty() {
+    let run_manifests = if args.manifests.is_empty() {
         // No manifests specified on command line, so run everything
         vec![String::from("")]
     } else {

@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 // I went through all the examples here: https://macos-defaults.com/
 // and while arrays and dictionaries are valid values, I couldn't
 // find any usable examples. So omitting for now
-#[derive(JsonSchema, Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[derive(JsonSchema, Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct MacOSDefault {
     pub domain: String,
     pub key: String,

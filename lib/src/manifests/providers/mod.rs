@@ -11,7 +11,7 @@ pub fn register_providers() -> Vec<Box<dyn ManifestProvider>> {
     ]
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum ManifestProviderError {
     NoResolution,
 }

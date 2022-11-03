@@ -10,7 +10,7 @@ use std::path::PathBuf;
 use tracing::error;
 
 // TODO: Next Major Version - Deprecate from and to
-#[derive(JsonSchema, Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[derive(JsonSchema, Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct FileLink {
     pub from: Option<String>,
     pub source: Option<String>,

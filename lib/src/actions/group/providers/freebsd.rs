@@ -4,7 +4,7 @@ use crate::{actions::group::GroupVariant, atoms::command::Exec};
 use serde::{Deserialize, Serialize};
 use tracing::warn;
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct FreeBSDGroupProvider {}
 
 impl GroupProvider for FreeBSDGroupProvider {

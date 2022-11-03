@@ -7,7 +7,7 @@ use sha256::digest;
 use tracing::warn;
 use which::which;
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Aptitude {}
 
 impl Aptitude {

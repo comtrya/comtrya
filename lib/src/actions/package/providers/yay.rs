@@ -10,7 +10,7 @@ use tracing::warn;
 use tracing::{debug, trace};
 use which::which;
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Yay {}
 
 impl PackageProvider for Yay {

@@ -9,7 +9,7 @@ use std::process::Command;
 use tracing::{debug, trace, warn};
 use which::which;
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Xbps {}
 
 impl PackageProvider for Xbps {

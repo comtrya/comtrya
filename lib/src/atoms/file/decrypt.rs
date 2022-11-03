@@ -37,7 +37,7 @@ impl Atom for Decrypt {
         }
 
         // Decrypting file with provided passphrase makes plan work
-        return match decrypt(&self.passphrase, &self.encrypted_content) {
+        match decrypt(&self.passphrase, &self.encrypted_content) {
             Ok(_) => true,
             Err(err) => {
                 error!(
@@ -46,9 +46,9 @@ impl Atom for Decrypt {
                     err
                 );
 
-                return false;
+                false
             }
-        };
+        }
     }
 
     fn execute(&mut self) -> anyhow::Result<()> {

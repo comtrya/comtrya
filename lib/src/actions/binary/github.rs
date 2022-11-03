@@ -11,7 +11,7 @@ use std::path::PathBuf;
 use tokio::runtime::Runtime;
 use tracing::debug;
 
-#[derive(Clone, Debug, Default, JsonSchema, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, JsonSchema, PartialEq, Eq, Serialize, Deserialize)]
 pub struct BinaryGitHub {
     pub name: String,
     pub directory: String,
