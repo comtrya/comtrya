@@ -7,7 +7,7 @@ on:
       - "main"
 
 env:
-  MIN_SUPPORTED_RUST_VERSION: "1.61.0"
+  MIN_SUPPORTED_RUST_VERSION: "1.64.0"
   CICD_INTERMEDIATES_DIR: "_cicd-intermediates"
   CARGO_TERM_COLOR: always
   #Fix these up soon
