@@ -8,7 +8,7 @@ description = "A tool to simplify reprovisioning a fresh OS. Installs packages a
 
 [dependencies]
 anyhow = "1.0.59"
-age = { version = "0.8.1", features = ["armor"] }
+age = { version = "0.9.0", features = ["armor"] }
 comtrya-lib = { path = "../lib" }
 dirs-next = "2.0.0"
 eval = "0.4.3"
