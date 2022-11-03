@@ -24,7 +24,7 @@ rand = "0.8.5"
 regex = "1"
 reqwest = { version = "0.11.11", default-features = false, features = [
     "blocking",
-    "rustls-tls"
+    "rustls-tls",
 ] }
 rhai = { version = "1.8.0", features = ["serde"] }
 serde = { version = "1.0", features = ["derive"] }
@@ -43,6 +43,7 @@ schemars = "0.8.10"
 trust-dns-resolver = "0.22.0"
 toml = "0.5.9"
 octocrab = "0.17.0"
+openssl = { version = "0", features = ["vendored"] }
 
 [target.'cfg(unix)'.dependencies]
 users = "0.11.0"
