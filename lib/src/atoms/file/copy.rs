@@ -1,3 +1,5 @@
+use crate::atoms::Outcome;
+
 use super::super::Atom;
 use super::FileAtom;
 use file_diff::diff;
@@ -26,8 +28,11 @@ impl std::fmt::Display for Copy {
 }
 
 impl Atom for Copy {
-    fn plan(&self) -> bool {
-        !diff(self.from.to_str().unwrap(), self.to.to_str().unwrap())
+    fn plan(&self) -> anyhow::Result<Outcome> {
+        Ok(Outcome {
+            should_run: !diff(self.from.to_str().unwrap(), self.to.to_str().unwrap()),
+            side_effects: Vec::new(),
+        })
     }
 
     fn execute(&mut self) -> anyhow::Result<()> {
@@ -75,14 +80,14 @@ mod tests {
             to: to_file.path().to_path_buf(),
         };
 
-        assert_eq!(true, file_copy.plan());
+        assert_eq!(true, file_copy.plan().unwrap().should_run);
 
         let file_copy = Copy {
             from: from_file.path().to_path_buf(),
             to: from_file.path().to_path_buf(),
         };
 
-        assert_eq!(false, file_copy.plan());
+        assert_eq!(false, file_copy.plan().unwrap().should_run);
     }
 
     #[test]
@@ -119,8 +124,8 @@ mod tests {
             to: to_file.path().to_path_buf(),
         };
 
-        assert_eq!(true, file_copy.plan());
+        assert_eq!(true, file_copy.plan().unwrap().should_run);
         assert_eq!(true, file_copy.execute().is_ok());
-        assert_eq!(false, file_copy.plan());
+        assert_eq!(false, file_copy.plan().unwrap().should_run);
     }
 }

@@ -6,6 +6,8 @@ mod create;
 mod decrypt;
 mod link;
 
+use std::path::PathBuf;
+
 use super::Atom;
 pub use chmod::Chmod;
 pub use chown::Chown;
@@ -14,6 +16,18 @@ pub use copy::Copy;
 pub use create::Create;
 pub use decrypt::Decrypt;
 pub use link::Link;
+
+pub enum FileSideEffectAction {
+    Created,
+    Deleted,
+    Chmod { mask: String }, // it's a string because of the leading 0
+    Downloaded { from: String, to: PathBuf },
+}
+
+pub struct FileSideEffect {
+    _path: PathBuf,
+    _action: FileSideEffectAction,
+}
 
 pub trait FileAtom: Atom {
     // Don't think this is needed? Validate soon

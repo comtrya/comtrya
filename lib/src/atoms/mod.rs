@@ -1,12 +1,24 @@
+use self::file::FileSideEffect;
+
 pub mod command;
 pub mod directory;
 pub mod file;
 pub mod git;
 pub mod http;
 
+pub enum SideEffect {
+    None,
+    File(FileSideEffect),
+}
+
+pub struct Outcome {
+    pub should_run: bool,
+    pub side_effects: Vec<SideEffect>,
+}
+
 pub trait Atom: std::fmt::Display {
     // Determine if this atom needs to run
-    fn plan(&self) -> bool;
+    fn plan(&self) -> anyhow::Result<Outcome>;
 
     // Apply new to old
     fn execute(&mut self) -> anyhow::Result<()>;
@@ -30,8 +42,11 @@ pub trait Atom: std::fmt::Display {
 pub struct Echo(pub &'static str);
 
 impl Atom for Echo {
-    fn plan(&self) -> bool {
-        true
+    fn plan(&self) -> anyhow::Result<Outcome> {
+        Ok(Outcome {
+            should_run: true,
+            side_effects: Vec::new(),
+        })
     }
 
     fn execute(&mut self) -> anyhow::Result<()> {

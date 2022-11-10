@@ -58,7 +58,7 @@ pub fn resolve(uri: &String) -> Option<PathBuf> {
 }
 
 pub fn get_manifest_name(manifest_directory: &Path, location: &Path) -> String {
-    let local_name = location.strip_prefix(&manifest_directory).unwrap();
+    let local_name = location.strip_prefix(manifest_directory).unwrap();
     let manifest_name =
         local_name
             .components()

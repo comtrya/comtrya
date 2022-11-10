@@ -1,3 +1,5 @@
+use crate::atoms::Outcome;
+
 use super::super::Atom;
 use super::FileAtom;
 use std::path::PathBuf;
@@ -23,8 +25,11 @@ impl std::fmt::Display for Create {
 }
 
 impl Atom for Create {
-    fn plan(&self) -> bool {
-        !self.path.exists()
+    fn plan(&self) -> anyhow::Result<Outcome> {
+        Ok(Outcome {
+            should_run: !self.path.exists(),
+            side_effects: Vec::new(),
+        })
     }
 
     fn execute(&mut self) -> anyhow::Result<()> {
@@ -45,7 +50,7 @@ mod tests {
             path: std::path::PathBuf::from("some-random-path"),
         };
 
-        assert_eq!(true, file_create.plan());
+        assert_eq!(true, file_create.plan().unwrap().should_run);
 
         let temp_file = match tempfile::NamedTempFile::new() {
             std::result::Result::Ok(file) => file,
@@ -59,7 +64,7 @@ mod tests {
             path: temp_file.path().to_path_buf(),
         };
 
-        assert_eq!(false, file_create.plan());
+        assert_eq!(false, file_create.plan().unwrap().should_run);
     }
 
     #[test]
@@ -77,6 +82,6 @@ mod tests {
         };
 
         assert_eq!(true, file_create.execute().is_ok());
-        assert_eq!(false, file_create.plan());
+        assert_eq!(false, file_create.plan().unwrap().should_run);
     }
 }

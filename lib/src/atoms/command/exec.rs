@@ -1,3 +1,5 @@
+use crate::atoms::Outcome;
+
 use super::super::Atom;
 use anyhow::anyhow;
 use tracing::trace;
@@ -57,8 +59,11 @@ impl std::fmt::Display for Exec {
 }
 
 impl Atom for Exec {
-    fn plan(&self) -> bool {
-        true
+    fn plan(&self) -> anyhow::Result<Outcome> {
+        Ok(Outcome {
+            should_run: true,
+            side_effects: Vec::new(),
+        })
     }
 
     fn execute(&mut self) -> anyhow::Result<()> {

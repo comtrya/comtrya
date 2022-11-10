@@ -1,3 +1,5 @@
+use crate::atoms::Outcome;
+
 use super::super::Atom;
 use super::FileAtom;
 use std::path::PathBuf;
@@ -26,19 +28,25 @@ impl std::fmt::Display for Link {
 }
 
 impl Atom for Link {
-    fn plan(&self) -> bool {
+    fn plan(&self) -> anyhow::Result<Outcome> {
         // First, ensure source exists and can be linked to
         if !self.source.exists() {
             error!(
                 "Cannot plan: source file is missing: {}",
                 self.source.to_str().unwrap()
             );
-            return false;
+            return Ok(Outcome {
+                should_run: false,
+                side_effects: Vec::new(),
+            });
         }
 
         // Target file doesn't exist, we can run safely
         if !self.target.exists() {
-            return true;
+            return Ok(Outcome {
+                should_run: true,
+                side_effects: Vec::new(),
+            });
         }
         // Target file exists, lets check if it's a symlink which can be safely updated
         // or return a false and emit some logging that we can't create the link
@@ -51,7 +59,10 @@ impl Atom for Link {
                     self.target.to_str().unwrap()
                 );
                 debug!("Cannot plan: {}", err);
-                return false;
+                return Ok(Outcome {
+                    should_run: false,
+                    side_effects: Vec::new(),
+                });
             }
         };
 
@@ -63,7 +74,10 @@ impl Atom for Link {
         };
 
         // If this file doesn't link to what we expect, lets make it so
-        !link.eq(&source)
+        Ok(Outcome {
+            should_run: !link.eq(&source),
+            side_effects: Vec::new(),
+        })
     }
 
     #[cfg(unix)]
@@ -112,8 +126,8 @@ mod tests {
             target: from_dir.path().join("symlink"),
             source: to_file.path().to_path_buf(),
         };
-        assert_eq!(true, atom.plan());
+        assert_eq!(true, atom.plan().unwrap().should_run);
         assert_eq!(true, atom.execute().is_ok());
-        assert_eq!(false, atom.plan());
+        assert_eq!(false, atom.plan().unwrap().should_run);
     }
 }
