@@ -16,6 +16,9 @@ pub(crate) struct Apply {
     /// Performs a dry-run without changing the system
     #[structopt(long)]
     dry_run: bool,
+
+    #[structopt(short = "l", long = "label")]
+    pub label: Option<String>,
 }
 
 #[instrument(skip(args, runtime))]
@@ -47,6 +50,7 @@ pub(crate) fn execute(args: &Apply, runtime: &Runtime) -> anyhow::Result<()> {
         name: None,
         depends: vec![],
         actions: vec![],
+        ..Default::default()
     };
 
     let root_index = dag.add_node(manifest_root);
@@ -128,6 +132,18 @@ pub(crate) fn execute(args: &Apply, runtime: &Runtime) -> anyhow::Result<()> {
             .entered();
 
             let mut successful = true;
+
+            if args.label.is_some() {
+                let label = args.label.clone().unwrap();
+
+                if !m1.labels.contains(&label) {
+                    info!(
+                        message = "Skipping manifest, label not found",
+                        label = label.as_str()
+                    );
+                    continue;
+                }
+            }
 
             if let Some(where_condition) = &m1.r#where {
                 let where_result = match engine.eval_with_scope::<bool>(&mut scope, where_condition)

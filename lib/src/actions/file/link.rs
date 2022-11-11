@@ -191,6 +191,7 @@ mod tests {
             depends: vec![],
             name: None,
             dag_index: None,
+            ..Default::default()
         };
 
         let config = Config::default();
@@ -246,6 +247,7 @@ mod tests {
             depends: vec![],
             name: None,
             dag_index: None,
+            ..Default::default()
         };
 
         let config = Config::default();
