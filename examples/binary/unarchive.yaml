@@ -1,0 +1,8 @@
+actions:
+  - action: github.archive
+    repository: comtrya/comtrya
+    version: v0.8.0
+    extension: tar.gz
+    path: /home/todd/sample/comtrya
+    dest: /home/todd/sample/unarchived
+

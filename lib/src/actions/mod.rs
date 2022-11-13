@@ -29,7 +29,7 @@ use std::fmt::Display;
 use tracing::error;
 use user::add::UserAdd;
 
-use self::user::add_group::UserAddGroup;
+use self::{binary::ArchiveGithub, user::add_group::UserAddGroup};
 
 #[derive(JsonSchema, Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub struct ConditionalVariantAction<T> {
@@ -115,6 +115,9 @@ pub enum Actions {
     #[serde(rename = "file.link")]
     FileLink(ConditionalVariantAction<FileLink>),
 
+    #[serde(rename = "github.archive")]
+    ArchiveGithub(ConditionalVariantAction<ArchiveGithub>),
+
     #[serde(
         rename = "binary.github",
         alias = "binary.gh",
@@ -148,6 +151,7 @@ pub enum Actions {
 impl Actions {
     pub fn inner_ref(&self) -> &dyn Action {
         match self {
+            Actions::ArchiveGithub(a) => a,
             Actions::BinaryGitHub(a) => a,
             Actions::CommandRun(a) => a,
             Actions::DirectoryCopy(a) => a,
@@ -169,6 +173,7 @@ impl Actions {
 impl Display for Actions {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let name = match self {
+            Actions::ArchiveGithub(_) => "github.archive",
             Actions::CommandRun(_) => "command.run",
             Actions::DirectoryCopy(_) => "directory.copy",
             Actions::DirectoryCreate(_) => "directory.create",
