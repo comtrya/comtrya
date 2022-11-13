@@ -37,8 +37,6 @@ impl Action for ArchiveGithub {
             + "."
             + self.extension.as_str();
 
-        println!("{}", url);
-
         let step: Vec<Step> = vec![
             Step {
                 atom: Box::new(Download {

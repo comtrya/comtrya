@@ -27,7 +27,6 @@ impl Atom for Unarchive {
     // Apply new to old
     fn execute(&mut self) -> anyhow::Result<()> {
         let tar_gz = File::open(&self.origin)?;
-        println!("hello");
         let tar = GzDecoder::new(tar_gz);
         let mut archive = Archive::new(tar);
         archive.unpack(&self.dest)?;
