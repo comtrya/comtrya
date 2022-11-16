@@ -192,7 +192,7 @@ pub(crate) fn execute(args: &Apply, runtime: &Runtime) -> anyhow::Result<()> {
                 if steps.peek().is_none() {
                     info!("nothing to be done to reconcile action");
                     span_action.exit();
-                    return;
+                    continue;
                 }
 
                 for mut step in steps {
