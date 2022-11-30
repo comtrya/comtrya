@@ -58,8 +58,7 @@ impl PackageProvider for Homebrew {
                 .stdout,
         )
         .unwrap()
-        .replace('\n', "")
-        .replace('\r', "");
+        .replace(['\n', '\r'], "");
 
         let cellar = Path::new(&prefix).join("Cellar");
         let caskroom = Path::new(&prefix).join("Caskroom");
@@ -68,10 +67,10 @@ impl PackageProvider for Homebrew {
             .packages()
             .into_iter()
             .filter(|p| {
-                if cellar.join(&p).is_dir() {
+                if cellar.join(p).is_dir() {
                     trace!("{}: found in Cellar", p);
                     false
-                } else if caskroom.join(&p).is_dir() {
+                } else if caskroom.join(p).is_dir() {
                     trace!("{}: found in Caskroom", p);
                     false
                 } else {

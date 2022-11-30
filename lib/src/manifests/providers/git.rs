@@ -95,9 +95,7 @@ impl GitManifestProvider {
         uri.to_string()
             .replace("https", "")
             .replace("http", "")
-            .replace(':', "")
-            .replace('.', "")
-            .replace('/', "")
+            .replace([':', '.', '/'], "")
     }
 }
 
