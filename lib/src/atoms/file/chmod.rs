@@ -18,7 +18,7 @@ impl std::fmt::Display for Chmod {
         write!(
             f,
             "The permissions on {} need to be set to {:o}",
-            self.path.to_str().unwrap(),
+            self.path.display(),
             self.mode
         )
     }
@@ -41,7 +41,7 @@ impl Atom for Chmod {
             Err(err) => {
                 error!(
                     "Couldn't get metadata for {}, rejecting atom: {}",
-                    &self.path.as_os_str().to_str().unwrap(),
+                    &self.path.display(),
                     err.to_string()
                 );
 

@@ -46,10 +46,11 @@ impl PackageProvider for Dnf {
         false
     }
 
-    fn add_repository(&self, repository: &PackageRepository) -> Vec<Step> {
+    fn add_repository(&self, repository: &PackageRepository) -> anyhow::Result<Vec<Step>> {
         let mut steps: Vec<Step> = vec![];
 
         if repository.key.is_some() {
+            // .unwrap() is safe here because we checked for key presence above
             let key = repository.clone().key.unwrap();
 
             steps.extend(vec![Step {
@@ -96,15 +97,15 @@ impl PackageProvider for Dnf {
             },
         ]);
 
-        steps
+        Ok(steps)
     }
 
-    fn query(&self, package: &PackageVariant) -> Vec<String> {
-        package.packages()
+    fn query(&self, package: &PackageVariant) -> anyhow::Result<Vec<String>> {
+        Ok(package.packages())
     }
 
-    fn install(&self, package: &PackageVariant) -> Vec<Step> {
-        vec![Step {
+    fn install(&self, package: &PackageVariant) -> anyhow::Result<Vec<Step>> {
+        Ok(vec![Step {
             atom: Box::new(Exec {
                 command: String::from("dnf"),
                 arguments: vec![
@@ -114,14 +115,14 @@ impl PackageProvider for Dnf {
                 ]
                 .into_iter()
                 .chain(package.extra_args.clone())
-                .chain(self.query(package))
+                .chain(self.query(package)?)
                 .collect(),
                 privileged: true,
                 ..Default::default()
             }),
             initializers: vec![],
             finalizers: vec![],
-        }]
+        }])
     }
 }
 
@@ -140,7 +141,7 @@ mod test {
             ..Default::default()
         });
 
-        assert_eq!(steps.len(), 2);
+        assert_eq!(steps.unwrap().len(), 2);
     }
 
     #[test]
@@ -155,6 +156,6 @@ mod test {
             provider: PackageProviders::Dnf,
         });
 
-        assert_eq!(steps.len(), 3);
+        assert_eq!(steps.unwrap().len(), 3);
     }
 }

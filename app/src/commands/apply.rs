@@ -1,6 +1,7 @@
 use crate::Runtime;
 use comtrya_lib::contexts::to_rhai;
 use comtrya_lib::manifests::{load, Manifest};
+use core::panic;
 use petgraph::{visit::DfsPostOrder, Graph};
 use rhai::Engine;
 use std::{collections::HashMap, ops::Deref};
@@ -23,16 +24,21 @@ pub(crate) struct Apply {
 
 #[instrument(skip(args, runtime))]
 pub(crate) fn execute(args: &Apply, runtime: &Runtime) -> anyhow::Result<()> {
-    let manifest_path =
-        match crate::manifests::resolve(runtime.config.manifest_paths.first().unwrap()) {
-            Some(path) => path,
-            None => {
-                return Err(anyhow::anyhow!(
-                    "Manifest location, {:?}, could be resolved",
-                    runtime.config.manifest_paths.first().unwrap()
-                ))
-            }
-        };
+    let first_manifest_path = runtime.config.manifest_paths.first().ok_or_else(|| {
+        anyhow::anyhow!(
+            "No manifest paths found in config file, please add at least one path to your manifests"
+        )
+    })?;
+
+    let manifest_path = match crate::manifests::resolve(first_manifest_path) {
+        Some(path) => path,
+        None => {
+            return Err(anyhow::anyhow!(
+                "Manifest location, {:?}, could be resolved",
+                first_manifest_path
+            ))
+        }
+    };
 
     trace!(manifests = args.manifests.join(",").deref(),);
 
@@ -68,11 +74,14 @@ pub(crate) fn execute(args: &Apply, runtime: &Runtime) -> anyhow::Result<()> {
         .collect();
 
     for (name, manifest) in manifests.iter() {
-        manifest.depends.iter().for_each(|d| {
-            let m1 = match manifests.get(d) {
+        manifest.depends.iter().for_each(|dependency| {
+            let m1 = match manifests.get(dependency) {
                 Some(manifest) => manifest,
                 None => {
-                    error!(message = "Unresolved dependency", dependency = d.as_str());
+                    error!(
+                        message = "Unresolved dependency",
+                        dependency = dependency.as_str()
+                    );
 
                     return;
                 }
@@ -81,10 +90,14 @@ pub(crate) fn execute(args: &Apply, runtime: &Runtime) -> anyhow::Result<()> {
             trace!(
                 message = "Dependency Registered",
                 from = name.as_str(),
-                to = m1.name.clone().unwrap().as_str()
+                to = m1.name.as_deref().unwrap_or("cannot extract name"),
             );
 
-            dag.add_edge(manifest.dag_index.unwrap(), m1.dag_index.unwrap(), 0);
+            if let (Some(from), Some(to)) = (manifest.dag_index, m1.dag_index) {
+                dag.add_edge(from, to, 0);
+            } else {
+                error!(message = "Cannot add dependency, missing dag index");
+            }
         });
     }
 
@@ -107,16 +120,30 @@ pub(crate) fn execute(args: &Apply, runtime: &Runtime) -> anyhow::Result<()> {
     let engine = Engine::new();
     let mut scope = to_rhai(contexts);
 
-    run_manifests.iter().for_each(|m| {
-        let start = if m.eq(&String::from("")) {
+    run_manifests.iter().for_each(|manifest| {
+        let start = if manifest.eq(&String::from("")) {
             root_index
+        } else if let Some(dag_index) = manifests
+            .get(manifest)
+            .and_then(|manifest| manifest.dag_index)
+        {
+            dag_index
         } else {
-            manifests.get(m).unwrap().dag_index.unwrap()
+            // FIXME: Don't panic here. Find a better way to handle this.
+            panic!("Cannot find manifest in DAG");
         };
 
         let mut dfs = DfsPostOrder::new(&dag, start);
 
         while let Some(visited) = dfs.next(&dag) {
+            if dag.node_weight(visited).is_none() {
+                info!(
+                    message = "Skipping manifest, not found in DAG",
+                    index = visited.index()
+                );
+            }
+
+            // .unwrap() is safe here, because we just checked that the node exists
             let m1 = dag.node_weight(visited).unwrap();
 
             // Root manifest, nothing to do.
@@ -127,16 +154,14 @@ pub(crate) fn execute(args: &Apply, runtime: &Runtime) -> anyhow::Result<()> {
             let span_manifest = span!(
                 tracing::Level::INFO,
                 "",
-                manifest = m1.name.clone().unwrap().as_str()
+                manifest = m1.name.as_deref().unwrap_or("Cannot extract name"),
             )
             .entered();
 
             let mut successful = true;
 
-            if args.label.is_some() {
-                let label = args.label.clone().unwrap();
-
-                if !m1.labels.contains(&label) {
+            if let Some(label) = args.label.as_ref() {
+                if !m1.labels.contains(label) {
                     info!(
                         message = "Skipping manifest, label not found",
                         label = label.as_str()

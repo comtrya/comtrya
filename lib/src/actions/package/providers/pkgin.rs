@@ -37,19 +37,19 @@ impl PackageProvider for Pkgin {
         false
     }
 
-    fn add_repository(&self, _: &PackageRepository) -> Vec<Step> {
-        vec![]
+    fn add_repository(&self, _: &PackageRepository) -> anyhow::Result<Vec<Step>> {
+        Ok(vec![])
     }
 
     // TODO: Handle query pkgs with pkgin search
-    fn query(&self, package: &PackageVariant) -> Vec<String> {
+    fn query(&self, package: &PackageVariant) -> anyhow::Result<Vec<String>> {
         // Install all packages for now, don't get smart about which
         // already are
-        package.packages()
+        Ok(package.packages())
     }
 
-    fn install(&self, package: &PackageVariant) -> Vec<Step> {
-        vec![
+    fn install(&self, package: &PackageVariant) -> anyhow::Result<Vec<Step>> {
+        Ok(vec![
             Step {
                 atom: Box::new(Exec {
                     command: String::from("/usr/pkg/bin/pkgin"),
@@ -78,6 +78,6 @@ impl PackageProvider for Pkgin {
                 initializers: vec![],
                 finalizers: vec![],
             },
-        ]
+        ])
     }
 }

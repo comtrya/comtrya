@@ -39,9 +39,9 @@ pub fn load_config() -> Result<Config> {
 
             // The existence of the config file allows an implicit manifests location of .
             if config.manifest_paths.is_empty() {
-                config
-                    .manifest_paths
-                    .push(config_path.parent().unwrap().display().to_string());
+                if let Some(parent) = config_path.parent() {
+                    config.manifest_paths.push(parent.display().to_string());
+                }
             }
 
             config

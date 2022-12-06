@@ -50,6 +50,6 @@ impl Default for UserProviders {
 }
 
 pub trait UserProvider {
-    fn add_user(&self, user: &UserVariant) -> Vec<Step>;
-    fn add_to_group(&self, user: &UserAddGroup) -> Vec<Step>;
+    fn add_user(&self, user: &UserVariant) -> anyhow::Result<Vec<Step>>;
+    fn add_to_group(&self, user: &UserAddGroup) -> anyhow::Result<Vec<Step>>;
 }

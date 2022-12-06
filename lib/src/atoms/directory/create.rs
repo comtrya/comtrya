@@ -10,7 +10,7 @@ impl std::fmt::Display for Create {
         write!(
             f,
             "The directory {} needs to be created",
-            self.path.to_str().unwrap(),
+            self.path.display(),
         )
     }
 }

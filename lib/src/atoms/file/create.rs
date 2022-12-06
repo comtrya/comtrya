@@ -14,11 +14,7 @@ impl FileAtom for Create {
 
 impl std::fmt::Display for Create {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "The file {} needs to be created",
-            self.path.to_str().unwrap(),
-        )
+        write!(f, "The file {} needs to be created", self.path.display(),)
     }
 }
 

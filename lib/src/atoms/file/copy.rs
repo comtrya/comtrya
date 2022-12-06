@@ -19,15 +19,18 @@ impl std::fmt::Display for Copy {
         write!(
             f,
             "The file {} contents needs to be copied from {}",
-            self.to.to_str().unwrap(),
-            self.from.to_str().unwrap(),
+            self.to.display(),
+            self.from.display(),
         )
     }
 }
 
 impl Atom for Copy {
     fn plan(&self) -> bool {
-        !diff(self.from.to_str().unwrap(), self.to.to_str().unwrap())
+        !diff(
+            &self.from.display().to_string(),
+            &self.to.display().to_string(),
+        )
     }
 
     fn execute(&mut self) -> anyhow::Result<()> {

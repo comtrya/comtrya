@@ -16,16 +16,22 @@ pub(crate) struct GitConfig {
 impl ManifestProvider for GitManifestProvider {
     fn looks_familiar(&self, url: &str) -> bool {
         use regex::Regex;
-        let regex = Regex::new(r"^(https|git|ssh)://").unwrap();
 
-        regex.is_match(url)
+        if let Ok(regex) = Regex::new(r"^(https|git|ssh)://") {
+            regex.is_match(url)
+        } else {
+            false
+        }
     }
 
-    fn resolve(&self, url: &str) -> Result<std::path::PathBuf, super::ManifestProviderError> {
+    fn resolve(
+        &self,
+        url: &str,
+    ) -> anyhow::Result<std::path::PathBuf, super::ManifestProviderError> {
         let git_config = self.parse_config_url(url);
         let clean_repo_url = self.clean_git_url(&git_config.repository);
         let cache_path = dirs_next::cache_dir()
-            .unwrap()
+            .ok_or(ManifestProviderError::NoResolution)?
             .join("comtrya")
             .join("manifests")
             .join("git")
@@ -41,7 +47,7 @@ impl ManifestProvider for GitManifestProvider {
         info!(
             "Syncing Git repository {} to {}",
             &url,
-            cache_path.to_str().unwrap()
+            cache_path.to_str().unwrap_or("cannot extract path")
         );
 
         if let Err(error) = git_sync.bootstrap() {

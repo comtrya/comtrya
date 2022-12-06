@@ -14,7 +14,7 @@ pub trait FileAction: Action {
         Ok(manifest
             .root_dir
             .clone()
-            .unwrap()
+            .ok_or_else(|| anyhow!("Failed because manifest has no root_dir"))?
             .join("files")
             .join(path)
             .normalize()
@@ -22,7 +22,10 @@ pub trait FileAction: Action {
                 anyhow!(
                     "Resolution of {} failed in manifest {} because {}",
                     path.to_string(),
-                    manifest.name.as_ref().unwrap(),
+                    manifest
+                        .name
+                        .as_ref()
+                        .unwrap_or(&"cannot extract manifest name".to_string()),
                     e.to_string()
                 )
             })?
@@ -32,7 +35,12 @@ pub trait FileAction: Action {
 
     fn load(&self, manifest: &Manifest, path: &str) -> Result<Vec<u8>> {
         use std::io::ErrorKind;
-        let file_path = manifest.root_dir.clone().unwrap().join("files").join(path);
+        let file_path = manifest
+            .root_dir
+            .as_ref()
+            .ok_or_else(|| anyhow::anyhow!("Cannot extract root dir"))?
+            .join("files")
+            .join(path);
 
         std::fs::read(file_path.clone()).map_err(|e| match e.kind() {
             ErrorKind::NotFound => anyhow!(

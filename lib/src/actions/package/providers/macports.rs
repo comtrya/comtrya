@@ -35,26 +35,26 @@ impl PackageProvider for Macports {
         false
     }
 
-    fn add_repository(&self, _repository: &PackageRepository) -> Vec<Step> {
-        vec![]
+    fn add_repository(&self, _repository: &PackageRepository) -> anyhow::Result<Vec<Step>> {
+        Ok(vec![])
     }
 
-    fn query(&self, _package: &PackageVariant) -> Vec<String> {
-        vec![]
+    fn query(&self, _package: &PackageVariant) -> anyhow::Result<Vec<String>> {
+        Ok(vec![])
     }
 
-    fn install(&self, package: &PackageVariant) -> Vec<Step> {
+    fn install(&self, package: &PackageVariant) -> anyhow::Result<Vec<Step>> {
         let cli = match which("port") {
             Ok(c) => c,
             Err(_) => {
                 warn!(message = "MacPorts is not availiable.");
-                return vec![];
+                return Ok(vec![]);
             }
         };
 
-        vec![Step {
+        Ok(vec![Step {
             atom: Box::new(Exec {
-                command: String::from(cli.to_str().unwrap()),
+                command: cli.display().to_string(),
                 arguments: vec![String::from("install")]
                     .into_iter()
                     .chain(package.extra_args.clone())
@@ -65,6 +65,6 @@ impl PackageProvider for Macports {
             }),
             initializers: vec![],
             finalizers: vec![],
-        }]
+        }])
     }
 }

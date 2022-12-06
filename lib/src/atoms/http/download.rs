@@ -9,12 +9,7 @@ pub struct Download {
 
 impl std::fmt::Display for Download {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "HttpDownload from {} to {}",
-            self.url,
-            self.to.to_str().unwrap()
-        )
+        write!(f, "HttpDownload from {} to {}", self.url, self.to.display())
     }
 }
 

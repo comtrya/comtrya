@@ -19,7 +19,7 @@ impl std::fmt::Display for SetContents {
         write!(
             f,
             "The file {} contents need to be set",
-            self.path.to_str().unwrap(),
+            self.path.display(),
         )
     }
 }
