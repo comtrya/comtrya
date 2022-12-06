@@ -95,17 +95,18 @@ impl Atom for Exec {
             .args(&arguments)
             .current_dir(&self.working_dir.clone().unwrap_or_else(|| {
                 std::env::current_dir()
-                    .unwrap()
-                    .into_os_string()
-                    .into_string()
-                    .unwrap()
+                    .map(|current_dir| current_dir.display().to_string())
+                    .expect("Failed to get current directory")
             }))
             .output()
         {
             Ok(output) => {
-                self.status.code = output.status.code().unwrap();
-                self.status.stdout = String::from_utf8(output.stdout).unwrap();
-                self.status.stderr = String::from_utf8(output.stderr).unwrap();
+                self.status.code = output
+                    .status
+                    .code()
+                    .ok_or_else(|| anyhow::anyhow!("Cannot extract exit code"))?;
+                self.status.stdout = String::from_utf8(output.stdout)?;
+                self.status.stderr = String::from_utf8(output.stderr)?;
 
                 trace!("exit code: {}", &self.status.code);
                 trace!("stdout: {}", &self.status.stdout);

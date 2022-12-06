@@ -24,10 +24,8 @@ fn get_false() -> bool {
 
 fn get_cwd() -> String {
     std::env::current_dir()
-        .unwrap()
-        .into_os_string()
-        .into_string()
-        .unwrap()
+        .map(|current_dir| current_dir.display().to_string())
+        .expect("Failed to get current directory")
 }
 
 impl Action for RunCommand {

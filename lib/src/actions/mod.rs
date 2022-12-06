@@ -65,6 +65,7 @@ where
                 return false;
             }
 
+            // .unwrap() is safe here because we checked for None above
             let condition = variant.condition.clone().unwrap();
 
             match engine.eval_with_scope::<bool>(&mut scope, condition.as_str()) {
@@ -84,7 +85,8 @@ where
             return self.action.plan(manifest, context);
         }
 
-        let condition = self.condition.clone().unwrap();
+        // .unwrap() is safe here because we checked for None above
+        let condition = self.condition.as_ref().unwrap();
 
         match engine.eval_with_scope::<bool>(&mut scope, condition.as_str()) {
             Ok(true) => self.action.plan(manifest, context),

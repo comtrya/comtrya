@@ -16,7 +16,7 @@ impl Action for UserAdd {
 
         let mut atoms: Vec<Step> = vec![];
 
-        atoms.append(&mut provider.add_user(&variant));
+        atoms.append(&mut provider.add_user(&variant)?);
 
         Ok(atoms)
     }

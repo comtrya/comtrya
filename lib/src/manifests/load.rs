@@ -14,6 +14,7 @@ pub fn load(manifest_path: PathBuf, contexts: &Contexts) -> HashMap<String, Mani
 
     let mut walker = WalkBuilder::new(&manifest_path);
 
+    // FIXME: get rid of all .unwrap() calls
     walker
         .standard_filters(true)
         .follow_links(false)
@@ -94,9 +95,10 @@ pub fn load(manifest_path: PathBuf, contexts: &Contexts) -> HashMap<String, Mani
                 }
             };
 
-            let name = get_manifest_name(&manifest_path, &entry);
+            let name =
+                get_manifest_name(&manifest_path, &entry).expect("Failed to get manifest name");
 
-            manifest.root_dir = Some(entry.parent().unwrap().to_path_buf());
+            manifest.root_dir = entry.parent().map(|parent| parent.to_path_buf());
 
             manifest.name = Some(name.clone());
 

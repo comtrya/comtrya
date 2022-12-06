@@ -18,7 +18,7 @@ impl DirectoryAction for DirectoryCopy {}
 
 impl Action for DirectoryCopy {
     fn plan(&self, manifest: &Manifest, _context: &Contexts) -> anyhow::Result<Vec<Step>> {
-        let from: String = self.resolve(manifest, &self.from).to_str().unwrap().into();
+        let from: String = self.resolve(manifest, &self.from).display().to_string();
 
         Ok(vec![
             Step {

@@ -8,13 +8,13 @@ use tracing::warn;
 pub struct NoneUserProvider {}
 
 impl UserProvider for NoneUserProvider {
-    fn add_user(&self, _user: &UserVariant) -> Vec<Step> {
+    fn add_user(&self, _user: &UserVariant) -> anyhow::Result<Vec<Step>> {
         warn!("This system does not have a provider for users");
-        vec![]
+        Ok(vec![])
     }
 
-    fn add_to_group(&self, _user: &UserAddGroup) -> Vec<Step> {
+    fn add_to_group(&self, _user: &UserAddGroup) -> anyhow::Result<Vec<Step>> {
         warn!(message = "This system does not have a provider for users");
-        vec![]
+        Ok(vec![])
     }
 }

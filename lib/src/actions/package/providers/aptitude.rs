@@ -58,12 +58,13 @@ impl PackageProvider for Aptitude {
         false
     }
 
-    fn add_repository(&self, repository: &PackageRepository) -> Vec<Step> {
+    fn add_repository(&self, repository: &PackageRepository) -> anyhow::Result<Vec<Step>> {
         let mut steps: Vec<Step> = vec![];
 
         let mut signed_by = String::from("");
 
         if repository.key.is_some() {
+            // .unwrap() is safe here because we checked for key.is_some() above
             let key = repository.clone().key.unwrap();
 
             let key_name = key.name.unwrap_or_else(|| digest(&*key.url));
@@ -117,15 +118,15 @@ impl PackageProvider for Aptitude {
             },
         ]);
 
-        steps
+        Ok(steps)
     }
 
-    fn query(&self, package: &PackageVariant) -> Vec<String> {
-        package.packages()
+    fn query(&self, package: &PackageVariant) -> anyhow::Result<Vec<String>> {
+        Ok(package.packages())
     }
 
-    fn install(&self, package: &PackageVariant) -> Vec<Step> {
-        vec![Step {
+    fn install(&self, package: &PackageVariant) -> anyhow::Result<Vec<Step>> {
+        Ok(vec![Step {
             atom: Box::new(Exec {
                 command: String::from("apt"),
                 arguments: vec![String::from("install"), String::from("--yes")]
@@ -139,7 +140,7 @@ impl PackageProvider for Aptitude {
             }),
             initializers: vec![],
             finalizers: vec![],
-        }]
+        }])
     }
 }
 
@@ -161,7 +162,7 @@ mod test {
             ..Default::default()
         });
 
-        assert_eq!(steps.len(), 2);
+        assert_eq!(steps.unwrap().len(), 2);
     }
 
     #[test]
@@ -176,7 +177,7 @@ mod test {
             ..Default::default()
         });
 
-        assert_eq!(steps.len(), 3);
+        assert_eq!(steps.unwrap().len(), 3);
     }
 
     #[test]
@@ -192,6 +193,6 @@ mod test {
             ..Default::default()
         });
 
-        assert_eq!(steps.len(), 3);
+        assert_eq!(steps.unwrap().len(), 3);
     }
 }

@@ -46,7 +46,7 @@ impl Action for FileCopy {
                     let mut tera = Tera::default();
                     register_functions(&mut tera);
 
-                    let content_as_str = std::str::from_utf8(&contents).unwrap();
+                    let content_as_str = std::str::from_utf8(&contents)?;
 
                     match tera.render_str(content_as_str, &to_tera(context)) {
                         Ok(rendered) => rendered,
@@ -88,7 +88,12 @@ impl Action for FileCopy {
         let mut steps = vec![
             Step {
                 atom: Box::new(DirCreate {
-                    path: parent.parent().unwrap().into(),
+                    path: parent
+                        .parent()
+                        .ok_or_else(|| {
+                            anyhow!("Failed to get parent directory for FileCopy action")
+                        })?
+                        .into(),
                 }),
                 initializers: vec![],
                 finalizers: vec![],

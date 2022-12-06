@@ -19,8 +19,8 @@ impl std::fmt::Display for Link {
         write!(
             f,
             "The file {} contents needs to be linked from {}",
-            self.target.to_str().unwrap(),
-            self.source.to_str().unwrap(),
+            self.target.display(),
+            self.source.display(),
         )
     }
 }
@@ -31,7 +31,7 @@ impl Atom for Link {
         if !self.source.exists() {
             error!(
                 "Cannot plan: source file is missing: {}",
-                self.source.to_str().unwrap()
+                self.source.display()
             );
             return false;
         }
@@ -48,7 +48,7 @@ impl Atom for Link {
             Err(err) => {
                 warn!(
                     "Cannot plan: target already exists and isn't a link: {}",
-                    self.target.to_str().unwrap()
+                    self.target.display()
                 );
                 debug!("Cannot plan: {}", err);
                 return false;

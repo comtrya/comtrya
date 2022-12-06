@@ -20,7 +20,7 @@ impl std::fmt::Display for Chown {
         write!(
             f,
             "The owner and group on {} need to be set to {}:{}",
-            self.path.to_str().unwrap(),
+            self.path.display(),
             self.owner,
             self.group,
         )
@@ -44,7 +44,7 @@ impl Atom for Chown {
             Err(err) => {
                 error!(
                     "Couldn't get metadata for {}, rejecting atom: {}",
-                    &self.path.as_os_str().to_str().unwrap(),
+                    &self.path.display(),
                     err.to_string()
                 );
 
@@ -52,38 +52,39 @@ impl Atom for Chown {
             }
         };
 
-        // Not happy with the unwrap's, but I'll loop back to this ... promise?
-        let current_owner = users::get_user_by_uid(metadata.uid()).unwrap();
-        let current_group = users::get_group_by_gid(metadata.gid()).unwrap();
+        if let (Some(current_owner), Some(current_group)) = (
+            users::get_user_by_uid(metadata.uid()),
+            users::get_group_by_gid(metadata.gid()),
+        ) {
+            let requested_owner = match users::get_user_by_name(self.owner.as_str()) {
+                Some(owner) => owner,
+                None => {
+                    error!(
+                        "Skipping chown as requested owner, {}, does not exist",
+                        self.owner,
+                    );
+                    return false;
+                }
+            };
 
-        let requested_owner = match users::get_user_by_name(self.owner.as_str()) {
-            Some(owner) => owner,
-            None => {
-                error!(
-                    "Skipping chown as requested owner, {}, does not exist",
-                    self.owner,
-                );
-                return false;
+            let requested_group = match users::get_group_by_name(self.group.as_str()) {
+                Some(group) => group,
+                None => {
+                    error!(
+                        "Skipping chown as requested group, {}, does not exist",
+                        self.group,
+                    );
+                    return false;
+                }
+            };
+
+            if current_owner.uid() != requested_owner.uid() {
+                return true;
             }
-        };
 
-        let requested_group = match users::get_group_by_name(self.group.as_str()) {
-            Some(group) => group,
-            None => {
-                error!(
-                    "Skipping chown as requested group, {}, does not exist",
-                    self.group,
-                );
-                return false;
+            if current_group.gid() != requested_group.gid() {
+                return true;
             }
-        };
-
-        if current_owner.uid() != requested_owner.uid() {
-            return true;
-        }
-
-        if current_group.gid() != requested_group.gid() {
-            return true;
         }
 
         false

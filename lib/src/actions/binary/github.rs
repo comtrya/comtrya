@@ -38,7 +38,12 @@ impl Action for BinaryGitHub {
             }
         };
 
-        let (owner, repo) = self.repository.split_once('/').unwrap();
+        let (owner, repo) = self.repository.split_once('/').ok_or_else(|| {
+            anyhow!(
+                "Failed to parse repository name: {}",
+                self.repository.as_str()
+            )
+        })?;
 
         let octocrab = octocrab::instance();
 

@@ -37,7 +37,7 @@ impl Action for PackageInstall {
             atoms.append(&mut provider.bootstrap());
         }
 
-        atoms.append(&mut provider.install(&variant));
+        atoms.append(&mut provider.install(&variant)?);
 
         span.exit();
 

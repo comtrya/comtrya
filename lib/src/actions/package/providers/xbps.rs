@@ -47,11 +47,11 @@ impl PackageProvider for Xbps {
         false
     }
 
-    fn add_repository(&self, _: &PackageRepository) -> Vec<Step> {
-        vec![]
+    fn add_repository(&self, _: &PackageRepository) -> anyhow::Result<Vec<Step>> {
+        Ok(vec![])
     }
 
-    fn query(&self, package: &PackageVariant) -> Vec<String> {
+    fn query(&self, package: &PackageVariant) -> anyhow::Result<Vec<String>> {
         let requested_already_installed: HashSet<String> = String::from_utf8(
             Command::new("xbps-query")
                 .args(
@@ -59,11 +59,9 @@ impl PackageProvider for Xbps {
                         .into_iter()
                         .chain(package.packages().into_iter()),
                 )
-                .output()
-                .unwrap()
+                .output()?
                 .stdout,
-        )
-        .unwrap()
+        )?
         .split('\n')
         .map(String::from)
         .collect();
@@ -72,7 +70,8 @@ impl PackageProvider for Xbps {
             "all requested installed packages: {:?}",
             requested_already_installed
         );
-        package
+
+        Ok(package
             .packages()
             .into_iter()
             .filter(|p| {
@@ -84,15 +83,16 @@ impl PackageProvider for Xbps {
                     true
                 }
             })
-            .collect()
+            .collect())
     }
 
-    fn install(&self, package: &PackageVariant) -> Vec<Step> {
-        let need_installed = self.query(package);
+    fn install(&self, package: &PackageVariant) -> anyhow::Result<Vec<Step>> {
+        let need_installed = self.query(package)?;
         if need_installed.is_empty() {
-            return vec![];
+            return Ok(vec![]);
         }
-        vec![Step {
+
+        Ok(vec![Step {
             atom: Box::new(Exec {
                 command: String::from("xbps-install"),
                 arguments: [
@@ -110,6 +110,6 @@ impl PackageProvider for Xbps {
             }),
             initializers: vec![],
             finalizers: vec![],
-        }]
+        }])
     }
 }
