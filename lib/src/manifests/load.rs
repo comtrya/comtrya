@@ -1,15 +1,10 @@
 use super::Manifest;
-use crate::{
-    contexts::{to_tera, Contexts},
-    manifests::get_manifest_name,
-    tera_functions::register_functions,
-};
+use crate::{contexts::Contexts, manifests::get_manifest_name};
 use ignore::WalkBuilder;
-use std::{collections::HashMap, error::Error, fs::canonicalize, ops::Deref, path::PathBuf};
-use tera::Tera;
+use std::{collections::HashMap, fs::canonicalize, ops::Deref, path::PathBuf};
 use tracing::{error, span};
 
-pub fn load(manifest_path: PathBuf, contexts: &Contexts) -> HashMap<String, Manifest> {
+pub fn load(manifest_path: PathBuf, _contexts: &Contexts) -> HashMap<String, Manifest> {
     let mut manifests: HashMap<String, Manifest> = HashMap::new();
 
     let mut walker = WalkBuilder::new(&manifest_path);
@@ -65,25 +60,7 @@ pub fn load(manifest_path: PathBuf, contexts: &Contexts) -> HashMap<String, Mani
             .entered();
 
             let entry = canonicalize(filename.into_path()).unwrap();
-            let contents = std::fs::read_to_string(entry.clone()).unwrap();
-            let template = contents.as_str();
-
-            let mut tera = Tera::default();
-            register_functions(&mut tera);
-
-            let yaml = match tera.render_str(template, &to_tera(contexts)) {
-                Ok(template) => template,
-                Err(err) => {
-                    match err.source() {
-                        Some(err) => error!(message = err.source()),
-                        None => error!(message = err.to_string().as_str()),
-                    }
-
-                    span.exit();
-
-                    return;
-                }
-            };
+            let yaml = std::fs::read_to_string(entry.clone()).unwrap();
 
             let mut manifest: Manifest = match serde_yaml::from_str(yaml.deref()) {
                 Ok(manifest) => manifest,

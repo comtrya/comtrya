@@ -1,11 +1,13 @@
 use crate::Runtime;
-use comtrya_lib::contexts::to_rhai;
+use comtrya_lib::contexts::{to_rhai, to_tera};
 use comtrya_lib::manifests::{load, Manifest};
+use comtrya_lib::tera_functions::register_functions;
 use core::panic;
 use petgraph::{visit::DfsPostOrder, Graph};
 use rhai::Engine;
 use std::{collections::HashMap, ops::Deref};
 use structopt::StructOpt;
+use tera::Tera;
 use tracing::{debug, error, info, instrument, span, trace, warn};
 
 #[derive(Clone, Debug, StructOpt)]
@@ -120,6 +122,9 @@ pub(crate) fn execute(args: &Apply, runtime: &Runtime) -> anyhow::Result<()> {
     let engine = Engine::new();
     let mut scope = to_rhai(contexts);
 
+    let mut tera = Tera::default();
+    register_functions(&mut tera);
+
     run_manifests.iter().for_each(|manifest| {
         let start = if manifest.eq(&String::from("")) {
             root_index
@@ -194,12 +199,28 @@ pub(crate) fn execute(args: &Apply, runtime: &Runtime) -> anyhow::Result<()> {
                 }
             }
 
-            for action in m1.actions.iter() {
+            let manifest = match serde_yaml::to_string(m1)
+                .map_err(anyhow::Error::from)
+                .and_then(|yaml| {
+                    tera.render_str(&yaml, &to_tera(contexts))
+                        .map_err(anyhow::Error::from)
+                })
+                .and_then(|renderd| {
+                    serde_yaml::from_str::<Manifest>(renderd.as_ref()).map_err(anyhow::Error::from)
+                }) {
+                Ok(manifest) => manifest,
+                Err(err) => {
+                    error!("Failed to render manifest: {}", err);
+                    continue;
+                }
+            };
+
+            for action in manifest.actions.iter() {
                 let span_action = span!(tracing::Level::INFO, "", %action).entered();
 
                 let action = action.inner_ref();
 
-                let plan = match action.plan(m1, contexts) {
+                let plan = match action.plan(&manifest, contexts) {
                     Ok(steps) => steps,
                     Err(err) => {
                         info!("Action failed to get plan: {:?}", err);
