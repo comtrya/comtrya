@@ -27,7 +27,7 @@ pub fn load(manifest_path: PathBuf, contexts: &Contexts) -> HashMap<String, Mani
             !entry
                 .as_ref()
                 .ok()
-                .and_then(|entry| entry.metadata().ok().and_then(|entry| Some(entry.is_dir())))
+                .and_then(|entry| entry.metadata().ok().map(|entry| entry.is_dir()))
                 .unwrap_or(false)
         })
         .filter(|entry| {
@@ -45,9 +45,7 @@ pub fn load(manifest_path: PathBuf, contexts: &Contexts) -> HashMap<String, Mani
                 .ok()
                 .and_then(|entry| {
                     entry.path().parent().and_then(|parent| {
-                        parent
-                            .file_name()
-                            .and_then(|file_name| Some(file_name.eq("files")))
+                        parent.file_name().map(|file_name| file_name.eq("files"))
                     })
                 })
                 .unwrap_or(false)
@@ -62,7 +60,8 @@ pub fn load(manifest_path: PathBuf, contexts: &Contexts) -> HashMap<String, Mani
                 .entered();
 
                 let entry = canonicalize(filename.into_path()).unwrap();
-                let contents = std::fs::read_to_string(entry.clone()).unwrap_or(String::from(""));
+                let contents =
+                    std::fs::read_to_string(entry.clone()).unwrap_or_else(|_| String::from(""));
                 let template = contents.as_str();
 
                 let mut tera = Tera::default();
