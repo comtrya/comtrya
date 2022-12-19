@@ -55,7 +55,7 @@ impl PackageProvider for Winget {
                             "--accept-package-agreements".to_string(),
                             "--accept-source-agreements".to_string(),
                             "--source".to_string(),
-                            "winget".to_string()
+                            "winget".to_string(),
                         ],
                         package.extra_args.clone(),
                         vec![p.clone()],
