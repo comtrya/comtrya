@@ -33,6 +33,16 @@ mod tests {
         assert_eq!(true, result.unwrap());
     }
 
+    #[cfg(target_family = "windows")]
+    #[test]
+    fn return_true_windows_xcopy() {
+        let initializer = CommandFound("Xcopy");
+        let result = initializer.initialize();
+
+        assert_eq!(true, result.is_ok());
+        assert_eq!(true, result.unwrap());
+    }
+
     #[cfg(target_family = "unix")]
     #[test]
     fn it_returns_true_when_found() {
