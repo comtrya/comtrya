@@ -49,7 +49,14 @@ impl PackageProvider for Winget {
                 atom: Box::new(Exec {
                     command: String::from("winget"),
                     arguments: [
-                        vec![String::from("install"), String::from("--silent")],
+                        vec![
+                            "install".to_string(),
+                            "--silent".to_string(),
+                            "--accept-package-agreements".to_string(),
+                            "--accept-source-agreements".to_string(),
+                            "--source".to_string(),
+                            "winget".to_string()
+                        ],
                         package.extra_args.clone(),
                         vec![p.clone()],
                     ]
