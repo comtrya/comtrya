@@ -59,7 +59,7 @@ pub fn load(manifest_path: PathBuf, contexts: &Contexts) -> HashMap<String, Mani
                 )
                 .entered();
 
-                let entry = canonicalize(filename.into_path()).unwrap();
+                let entry = canonicalize(filename.into_path()).ok().unwrap_or_default();
                 let contents =
                     std::fs::read_to_string(entry.clone()).unwrap_or_else(|_| String::from(""));
                 let template = contents.as_str();
