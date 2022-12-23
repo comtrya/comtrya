@@ -2,6 +2,7 @@ use super::super::Atom;
 use super::FileAtom;
 use file_diff::diff;
 use std::path::PathBuf;
+use tracing::error;
 
 pub struct Copy {
     pub from: PathBuf,
@@ -27,6 +28,12 @@ impl std::fmt::Display for Copy {
 
 impl Atom for Copy {
     fn plan(&self) -> bool {
+        if false == self.to.is_file() {
+            error!("Cannot plan: target isn't a file: {}", self.to.display());
+
+            return false;
+        }
+
         !diff(
             &self.from.display().to_string(),
             &self.to.display().to_string(),
@@ -124,6 +131,31 @@ mod tests {
 
         assert_eq!(true, file_copy.plan());
         assert_eq!(true, file_copy.execute().is_ok());
+        assert_eq!(false, file_copy.plan());
+    }
+
+    fn it_wont_destroy_directories() {
+        let to = match tempdir::TempDir::new("file-copy") {
+            std::result::Result::Ok(dir) => dir,
+            std::result::Result::Err(_) => {
+                assert_eq!(false, true);
+                return;
+            }
+        };
+
+        let mut from_file = match tempfile::NamedTempFile::new() {
+            std::result::Result::Ok(file) => file,
+            std::result::Result::Err(_) => {
+                assert_eq!(false, true);
+                return;
+            }
+        };
+
+        let file_copy = Copy {
+            from: from_file.path().to_path_buf(),
+            to: to.path().to_path_buf(),
+        };
+
         assert_eq!(false, file_copy.plan());
     }
 }
