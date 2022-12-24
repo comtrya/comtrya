@@ -190,7 +190,7 @@ pub(crate) fn execute(args: &Apply, runtime: &Runtime) -> anyhow::Result<()> {
                 if !where_result {
                     info!("Skip manifest, because 'where' conditions were false!");
                     span_manifest.exit();
-                    return;
+                    continue;
                 }
             }
 
