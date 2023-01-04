@@ -490,7 +490,7 @@ dependencies = [
 
 [[package]]
 name = "comtrya"
-version = "0.8.0"
+version = "0.8.2"
 dependencies = [
  "age",
  "anyhow",
@@ -531,7 +531,7 @@ dependencies = [
 
 [[package]]
 name = "comtrya-lib"
-version = "0.7.4"
+version = "0.8.2"
 dependencies = [
  "age",
  "anyhow",
@@ -1266,9 +1266,9 @@ dependencies = [
 
 [[package]]
 name = "gitsync"
-version = "0.1.6"
+version = "0.1.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3a3ad1745f0013a481462aa98c9391df00ec493291e0acef04fd38c90e757f5e"
+checksum = "c94a89eadff6e3b9a1ddc585780b038e2be2c52dd5bfefc668ee6cd340d34eba"
 dependencies = [
  "actix",
  "chrono",
