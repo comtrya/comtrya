@@ -12,9 +12,9 @@
 [![GitHub Actions Status](https://img.shields.io/github/workflow/status/comtrya/comtrya/release/main?style=for-the-badge)](https://github.com/comtrya/comtrya/actions/workflows/main.yml)
 [![Codecov](https://img.shields.io/codecov/c/github/comtrya/comtrya?style=for-the-badge)](https://codecov.io/gh/comtrya/comtrya)
 
-[
-![Discord](https://img.shields.io/discord/730728064031653999?label=Discord&style=for-the-badge)](https://rawkode.chat)
+[![Discord](https://img.shields.io/discord/730728064031653999?label=Discord&style=for-the-badge)](https://rawkode.chat)
 
+[![Packaging status](https://repology.org/badge/vertical-allrepos/comtrya.svg)](https://repology.org/metapackage/comtrya)
 
 ---
 
