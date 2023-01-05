@@ -75,12 +75,17 @@ pub(crate) fn execute(args: &Apply, runtime: &Runtime) -> anyhow::Result<()> {
 
     for (name, manifest) in manifests.iter() {
         manifest.depends.iter().for_each(|dependency| {
-            let m1 = match manifests.get(dependency) {
+            let (local_dependency_prefix, _) = name.rsplit_once(".").unwrap_or(("", ""));
+
+            let resolved_dependency_name =
+                dependency.replace("./", format!("{}.", local_dependency_prefix).as_str());
+
+            let m1 = match manifests.get(&resolved_dependency_name) {
                 Some(manifest) => manifest,
                 None => {
                     error!(
                         message = "Unresolved dependency",
-                        dependency = dependency.as_str()
+                        dependency = resolved_dependency_name.as_str()
                     );
 
                     return;
