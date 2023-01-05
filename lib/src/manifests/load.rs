@@ -5,7 +5,9 @@ use crate::{
     tera_functions::register_functions,
 };
 use ignore::WalkBuilder;
-use std::{collections::HashMap, error::Error, fs::canonicalize, ops::Deref, path::PathBuf};
+use std::{
+    collections::HashMap, error::Error, ffi::OsStr, fs::canonicalize, ops::Deref, path::PathBuf,
+};
 use tera::Tera;
 use tracing::{error, span};
 
@@ -87,27 +89,30 @@ pub fn load(manifest_path: PathBuf, contexts: &Contexts) -> HashMap<String, Mani
 
                 let mut manifest: Manifest;
 
-                if entry.ends_with(".yaml") || entry.ends_with(".yml") {
-                    manifest = match serde_yaml::from_str(template.deref()) {
-                        Ok(manifest) => manifest,
+                match entry.extension().and_then(OsStr::to_str) {
+                    Some("yaml") | Some("yml") => match serde_yaml::from_str(template.deref()) {
+                        Ok(m) => manifest = m,
                         Err(e) => {
                             error!(message = e.to_string().as_str());
                             span.exit();
-
                             return;
                         }
-                    };
-                } else {
-                    manifest = match toml::from_str(template.deref()) {
-                        Ok(manifest) => manifest,
+                    },
+                    Some("toml") => match toml::from_str(template.deref()) {
+                        Ok(m) => manifest = m,
                         Err(e) => {
                             error!(message = e.to_string().as_str());
                             span.exit();
-
                             return;
                         }
-                    };
-                }
+                    },
+                    _ => {
+                        error!("Unrecognized file extension for manifest");
+                        span.exit();
+
+                        return;
+                    }
+                };
 
                 let name =
                     get_manifest_name(&manifest_path, &entry).expect("Failed to get manifest name");
