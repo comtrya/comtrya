@@ -39,7 +39,7 @@ pub(crate) enum Commands {
     /// Print version information
     Version(commands::Version),
 
-    /// List available contexts
+    /// List available contexts (BETA)
     Contexts(commands::Contexts),
 }
 
