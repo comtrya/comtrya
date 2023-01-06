@@ -87,9 +87,7 @@ pub fn load(manifest_path: PathBuf, contexts: &Contexts) -> HashMap<String, Mani
                     }
                 };
 
-                let manifest: Option<Manifest>;
-
-                manifest = match entry.extension().and_then(OsStr::to_str) {
+                let manifest: Option<Manifest> = match entry.extension().and_then(OsStr::to_str) {
                     Some("yaml") | Some("yml") => serde_yaml::from_str(template.deref()).ok(),
                     Some("toml") => toml::from_str(template.deref()).ok(),
                     _ => {
