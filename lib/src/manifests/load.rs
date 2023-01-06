@@ -87,25 +87,11 @@ pub fn load(manifest_path: PathBuf, contexts: &Contexts) -> HashMap<String, Mani
                     }
                 };
 
-                let mut manifest: Manifest;
+                let manifest: Option<Manifest>;
 
-                match entry.extension().and_then(OsStr::to_str) {
-                    Some("yaml") | Some("yml") => match serde_yaml::from_str(template.deref()) {
-                        Ok(m) => manifest = m,
-                        Err(e) => {
-                            error!(message = e.to_string().as_str());
-                            span.exit();
-                            return;
-                        }
-                    },
-                    Some("toml") => match toml::from_str(template.deref()) {
-                        Ok(m) => manifest = m,
-                        Err(e) => {
-                            error!(message = e.to_string().as_str());
-                            span.exit();
-                            return;
-                        }
-                    },
+                manifest = match entry.extension().and_then(OsStr::to_str) {
+                    Some("yaml") | Some("yml") => serde_yaml::from_str(template.deref()).ok(),
+                    Some("toml") => toml::from_str(template.deref()).ok(),
                     _ => {
                         error!("Unrecognized file extension for manifest");
                         span.exit();
@@ -114,14 +100,17 @@ pub fn load(manifest_path: PathBuf, contexts: &Contexts) -> HashMap<String, Mani
                     }
                 };
 
-                let name =
-                    get_manifest_name(&manifest_path, &entry).expect("Failed to get manifest name");
+		if let Some(mut manifest) = manifest {
+		    let name = get_manifest_name(&manifest_path, &entry).expect("Failed to get manifest name");
 
-                manifest.root_dir = entry.parent().map(|parent| parent.to_path_buf());
+		    manifest.root_dir = entry.parent().map(|parent| parent.to_path_buf());
 
-                manifest.name = Some(name.clone());
+		    manifest.name = Some(name.clone());
 
-                manifests.insert(name, manifest);
+		    manifests.insert(name, manifest);
+		} else {
+		    error!("Unrecognized file extension for manifest");
+		}
 
                 span.exit();
             }
