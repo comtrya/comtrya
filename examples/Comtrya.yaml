@@ -2,8 +2,10 @@
 # Default: [.]
 # This is a list because we'll eventually support multiple.
 # However, only the first is used atm.
-manifests:
-  - https://github.com/rawkode/rawkode
+manifest_paths:
+  - .
+  # We also support Git repositories, using Docker's syntax:
+  #   https://docs.docker.com/build/building/context/#git-repositories
 
 # Used by the variables context provider:
 # context="variables" key="<key>" value="<value>"
@@ -12,4 +14,4 @@ variables:
   kuci: "xhpv"
 
 include_variables:
- - "dns+txt://comtrya.icepuma.dev"
+  - "dns+txt://comtrya.icepuma.dev"
