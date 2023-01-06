@@ -28,7 +28,7 @@ impl std::fmt::Display for Copy {
 
 impl Atom for Copy {
     fn plan(&self) -> bool {
-        if false == self.to.is_file() {
+        if !self.to.is_file() {
             error!("Cannot plan: target isn't a file: {}", self.to.display());
 
             return false;
@@ -134,6 +134,7 @@ mod tests {
         assert_eq!(false, file_copy.plan());
     }
 
+    #[test]
     fn it_wont_destroy_directories() {
         let to = match tempdir::TempDir::new("file-copy") {
             std::result::Result::Ok(dir) => dir,
@@ -143,7 +144,7 @@ mod tests {
             }
         };
 
-        let mut from_file = match tempfile::NamedTempFile::new() {
+        let from_file = match tempfile::NamedTempFile::new() {
             std::result::Result::Ok(file) => file,
             std::result::Result::Err(_) => {
                 assert_eq!(false, true);

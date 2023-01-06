@@ -16,7 +16,7 @@ fs_extra = "1.2.0"
 gethostname = "0.4.0"
 gitsync = "0.1.8"
 ignore = "0.4.18"
-normpath = "0.3.2"
+normpath = "1"
 os_info = "3.5.0"
 paw = "1.0"
 petgraph = "0.6.2"
@@ -42,7 +42,7 @@ sha256 = "1.0.3"
 schemars = "0.8.10"
 trust-dns-resolver = "0.22.0"
 toml = "0.5.10"
-octocrab = "0.17.0"
+octocrab = "0.18"
 openssl = { version = "0", features = ["vendored"] }
 
 [target.'cfg(unix)'.dependencies]

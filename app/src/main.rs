@@ -1,3 +1,5 @@
+use commands::ComtryaCommand;
+
 use comtrya_lib::contexts::build_contexts;
 use comtrya_lib::contexts::Contexts;
 use comtrya_lib::manifests;
@@ -30,13 +32,19 @@ pub(crate) struct GlobalArgs {
 
 #[derive(Clone, Debug, StructOpt)]
 pub(crate) enum Commands {
+    /// Apply manifests
     #[structopt(aliases = &["do", "run"])]
     Apply(commands::Apply),
+
+    /// Print version information
     Version(commands::Version),
+
+    /// List available contexts (BETA)
+    Contexts(commands::Contexts),
 }
 
 #[derive(Clone, Debug)]
-pub(crate) struct Runtime {
+pub struct Runtime {
     pub(crate) args: GlobalArgs,
     pub(crate) config: Config,
     pub(crate) contexts: Contexts,
@@ -44,8 +52,9 @@ pub(crate) struct Runtime {
 
 pub(crate) fn execute(runtime: Runtime) -> anyhow::Result<()> {
     match &runtime.args.command {
-        Commands::Apply(a) => commands::apply(a, &runtime),
-        Commands::Version(a) => commands::version(a, &runtime),
+        Commands::Apply(apply) => apply.execute(&runtime),
+        Commands::Version(version) => version.execute(&runtime),
+        Commands::Contexts(contexts) => contexts.execute(&runtime),
     }
 }
 
