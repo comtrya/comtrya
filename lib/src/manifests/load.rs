@@ -100,17 +100,18 @@ pub fn load(manifest_path: PathBuf, contexts: &Contexts) -> HashMap<String, Mani
                     }
                 };
 
-		if let Some(mut manifest) = manifest {
-		    let name = get_manifest_name(&manifest_path, &entry).expect("Failed to get manifest name");
+                if let Some(mut manifest) = manifest {
+                    let name = get_manifest_name(&manifest_path, &entry)
+                        .expect("Failed to get manifest name");
 
-		    manifest.root_dir = entry.parent().map(|parent| parent.to_path_buf());
+                    manifest.root_dir = entry.parent().map(|parent| parent.to_path_buf());
 
-		    manifest.name = Some(name.clone());
+                    manifest.name = Some(name.clone());
 
-		    manifests.insert(name, manifest);
-		} else {
-		    error!("Unrecognized file extension for manifest");
-		}
+                    manifests.insert(name, manifest);
+                } else {
+                    error!("Unrecognized file extension for manifest");
+                }
 
                 span.exit();
             }
