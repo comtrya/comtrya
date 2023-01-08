@@ -8,6 +8,8 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 mod linux;
 use self::linux::LinuxUserProvider;
+mod macos;
+use self::macos::MacOSUserProvider;
 
 #[derive(JsonSchema, Clone, Debug, Serialize, Deserialize)]
 pub enum UserProviders {
@@ -19,6 +21,9 @@ pub enum UserProviders {
 
     #[serde(alias = "linux")]
     Linux,
+
+    #[serde(alias = "macos")]
+    MacOs,
 }
 
 impl UserProviders {
@@ -27,6 +32,7 @@ impl UserProviders {
             UserProviders::FreeBSD => Box::new(FreeBSDUserProvider {}),
             UserProviders::None => Box::new(NoneUserProvider {}),
             UserProviders::Linux => Box::new(LinuxUserProvider {}),
+            UserProviders::MacOs => Box::new(MacOSUserProvider {}),
         }
     }
 }
@@ -44,6 +50,7 @@ impl Default for UserProviders {
         match info.os_type() {
             // BSD Operating systems
             os_info::Type::FreeBSD => UserProviders::FreeBSD,
+            os_info::Type::Macos => UserProviders::MacOs,
             _ => UserProviders::None,
         }
     }
