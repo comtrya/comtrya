@@ -33,7 +33,7 @@ impl GroupProviders {
             GroupProviders::None => Box::new(NoneGroupProvider {}),
             GroupProviders::FreeBSD => Box::new(FreeBSDGroupProvider {}),
             GroupProviders::Linux => Box::new(LinuxGroupProvider {}),
-	    GroupProviders::MacOs => Box::new(MacOsGroupProvider {}),
+            GroupProviders::MacOs => Box::new(MacOsGroupProvider {}),
         }
     }
 }
@@ -50,7 +50,7 @@ impl Default for GroupProviders {
 
         match info.os_type() {
             os_info::Type::FreeBSD => GroupProviders::FreeBSD,
-	    os_info::Type::Macos => GroupProviders::MacOs,
+            os_info::Type::Macos => GroupProviders::MacOs,
             _ => GroupProviders::None,
         }
     }
