@@ -39,6 +39,13 @@ If you're not feeling risk-averse, you can use this one-liner:
 ```shell
 curl -fsSL https://get.comtrya.dev | sh
 ```
+or 
+
+
+```shell
+VERSION=v0.8.1 curl -fsSL https://get.comtrya.dev | sh
+```
+
 
 If this doesn't work for your OS and architecture, please open an issue and we'll do our best to support it.
 
