@@ -39,8 +39,8 @@ If you're not feeling risk-averse, you can use this one-liner:
 ```shell
 curl -fsSL https://get.comtrya.dev | sh
 ```
-or 
 
+or specify `VERSION=vx.x.x` to pin to a release version
 
 ```shell
 VERSION=v0.8.1 curl -fsSL https://get.comtrya.dev | sh
