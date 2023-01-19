@@ -30,19 +30,19 @@ impl ContextProvider for UserContextProvider {
                 String::from("data_dir"),
                 data_dir()
                     .map(Into::into)
-                    .unwrap_or_else(|| "unknown".into())
+                    .unwrap_or_else(|| "unknown".into()),
             ),
             Context::KeyValueContext(
                 String::from("data_local_dir"),
                 data_local_dir()
                     .map(Into::into)
-                    .unwrap_or_else(|| "unknown".into())
+                    .unwrap_or_else(|| "unknown".into()),
             ),
             Context::KeyValueContext(
                 String::from("document_dir"),
                 document_dir()
                     .map(Into::into)
-                    .unwrap_or_else(|| "unknown".into())
+                    .unwrap_or_else(|| "unknown".into()),
             ),
         ])
     }
