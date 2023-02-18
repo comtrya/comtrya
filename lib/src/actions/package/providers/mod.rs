@@ -7,6 +7,8 @@ mod dnf;
 use self::dnf::Dnf;
 mod homebrew;
 use self::homebrew::Homebrew;
+mod luarocks;
+use self::luarocks::LuaRocks;
 mod macports;
 use self::macports::Macports;
 mod pkgin;
@@ -37,6 +39,9 @@ pub enum PackageProviders {
     #[serde(rename = "homebrew", alias = "brew")]
     Homebrew,
 
+    #[serde(rename = "luarocks", alias = "luarocks")]
+    LuaRocks,
+
     #[serde(rename = "macports", alias = "port")]
     Macports,
 
@@ -63,6 +68,7 @@ impl PackageProviders {
             PackageProviders::BsdPkg => Box::new(BsdPkg {}),
             PackageProviders::Dnf => Box::new(Dnf {}),
             PackageProviders::Homebrew => Box::new(Homebrew {}),
+	    PackageProviders::LuaRocks => Box::new(LuaRocks {}),
             PackageProviders::Macports => Box::new(Macports {}),
             PackageProviders::Pkgin => Box::new(Pkgin {}),
             PackageProviders::Yay => Box::new(Yay {}),
