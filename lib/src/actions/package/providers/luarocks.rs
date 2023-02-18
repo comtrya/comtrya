@@ -27,8 +27,8 @@ impl PackageProvider for LuaRocks {
 
     #[instrument(name = "bootstrap", level = "info", skip(self))]
     fn bootstrap(&self) -> Vec<Step> {
-	// TODO: Perhaps we can use the local OS provider package manager
-	// to bootstrap?
+        // TODO: Perhaps we can use the local OS provider package manager
+        // to bootstrap?
         vec![]
     }
 
@@ -48,29 +48,27 @@ impl PackageProvider for LuaRocks {
     }
 
     fn install(&self, package: &PackageVariant) -> anyhow::Result<Vec<Step>> {
-	let cli = match which("luarocks") {
-	    Ok(c) => c,
-	    Err(_) => {
-		warn!(message = "LuaRocks is not available.");
-		return Ok(vec![]);
-	    }
-	};
-	
-        Ok(vec![
-            Step {
-                atom: Box::new(Exec {
-                    command: cli.display().to_string(),
-                    arguments: vec![String::from("install")]
-                        .into_iter()
-                        .chain(package.extra_args.clone())
-                        .chain(package.packages())
-                        .collect(),
-                    privileged: true,
-                    ..Default::default()
-                }),
-                initializers: vec![],
-                finalizers: vec![],
+        let cli = match which("luarocks") {
+            Ok(c) => c,
+            Err(_) => {
+                warn!(message = "LuaRocks is not available.");
+                return Ok(vec![]);
             }
-        ])
+        };
+
+        Ok(vec![Step {
+            atom: Box::new(Exec {
+                command: cli.display().to_string(),
+                arguments: vec![String::from("install")]
+                    .into_iter()
+                    .chain(package.extra_args.clone())
+                    .chain(package.packages())
+                    .collect(),
+                privileged: true,
+                ..Default::default()
+            }),
+            initializers: vec![],
+            finalizers: vec![],
+        }])
     }
 }

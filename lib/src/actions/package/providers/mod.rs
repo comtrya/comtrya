@@ -68,7 +68,7 @@ impl PackageProviders {
             PackageProviders::BsdPkg => Box::new(BsdPkg {}),
             PackageProviders::Dnf => Box::new(Dnf {}),
             PackageProviders::Homebrew => Box::new(Homebrew {}),
-	    PackageProviders::LuaRocks => Box::new(LuaRocks {}),
+            PackageProviders::LuaRocks => Box::new(LuaRocks {}),
             PackageProviders::Macports => Box::new(Macports {}),
             PackageProviders::Pkgin => Box::new(Pkgin {}),
             PackageProviders::Yay => Box::new(Yay {}),
