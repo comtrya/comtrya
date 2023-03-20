@@ -38,6 +38,7 @@ impl GroupProviders {
     }
 }
 
+#[allow(clippy::derivable_impls)]
 impl Default for GroupProviders {
     #[cfg(target_os = "linux")]
     fn default() -> Self {
