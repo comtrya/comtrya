@@ -62,23 +62,21 @@ pub fn resolve(uri: &String) -> Option<PathBuf> {
 
 pub fn get_manifest_name(manifest_directory: &Path, location: &Path) -> anyhow::Result<String> {
     let local_name = location.strip_prefix(manifest_directory)?;
-    let manifest_name =
-        local_name
-            .components()
-            .into_iter()
-            .fold(String::from(""), |mut s, next| {
-                if !s.is_empty() {
-                    s.push('.');
-                }
+    let manifest_name = local_name
+        .components()
+        .fold(String::from(""), |mut s, next| {
+            if !s.is_empty() {
+                s.push('.');
+            }
 
-                if let Some(next) = next.as_os_str().to_str() {
-                    s.push_str(next);
-                } else {
-                    error!("Failed to convert path component to string");
-                }
+            if let Some(next) = next.as_os_str().to_str() {
+                s.push_str(next);
+            } else {
+                error!("Failed to convert path component to string");
+            }
 
-                s
-            });
+            s
+        });
 
     let manifest_name = manifest_name.trim_end_matches(".yaml");
     let manifest_name = manifest_name.trim_end_matches(".yml");

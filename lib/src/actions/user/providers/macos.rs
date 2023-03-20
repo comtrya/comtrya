@@ -93,12 +93,13 @@ impl UserProvider for MacOSUserProvider {
             let mut group_string: String = String::from("/Groups/");
             group_string.push_str(&group.clone());
 
-            let mut args: Vec<String> = vec![];
-            args.push(".".to_string());
-            args.push("append".to_string());
-            args.push(group_string.clone());
-            args.push("GroupMembership".to_string());
-            args.push(user.username.clone());
+            let args: Vec<String> = vec![
+                ".".to_string(),
+                "append".to_string(),
+                group_string.clone(),
+                "GroupMembership".to_string(),
+                user.username.clone(),
+            ];
 
             steps.push(Step {
                 atom: Box::new(Exec {

@@ -26,10 +26,11 @@ impl GroupProvider for MacOsGroupProvider {
         let mut group_creation_string = String::from("/Groups/");
         group_creation_string.push_str(group.group_name.clone().as_str());
 
-        let mut args: Vec<String> = vec![];
-        args.push(".".to_string());
-        args.push("create".to_string());
-        args.push(group_creation_string.to_owned());
+        let args: Vec<String> = vec![
+            ".".to_string(),
+            "create".to_string(),
+            group_creation_string.to_owned(),
+        ];
 
         vec![Step {
             atom: Box::new(Exec {
