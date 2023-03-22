@@ -1,3 +1,5 @@
+use crate::atoms::Outcome;
+
 use super::super::Atom;
 use std::io::Write;
 use std::{fs::File, path::PathBuf};
@@ -14,11 +16,15 @@ impl std::fmt::Display for Download {
 }
 
 impl Atom for Download {
-    fn plan(&self) -> bool {
+    fn plan(&self) -> anyhow::Result<Outcome> {
         // Initial implementation will return false if the local file
         // doesn't exist. I'd like to include a SHA to verify the
         // correct version exists; or perhaps a TTL when omitted?
-        !PathBuf::from(&self.to).exists()
+
+        Ok(Outcome {
+            side_effects: vec![],
+            should_run: !PathBuf::from(&self.to).exists(),
+        })
     }
 
     fn execute(&mut self) -> anyhow::Result<()> {
@@ -49,10 +55,10 @@ mod tests {
             to: to_file,
         };
 
-        assert_eq!(true, atom.plan());
+        assert_eq!(true, atom.plan().unwrap().should_run);
 
         let result = atom.execute();
         assert_eq!(true, result.is_ok());
-        assert_eq!(false, atom.plan());
+        assert_eq!(false, atom.plan().unwrap().should_run);
     }
 }
