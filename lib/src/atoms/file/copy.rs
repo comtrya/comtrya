@@ -1,3 +1,5 @@
+use crate::atoms::Outcome;
+
 use super::super::Atom;
 use super::FileAtom;
 use file_diff::diff;
@@ -27,17 +29,23 @@ impl std::fmt::Display for Copy {
 }
 
 impl Atom for Copy {
-    fn plan(&self) -> bool {
+    fn plan(&self) -> anyhow::Result<Outcome> {
         if !self.to.is_file() {
             error!("Cannot plan: target isn't a file: {}", self.to.display());
 
-            return false;
+            return Ok(Outcome {
+                side_effects: vec![],
+                should_run: false,
+            });
         }
 
-        !diff(
-            &self.from.display().to_string(),
-            &self.to.display().to_string(),
-        )
+        return Ok(Outcome {
+            side_effects: vec![],
+            should_run: !diff(
+                &self.from.display().to_string(),
+                &self.to.display().to_string(),
+            ),
+        });
     }
 
     fn execute(&mut self) -> anyhow::Result<()> {
@@ -85,14 +93,14 @@ mod tests {
             to: to_file.path().to_path_buf(),
         };
 
-        assert_eq!(true, file_copy.plan());
+        assert_eq!(true, file_copy.plan().unwrap().should_run);
 
         let file_copy = Copy {
             from: from_file.path().to_path_buf(),
             to: from_file.path().to_path_buf(),
         };
 
-        assert_eq!(false, file_copy.plan());
+        assert_eq!(false, file_copy.plan().unwrap().should_run);
     }
 
     #[test]
@@ -129,9 +137,9 @@ mod tests {
             to: to_file.path().to_path_buf(),
         };
 
-        assert_eq!(true, file_copy.plan());
+        assert_eq!(true, file_copy.plan().unwrap().should_run);
         assert_eq!(true, file_copy.execute().is_ok());
-        assert_eq!(false, file_copy.plan());
+        assert_eq!(false, file_copy.plan().unwrap().should_run);
     }
 
     #[test]
@@ -157,6 +165,6 @@ mod tests {
             to: to.path().to_path_buf(),
         };
 
-        assert_eq!(false, file_copy.plan());
+        assert_eq!(false, file_copy.plan().unwrap().should_run);
     }
 }

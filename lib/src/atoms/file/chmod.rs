@@ -1,3 +1,5 @@
+use crate::atoms::Outcome;
+
 use super::super::Atom;
 use super::FileAtom;
 use std::path::PathBuf;
@@ -29,11 +31,14 @@ use {std::os::unix::prelude::PermissionsExt, tracing::error};
 
 #[cfg(unix)]
 impl Atom for Chmod {
-    fn plan(&self) -> bool {
+    fn plan(&self) -> anyhow::Result<Outcome> {
         // If the file doesn't exist, assume it's because
         // another atom is going to provide it.
         if !self.path.exists() {
-            return true;
+            return Ok(Outcome {
+                side_effects: vec![],
+                should_run: true,
+            });
         }
 
         let metadata = match std::fs::metadata(&self.path) {
@@ -45,15 +50,21 @@ impl Atom for Chmod {
                     err.to_string()
                 );
 
-                return false;
+                return Ok(Outcome {
+                    side_effects: vec![],
+                    should_run: false,
+                });
             }
         };
 
         // We expect permissions to come through as if the user was using chmod themselves.
         // This means we support 644/755 decimal syntax. We need to add 0o100000 to support
         // the part of chmod they don't often type.
-        std::fs::Permissions::from_mode(0o100000 + self.mode).mode()
-            != metadata.permissions().mode()
+        Ok(Outcome {
+            side_effects: vec![],
+            should_run: std::fs::Permissions::from_mode(0o100000 + self.mode).mode()
+                != metadata.permissions().mode(),
+        })
     }
 
     fn execute(&mut self) -> anyhow::Result<()> {
@@ -68,8 +79,12 @@ impl Atom for Chmod {
 
 #[cfg(not(unix))]
 impl Atom for Chmod {
-    fn plan(&self) -> bool {
-        false
+    fn plan(&self) -> anyhow::Result<Outcome> {
+        // Never run
+        Ok(Outcome {
+            side_effects: vec![],
+            should_run: false,
+        })
     }
 
     fn execute(&mut self) -> anyhow::Result<()> {
@@ -115,14 +130,14 @@ mod tests {
             mode: 0o644,
         };
 
-        assert_eq!(false, file_chmod.plan());
+        assert_eq!(false, file_chmod.plan().unwrap().should_run);
 
         let file_chmod = Chmod {
             path: temp_dir.path().join("644"),
             mode: 0o640,
         };
 
-        assert_eq!(true, file_chmod.plan());
+        assert_eq!(true, file_chmod.plan().unwrap().should_run);
     }
 
     #[test]
@@ -157,15 +172,15 @@ mod tests {
             mode: 0o644,
         };
 
-        assert_eq!(false, file_chmod.plan());
+        assert_eq!(false, file_chmod.plan().unwrap().should_run);
 
         let mut file_chmod = Chmod {
             path: temp_dir.path().join("644"),
             mode: 0o640,
         };
 
-        assert_eq!(true, file_chmod.plan());
+        assert_eq!(true, file_chmod.plan().unwrap().should_run);
         assert_eq!(true, file_chmod.execute().is_ok());
-        assert_eq!(false, file_chmod.plan());
+        assert_eq!(false, file_chmod.plan().unwrap().should_run);
     }
 }

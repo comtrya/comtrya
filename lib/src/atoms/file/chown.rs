@@ -1,6 +1,10 @@
+use crate::atoms::Outcome;
+
 use super::super::Atom;
 use super::FileAtom;
 use std::path::PathBuf;
+
+#[cfg(unix)]
 use tracing::error;
 
 pub struct Chown {
@@ -32,11 +36,14 @@ use std::os::unix::prelude::MetadataExt;
 
 #[cfg(unix)]
 impl Atom for Chown {
-    fn plan(&self) -> bool {
+    fn plan(&self) -> anyhow::Result<Outcome> {
         // If the file doesn't exist, assume it's because
         // another atom is going to provide it.
         if !self.path.exists() {
-            return true;
+            return Ok(Outcome {
+                side_effects: vec![],
+                should_run: true,
+            });
         }
 
         let metadata = match std::fs::metadata(&self.path) {
@@ -48,7 +55,10 @@ impl Atom for Chown {
                     err.to_string()
                 );
 
-                return false;
+                return Ok(Outcome {
+                    side_effects: vec![],
+                    should_run: false,
+                });
             }
         };
 
@@ -63,7 +73,10 @@ impl Atom for Chown {
                         "Skipping chown as requested owner, {}, does not exist",
                         self.owner,
                     );
-                    return false;
+                    return Ok(Outcome {
+                        side_effects: vec![],
+                        should_run: false,
+                    });
                 }
             };
 
@@ -74,20 +87,33 @@ impl Atom for Chown {
                         "Skipping chown as requested group, {}, does not exist",
                         self.group,
                     );
-                    return false;
+
+                    return Ok(Outcome {
+                        side_effects: vec![],
+                        should_run: false,
+                    });
                 }
             };
 
             if current_owner.uid() != requested_owner.uid() {
-                return true;
+                return Ok(Outcome {
+                    side_effects: vec![],
+                    should_run: true,
+                });
             }
 
             if current_group.gid() != requested_group.gid() {
-                return true;
+                return Ok(Outcome {
+                    side_effects: vec![],
+                    should_run: true,
+                });
             }
         }
 
-        false
+        Ok(Outcome {
+            side_effects: vec![],
+            should_run: false,
+        })
     }
 
     fn execute(&mut self) -> anyhow::Result<()> {
@@ -97,9 +123,12 @@ impl Atom for Chown {
 
 #[cfg(not(unix))]
 impl Atom for Chown {
-    fn plan(&self) -> bool {
+    fn plan(&self) -> anyhow::Result<Outcome> {
         // Never run
-        false
+        Ok(Outcome {
+            side_effects: vec![],
+            should_run: false,
+        })
     }
 
     fn execute(&mut self) -> anyhow::Result<()> {
@@ -142,7 +171,7 @@ mod tests {
             group: group.clone(),
         };
 
-        assert_eq!(false, file_chown.plan());
+        assert_eq!(false, file_chown.plan().unwrap().should_run);
 
         let file_chown = Chown {
             path: temp_file.path().to_path_buf(),
@@ -150,7 +179,7 @@ mod tests {
             group: String::from("daemon"),
         };
 
-        assert_eq!(true, file_chown.plan());
+        assert_eq!(true, file_chown.plan().unwrap().should_run);
 
         let file_chown = Chown {
             path: temp_file.path().to_path_buf(),
@@ -158,7 +187,7 @@ mod tests {
             group,
         };
 
-        assert_eq!(true, file_chown.plan());
+        assert_eq!(true, file_chown.plan().unwrap().should_run);
 
         let file_chown = Chown {
             path: temp_file.path().to_path_buf(),
@@ -166,6 +195,6 @@ mod tests {
             group: String::from("daemon"),
         };
 
-        assert_eq!(true, file_chown.plan());
+        assert_eq!(true, file_chown.plan().unwrap().should_run);
     }
 }

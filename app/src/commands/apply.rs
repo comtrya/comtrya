@@ -218,7 +218,10 @@ impl ComtryaCommand for Apply {
                     let mut steps = plan
                         .into_iter()
                         .filter(|step| step.do_initializers_allow_us_to_run())
-                        .filter(|step| step.atom.plan())
+                        .filter(|step| match step.atom.plan() {
+                            Ok(outcome) => outcome.should_run,
+                            Err(_) => false,
+                        })
                         .peekable();
 
                     if steps.peek().is_none() {
