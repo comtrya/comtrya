@@ -32,14 +32,14 @@ serde_yaml = "0.9"
 sha256 = "1.0"
 strip-ansi-escapes = "0.1"
 structopt = { version = "0.3", features = ["paw"] }
-tera = "1"
+tera = "1.18"
 tracing = "0.1"
 tracing-subscriber = "0.3"
 update-informer = "0.6"
-walkdir = "2"
+walkdir = "2.3"
 which = "4.2"
 whoami = "1.2"
 
 [target.'cfg(unix)'.dependencies]
-users = "0.11.0"
+users = "0.11"
 
