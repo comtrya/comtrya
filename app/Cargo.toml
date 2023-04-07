@@ -16,7 +16,7 @@ dirs-next = "2.0"
 file_diff = "1.0"
 gitsync = "0.1"
 ignore = "0.4"
-os_info = "3.5"
+os_info = "3.7"
 paw = "1.0"
 petgraph = "0.6"
 rand = "0.8"
@@ -25,11 +25,11 @@ reqwest = { version = "0.11", default-features = false, features = [
     "blocking",
     "rustls-tls",
 ] }
-rhai = { version = "1.8", features = ["serde"] }
+rhai = { version = "1.13", features = ["serde"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_yaml = "0.9"
-sha256 = "1.0"
+sha256 = "1.1"
 strip-ansi-escapes = "0.1"
 structopt = { version = "0.3", features = ["paw"] }
 tera = "1.18"
@@ -37,8 +37,8 @@ tracing = "0.1"
 tracing-subscriber = "0.3"
 update-informer = "0.6"
 walkdir = "2.3"
-which = "4.2"
-whoami = "1.2"
+which = "4.3"
+whoami = "1.4"
 
 [target.'cfg(unix)'.dependencies]
 users = "0.11"
