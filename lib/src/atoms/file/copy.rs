@@ -144,7 +144,7 @@ mod tests {
 
     #[test]
     fn it_wont_destroy_directories() {
-        let to = match tempdir::TempDir::new("file-copy") {
+        let to = match tempfile::TempDir::new() {
             std::result::Result::Ok(dir) => dir,
             std::result::Result::Err(_) => {
                 assert_eq!(false, true);

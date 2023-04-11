@@ -7,47 +7,39 @@ license = "MIT"
 description = "A tool to simplify reprovisioning a fresh OS. Installs packages and manages dotfiles."
 
 [dependencies]
-anyhow = "1.0.59"
-age = { version = "0.9.0", features = ["armor"] }
+anyhow = "1.0"
+age = { version = "0.9", features = ["armor"] }
+colored = "2.0"
+comfy-table = "6.1"
 comtrya-lib = { path = "../lib", version = "0.8.3" }
-dirs-next = "2.0.0"
-eval = "0.4.3"
-file_diff = "1.0.0"
-fs_extra = "1.2.0"
-gitsync = "0.1.6"
-ignore = "0.4.18"
-os_info = "3.5.0"
+dirs-next = "2.0"
+file_diff = "1.0"
+gitsync = "0.1"
+ignore = "0.4"
+os_info = "3.7"
 paw = "1.0"
-petgraph = "0.6.2"
-rand = "0.8.5"
-regex = "1"
-reqwest = { version = "0.11.11", default-features = false, features = [
+petgraph = "0.6"
+rand = "0.8"
+regex = "1.7"
+reqwest = { version = "0.11", default-features = false, features = [
     "blocking",
     "rustls-tls",
 ] }
-rhai = { version = "1.8.0", features = ["serde"] }
+rhai = { version = "1.13", features = ["serde"] }
 serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0.83"
-serde_yaml = "0.9.3"
-structopt = { version = "0.3", features = ["paw"] }
-tera = "1"
-tracing = "0.1.36"
-tracing-subscriber = "0.3.15"
-walkdir = "2"
-which = "4.2.5"
-whoami = "1.2.1"
-sha256 = "1.0.3"
-update-informer = "0.6.0"
-colored = "2.0.0"
+serde_json = "1.0"
+serde_yaml = "0.9"
+sha256 = "1.1"
 strip-ansi-escapes = "0.1"
-comfy-table = "6"
+structopt = { version = "0.3", features = ["paw"] }
+tera = "1.18"
+tracing = "0.1"
+tracing-subscriber = "0.3"
+update-informer = "0.6"
+walkdir = "2.3"
+which = "4.3"
+whoami = "1.4"
 
 [target.'cfg(unix)'.dependencies]
-users = "0.11.0"
+users = "0.11"
 
-[dev-dependencies]
-tempdir = "0.3.7"
-tempfile = "3.3.0"
-assert_cmd = "2.0.4"
-predicates = "2.1.1"
-assert_fs = "1.0.7"
