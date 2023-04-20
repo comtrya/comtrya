@@ -5,6 +5,13 @@ mod utils;
 
 #[test]
 fn prints_help() {
+    run("-h")
+        .success()
+        .stdout(predicates::str::contains("comtrya"));
+}
+
+#[test]
+fn dry_run_doesnt_error() {
     let t = TempDir::new().expect("could not create tempdir");
     let path = t.into_path();
     dir(
@@ -49,7 +56,7 @@ actions:
     .create_in(&path)
     .expect("should have create test directories");
 
-    let assert = cd(path).run("comtrya --no-color -d ./directory apply -m copy --dry-run");
+    let assert = cd(path).run("--no-color -d ./directory apply -m copy --dry-run");
 
     assert.success();
 }
