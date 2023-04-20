@@ -1,12 +1,11 @@
-use tempdir::TempDir;
+use tempfile::TempDir;
 use utils::*;
 
-#[path = "./utils.rs"]
 mod utils;
 
 #[test]
 fn prints_help() {
-    let t = TempDir::new("comtrya").expect("could not create tempdir");
+    let t = TempDir::new().expect("could not create tempdir");
     let path = t.into_path();
     dir(
         "directory",
