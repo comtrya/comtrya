@@ -91,4 +91,4 @@ Currently, we execute arbitrary `packager install` commands. The provider spec s
 
 ### Integration tests
 
-We are a bit light on tests at the moment, but we have started introducing some helpful plumbing in [tests](./tests).
+We are a bit light on tests at the moment, but we have started introducing some helpful plumbing in [tests](comtrya/app/tests).

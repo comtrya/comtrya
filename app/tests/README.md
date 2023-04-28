@@ -15,7 +15,6 @@ If you add a new file, you'll have to make to bring in `utils.rs` like so:
 ```rust
 use utils::*;
 
-#[path = "./utils.rs"]
 mod utils;
 
 #[test]
