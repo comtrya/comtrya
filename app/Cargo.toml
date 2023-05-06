@@ -1,6 +1,6 @@
 [package]
 name = "comtrya"
-version = "0.8.3"
+version = "0.8.4"
 authors = ["David McKay <david@rawkode.dev>"]
 edition = "2021"
 license = "MIT"
@@ -11,7 +11,7 @@ anyhow = "1.0"
 age = { version = "0.9", features = ["armor"] }
 colored = "2.0"
 comfy-table = "6.1"
-comtrya-lib = { path = "../lib", version = "0.8.3" }
+comtrya-lib = { path = "../lib", version = "0.8.4" }
 dirs-next = "2.0"
 file_diff = "1.0"
 gitsync = "0.1"
