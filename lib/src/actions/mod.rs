@@ -18,6 +18,7 @@ use directory::{DirectoryCopy, DirectoryCreate};
 use file::copy::FileCopy;
 use file::download::FileDownload;
 use file::link::FileLink;
+use file::remove::FileRemove;
 use git::GitClone;
 use group::add::GroupAdd;
 use macos::MacOSDefault;
@@ -117,6 +118,9 @@ pub enum Actions {
     #[serde(rename = "file.link")]
     FileLink(ConditionalVariantAction<FileLink>),
 
+    #[serde(rename = "file.remove")]
+    FileRemove(ConditionalVariantAction<FileRemove>),
+
     #[serde(
         rename = "binary.github",
         alias = "binary.gh",
@@ -164,6 +168,7 @@ impl Actions {
             Actions::PackageRepository(a) => a,
             Actions::UserAdd(a) => a,
             Actions::UserAddGroup(a) => a,
+            Actions::FileRemove(a) => a,
         }
     }
 }
@@ -177,6 +182,7 @@ impl Display for Actions {
             Actions::FileCopy(_) => "file.copy",
             Actions::FileDownload(_) => "file.download",
             Actions::FileLink(_) => "file.link",
+            Actions::FileRemove(_) => "file.remove",
             Actions::BinaryGitHub(_) => "github.binary",
             Actions::GitClone(_) => "git.clone",
             Actions::GroupAdd(_) => "group.add",
