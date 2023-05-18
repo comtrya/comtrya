@@ -27,7 +27,7 @@ If you're lost or not know how to start, you can contact:
 at the [Rawkode Academy Discord](https://rawkode.chat/) in the `#comtrya` channel.
 
 ## Pull requests
-We provide a [pull request template](https://github.com/comtrya/comtrya/docs/pull_request_template.md) to guide you through the progress.
+We provide a [pull request template](https://github.com/comtrya/comtrya/blob/main/.github/pull_request_template.md) to guide you through the progress.
 
 ## Help
 If you want to get in touch with us, join the [Rawkode Academy Discord](https://rawkode.chat/) server and jump into the `#comtrya` channel.
