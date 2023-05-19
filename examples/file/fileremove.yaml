@@ -14,3 +14,7 @@ actions:
     to: /home/bjoroen/dev/Comtrya_root/tmp/test.txt
 
   - action: file.remove
+    target: ~/home/bjoroen/dev/Comtrya_root/tmp/test.txt
+
+  - action: file.remove
+    target: /home/bjoroen/dev/Comtrya_root/tmp/test.txt

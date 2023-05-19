@@ -7,7 +7,7 @@ use super::FileAction;
 
 #[derive(JsonSchema, Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct FileRemove {
-    pub file: Option<String>,
+    pub target: Option<String>,
 }
 
 impl FileRemove {}
@@ -20,9 +20,7 @@ impl Action for FileRemove {
         manifest: &crate::manifests::Manifest,
         context: &crate::contexts::Contexts,
     ) -> anyhow::Result<Vec<crate::steps::Step>> {
-        dbg!(manifest);
-        dbg!(self);
-        dbg!(context);
+        dbg!(&self.target);
 
         todo!()
     }

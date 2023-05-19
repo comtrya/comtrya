@@ -5,6 +5,7 @@ mod copy;
 mod create;
 mod decrypt;
 mod link;
+mod remove;
 
 use super::Atom;
 pub use chmod::Chmod;
