@@ -19,15 +19,14 @@ impl FileAction for FileRemove {}
 impl Action for FileRemove {
     fn plan(
         &self,
-        manifest: &crate::manifests::Manifest,
-        context: &crate::contexts::Contexts,
+        _: &crate::manifests::Manifest,
+        _: &crate::contexts::Contexts,
     ) -> anyhow::Result<Vec<crate::steps::Step>> {
         use crate::atoms::file::Remove as RemoveFile;
 
         let path = PathBuf::from(&self.target);
-        dbg!(&manifest.root_dir);
 
-        let mut steps = vec![Step {
+        let steps = vec![Step {
             atom: Box::new(RemoveFile { target: path }),
             initializers: vec![],
             finalizers: vec![],
@@ -38,4 +37,25 @@ impl Action for FileRemove {
 }
 
 #[cfg(test)]
-mod tests {}
+mod tests {
+    use crate::actions::Actions;
+
+    #[test]
+    fn it_can_be_deserialized() {
+        let yaml = r#"
+- action: file.remove
+  target: a
+"#;
+
+        let mut actions: Vec<Actions> = serde_yaml::from_str(yaml).unwrap();
+
+        match actions.pop() {
+            Some(Actions::FileRemove(action)) => {
+                assert_eq!("a", action.action.target);
+            }
+            _ => {
+                panic!("FileCopy didn't deserialize to the correct type");
+            }
+        };
+    }
+}

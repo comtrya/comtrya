@@ -77,3 +77,45 @@ impl Atom for Remove {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use pretty_assertions::assert_eq;
+
+    #[test]
+    fn it_can_plan() {
+        let target_file = match tempfile::NamedTempFile::new() {
+            std::result::Result::Ok(file) => file,
+            std::result::Result::Err(_) => {
+                assert_eq!(false, true);
+                return;
+            }
+        };
+
+        let file_remove = Remove {
+            target: target_file.path().to_path_buf(),
+        };
+
+        assert_eq!(true, file_remove.plan().unwrap().should_run)
+    }
+
+    #[test]
+    fn it_can_execute() {
+        let target_file = match tempfile::NamedTempFile::new() {
+            std::result::Result::Ok(file) => file,
+            std::result::Result::Err(_) => {
+                assert_eq!(false, true);
+                return;
+            }
+        };
+
+        let mut file_remove = Remove {
+            target: target_file.path().to_path_buf(),
+        };
+
+        assert_eq!(true, file_remove.plan().unwrap().should_run);
+        assert_eq!(true, file_remove.execute().is_ok());
+        assert_eq!(false, file_remove.plan().unwrap().should_run)
+    }
+}
