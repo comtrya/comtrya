@@ -72,7 +72,6 @@ impl Atom for Remove {
     }
 
     fn execute(&mut self) -> anyhow::Result<()> {
-        dbg!(&self.target);
         std::fs::remove_file(&self.target)?;
         Ok(())
     }

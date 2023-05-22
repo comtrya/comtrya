@@ -54,7 +54,7 @@ mod tests {
                 assert_eq!("a", action.action.target);
             }
             _ => {
-                panic!("FileCopy didn't deserialize to the correct type");
+                panic!("FileRemove didn't deserialize to the correct type");
             }
         };
     }

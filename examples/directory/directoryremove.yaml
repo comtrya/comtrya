@@ -3,10 +3,10 @@ actions:
     path: /home/bjoroen/dev/Comtrya_root/tmp/test_dir
 
   - action: directory.remove
-    path: /home/bjoroen/dev/Comtrya_root/tmp/test_dir
+    target: /home/bjoroen/dev/Comtrya_root/tmp/test_dir
 
   - action: directory.create
-    path: /home/bjoroen/dev/Comtrya_root/tmp/test_dir_user_root
+    path: "{{user.home_dir}}/dev/Comtrya_root/tmp/test_dir_user_root"
 
   - action: directory.remove
-    path: "{{user.home_dir}}/dev/Comtrya_root/tmp/test_dir"
+    target: "{{user.home_dir}}/dev/Comtrya_root/tmp/test_dir_user_root"

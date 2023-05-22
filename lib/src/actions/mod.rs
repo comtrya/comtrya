@@ -121,7 +121,7 @@ pub enum Actions {
     #[serde(rename = "file.remove")]
     FileRemove(ConditionalVariantAction<FileRemove>),
 
-    #[serde(rename = "directory.remove")]
+    #[serde(rename = "directory.remove", alias = "dir.remove")]
     DirectoryRemove(ConditionalVariantAction<DirectoryRemove>),
 
     #[serde(
