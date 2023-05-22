@@ -14,7 +14,7 @@ use crate::steps::Step;
 use anyhow::anyhow;
 use binary::BinaryGitHub;
 use command::run::RunCommand;
-use directory::{DirectoryCopy, DirectoryCreate};
+use directory::{DirectoryCopy, DirectoryCreate, DirectoryRemove};
 use file::copy::FileCopy;
 use file::download::FileDownload;
 use file::link::FileLink;
@@ -121,6 +121,9 @@ pub enum Actions {
     #[serde(rename = "file.remove")]
     FileRemove(ConditionalVariantAction<FileRemove>),
 
+    #[serde(rename = "directory.remove")]
+    DirectoryRemove(ConditionalVariantAction<DirectoryRemove>),
+
     #[serde(
         rename = "binary.github",
         alias = "binary.gh",
@@ -169,6 +172,7 @@ impl Actions {
             Actions::UserAdd(a) => a,
             Actions::UserAddGroup(a) => a,
             Actions::FileRemove(a) => a,
+            Actions::DirectoryRemove(a) => a,
         }
     }
 }
@@ -183,6 +187,7 @@ impl Display for Actions {
             Actions::FileDownload(_) => "file.download",
             Actions::FileLink(_) => "file.link",
             Actions::FileRemove(_) => "file.remove",
+            Actions::DirectoryRemove(_) => "directory.remove",
             Actions::BinaryGitHub(_) => "github.binary",
             Actions::GitClone(_) => "git.clone",
             Actions::GroupAdd(_) => "group.add",

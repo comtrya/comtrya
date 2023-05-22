@@ -4,8 +4,10 @@ use std::path::PathBuf;
 
 mod copy;
 mod create;
+mod remove;
 pub use copy::DirectoryCopy;
 pub use create::DirectoryCreate;
+pub use remove::DirectoryRemove;
 
 pub trait DirectoryAction: Action {
     fn resolve(&self, manifest: &Manifest, path: &str) -> PathBuf {
