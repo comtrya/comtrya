@@ -1,14 +1,7 @@
 actions:
   - action: file.copy
     from: some-file
-    to: /home/bjoroen/dev/Comtrya_root/tmp/some-file-rendered.txt
-
-  - action: file.copy
-    from: test.txt
-    to: "{{user.home_dir}}/dev/Comtrya_root/tmp/test.txt"
+    to: /tmp/some-file-rendered
 
   - action: file.remove
-    target: "{{user.home_dir}}/dev/Comtrya_root/tmp/some-file-rendered.txt"
-
-  - action: file.remove
-    target: /home/bjoroen/dev/Comtrya_root/tmp/test.txt
+    target: /tmp/some-file-rendered

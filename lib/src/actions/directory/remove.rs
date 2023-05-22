@@ -20,7 +20,7 @@ impl DirectoryAction for DirectoryRemove {}
 impl Action for DirectoryRemove {
     fn plan(
         &self,
-        _manifest: &crate::manifests::Manifest,
+        manifest: &crate::manifests::Manifest,
         _context: &crate::contexts::Contexts,
     ) -> anyhow::Result<Vec<crate::steps::Step>> {
         let path = PathBuf::from(&self.target);

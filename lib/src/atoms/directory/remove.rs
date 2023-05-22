@@ -21,6 +21,7 @@ impl std::fmt::Display for Remove {
 impl Atom for Remove {
     fn plan(&self) -> anyhow::Result<Outcome> {
         let path_to_dir = PathBuf::from(&self.target);
+        dbg!(&path_to_dir);
 
         if !path_to_dir.is_dir() {
             error!(
