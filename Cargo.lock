@@ -449,7 +449,7 @@ dependencies = [
 
 [[package]]
 name = "comtrya"
-version = "0.8.4"
+version = "0.8.5"
 dependencies = [
  "age",
  "anyhow",
@@ -488,7 +488,7 @@ dependencies = [
 
 [[package]]
 name = "comtrya-lib"
-version = "0.8.4"
+version = "0.8.5"
 dependencies = [
  "age",
  "anyhow",
