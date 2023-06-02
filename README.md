@@ -22,6 +22,7 @@
 Want to learn how to use Comtrya? [Check the docs](https://comtrya.dev).
 
 ---
+
 ## About
 
 Comtrya is a tool to help provision a fresh OS with the packages and configuration (dotfiles) you need to become productive again.
@@ -43,9 +44,8 @@ curl -fsSL https://get.comtrya.dev | sh
 or specify `VERSION=vx.x.x` to pin to a release version
 
 ```shell
-VERSION=v0.8.1 curl -fsSL https://get.comtrya.dev | sh
+VERSION=v0.8.5 curl -fsSL https://get.comtrya.dev | sh
 ```
-
 
 If this doesn't work for your OS and architecture, please open an issue and we'll do our best to support it.
 
@@ -85,9 +85,9 @@ We're using [petgraph](https://github.com/petgraph/petgraph) to build out the gr
 
 Currently, we execute arbitrary `packager install` commands. The provider spec should be enriched to support:
 
-- List refresh
-- Upgrades
-- Version pinning
+-   List refresh
+-   Upgrades
+-   Version pinning
 
 ### Integration tests
 
