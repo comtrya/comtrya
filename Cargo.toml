@@ -1,2 +1,3 @@
 [workspace]
 members = ["app", "jsonschemagen", "lib"]
+resolver = "1"
