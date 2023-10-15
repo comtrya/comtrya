@@ -7,7 +7,7 @@ on:
       - "main"
 
 env:
-  MIN_SUPPORTED_RUST_VERSION: "1.65.0"
+  MIN_SUPPORTED_RUST_VERSION: "1.70.0"
   CICD_INTERMEDIATES_DIR: "_cicd-intermediates"
   CARGO_TERM_COLOR: always
   #Fix these up soon
@@ -41,7 +41,7 @@ jobs:
       - name: Run Tarpaulin
         uses: actions-rs/tarpaulin@v0.1
         with:
-          version: "0.20.1"
+          version: "0.22.0"
           args: "--workspace -- --test-threads 1"
 
       - name: Upload to codecov.io

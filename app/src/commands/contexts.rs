@@ -52,7 +52,7 @@ impl ComtryaCommand for Contexts {
                     });
             } else {
                 for (key, value) in context.iter() {
-                    let value = strip_ansi_escapes::strip(value.to_string()).unwrap_or_default();
+                    let value = strip_ansi_escapes::strip(value.to_string());
                     let value = String::from_utf8(value).unwrap_or_default();
 
                     table.add_row(vec![
