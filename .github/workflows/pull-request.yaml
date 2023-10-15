@@ -35,7 +35,7 @@ jobs:
         with:
           reporter: 'github-pr-review'
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          args: --all-features --all-targets
+          clippy_flags: --all-features --all-targets
 
       - uses: actions-rs/tarpaulin@v0.1
         with:
