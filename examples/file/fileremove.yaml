@@ -1,0 +1,7 @@
+actions:
+  - action: file.copy
+    from: some-file
+    to: /tmp/some-file-rendered
+
+  - action: file.remove
+    target: /tmp/some-file-rendered

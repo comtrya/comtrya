@@ -1,6 +1,7 @@
 pub mod copy;
 pub mod download;
 pub mod link;
+pub mod remove;
 
 use crate::actions::Action;
 use crate::manifests::Manifest;
