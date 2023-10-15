@@ -1,7 +1,7 @@
 name: pull-request
 
 env:
-  MIN_SUPPORTED_RUST_VERSION: "1.65.0"
+  MIN_SUPPORTED_RUST_VERSION: "1.70.0"
 
 on:
   pull_request:
@@ -31,14 +31,15 @@ jobs:
           command: fmt
           args: --all -- --check
 
-      - uses: actions-rs/clippy-check@v1
+      - uses: giraffate/clippy-action@v1
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          args: --all-features --all-targets
+          reporter: 'github-pr-review'
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          clippy_flags: --all-features --all-targets
 
       - uses: actions-rs/tarpaulin@v0.1
         with:
-          version: "0.20.1"
+          version: "0.22.0"
           args: "--workspace -- --test-threads 1"
 
       - uses: codecov/codecov-action@v2
@@ -69,7 +70,7 @@ jobs:
           #     use-cross: true,
           #   }
           - { os: macos-12, target: x86_64-apple-darwin }
-          - { os: windows-2019, target: x86_64-pc-windows-msvc }
+          - { os: windows-2022, target: x86_64-pc-windows-msvc }
     steps:
       - uses: actions/checkout@v2
 
