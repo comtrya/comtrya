@@ -12,9 +12,9 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
-      - uses: agenthunt/conventional-commit-checker-action@v1.0.0
+      - uses: agenthunt/conventional-commit-checker-action@v2.0.0
         continue-on-error: true
         with:
           pr-body-regex: ".*"
@@ -42,7 +42,7 @@ jobs:
           version: "0.22.0"
           args: "--workspace -- --test-threads 1"
 
-      - uses: codecov/codecov-action@v2
+      - uses: codecov/codecov-action@v3
 
   test:
     name: ${{ matrix.job.os }} (${{ matrix.job.target }})
@@ -72,7 +72,7 @@ jobs:
           - { os: macos-12, target: x86_64-apple-darwin }
           - { os: windows-2022, target: x86_64-pc-windows-msvc }
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
       - shell: bash
         run: |
