@@ -69,7 +69,7 @@ impl Atom for Link {
         };
 
         let source = if cfg!(target_os = "windows") {
-            const PREFIX: &str = r#"\\?\"#;
+            const PREFIX: &str = r"\\?\";
             PathBuf::from(&self.source.display().to_string().replace(PREFIX, ""))
         } else {
             self.source.to_owned()
