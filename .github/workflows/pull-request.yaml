@@ -1,7 +1,7 @@
 name: pull-request
 
 env:
-  MIN_SUPPORTED_RUST_VERSION: "1.65.0"
+  MIN_SUPPORTED_RUST_VERSION: "1.70.0"
 
 on:
   pull_request:
@@ -39,7 +39,7 @@ jobs:
 
       - uses: actions-rs/tarpaulin@v0.1
         with:
-          version: "0.20.1"
+          version: "0.27.1"
           args: "--workspace -- --test-threads 1"
 
       - uses: codecov/codecov-action@v2
