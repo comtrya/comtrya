@@ -7,7 +7,8 @@ actions:
       - hello, world!
     variants:
       - where: os.name == "linux"
-        command: reboot
+        command: echo
+        args: ["Hello", "Linux"]
       - where: os.name == "macos"
         command: echo
         args: ["Hello", "macOS"]
