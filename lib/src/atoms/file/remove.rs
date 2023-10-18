@@ -65,10 +65,10 @@ impl Atom for Remove {
             }
         };
 
-        return Ok(Outcome {
+        Ok(Outcome {
             side_effects: vec![],
             should_run: true,
-        });
+        })
     }
 
     fn execute(&mut self) -> anyhow::Result<()> {
