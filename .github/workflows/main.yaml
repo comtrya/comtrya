@@ -15,7 +15,7 @@ env:
 
 jobs:
   lint-test-release:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Clone Repository
         uses: actions/checkout@v4
@@ -54,12 +54,17 @@ jobs:
           unset IS_RELEASE ; if [[ $GITHUB_REF =~ ^refs/tags/v[0-9].* ]]; then IS_RELEASE='true' ; fi
           echo ::set-output name=IS_RELEASE::${IS_RELEASE}
 
-      - name: Cargo Publish
-        uses: katyo/publish-crates@v2
+      - name: Cargo Publish "comtrya-lib"
         if: steps.is-release.outputs.IS_RELEASE
-        with:
-          args: --allow-dirty
-          registry-token: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: cargo publish -p comtrya-lib --token ${CRATES_TOKEN}
+        env:
+          CRATES_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+
+      - name: Cargo Publish "comtrya"
+        if: steps.is-release.outputs.IS_RELEASE
+        run: cargo publish -p comtrya --token ${CRATES_TOKEN}
+        env:
+          CRATES_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
 
   build:
     name: build-${{ matrix.job.target }}
