@@ -10,6 +10,7 @@ use super::FileAtom;
 pub struct Unarchive {
     pub origin: PathBuf,
     pub dest: PathBuf,
+    pub force: bool
 }
 
 impl FileAtom for Unarchive {
@@ -21,6 +22,10 @@ impl FileAtom for Unarchive {
 impl Atom for Unarchive {
     // Determine if this atom needs to run
     fn plan(&self) -> bool {
+    	if self.dest.exists() && !self.force {
+    		return false;
+    	}
+
         self.origin.exists()
     }
 
@@ -36,11 +41,13 @@ impl Atom for Unarchive {
 
 impl std::fmt::Display for Unarchive {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let origin_path = self.origin.display().to_string();
+        let dest_path = self.dest.display().to_string();
+
         write!(
             f,
             "The archive {} to be decompressed to {}",
-            self.origin.to_str().unwrap(),
-            self.dest.to_str().unwrap(),
+            origin_path, dest_path
         )
     }
 }
