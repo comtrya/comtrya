@@ -1,0 +1,18 @@
+# Summary
+
+- [Introduction](./introduction.md)
+- [Supported Systems](./supported-systems.md)
+- [Installation](./installation.md)
+- [CLI](./cli.md)
+- [Manifests](./manifests.md)
+  - [Actions](./actions.md)
+	- [Binary](./binary.md)
+	- [Commands](./command.md)
+	- [Files and Directories](./files-and-directories.md)
+	- [Git](./git.md)
+	- [Group](./group.md)
+	- [macOS](./macos.md)
+	- [Packages](./packages.md)
+	- [User](./user.md)
+  - [Dependencies](./dependencies.md)
+  - [Variants](./variants.md)

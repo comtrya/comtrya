@@ -1,5 +1,7 @@
 use std::path::PathBuf;
 
+use crate::atoms::Outcome;
+
 use super::super::Atom;
 use gitsync::GitSync;
 use tracing::instrument;
@@ -27,8 +29,11 @@ impl std::fmt::Display for Clone {
 
 impl Atom for Clone {
     #[instrument(name = "git.clone.plan", level = "info", skip(self))]
-    fn plan(&self) -> bool {
-        !self.directory.exists()
+    fn plan(&self) -> anyhow::Result<Outcome> {
+        Ok(Outcome {
+            side_effects: vec![],
+            should_run: !self.directory.exists(),
+        })
     }
 
     #[instrument(name = "git.clone.execute", level = "info", skip(self))]
@@ -68,7 +73,7 @@ mod tests {
             ..Default::default()
         };
 
-        assert_eq!(false, git_clone.plan());
+        assert_eq!(false, git_clone.plan().unwrap().should_run);
 
         let git_clone = Clone {
             repository: String::from("https://github.com/comtrya/comtrya"),
@@ -76,7 +81,7 @@ mod tests {
             ..Default::default()
         };
 
-        assert_eq!(true, git_clone.plan());
+        assert_eq!(true, git_clone.plan().unwrap().should_run);
     }
 
     #[test]

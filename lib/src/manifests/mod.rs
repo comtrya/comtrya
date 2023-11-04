@@ -50,7 +50,7 @@ pub fn resolve(uri: &String) -> Option<PathBuf> {
         });
 
     let manifest_directory = match manifest_directory {
-        Some(dir) => dir.canonicalize().unwrap(),
+        Some(dir) => dir.canonicalize().expect("Failed to canonicalize path"),
         None => {
             error!("Failed to find manifests at {}", &uri);
             panic!();
@@ -60,25 +60,28 @@ pub fn resolve(uri: &String) -> Option<PathBuf> {
     Some(manifest_directory)
 }
 
-pub fn get_manifest_name(manifest_directory: &Path, location: &Path) -> String {
-    let local_name = location.strip_prefix(&manifest_directory).unwrap();
-    let manifest_name =
-        local_name
-            .components()
-            .into_iter()
-            .fold(String::from(""), |mut s, next| {
-                if !s.is_empty() {
-                    s.push('.');
-                }
-                s.push_str(next.as_os_str().to_str().unwrap());
+pub fn get_manifest_name(manifest_directory: &Path, location: &Path) -> anyhow::Result<String> {
+    let local_name = location.strip_prefix(manifest_directory)?;
+    let manifest_name = local_name
+        .components()
+        .fold(String::from(""), |mut s, next| {
+            if !s.is_empty() {
+                s.push('.');
+            }
 
-                s
-            });
+            if let Some(next) = next.as_os_str().to_str() {
+                s.push_str(next);
+            } else {
+                error!("Failed to convert path component to string");
+            }
+
+            s
+        });
 
     let manifest_name = manifest_name.trim_end_matches(".yaml");
     let manifest_name = manifest_name.trim_end_matches(".yml");
 
-    String::from(manifest_name.trim_end_matches(".main"))
+    Ok(String::from(manifest_name.trim_end_matches(".main")))
 }
 
 #[cfg(test)]
@@ -91,7 +94,10 @@ mod test {
         let manifest_directory = PathBuf::from("/tmp");
         let location = PathBuf::from("/tmp/main.yaml");
 
-        assert_eq!("main", get_manifest_name(&manifest_directory, &location));
+        assert_eq!(
+            "main",
+            get_manifest_name(&manifest_directory, &location).unwrap()
+        );
     }
 
     #[test]
@@ -99,7 +105,10 @@ mod test {
         let manifest_directory = PathBuf::from("/tmp");
         let location = PathBuf::from("/tmp/test/main.yaml");
 
-        assert_eq!("test", get_manifest_name(&manifest_directory, &location));
+        assert_eq!(
+            "test",
+            get_manifest_name(&manifest_directory, &location).unwrap()
+        );
     }
 
     #[test]
@@ -107,7 +116,10 @@ mod test {
         let manifest_directory = PathBuf::from("/tmp");
         let location = PathBuf::from("/tmp/test/main.yml");
 
-        assert_eq!("test", get_manifest_name(&manifest_directory, &location));
+        assert_eq!(
+            "test",
+            get_manifest_name(&manifest_directory, &location).unwrap()
+        );
     }
 
     #[test]
@@ -117,7 +129,7 @@ mod test {
 
         assert_eq!(
             "test.hello",
-            get_manifest_name(&manifest_directory, &location)
+            get_manifest_name(&manifest_directory, &location).unwrap()
         );
     }
 
@@ -128,7 +140,7 @@ mod test {
 
         assert_eq!(
             "test.nested",
-            get_manifest_name(&manifest_directory, &location)
+            get_manifest_name(&manifest_directory, &location).unwrap()
         );
     }
 
@@ -139,7 +151,7 @@ mod test {
 
         assert_eq!(
             "test.nested.hello",
-            get_manifest_name(&manifest_directory, &location)
+            get_manifest_name(&manifest_directory, &location).unwrap()
         );
     }
 }
@@ -154,7 +166,10 @@ mod test {
         let manifest_directory = PathBuf::from("C:\\");
         let location = PathBuf::from("C:\\test\\main.yaml");
 
-        assert_eq!("test", get_manifest_name(&manifest_directory, &location));
+        assert_eq!(
+            "test",
+            get_manifest_name(&manifest_directory, &location).unwrap()
+        );
     }
 
     #[test]
@@ -162,7 +177,10 @@ mod test {
         let manifest_directory = PathBuf::from("C:\\");
         let location = PathBuf::from("C:\\test\\main.yml");
 
-        assert_eq!("test", get_manifest_name(&manifest_directory, &location));
+        assert_eq!(
+            "test",
+            get_manifest_name(&manifest_directory, &location).unwrap()
+        );
     }
 
     #[test]
@@ -172,7 +190,7 @@ mod test {
 
         assert_eq!(
             "test.hello",
-            get_manifest_name(&manifest_directory, &location)
+            get_manifest_name(&manifest_directory, &location).unwrap()
         );
     }
 
@@ -183,7 +201,7 @@ mod test {
 
         assert_eq!(
             "test.nested",
-            get_manifest_name(&manifest_directory, &location)
+            get_manifest_name(&manifest_directory, &location).unwrap()
         );
     }
 
@@ -194,7 +212,7 @@ mod test {
 
         assert_eq!(
             "test.nested.hello",
-            get_manifest_name(&manifest_directory, &location)
+            get_manifest_name(&manifest_directory, &location).unwrap()
         );
     }
 }

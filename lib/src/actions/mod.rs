@@ -14,10 +14,11 @@ use crate::steps::Step;
 use anyhow::anyhow;
 use binary::BinaryGitHub;
 use command::run::RunCommand;
-use directory::{DirectoryCopy, DirectoryCreate};
+use directory::{DirectoryCopy, DirectoryCreate, DirectoryRemove};
 use file::copy::FileCopy;
 use file::download::FileDownload;
 use file::link::FileLink;
+use file::remove::FileRemove;
 use git::GitClone;
 use group::add::GroupAdd;
 use macos::MacOSDefault;
@@ -65,6 +66,7 @@ where
                 return false;
             }
 
+            // .unwrap() is safe here because we checked for None above
             let condition = variant.condition.clone().unwrap();
 
             match engine.eval_with_scope::<bool>(&mut scope, condition.as_str()) {
@@ -84,7 +86,8 @@ where
             return self.action.plan(manifest, context);
         }
 
-        let condition = self.condition.clone().unwrap();
+        // .unwrap() is safe here because we checked for None above
+        let condition = self.condition.as_ref().unwrap();
 
         match engine.eval_with_scope::<bool>(&mut scope, condition.as_str()) {
             Ok(true) => self.action.plan(manifest, context),
@@ -114,6 +117,12 @@ pub enum Actions {
 
     #[serde(rename = "file.link")]
     FileLink(ConditionalVariantAction<FileLink>),
+
+    #[serde(rename = "file.remove")]
+    FileRemove(ConditionalVariantAction<FileRemove>),
+
+    #[serde(rename = "directory.remove", alias = "dir.remove")]
+    DirectoryRemove(ConditionalVariantAction<DirectoryRemove>),
 
     #[serde(
         rename = "binary.github",
@@ -162,6 +171,8 @@ impl Actions {
             Actions::PackageRepository(a) => a,
             Actions::UserAdd(a) => a,
             Actions::UserAddGroup(a) => a,
+            Actions::FileRemove(a) => a,
+            Actions::DirectoryRemove(a) => a,
         }
     }
 }
@@ -175,6 +186,8 @@ impl Display for Actions {
             Actions::FileCopy(_) => "file.copy",
             Actions::FileDownload(_) => "file.download",
             Actions::FileLink(_) => "file.link",
+            Actions::FileRemove(_) => "file.remove",
+            Actions::DirectoryRemove(_) => "directory.remove",
             Actions::BinaryGitHub(_) => "github.binary",
             Actions::GitClone(_) => "git.clone",
             Actions::GroupAdd(_) => "group.add",

@@ -1,6 +1,6 @@
 use crate::contexts::{Context, ContextProvider};
 use anyhow::Result;
-use dirs_next::{config_dir, home_dir};
+use dirs_next::{config_dir, data_dir, data_local_dir, document_dir, home_dir};
 
 pub struct UserContextProvider {}
 
@@ -26,6 +26,24 @@ impl ContextProvider for UserContextProvider {
                     .map(Into::into)
                     .unwrap_or_else(|| "unknown".into()),
             ),
+            Context::KeyValueContext(
+                String::from("data_dir"),
+                data_dir()
+                    .map(Into::into)
+                    .unwrap_or_else(|| "unknown".into()),
+            ),
+            Context::KeyValueContext(
+                String::from("data_local_dir"),
+                data_local_dir()
+                    .map(Into::into)
+                    .unwrap_or_else(|| "unknown".into()),
+            ),
+            Context::KeyValueContext(
+                String::from("document_dir"),
+                document_dir()
+                    .map(Into::into)
+                    .unwrap_or_else(|| "unknown".into()),
+            ),
         ])
     }
 }
@@ -33,7 +51,7 @@ impl ContextProvider for UserContextProvider {
 impl UserContextProvider {
     #[cfg(unix)]
     fn get_uid(&self) -> u32 {
-        users::get_current_uid()
+        uzers::get_current_uid()
     }
 
     #[cfg(not(unix))]

@@ -1,3 +1,5 @@
+use crate::atoms::Outcome;
+
 use super::super::Atom;
 use std::path::PathBuf;
 
@@ -10,14 +12,17 @@ impl std::fmt::Display for Create {
         write!(
             f,
             "The directory {} needs to be created",
-            self.path.to_str().unwrap(),
+            self.path.display(),
         )
     }
 }
 
 impl Atom for Create {
-    fn plan(&self) -> bool {
-        !self.path.exists()
+    fn plan(&self) -> anyhow::Result<Outcome> {
+        Ok(Outcome {
+            side_effects: vec![],
+            should_run: !self.path.exists(),
+        })
     }
 
     fn execute(&mut self) -> anyhow::Result<()> {
@@ -39,11 +44,11 @@ mod tests {
         let atom = Create {
             path: std::path::PathBuf::from("/some-random-path"),
         };
-        assert_eq!(true, atom.plan());
+        assert_eq!(true, atom.plan().unwrap().should_run);
 
         let temp = temp_dir();
         let atom = Create { path: temp };
-        assert_eq!(false, atom.plan());
+        assert_eq!(false, atom.plan().unwrap().should_run);
     }
 
     #[test]
@@ -63,7 +68,7 @@ mod tests {
         assert_eq!(false, temp_dir.path().join("create-me").exists());
 
         assert_eq!(true, atom.execute().is_ok());
-        assert_eq!(false, atom.plan());
+        assert_eq!(false, atom.plan().unwrap().should_run);
 
         assert_eq!(true, temp_dir.path().join("create-me").is_dir());
     }

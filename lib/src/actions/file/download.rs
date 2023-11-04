@@ -40,7 +40,15 @@ impl Action for FileDownload {
         Ok(vec![
             Step {
                 atom: Box::new(DirCreate {
-                    path: parent.parent().unwrap().into(),
+                    path: parent
+                        .parent()
+                        .ok_or_else(|| {
+                            anyhow::anyhow!(
+                                "Failed to get parent directory of path: {}",
+                                path.display()
+                            )
+                        })?
+                        .into(),
                 }),
                 initializers: vec![],
                 finalizers: vec![],

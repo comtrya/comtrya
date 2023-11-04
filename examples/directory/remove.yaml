@@ -1,0 +1,6 @@
+actions:
+  - action: directory.remove
+    target: "{{user.home_dir}}/some/path/to/dir"
+
+  - action: directory.remove
+    target: home/user/some/path/to/dir

@@ -6,6 +6,7 @@ mod create;
 mod decrypt;
 mod link;
 mod unarchive;
+mod remove;
 
 use super::Atom;
 pub use chmod::Chmod;
@@ -16,6 +17,7 @@ pub use create::Create;
 pub use decrypt::Decrypt;
 pub use link::Link;
 pub use unarchive::Unarchive;
+pub use remove::Remove;
 
 pub trait FileAtom: Atom {
     // Don't think this is needed? Validate soon

@@ -21,7 +21,7 @@ impl Dir {
 
         comtrya.current_dir(self.cwd);
 
-        let args = cli.split(' ').skip(1).collect::<Vec<_>>();
+        let args = cli.split(' ').collect::<Vec<_>>();
         comtrya.args(args);
 
         comtrya.assert()

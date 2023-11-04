@@ -1,0 +1,4 @@
+[[actions]]
+action = "command.run"
+command = "echo"
+args = [ "hi" ]

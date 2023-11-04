@@ -1,3 +1,5 @@
+use crate::atoms::Outcome;
+
 use super::super::Atom;
 use super::FileAtom;
 use age::armor::ArmoredReader;
@@ -29,16 +31,22 @@ impl std::fmt::Display for Decrypt {
 }
 
 impl Atom for Decrypt {
-    fn plan(&self) -> bool {
+    fn plan(&self) -> anyhow::Result<Outcome> {
         // If the file doesn't exist, assume it's because
         // another atom is going to provide it.
         if !self.path.exists() {
-            return true;
+            return Ok(Outcome {
+                side_effects: vec![],
+                should_run: true,
+            });
         }
 
         // Decrypting file with provided passphrase makes plan work
         match decrypt(&self.passphrase, &self.encrypted_content) {
-            Ok(_) => true,
+            Ok(_) => Ok(Outcome {
+                side_effects: vec![],
+                should_run: true,
+            }),
             Err(err) => {
                 error!(
                     "Cannot decrypt file {} because {:?}. Skipping.",
@@ -46,7 +54,10 @@ impl Atom for Decrypt {
                     err
                 );
 
-                false
+                Ok(Outcome {
+                    side_effects: vec![],
+                    should_run: false,
+                })
             }
         }
     }
@@ -101,7 +112,7 @@ mod tests {
         };
 
         // plan
-        assert_eq!(true, decrypt.plan());
+        assert_eq!(true, decrypt.plan().unwrap().should_run);
 
         // prepare another atom
         let another_decrypt = Decrypt {
@@ -111,7 +122,7 @@ mod tests {
         };
 
         // plan
-        assert_eq!(false, another_decrypt.plan());
+        assert_eq!(false, another_decrypt.plan().unwrap().should_run);
 
         Ok(())
     }
@@ -135,7 +146,7 @@ mod tests {
         };
 
         // plan, execute
-        assert_eq!(true, decrypt.plan());
+        assert_eq!(true, decrypt.plan().unwrap().should_run);
         assert_eq!(true, decrypt.execute().is_ok());
 
         Ok(())

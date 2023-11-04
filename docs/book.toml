@@ -1,0 +1,6 @@
+[book]
+authors = ["Stefan Ruzitschka", "Todd Martin"]
+language = "en"
+multilingual = false
+src = "src"
+title = "Comtrya"

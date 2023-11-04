@@ -1,5 +1,3 @@
-use std::io::BufRead;
-use std::io::BufReader;
 use tera::{Function, Result, Tera, Value};
 
 pub struct ReadFileContents;
@@ -8,14 +6,8 @@ impl Function for ReadFileContents {
     fn call(&self, args: &std::collections::HashMap<String, Value>) -> Result<Value> {
         match args.get("path") {
             Some(value) => match value.as_str() {
-                Some(path) => match std::fs::File::open(path) {
-                    Ok(file) => {
-                        // This avoids reading the newline at the end of the file
-                        // https://doc.rust-lang.org/std/fs/fn.read_to_string.html reads the newline
-                        let contents = BufReader::new(file).lines().flatten().collect::<String>();
-
-                        Ok(contents.into())
-                    }
+                Some(path) => match std::fs::read_to_string(path) {
+                    Ok(content) => Ok(content.trim().into()),
                     Err(err) => Err(err.into()),
                 },
 
@@ -48,7 +40,14 @@ mod test {
 
         let mut file = tempfile::NamedTempFile::new()?;
 
-        write!(file.as_file_mut(), "FKBR KUCI SXOE")?;
+        let file_content = r#"
+FKBR
+KUCI
+SXOE
+
+"#;
+
+        write!(file.as_file_mut(), "{}", file_content)?;
 
         let template = format!(
             "{{{{ read_file_contents(path=\"{}\") }}}}",
@@ -57,7 +56,11 @@ mod test {
 
         let content = tera.render_str(&template, &Context::new())?;
 
-        assert_eq!("FKBR KUCI SXOE", content);
+        let expected_file_content = r#"FKBR
+KUCI
+SXOE"#;
+
+        assert_eq!(expected_file_content, content);
 
         Ok(())
     }

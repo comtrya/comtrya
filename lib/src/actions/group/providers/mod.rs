@@ -9,6 +9,8 @@ use serde::{Deserialize, Serialize};
 mod freebsd;
 mod linux;
 use self::linux::LinuxGroupProvider;
+mod macos;
+use self::macos::MacOsGroupProvider;
 
 #[derive(JsonSchema, Clone, Debug, Serialize, Deserialize)]
 pub enum GroupProviders {
@@ -20,6 +22,9 @@ pub enum GroupProviders {
 
     #[serde(alias = "linux")]
     Linux,
+
+    #[serde(alias = "macos")]
+    MacOs,
 }
 
 impl GroupProviders {
@@ -28,10 +33,12 @@ impl GroupProviders {
             GroupProviders::None => Box::new(NoneGroupProvider {}),
             GroupProviders::FreeBSD => Box::new(FreeBSDGroupProvider {}),
             GroupProviders::Linux => Box::new(LinuxGroupProvider {}),
+            GroupProviders::MacOs => Box::new(MacOsGroupProvider {}),
         }
     }
 }
 
+#[allow(clippy::derivable_impls)]
 impl Default for GroupProviders {
     #[cfg(target_os = "linux")]
     fn default() -> Self {
@@ -44,6 +51,7 @@ impl Default for GroupProviders {
 
         match info.os_type() {
             os_info::Type::FreeBSD => GroupProviders::FreeBSD,
+            os_info::Type::Macos => GroupProviders::MacOs,
             _ => GroupProviders::None,
         }
     }

@@ -32,24 +32,31 @@ impl PackageProvider for Winget {
         true
     }
 
-    fn add_repository(&self, _: &PackageRepository) -> Vec<Step> {
-        vec![]
+    fn add_repository(&self, _: &PackageRepository) -> anyhow::Result<Vec<Step>> {
+        Ok(vec![])
     }
 
-    fn query(&self, package: &PackageVariant) -> Vec<String> {
+    fn query(&self, package: &PackageVariant) -> anyhow::Result<Vec<String>> {
         // Install all packages, make this smarter soon
-        package.packages()
+        Ok(package.packages())
     }
 
-    fn install(&self, package: &PackageVariant) -> Vec<Step> {
-        package
+    fn install(&self, package: &PackageVariant) -> anyhow::Result<Vec<Step>> {
+        Ok(package
             .packages()
             .iter()
             .map::<Step, _>(|p| Step {
                 atom: Box::new(Exec {
                     command: String::from("winget"),
                     arguments: [
-                        vec![String::from("install"), String::from("--silent")],
+                        vec![
+                            "install".to_string(),
+                            "--silent".to_string(),
+                            "--accept-package-agreements".to_string(),
+                            "--accept-source-agreements".to_string(),
+                            "--source".to_string(),
+                            "winget".to_string(),
+                        ],
                         package.extra_args.clone(),
                         vec![p.clone()],
                     ]
@@ -59,6 +66,6 @@ impl PackageProvider for Winget {
                 initializers: vec![],
                 finalizers: vec![],
             })
-            .collect()
+            .collect())
     }
 }

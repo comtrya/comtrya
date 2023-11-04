@@ -7,6 +7,7 @@ use crate::{actions::Action, contexts::Contexts};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
+use std::vec;
 use tracing::error;
 
 // TODO: Next Major Version - Deprecate from and to
@@ -31,9 +32,11 @@ impl FileLink {
         if self.source.is_none() && self.from.is_none() {
             error!("Field 'source' is required for file.link");
         }
+
         if let Some(ref source) = self.source {
             source.to_string()
         } else {
+            // .unwrap() is safe here because we already checked for None
             self.from.clone().unwrap()
         }
     }
@@ -45,6 +48,7 @@ impl FileLink {
         if let Some(ref target) = self.target {
             target.to_string()
         } else {
+            // .unwrap() is safe here because we already checked for None
             self.to.clone().unwrap()
         }
     }
@@ -53,23 +57,28 @@ impl FileLink {
         use crate::atoms::directory::Create as DirCreate;
         use crate::atoms::file::Link;
 
-        vec![
-            Step {
-                atom: Box::new(DirCreate {
-                    path: to.parent().unwrap().to_path_buf(),
-                }),
-                initializers: vec![],
-                finalizers: vec![],
-            },
-            Step {
-                atom: Box::new(Link {
-                    source: from.to_owned(),
-                    target: to,
-                }),
-                initializers: vec![Ensure(Box::new(FileExists(from)))],
-                finalizers: vec![],
-            },
-        ]
+        match to.parent() {
+            Some(parent) => {
+                vec![
+                    Step {
+                        atom: Box::new(DirCreate {
+                            path: parent.to_path_buf(),
+                        }),
+                        initializers: vec![],
+                        finalizers: vec![],
+                    },
+                    Step {
+                        atom: Box::new(Link {
+                            source: from.to_owned(),
+                            target: to,
+                        }),
+                        initializers: vec![Ensure(Box::new(FileExists(from)))],
+                        finalizers: vec![],
+                    },
+                ]
+            }
+            None => vec![],
+        }
     }
 
     pub fn plan_walk(from: PathBuf, to: PathBuf) -> Vec<Step> {
@@ -77,27 +86,29 @@ impl FileLink {
         use crate::atoms::file::Link;
 
         let mut steps = vec![Step {
-            atom: Box::new(DirCreate {
-                path: to.to_path_buf(),
-            }),
+            atom: Box::new(DirCreate { path: to.clone() }),
             initializers: vec![],
             finalizers: vec![],
         }];
 
-        let paths = std::fs::read_dir(from).unwrap();
+        if let Ok(paths) = std::fs::read_dir(from) {
+            paths.for_each(|path| {
+                if let Ok(path) = path {
+                    let p = path.path();
 
-        steps.extend(paths.map(|path| {
-            let p = path.unwrap().path();
-
-            Step {
-                atom: Box::new(Link {
-                    source: p.clone(),
-                    target: to.join(p.file_name().unwrap()),
-                }),
-                initializers: vec![Ensure(Box::new(FileExists(p.clone())))],
-                finalizers: vec![],
-            }
-        }));
+                    if let Some(file_name) = p.file_name() {
+                        steps.push(Step {
+                            atom: Box::new(Link {
+                                source: p.clone(),
+                                target: to.join(file_name),
+                            }),
+                            initializers: vec![Ensure(Box::new(FileExists(p.clone())))],
+                            finalizers: vec![],
+                        })
+                    }
+                }
+            })
+        }
 
         steps
     }

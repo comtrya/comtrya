@@ -2,7 +2,7 @@ use anyhow::Result;
 use rhai::Scope;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
-use tracing::{debug, instrument, trace, warn};
+use tracing::{instrument, trace, warn};
 use user::UserContextProvider;
 
 use crate::{
@@ -63,7 +63,7 @@ pub fn build_contexts(config: &Config) -> Contexts {
             .iter()
             .for_each(|context| match context {
                 Context::KeyValueContext(k, v) => {
-                    debug!(
+                    trace!(
                         context = provider.get_prefix().as_str(),
                         key = k.clone().as_str(),
                         value = v.clone().to_string(),
@@ -72,7 +72,7 @@ pub fn build_contexts(config: &Config) -> Contexts {
                     values.insert(k.clone(), v.clone());
                 }
                 Context::ListContext(k, v) => {
-                    debug!(
+                    trace!(
                         context = provider.get_prefix().as_str(),
                         key = k.clone().as_str(),
                         values = format!("{:?}", v), // debug of the vector values is good enough

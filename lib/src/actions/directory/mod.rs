@@ -4,20 +4,18 @@ use std::path::PathBuf;
 
 mod copy;
 mod create;
+mod remove;
 pub use copy::DirectoryCopy;
 pub use create::DirectoryCreate;
+pub use remove::DirectoryRemove;
 
 pub trait DirectoryAction: Action {
     fn resolve(&self, manifest: &Manifest, path: &str) -> PathBuf {
         manifest
             .root_dir
-            .clone()
-            .unwrap()
-            .join("files")
-            .join(path)
-            .normalize()
-            .unwrap()
-            .as_path()
-            .to_path_buf()
+            .as_ref()
+            .and_then(|root_dir| root_dir.join("files").join(path).normalize().ok())
+            .map(|path| path.as_path().to_path_buf())
+            .expect("Failed to resolve path")
     }
 }

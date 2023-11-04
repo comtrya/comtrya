@@ -7,7 +7,7 @@ on:
       - "main"
 
 env:
-  MIN_SUPPORTED_RUST_VERSION: "1.64.0"
+  MIN_SUPPORTED_RUST_VERSION: "1.70.0"
   CICD_INTERMEDIATES_DIR: "_cicd-intermediates"
   CARGO_TERM_COLOR: always
   #Fix these up soon
@@ -15,10 +15,10 @@ env:
 
 jobs:
   lint-test-release:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Clone Repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Install Rust Toolchain (v${{ env.MIN_SUPPORTED_RUST_VERSION }})
         uses: actions-rs/toolchain@v1
@@ -41,11 +41,11 @@ jobs:
       - name: Run Tarpaulin
         uses: actions-rs/tarpaulin@v0.1
         with:
-          version: "0.20.1"
+          version: "0.22.0"
           args: "--workspace -- --test-threads 1"
 
       - name: Upload to codecov.io
-        uses: codecov/codecov-action@v1
+        uses: codecov/codecov-action@v3
 
       - name: Check for Release
         id: is-release
@@ -54,12 +54,17 @@ jobs:
           unset IS_RELEASE ; if [[ $GITHUB_REF =~ ^refs/tags/v[0-9].* ]]; then IS_RELEASE='true' ; fi
           echo ::set-output name=IS_RELEASE::${IS_RELEASE}
 
-      - name: Cargo Publish
-        uses: katyo/publish-crates@v1
+      - name: Cargo Publish "comtrya-lib"
         if: steps.is-release.outputs.IS_RELEASE
-        with:
-          args: --allow-dirty
-          registry-token: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: cargo publish -p comtrya-lib --token ${CRATES_TOKEN}
+        env:
+          CRATES_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+
+      - name: Cargo Publish "comtrya"
+        if: steps.is-release.outputs.IS_RELEASE
+        run: cargo publish -p comtrya --token ${CRATES_TOKEN}
+        env:
+          CRATES_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
 
   build:
     name: build-${{ matrix.job.target }}
@@ -74,10 +79,10 @@ jobs:
           - { os: macos-12, target: x86_64-apple-darwin }
           - { os: macos-12, target: aarch64-apple-darwin }
 
-          - { os: windows-2019, target: x86_64-pc-windows-msvc }
+          - { os: windows-2022, target: x86_64-pc-windows-msvc }
     steps:
       - name: Clone Repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Install Rust Toolchain
         uses: actions-rs/toolchain@v1
@@ -89,7 +94,7 @@ jobs:
           profile: minimal
 
       - name: Handle Rust Dependencies Caching
-        uses: Swatinem/rust-cache@v1
+        uses: Swatinem/rust-cache@v2
         with:
           key: v1-${{ matrix.job.target }}
 
@@ -142,7 +147,7 @@ jobs:
     container: clux/muslrust:stable
     steps:
       - name: Clone Repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Link to muscl Toolchain
         run: |
@@ -150,7 +155,7 @@ jobs:
           ln -s /root/.rustup $HOME/.rustup
 
       - name: Handle Rust Dependencies Caching
-        uses: Swatinem/rust-cache@v1
+        uses: Swatinem/rust-cache@v2
         with:
           key: v1-linux-musl
 

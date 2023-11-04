@@ -43,6 +43,7 @@ impl From<&Group> for GroupVariant {
             };
         };
 
+        // .unwrap() is safe here because we checked for None above
         let variant = variant.unwrap();
 
         debug!(message = "Built Variant", variant = ?variant);

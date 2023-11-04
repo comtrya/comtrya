@@ -9,12 +9,12 @@ use tracing::warn;
 pub struct FreeBSDUserProvider {}
 
 impl UserProvider for FreeBSDUserProvider {
-    fn add_user(&self, user: &UserVariant) -> Vec<Step> {
+    fn add_user(&self, user: &UserVariant) -> anyhow::Result<Vec<Step>> {
         let mut args: Vec<String> = vec![];
 
         // is a user name isn't provided, cant create a new user
         if user.username.is_empty() {
-            return vec![];
+            return Ok(vec![]);
         }
 
         args.push(String::from("-n"));
@@ -60,25 +60,25 @@ impl UserProvider for FreeBSDUserProvider {
                 group: user.group.clone(),
                 provider: user.provider.clone(),
             };
-            for group in self.add_to_group(&user_groups) {
+            for group in self.add_to_group(&user_groups)? {
                 steps.push(group);
             }
         }
 
-        steps
+        Ok(steps)
     }
 
-    fn add_to_group(&self, user: &UserAddGroup) -> Vec<Step> {
+    fn add_to_group(&self, user: &UserAddGroup) -> anyhow::Result<Vec<Step>> {
         let mut steps: Vec<Step> = vec![];
 
         if user.group.is_empty() {
             warn!(message = "No Groups listed to add user to");
-            return steps;
+            return Ok(steps);
         }
 
         if user.username.is_empty() {
             warn!(message = "No user specified to add to group(s)");
-            return steps;
+            return Ok(steps);
         }
 
         for group in user.group.iter() {
@@ -100,7 +100,7 @@ impl UserProvider for FreeBSDUserProvider {
             });
         }
 
-        steps
+        Ok(steps)
     }
 }
 

@@ -9,18 +9,20 @@
 [![License](https://img.shields.io/github/license/comtrya/comtrya?style=for-the-badge)](https://github.com/comtrya/comtrya/blob/main/LICENSE)
 
 [![Latest GitHub Release](https://img.shields.io/github/v/release/comtrya/comtrya?label=Latest&style=for-the-badge)](https://github.com/comtrya/comtrya/releases/latest)
-[![GitHub Actions Status](https://img.shields.io/github/workflow/status/comtrya/comtrya/release/main?style=for-the-badge)](https://github.com/comtrya/comtrya/actions/workflows/main.yml)
+[![GitHub Actions Status](https://img.shields.io/github/actions/workflow/status/comtrya/comtrya/main.yaml?branch=main&style=for-the-badge)](https://github.com/comtrya/comtrya/actions/workflows/main.yml)
+
 [![Codecov](https://img.shields.io/codecov/c/github/comtrya/comtrya?style=for-the-badge)](https://codecov.io/gh/comtrya/comtrya)
 
-[
-![Discord](https://img.shields.io/discord/730728064031653999?label=Discord&style=for-the-badge)](https://rawkode.chat)
+[![Discord](https://img.shields.io/discord/730728064031653999?label=Discord&style=for-the-badge)](https://rawkode.chat)
 
+[![Packaging status](https://repology.org/badge/vertical-allrepos/comtrya.svg)](https://repology.org/metapackage/comtrya)
 
 ---
 
 Want to learn how to use Comtrya? [Check the docs](https://comtrya.dev).
 
 ---
+
 ## About
 
 Comtrya is a tool to help provision a fresh OS with the packages and configuration (dotfiles) you need to become productive again.
@@ -37,6 +39,12 @@ If you're not feeling risk-averse, you can use this one-liner:
 
 ```shell
 curl -fsSL https://get.comtrya.dev | sh
+```
+
+or specify `VERSION=vx.x.x` to pin to a release version
+
+```shell
+VERSION=v0.8.7 curl -fsSL https://get.comtrya.dev | sh
 ```
 
 If this doesn't work for your OS and architecture, please open an issue and we'll do our best to support it.
@@ -77,10 +85,10 @@ We're using [petgraph](https://github.com/petgraph/petgraph) to build out the gr
 
 Currently, we execute arbitrary `packager install` commands. The provider spec should be enriched to support:
 
-- List refresh
-- Upgrades
-- Version pinning
+-   List refresh
+-   Upgrades
+-   Version pinning
 
 ### Integration tests
 
-We are a bit light on tests at the moment, but we have started introducing some helpful plumbing in [tests](./tests).
+We are a bit light on tests at the moment, but we have started introducing some helpful plumbing in [tests](comtrya/app/tests).

@@ -1,3 +1,5 @@
+use crate::atoms::Outcome;
+
 use super::super::Atom;
 use super::FileAtom;
 use std::path::PathBuf;
@@ -19,17 +21,20 @@ impl std::fmt::Display for SetContents {
         write!(
             f,
             "The file {} contents need to be set",
-            self.path.to_str().unwrap(),
+            self.path.display(),
         )
     }
 }
 
 impl Atom for SetContents {
-    fn plan(&self) -> bool {
+    fn plan(&self) -> anyhow::Result<Outcome> {
         // If the file doesn't exist, assume it's because
         // another atom is going to provide it.
         if !self.path.exists() {
-            return true;
+            return Ok(Outcome {
+                side_effects: vec![],
+                should_run: true,
+            });
         }
 
         let contents = match std::fs::read(&self.path) {
@@ -40,11 +45,17 @@ impl Atom for SetContents {
                     error, self.path
                 );
 
-                return false;
+                return Ok(Outcome {
+                    side_effects: vec![],
+                    should_run: false,
+                });
             }
         };
 
-        !contents.eq(&self.contents)
+        Ok(Outcome {
+            side_effects: vec![],
+            should_run: !contents.eq(&self.contents),
+        })
     }
 
     fn execute(&mut self) -> anyhow::Result<()> {
@@ -74,15 +85,15 @@ mod tests {
             contents: String::from("").into_bytes(),
         };
 
-        assert_eq!(false, file_contents.plan());
+        assert_eq!(false, file_contents.plan().unwrap().should_run);
 
         let mut file_contents = SetContents {
             path: file.path().to_path_buf(),
             contents: String::from("Hello, world!").into_bytes(),
         };
 
-        assert_eq!(true, file_contents.plan());
+        assert_eq!(true, file_contents.plan().unwrap().should_run);
         assert_eq!(true, file_contents.execute().is_ok());
-        assert_eq!(false, file_contents.plan());
+        assert_eq!(false, file_contents.plan().unwrap().should_run);
     }
 }

@@ -11,20 +11,20 @@ use which::which;
 pub struct LinuxUserProvider {}
 
 impl UserProvider for LinuxUserProvider {
-    fn add_user(&self, user: &UserVariant) -> Vec<Step> {
+    fn add_user(&self, user: &UserVariant) -> anyhow::Result<Vec<Step>> {
         let mut args: Vec<String> = vec![];
         let cli = match which("useradd") {
             Ok(c) => c,
             Err(_) => {
                 warn!(message = "Could not get the proper user add tool");
-                return vec![];
+                return Ok(vec![]);
             }
         };
 
         // is a user name isn't provided, cant create a new user
         if user.username.is_empty() {
             warn!(message = "Unable to create user without a username");
-            return vec![];
+            return Ok(vec![]);
         }
 
         args.push(user.username.clone());
@@ -47,7 +47,7 @@ impl UserProvider for LinuxUserProvider {
 
         let mut steps: Vec<Step> = vec![Step {
             atom: Box::new(Exec {
-                command: String::from(cli.to_str().unwrap()),
+                command: cli.display().to_string(),
                 arguments: vec![].into_iter().chain(args.clone()).collect(),
                 privileged: true,
                 ..Default::default()
@@ -62,31 +62,31 @@ impl UserProvider for LinuxUserProvider {
                 group: user.group.clone(),
                 provider: user.provider.clone(),
             };
-            for group in self.add_to_group(&user_groups) {
+            for group in self.add_to_group(&user_groups)? {
                 steps.push(group);
             }
         }
 
-        steps
+        Ok(steps)
     }
 
-    fn add_to_group(&self, user: &UserAddGroup) -> Vec<Step> {
+    fn add_to_group(&self, user: &UserAddGroup) -> anyhow::Result<Vec<Step>> {
         let cli = match which("usermod") {
             Ok(c) => c,
             Err(_) => {
                 warn!(message = "Could not get the proper user add tool");
-                return vec![];
+                return Ok(vec![]);
             }
         };
 
         if user.group.is_empty() {
             warn!(message = "No groups listed to add user to");
-            return vec![];
+            return Ok(vec![]);
         }
 
         if user.username.is_empty() {
             warn!(message = "No user specified to add to group(s)");
-            return vec![];
+            return Ok(vec![]);
         }
 
         let mut steps: Vec<Step> = vec![];
@@ -94,7 +94,7 @@ impl UserProvider for LinuxUserProvider {
         for group in user.group.iter() {
             steps.push(Step {
                 atom: Box::new(Exec {
-                    command: String::from(cli.to_str().unwrap()),
+                    command: cli.display().to_string(),
                     arguments: vec![
                         String::from("-a"),
                         String::from("-G"),
@@ -109,7 +109,7 @@ impl UserProvider for LinuxUserProvider {
             });
         }
 
-        steps
+        Ok(steps)
     }
 }
 
@@ -131,7 +131,7 @@ mod test {
             ..Default::default()
         });
 
-        assert_eq!(steps.len(), 1);
+        assert_eq!(steps.unwrap().len(), 1);
     }
 
     #[test]
@@ -146,7 +146,7 @@ mod test {
             ..Default::default()
         });
 
-        assert_eq!(steps.len(), 0);
+        assert_eq!(steps.unwrap().len(), 0);
     }
 
     #[test]
@@ -158,7 +158,7 @@ mod test {
             ..Default::default()
         });
 
-        assert_eq!(steps.len(), 2);
+        assert_eq!(steps.unwrap().len(), 2);
     }
 
     #[test]
@@ -173,6 +173,6 @@ mod test {
             ..Default::default()
         });
 
-        assert_eq!(steps.len(), 2);
+        assert_eq!(steps.unwrap().len(), 2);
     }
 }

@@ -32,16 +32,16 @@ impl PackageProvider for Zypper {
         false
     }
 
-    fn add_repository(&self, _repository: &PackageRepository) -> Vec<Step> {
-        vec![]
+    fn add_repository(&self, _repository: &PackageRepository) -> anyhow::Result<Vec<Step>> {
+        Ok(vec![])
     }
 
-    fn query(&self, package: &PackageVariant) -> Vec<String> {
-        package.packages()
+    fn query(&self, package: &PackageVariant) -> anyhow::Result<Vec<String>> {
+        Ok(package.packages())
     }
 
-    fn install(&self, package: &PackageVariant) -> Vec<Step> {
-        vec![Step {
+    fn install(&self, package: &PackageVariant) -> anyhow::Result<Vec<Step>> {
+        Ok(vec![Step {
             atom: Box::new(Exec {
                 command: String::from("zypper"),
                 arguments: vec![String::from("install"), String::from("-y")]
@@ -54,7 +54,7 @@ impl PackageProvider for Zypper {
             }),
             initializers: vec![],
             finalizers: vec![],
-        }]
+        }])
     }
 }
 
@@ -74,6 +74,6 @@ mod test {
             provider: PackageProviders::Zypper,
         });
 
-        assert_eq!(steps.len(), 1);
+        assert_eq!(steps.unwrap().len(), 1);
     }
 }
