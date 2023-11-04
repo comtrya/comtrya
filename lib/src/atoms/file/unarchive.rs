@@ -10,7 +10,7 @@ use super::FileAtom;
 pub struct Unarchive {
     pub origin: PathBuf,
     pub dest: PathBuf,
-    pub force: bool
+    pub force: bool,
 }
 
 impl FileAtom for Unarchive {
@@ -22,9 +22,9 @@ impl FileAtom for Unarchive {
 impl Atom for Unarchive {
     // Determine if this atom needs to run
     fn plan(&self) -> bool {
-    	if self.dest.exists() && !self.force {
-    		return false;
-    	}
+        if self.dest.exists() && !self.force {
+            return false;
+        }
 
         self.origin.exists()
     }
