@@ -1,3 +1,4 @@
 /target
 /_cicd-intermediates
 /.build
+.DS_Store
