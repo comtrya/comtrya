@@ -93,10 +93,10 @@ jobs:
           default: true
           profile: minimal
 
-    - name: Use Cross
-      shell: bash
-      run: |
-        cargo install cross
+      - name: Use Cross
+        shell: bash
+        run: |
+          cargo install cross
 
       - name: Handle Rust Dependencies Caching
         uses: Swatinem/rust-cache@v2
