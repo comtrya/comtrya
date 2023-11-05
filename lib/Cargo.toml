@@ -38,6 +38,8 @@ trust-dns-resolver = "0.23.2"
 walkdir = "2.3"
 which = "5.0"
 whoami = "1.4"
+tar = "0.4.40"
+flate2 = "1.0.28"
 
 [target.'cfg(unix)'.dependencies]
 uzers = "0.11"
