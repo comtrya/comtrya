@@ -93,6 +93,11 @@ jobs:
           default: true
           profile: minimal
 
+    - name: Use Cross
+      shell: bash
+      run: |
+        cargo install cross
+
       - name: Handle Rust Dependencies Caching
         uses: Swatinem/rust-cache@v2
         with:
@@ -101,6 +106,7 @@ jobs:
       - name: Build Release Binary
         uses: actions-rs/cargo@v1
         with:
+          use-cross: true
           command: build
           args: --release
 
