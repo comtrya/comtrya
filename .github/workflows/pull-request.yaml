@@ -64,6 +64,7 @@ jobs:
           #     use-cross: true,
           #   }
           - { os: ubuntu-20.04, target: x86_64-unknown-linux-gnu }
+          - { os: ubuuntu-22.04, target: aarch64-unknown-linux-gnu }
           # - {
           #     os: ubuntu-20.04,
           #     target: x86_64-unknown-linux-musl,

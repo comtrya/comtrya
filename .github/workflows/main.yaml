@@ -102,7 +102,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: build
-          args: --release
+          args: --release ${{ matrix.job.target }}
 
       - name: Rename Binary
         if: matrix.job.target != 'x86_64-pc-windows-msvc'
@@ -163,7 +163,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: build
-          args: --release
+          args: --release ${{ matrix.job.target }}
 
       - name: Rename Binary
         shell: bash
