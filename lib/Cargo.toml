@@ -39,6 +39,10 @@ walkdir = "2.3"
 which = "5.0"
 whoami = "1.4"
 
+[dependencies.openssl-sys]
+version="0.9"
+features = ["vendored"]
+
 [target.'cfg(unix)'.dependencies]
 uzers = "0.11"
 
