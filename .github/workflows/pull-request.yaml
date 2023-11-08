@@ -63,7 +63,6 @@ jobs:
           #     target: aarch64-unknown-linux-gnu,
           #     use-cross: true,
           #   }
-          # - { os: ubuntu-22.04, target: aarch64-unknown-linux-gnu, use-cross: true }
           - { os: ubuntu-22.04, target: x86_64-unknown-linux-gnu }
           # - {
           #     os: ubuntu-20.04,
@@ -99,4 +98,4 @@ jobs:
         with:
           use-cross: ${{ matrix.job.use-cross }}
           command: test
-          args: --target=${{ matrix.job.target }} ${{ steps.test-options.outputs.CARGO_TEST_OPTIONS }}
+          args: --target=${{ matrix.job.target }} ${{ steps.test-options.outputs.CARGO_TEST_OPTIONS}}
