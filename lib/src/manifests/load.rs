@@ -87,9 +87,14 @@ pub fn load(manifest_path: PathBuf, contexts: &Contexts) -> HashMap<String, Mani
                     }
                 };
 
-                let manifest: Option<Manifest> = match entry.extension().and_then(OsStr::to_str) {
-                    Some("yaml") | Some("yml") => serde_yaml::from_str(template.deref()).ok(),
-                    Some("toml") => toml::from_str(template.deref()).ok(),
+                let manifest: anyhow::Result<Manifest> = match entry
+                    .extension()
+                    .and_then(OsStr::to_str)
+                {
+                    Some("yaml") | Some("yml") => {
+                        serde_yaml::from_str(template.deref()).map_err(anyhow::Error::from)
+                    }
+                    Some("toml") => toml::from_str(template.deref()).map_err(anyhow::Error::from),
                     _ => {
                         error!("Unrecognized file extension for manifest");
                         span.exit();
@@ -98,17 +103,23 @@ pub fn load(manifest_path: PathBuf, contexts: &Contexts) -> HashMap<String, Mani
                     }
                 };
 
-                if let Some(mut manifest) = manifest {
-                    let name = get_manifest_name(&manifest_path, &entry)
-                        .expect("Failed to get manifest name");
+                match manifest {
+                    Ok(mut manifest) => {
+                        let name = get_manifest_name(&manifest_path, &entry)
+                            .expect("Failed to get manifest name");
 
-                    manifest.root_dir = entry.parent().map(|parent| parent.to_path_buf());
+                        manifest.root_dir = entry.parent().map(|parent| parent.to_path_buf());
 
-                    manifest.name = Some(name.clone());
+                        manifest.name = Some(name.clone());
 
-                    manifests.insert(name, manifest);
-                } else {
-                    error!("Unrecognized file extension for manifest");
+                        manifests.insert(name, manifest);
+                    }
+                    Err(err) => {
+                        let manifest_name =
+                            get_manifest_name(&manifest_path, &entry).unwrap_or_default();
+
+                        error!("Manifest '{manifest_name}' in file with path '{}' cannot be parsed. Reason: {err}", &entry.display());
+                    }
                 }
 
                 span.exit();
