@@ -6,9 +6,6 @@ on:
       environment:
         description: 'Experiment with new workflow'
         required: true
-#   push:
-#     branches:
-#       - "main"
 
 env:
   MIN_SUPPORTED_RUST_VERSION: "1.70.0"
