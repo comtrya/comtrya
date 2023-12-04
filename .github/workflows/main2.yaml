@@ -1,6 +1,11 @@
 name: release-experimental
 
-on: workflow_dispatch
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Experiment with new workflow'
+        required: true
 #   push:
 #     branches:
 #       - "main"
