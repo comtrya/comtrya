@@ -127,19 +127,19 @@ jobs:
           args: "--release"
 
       - name: Rename Binary
-        if: matrix.job.target != 'x86_64-pc-windows-msvc'
+        if: matrix.platform.target != 'x86_64-pc-windows-msvc'
         shell: bash
         run: |
           mv target/release/comtrya ${{ matrix.platform.target }}
 
       - name: Rename Binary.exe
-        if: matrix.job.target == 'x86_64-pc-windows-msvc'
+        if: matrix.platform.target == 'x86_64-pc-windows-msvc'
         shell: bash
         run: |
           mv target/release/comtrya.exe ${{ matrix.platform.target }}.exe
 
       - name: Upload Artifact
-        if: matrix.job.target != 'x86_64-pc-windows-msvc'
+        if: matrix.platform.target != 'x86_64-pc-windows-msvc'
         uses: softprops/action-gh-release@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -152,7 +152,7 @@ jobs:
             comtrya-${{ matrix.platform.target }}
 
       - name: Upload Artifact.exe
-        if: matrix.job.target == 'x86_64-pc-windows-msvc'
+        if: matrix.platform.target == 'x86_64-pc-windows-msvc'
         uses: softprops/action-gh-release@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
