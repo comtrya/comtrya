@@ -35,10 +35,10 @@ impl Atom for Unarchive {
             });
         }
 
-        return Ok(Outcome {
+        Ok(Outcome {
             side_effects: vec![],
             should_run: self.origin.exists(),
-        });
+        })
     }
 
     // Apply new to old
