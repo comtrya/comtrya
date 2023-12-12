@@ -93,8 +93,8 @@ jobs:
           - os_name: Windows-x86_64
             os: windows-2022
             target: x86_64-pc-windows-msvc
-            bin: comtrya
-            name: comtrya-x86_64-pc-winfows-msvc
+            bin: comtrya.exe
+            name: comtrya-x86_64-pc-windows-msvc
             cross: false
             cargo_command: cargo
             skip_tests: false
@@ -126,17 +126,17 @@ jobs:
           toolchain: stable
           args: "--release"
           
-      # - name: Rename Binary
-      #   if: matrix.job.target != 'x86_64-pc-windows-msvc'
-      #   shell: bash
-      #   run: |
-      #     mv target/release/comtrya ${{ matrix.platform.target }}
+      - name: Rename Binary
+        if: matrix.job.target != 'x86_64-pc-windows-msvc'
+        shell: bash
+        run: |
+          mv target/release/$${{ matrix.platform.bin }} ${{ matrix.platform.name}}
 
-      # - name: Rename Binary.exe
-      #   if: matrix.job.target == 'x86_64-pc-windows-msvc'
-      #   shell: bash
-      #   run: |
-      #     mv target/release/comtrya.exe ${{ matrix.platform.target }}.exe
+      - name: Rename Binary.exe
+        if: matrix.job.target == 'x86_64-pc-windows-msvc'
+        shell: bash
+        run: |
+          mv target/release/$${{ matrix.platform.bin }} ${{ matrix.platform.name }}.exe
 
       - name: Upload Artifact
         if: matrix.platform.target != 'x86_64-pc-windows-msvc'
@@ -149,7 +149,7 @@ jobs:
           generate_release_notes: false
           fail_on_unmatched_files: true
           files: |
-            comtrya-${{ matrix.platform.target }}
+            $${{ matrix.platform.name }}
 
       - name: Upload Artifact.exe
         if: matrix.platform.target == 'x86_64-pc-windows-msvc'
