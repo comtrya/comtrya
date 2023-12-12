@@ -130,13 +130,13 @@ jobs:
         if: matrix.platform.target != 'x86_64-pc-windows-msvc'
         shell: bash
         run: |
-          mv target/release/comtrya ${{ matrix.platform.target }}
+          mv target/release/comtrya ${{ matrix.platform.name }}
 
       - name: Rename Binary.exe
         if: matrix.platform.target == 'x86_64-pc-windows-msvc'
         shell: bash
         run: |
-          mv target/release/comtrya.exe ${{ matrix.platform.target }}.exe
+          mv target/release/comtrya.exe ${{ matrix.platform.name }}.exe
 
       - name: Upload Artifact
         if: matrix.platform.target != 'x86_64-pc-windows-msvc'
