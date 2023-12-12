@@ -45,7 +45,7 @@ impl Action for BinaryGitHub {
             )
         })?;
 
-        let octocrab = octocrab::instance();
+        let octocrab = async_runtime.block_on(async { octocrab::instance() });
 
         let repos = octocrab.repos(owner, repo);
         let releases = repos.releases();
