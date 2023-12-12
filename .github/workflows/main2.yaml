@@ -126,17 +126,17 @@ jobs:
           toolchain: stable
           args: "--release"
 
-      - name: Rename Binary
-        if: matrix.job.target != 'x86_64-pc-windows-msvc'
-        shell: bash
-        run: |
-          mv target/release/comtrya ${{ matrix.platform.target }}
+      # - name: Rename Binary
+      #   if: matrix.job.target != 'x86_64-pc-windows-msvc'
+      #   shell: bash
+      #   run: |
+      #     mv target/release/comtrya ${{ matrix.platform.target }}
 
-      - name: Rename Binary.exe
-        if: matrix.job.target == 'x86_64-pc-windows-msvc'
-        shell: bash
-        run: |
-          mv target/release/comtrya.exe ${{ matrix.platform.target }}.exe
+      # - name: Rename Binary.exe
+      #   if: matrix.job.target == 'x86_64-pc-windows-msvc'
+      #   shell: bash
+      #   run: |
+      #     mv target/release/comtrya.exe ${{ matrix.platform.target }}.exe
 
       - name: Upload Artifact
         if: matrix.job.target != 'x86_64-pc-windows-msvc'
