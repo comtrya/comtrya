@@ -130,13 +130,13 @@ jobs:
         if: matrix.job.target != 'x86_64-pc-windows-msvc'
         shell: bash
         run: |
-          mv target/release/$${{ matrix.platform.bin }} ${{ matrix.platform.name}}
+          mv target/release/${{ matrix.platform.bin }} ${{ matrix.platform.name }}
 
       - name: Rename Binary.exe
         if: matrix.job.target == 'x86_64-pc-windows-msvc'
         shell: bash
         run: |
-          mv target/release/$${{ matrix.platform.bin }} ${{ matrix.platform.name }}.exe
+          mv target/release/${{ matrix.platform.bin }} ${{ matrix.platform.name }}.exe
 
       - name: Upload Artifact
         if: matrix.platform.target != 'x86_64-pc-windows-msvc'
@@ -149,7 +149,7 @@ jobs:
           generate_release_notes: false
           fail_on_unmatched_files: true
           files: |
-            $${{ matrix.platform.name }}
+            ${{ matrix.platform.name }}
 
       - name: Upload Artifact.exe
         if: matrix.platform.target == 'x86_64-pc-windows-msvc'
