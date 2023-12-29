@@ -7,8 +7,8 @@ privilege escalation, some actions allow that to be specified. Here is an exampl
 
 ```
 - action: command.run
-    command: whoami
-    sudo: true
+  command: whoami
+  sudo: true
 ```
 
 Comtrya allows two terms for escalating privilege. Originally, it had to be done using sudo, however sudo is a term
@@ -18,7 +18,7 @@ privilege escalation. A more generic way to write the above action would be to u
 
 ```
 - action: command.run
-    command: whoami
-    sudo: true
-    privileged: true
+  command: whoami
+  sudo: true
+  privileged: true
 ```
