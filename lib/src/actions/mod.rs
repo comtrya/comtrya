@@ -33,6 +33,7 @@ use user::add::UserAdd;
 use self::user::add_group::UserAddGroup;
 
 #[derive(JsonSchema, Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(deny_unknown_fields)]
 pub struct ConditionalVariantAction<T> {
     #[serde(flatten)]
     pub action: T,
@@ -98,7 +99,7 @@ where
 }
 
 #[derive(JsonSchema, Clone, Debug, Serialize, Deserialize)]
-#[serde(tag = "action")]
+#[serde(deny_unknown_fields, tag = "action")]
 pub enum Actions {
     #[serde(rename = "command.run", alias = "cmd.run")]
     CommandRun(ConditionalVariantAction<RunCommand>),

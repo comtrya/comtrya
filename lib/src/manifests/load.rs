@@ -92,9 +92,9 @@ pub fn load(manifest_path: PathBuf, contexts: &Contexts) -> HashMap<String, Mani
                     .and_then(OsStr::to_str)
                 {
                     Some("yaml") | Some("yml") => {
-                        serde_yaml::from_str(template.deref()).map_err(anyhow::Error::from)
+                        serde_yaml::from_str::<Manifest>(template.deref()).map_err(anyhow::Error::from)
                     }
-                    Some("toml") => toml::from_str(template.deref()).map_err(anyhow::Error::from),
+                    Some("toml") => toml::from_str::<Manifest>(template.deref()).map_err(anyhow::Error::from),
                     _ => {
                         error!("Unrecognized file extension for manifest");
                         span.exit();
