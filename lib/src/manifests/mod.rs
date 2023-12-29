@@ -11,6 +11,7 @@ use std::path::{Path, PathBuf};
 use tracing::error;
 
 #[derive(JsonSchema, Clone, Debug, Default, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Manifest {
     #[serde(default)]
     pub r#where: Option<String>,
