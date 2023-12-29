@@ -11,8 +11,8 @@ pub struct RunCommand {
     #[serde(default)]
     pub args: Vec<String>,
 
-    #[serde(default = "get_false")]
-    pub sudo: bool,
+    #[serde(default = "get_false", alias = "sudo")]
+    pub privileged: bool,
 
     #[serde(default = "get_cwd")]
     pub dir: String,
@@ -36,7 +36,7 @@ impl Action for RunCommand {
             atom: Box::new(Exec {
                 command: self.command.clone(),
                 arguments: self.args.clone(),
-                privileged: self.sudo,
+                privileged: self.privileged,
                 working_dir: Some(self.dir.clone()),
                 ..Default::default()
             }),

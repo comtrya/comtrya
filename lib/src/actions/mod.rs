@@ -257,7 +257,7 @@ actions:
             RunCommand {
                 command: "echo".into(),
                 args: vec!["hi".into()],
-                sudo: false,
+                privileged: false,
                 dir: std::env::current_dir()
                     .unwrap()
                     .into_os_string()

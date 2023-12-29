@@ -7,7 +7,7 @@ actions:
 
   - action: command.run
     command: whoami
-    sudo: true
+    privileged: true
 
   - action: command.run
     command: ls
@@ -20,4 +20,4 @@ actions:
       - "-c"
       - "curl -sfL https://get.k3s.io | sh -"
     dir: .
-    sudo: true
+    privileged: true
