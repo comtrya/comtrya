@@ -2,7 +2,7 @@ use crate::atoms::Outcome;
 
 use super::super::Atom;
 use anyhow::anyhow;
-use tracing::trace;
+use tracing::debug;
 
 #[derive(Default)]
 pub struct Exec {
@@ -31,18 +31,49 @@ pub fn new_run_command(command: String) -> Exec {
 
 impl Exec {
     fn elevate_if_required(&self) -> (String, Vec<String>) {
-        if !self.privileged {
-            return (self.command.clone(), self.arguments.clone());
-        }
+        // Depending on the priviledged flag and who who the current user is
+        // we can determine if we need to prepend sudo to the command
+        match (self.privileged, whoami::username().as_str()) {
+            // Hasn't requested priviledged, so never try to elevate
+            (false, _) => (self.command.clone(), self.arguments.clone()),
 
-        if "root" == whoami::username() {
-            return (self.command.clone(), self.arguments.clone());
-        }
+            // Requested priviledged, but is already root
+            (true, "root") => (self.command.clone(), self.arguments.clone()),
 
-        (
-            String::from("sudo"),
-            [vec![self.command.clone()], self.arguments.clone()].concat(),
-        )
+            // Requested priviledged, but is not root
+            (true, _) => (
+                String::from("sudo"),
+                [vec![self.command.clone()], self.arguments.clone()].concat(),
+            ),
+        }
+    }
+
+    fn elevate(&mut self) -> anyhow::Result<()> {
+        tracing::info!(
+            "Sudo required for privilege elevation to run `{} {}`. Validating sudo ...",
+            &self.command,
+            &self.arguments.join(" ")
+        );
+
+        match std::process::Command::new("sudo")
+            .stdin(std::process::Stdio::inherit())
+            .stdout(std::process::Stdio::inherit())
+            .stderr(std::process::Stdio::inherit())
+            .arg("--validate")
+            .output()
+        {
+            Ok(std::process::Output { status, .. }) if status.success() => Ok(()),
+
+            Ok(std::process::Output { stderr, .. }) => Err(anyhow!(
+                "Command requires sudo, but couldn't elevate privileges: {}",
+                String::from_utf8(stderr)?
+            )),
+
+            Err(err) => Err(anyhow!(
+                "Command requires sudo, but couldn't elevate privileges: {}",
+                err
+            )),
+        }
     }
 }
 
@@ -50,7 +81,7 @@ impl std::fmt::Display for Exec {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "RunCommand with privileged {}: {} {}",
+            "CommandExec with: privileged={}: {} {}",
             self.privileged,
             self.command,
             self.arguments.join(" ")
@@ -61,7 +92,13 @@ impl std::fmt::Display for Exec {
 impl Atom for Exec {
     fn plan(&self) -> anyhow::Result<Outcome> {
         Ok(Outcome {
+            // Commands may have side-effects, but none that can be "known"
+            // without some sandboxed operations to detect filesystem and network
+            // affects.
+            // Maybe we'll look into this one day?
             side_effects: vec![],
+            // Commands should always run, we have no cache-key based
+            // determinism atm the moment.
             should_run: true,
         })
     }
@@ -72,27 +109,12 @@ impl Atom for Exec {
         // If we require root, we need to use sudo with inherited IO
         // to ensure the user can respond if prompted for a password
         if command.eq("sudo") {
-            tracing::info!(
-                "Sudo required for privilege elevation to run `{} {}`. Validating sudo ...",
-                &command,
-                arguments.join(" ")
-            );
-
-            match std::process::Command::new("sudo")
-                .stdin(std::process::Stdio::inherit())
-                .stdout(std::process::Stdio::inherit())
-                .stderr(std::process::Stdio::inherit())
-                .arg("--validate")
-                .output()
-            {
-                Ok(std::process::Output { status, .. }) if status.success() => (),
-
-                _ => {
-                    return Err(anyhow!(
-                        "Command requires sudo, but couldn't elevate privileges."
-                    ))
+            match self.elevate() {
+                Ok(_) => (),
+                Err(err) => {
+                    return Err(anyhow!(err));
                 }
-            };
+            }
         }
 
         match std::process::Command::new(&command)
@@ -105,20 +127,29 @@ impl Atom for Exec {
             }))
             .output()
         {
-            Ok(output) => {
-                self.status.code = output
-                    .status
-                    .code()
-                    .ok_or_else(|| anyhow::anyhow!("Cannot extract exit code"))?;
+            Ok(output) if output.status.success() => {
                 self.status.stdout = String::from_utf8(output.stdout)?;
                 self.status.stderr = String::from_utf8(output.stderr)?;
 
-                trace!("exit code: {}", &self.status.code);
-                trace!("stdout: {}", &self.status.stdout);
-                trace!("stderr: {}", &self.status.stderr);
+                debug!("stdout: {}", &self.status.stdout);
 
                 Ok(())
             }
+
+            Ok(output) => {
+                self.status.stdout = String::from_utf8(output.stdout)?;
+                self.status.stderr = String::from_utf8(output.stderr)?;
+
+                debug!("exit code: {}", &self.status.code);
+                debug!("stdout: {}", &self.status.stdout);
+                debug!("stderr: {}", &self.status.stderr);
+
+                Err(anyhow!(
+                    "Command failed with exit code: {}",
+                    output.status.code().unwrap_or(1)
+                ))
+            }
+
             Err(err) => Err(anyhow!(err)),
         }
     }
@@ -177,5 +208,11 @@ mod tests {
             vec![String::from("echo"), String::from("Hello, world!")],
             args
         );
+    }
+
+    #[test]
+    fn error_propagation() {
+        let mut command_run = new_run_command(String::from("non-existant-command"));
+        command_run.execute().expect_err("Command should fail");
     }
 }
