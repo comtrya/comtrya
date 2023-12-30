@@ -44,9 +44,7 @@ pub trait FileAction: Action {
             .join(path);
 
         if file_path.is_dir() {
-            return Err(anyhow!(
-                "Expected a file, but found a directory"
-            ));
+            return Err(anyhow!("Expected a file, but found a directory"));
         }
 
         std::fs::read(file_path.clone()).map_err(|e| match e.kind() {
