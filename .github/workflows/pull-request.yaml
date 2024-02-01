@@ -42,7 +42,7 @@ jobs:
           version: "0.22.0"
           args: "--workspace -- --test-threads 1"
 
-      - uses: codecov/codecov-action@v3
+      - uses: codecov/codecov-action@v4
 
   test:
     name: ${{ matrix.job.os }} (${{ matrix.job.target }})
