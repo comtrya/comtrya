@@ -228,11 +228,8 @@ impl<E: std::error::Error> From<E> for ActionError {
 
 pub trait Action {
     fn summarize(&self) -> String {
-        warn!(
-            "not found action summarize: {}",
-            std::any::type_name_of_val(self)
-        );
-        format!("{:?}", std::any::type_name_of_val(self))
+        warn!("need to define action summarize");
+        format!("not found action summarize")
     }
     fn plan(&self, manifest: &Manifest, context: &Contexts) -> anyhow::Result<Vec<Step>>;
 }
