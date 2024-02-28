@@ -250,6 +250,7 @@ impl ComtryaCommand for Apply {
                             break;
                         }
                     }
+                    info!("{}", action.summarize());
                     span_action.exit();
                 }
 

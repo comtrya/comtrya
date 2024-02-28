@@ -27,7 +27,7 @@ use rhai::Engine;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
-use tracing::error;
+use tracing::{error, warn};
 use user::add::UserAdd;
 
 use self::user::add_group::UserAddGroup;
@@ -58,6 +58,10 @@ impl<T> Action for ConditionalVariantAction<T>
 where
     T: Action,
 {
+    fn summarize(&self) -> String {
+        self.action.summarize()
+    }
+
     fn plan(&self, manifest: &Manifest, context: &Contexts) -> Result<Vec<Step>, anyhow::Error> {
         let engine = Engine::new();
         let mut scope = crate::contexts::to_rhai(context);
@@ -69,7 +73,6 @@ where
 
             // .unwrap() is safe here because we checked for None above
             let condition = variant.condition.clone().unwrap();
-
             match engine.eval_with_scope::<bool>(&mut scope, condition.as_str()) {
                 Ok(b) => b,
                 Err(error) => {
@@ -224,6 +227,13 @@ impl<E: std::error::Error> From<E> for ActionError {
 }
 
 pub trait Action {
+    fn summarize(&self) -> String {
+        warn!(
+            "not found action summarize: {}",
+            std::any::type_name_of_val(self)
+        );
+        format!("{:?}", std::any::type_name_of_val(self))
+    }
     fn plan(&self, manifest: &Manifest, context: &Contexts) -> anyhow::Result<Vec<Step>>;
 }
 

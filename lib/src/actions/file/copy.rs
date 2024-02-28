@@ -35,6 +35,9 @@ impl FileCopy {}
 impl FileAction for FileCopy {}
 
 impl Action for FileCopy {
+    fn summarize(&self) -> String {
+        format!("copy file from {} to {}", self.from, self.to)
+    }
     fn plan(
         &self,
         manifest: &Manifest,
@@ -84,7 +87,6 @@ impl Action for FileCopy {
 
         let path = PathBuf::from(&self.to);
         let parent = path.clone();
-
         let mut steps = vec![
             Step {
                 atom: Box::new(DirCreate {
