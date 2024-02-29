@@ -33,11 +33,14 @@ actions:
       - hello, vanilla Linux!
     variants:
       - where: os.family == "unix"
-        command: echo Hi, Unix
+        command: echo
+        args: ["Hi,", "Unix"]
       - where: os.distribution == "Ubuntu"
-        command: echo Hi, Ubuntu
+        command: echo
+        args: ["Hi,", "Ubuntu"]
       - where: os.bitness == "64-bit"
-        command: echo Hi, 64 bit!
+        command: echo
+        args: ["Hi,", "64 bit!"]
 ```
 
 Lastly, the `where` clause can be used to selectively skip or run tasks:
