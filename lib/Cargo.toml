@@ -8,14 +8,14 @@ description = "Contains the interfaces for comtrya plugins"
 
 [dependencies]
 anyhow = "1.0"
-age = { version = "0.9", features = ["armor"] }
+age = { version = "0.10", features = ["armor"] }
 dirs-next = "2.0"
 file_diff = "1.0"
 gethostname = "0.4"
 gitsync = "0.1"
 ignore = "0.4"
-normpath = "1.1"
-octocrab = "0.33"
+normpath = "1.2"
+octocrab = "0.34"
 os_info = "3.7"
 petgraph = "0.6"
 rand = "0.8"
@@ -30,7 +30,7 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_yaml = "0.9"
 sha256 = "1.5"
-tokio = "1.35"
+tokio = "1.36"
 toml = "0.8"
 tera = "1.18"
 tracing = "0.1"
@@ -49,5 +49,5 @@ version="0.9"
 features = ["vendored"]
 
 [dev-dependencies]
-tempfile = "3.9"
+tempfile = "3.10"
 pretty_assertions = "1.3"
