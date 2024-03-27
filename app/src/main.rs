@@ -1,11 +1,13 @@
+use std::io;
+
 use commands::ComtryaCommand;
 
 use comtrya_lib::contexts::build_contexts;
 use comtrya_lib::contexts::Contexts;
 use comtrya_lib::manifests;
 use structopt::StructOpt;
-use tracing::{error, Level, Subscriber};
-use tracing_subscriber::FmtSubscriber;
+use tracing::{error, Level};
+use tracing_subscriber::{fmt::writer::MakeWriterExt, layer::SubscriberExt, FmtSubscriber};
 
 mod commands;
 mod config;
@@ -58,26 +60,34 @@ pub(crate) fn execute(runtime: Runtime) -> anyhow::Result<()> {
     }
 }
 
-fn configure_subscriber(args: &GlobalArgs) -> impl Subscriber {
+fn configure_tracing(args: &GlobalArgs) {
+    let stdout_writer = match args.verbose {
+        0 => io::stdout.with_max_level(tracing::Level::INFO),
+        1 => io::stdout.with_max_level(tracing::Level::DEBUG),
+        _ => io::stdout.with_max_level(tracing::Level::TRACE),
+    };
+
     let builder = FmtSubscriber::builder()
-        .with_max_level(Level::INFO)
+        .with_max_level(Level::TRACE)
         .with_ansi(!args.no_color)
         .with_target(false)
+        .with_writer(stdout_writer)
         .without_time();
 
-    match args.verbose {
-        0 => builder,
-        1 => builder.with_max_level(Level::DEBUG),
-        _ => builder.with_max_level(Level::TRACE),
+    #[cfg(target_os = "linux")]
+    if let Ok(layer) = tracing_journald::layer() {
+        tracing::subscriber::set_global_default(builder.finish().with(layer))
+            .expect("Unable to set a global subscriber");
+        return;
     }
-    .finish()
+
+    tracing::subscriber::set_global_default(builder.finish())
+        .expect("Unable to set a global subscriber");
 }
 
 #[paw::main]
 fn main(args: GlobalArgs) -> anyhow::Result<()> {
-    let subscriber = configure_subscriber(&args);
-
-    tracing::subscriber::set_global_default(subscriber).expect("setting default subscriber failed");
+    configure_tracing(&args);
 
     let config = match load_config(args.clone()) {
         Ok(config) => config,
