@@ -7,7 +7,7 @@ on:
       - "main"
 
 env:
-  MIN_SUPPORTED_RUST_VERSION: "1.70.0"
+  MIN_SUPPORTED_RUST_VERSION: "1.77.0"
   CICD_INTERMEDIATES_DIR: "_cicd-intermediates"
   CARGO_TERM_COLOR: always
   #Fix these up soon
@@ -124,7 +124,7 @@ jobs:
           target: ${{ matrix.platform.target }}
           toolchain: stable
           args: "--release"
-          
+
       - name: Rename Binary
         if: matrix.platform.target != 'x86_64-pc-windows-msvc'
         shell: bash
