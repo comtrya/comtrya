@@ -229,7 +229,7 @@ impl<E: std::error::Error> From<E> for ActionError {
 pub trait Action {
     fn summarize(&self) -> String {
         warn!("need to define action summarize");
-        format!("not found action summarize")
+        "not found action summarize".to_string()
     }
     fn plan(&self, manifest: &Manifest, context: &Contexts) -> anyhow::Result<Vec<Step>>;
 }
@@ -251,7 +251,7 @@ actions:
     - where: Debian
       command: halt
 "#;
-        let m: Manifest = serde_yaml::from_str(content).unwrap();
+        let m: Manifest = serde_yml::from_str(content).unwrap();
 
         let action = &m.actions[0];
 

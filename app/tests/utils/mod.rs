@@ -7,7 +7,6 @@ use std::{
 };
 
 // re-export for all modules to share
-pub use predicates::{prelude::PredicateBooleanExt, str::contains as c};
 use std::path::PathBuf;
 
 pub(crate) struct Dir {
