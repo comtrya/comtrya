@@ -7,6 +7,8 @@ use comtrya_lib::contexts::Contexts;
 use comtrya_lib::manifests;
 use structopt::StructOpt;
 use tracing::{error, Level};
+
+#[allow(unused_imports)]
 use tracing_subscriber::{fmt::writer::MakeWriterExt, layer::SubscriberExt, FmtSubscriber};
 
 mod commands;
