@@ -1,8 +1,10 @@
 use super::ComtryaCommand;
 use crate::Runtime;
-use structopt::StructOpt;
 
-#[derive(Clone, Debug, StructOpt)]
+use clap::Parser;
+
+#[derive(Parser, Debug)]
+#[command()]
 pub(crate) struct Version {}
 
 impl ComtryaCommand for Version {

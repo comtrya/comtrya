@@ -1,25 +1,26 @@
 use super::ComtryaCommand;
 use crate::Runtime;
+use clap::Parser;
 use comtrya_lib::contexts::to_rhai;
 use comtrya_lib::manifests::{load, Manifest};
 use core::panic;
 use petgraph::{visit::DfsPostOrder, Graph};
 use rhai::Engine;
 use std::{collections::HashMap, ops::Deref};
-use structopt::StructOpt;
 use tracing::{debug, error, info, instrument, span, trace, warn};
 
-#[derive(Clone, Debug, StructOpt)]
+#[derive(Parser, Debug)]
 pub(crate) struct Apply {
     /// Run a subset of your manifests, comma separated list
-    #[structopt(short = "m", long, use_delimiter = true)]
+    #[arg(short, long, value_delimiter = ',')]
     manifests: Vec<String>,
 
     /// Performs a dry-run without changing the system
-    #[structopt(long)]
+    #[arg(long)]
     dry_run: bool,
 
-    #[structopt(short = "l", long = "label")]
+    /// Define label selector
+    #[arg(short, long)]
     pub label: Option<String>,
 }
 

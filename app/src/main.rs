@@ -2,10 +2,11 @@ use std::io;
 
 use commands::ComtryaCommand;
 
+use clap::{Parser, Subcommand};
 use comtrya_lib::contexts::build_contexts;
 use comtrya_lib::contexts::Contexts;
 use comtrya_lib::manifests;
-use structopt::StructOpt;
+
 use tracing::{error, Level};
 
 #[allow(unused_imports)]
@@ -13,31 +14,30 @@ use tracing_subscriber::{fmt::writer::MakeWriterExt, layer::SubscriberExt, FmtSu
 
 mod commands;
 mod config;
-use config::{load_config, Config};
 
-#[derive(Clone, Debug, structopt::StructOpt)]
-#[structopt(name = "comtrya")]
-pub(crate) struct GlobalArgs {
-    /// Directory
-    #[structopt(short = "d", long)]
+use config::{load_config, Config};
+#[derive(Parser, Debug)]
+#[command(version, about, name="comtrya", long_about = None)]
+struct GlobalArgs {
+    #[arg(short = 'd', long)]
     pub manifest_directory: Option<String>,
 
     /// Disable color printing
-    #[structopt(long = "no-color")]
+    #[arg(long)]
     pub no_color: bool,
 
     /// Debug & tracing mode (-v, -vv)
-    #[structopt(short = "v", long = "verbose", parse(from_occurrences))]
-    pub verbose: u8,
+    #[arg(short, action = clap::ArgAction::Count)]
+    verbose: u8,
 
-    #[structopt(subcommand)]
-    pub command: Commands,
+    #[command(subcommand)]
+    command: Commands,
 }
 
-#[derive(Clone, Debug, StructOpt)]
-pub(crate) enum Commands {
+#[derive(Debug, Subcommand)]
+enum Commands {
     /// Apply manifests
-    #[structopt(aliases = &["do", "run"])]
+    #[clap(aliases = &["do", "run"])]
     Apply(commands::Apply),
 
     /// Print version information
@@ -47,7 +47,7 @@ pub(crate) enum Commands {
     Contexts(commands::Contexts),
 }
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct Runtime {
     pub(crate) args: GlobalArgs,
     pub(crate) config: Config,
@@ -87,11 +87,11 @@ fn configure_tracing(args: &GlobalArgs) {
         .expect("Unable to set a global subscriber");
 }
 
-#[paw::main]
-fn main(args: GlobalArgs) -> anyhow::Result<()> {
+fn main() -> anyhow::Result<()> {
+    let args = GlobalArgs::parse();
     configure_tracing(&args);
 
-    let config = match load_config(args.clone()) {
+    let config = match load_config(&args) {
         Ok(config) => config,
         Err(error) => {
             error!("{}", error.to_string());
