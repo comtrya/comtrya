@@ -45,6 +45,14 @@ enum Commands {
 
     /// List available contexts (BETA)
     Contexts(commands::Contexts),
+
+    /// Auto generate completions
+    ///
+    /// for examples:
+    ///  - bash: ```source <(comtrya gen-completions bash)```
+    ///  - fish: ```comtrya gen-completions fish | source```
+    #[command(long_about, verbatim_doc_comment)]
+    GenCompletions(commands::GenCompletions),
 }
 
 #[derive(Debug)]
@@ -59,6 +67,7 @@ pub(crate) fn execute(runtime: Runtime) -> anyhow::Result<()> {
         Commands::Apply(apply) => apply.execute(&runtime),
         Commands::Version(version) => version.execute(&runtime),
         Commands::Contexts(contexts) => contexts.execute(&runtime),
+        Commands::GenCompletions(gen_completions) => gen_completions.execute(&runtime),
     }
 }
 
