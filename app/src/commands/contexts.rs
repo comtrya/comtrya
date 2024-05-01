@@ -5,8 +5,7 @@ use comfy_table::{presets::NOTHING, Attribute, Cell, ContentArrangement, Table};
 
 use clap::Parser;
 
-#[derive(Parser, Debug)]
-#[command()]
+#[derive(Parser, Debug, PartialEq)]
 pub(crate) struct Contexts {
     /// Show the values of the contexts
     #[arg(long)]

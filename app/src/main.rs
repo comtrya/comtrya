@@ -1,8 +1,7 @@
 use std::io;
 
-use commands::ComtryaCommand;
+use clap::Parser;
 
-use clap::{Parser, Subcommand};
 use comtrya_lib::contexts::build_contexts;
 use comtrya_lib::contexts::Contexts;
 use comtrya_lib::manifests;
@@ -16,7 +15,8 @@ mod commands;
 mod config;
 
 use config::{load_config, Config};
-#[derive(Parser, Debug)]
+
+#[derive(Parser, Debug, PartialEq)]
 #[command(version, about, name="comtrya", long_about = None)]
 struct GlobalArgs {
     #[arg(short = 'd', long)]
@@ -31,35 +31,13 @@ struct GlobalArgs {
     verbose: u8,
 
     #[command(subcommand)]
-    command: Commands,
-}
-
-#[derive(Debug, Subcommand)]
-enum Commands {
-    /// Apply manifests
-    #[clap(aliases = &["do", "run"])]
-    Apply(commands::Apply),
-
-    /// Print version information
-    Version(commands::Version),
-
-    /// List available contexts (BETA)
-    Contexts(commands::Contexts),
+    command: commands::Commands,
 }
 
 #[derive(Debug)]
 pub struct Runtime {
-    pub(crate) args: GlobalArgs,
     pub(crate) config: Config,
     pub(crate) contexts: Contexts,
-}
-
-pub(crate) fn execute(runtime: Runtime) -> anyhow::Result<()> {
-    match &runtime.args.command {
-        Commands::Apply(apply) => apply.execute(&runtime),
-        Commands::Version(version) => version.execute(&runtime),
-        Commands::Contexts(contexts) => contexts.execute(&runtime),
-    }
 }
 
 fn configure_tracing(args: &GlobalArgs) {
@@ -89,6 +67,7 @@ fn configure_tracing(args: &GlobalArgs) {
 
 fn main() -> anyhow::Result<()> {
     let args = GlobalArgs::parse();
+
     configure_tracing(&args);
 
     let config = match load_config(&args) {
@@ -105,14 +84,9 @@ fn main() -> anyhow::Result<()> {
 
     // Run Context Providers
     let contexts = build_contexts(&config);
+    let runtime = Runtime { config, contexts };
 
-    let runtime = Runtime {
-        args,
-        config,
-        contexts,
-    };
-
-    execute(runtime)?;
+    args.command.execute(&runtime)?;
 
     Ok(())
 }

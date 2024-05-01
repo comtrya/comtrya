@@ -9,7 +9,7 @@ use rhai::Engine;
 use std::{collections::HashMap, ops::Deref};
 use tracing::{debug, error, info, instrument, span, trace, warn};
 
-#[derive(Parser, Debug)]
+#[derive(Parser, Debug, PartialEq)]
 pub(crate) struct Apply {
     /// Run a subset of your manifests, comma separated list
     #[arg(short, long, value_delimiter = ',')]

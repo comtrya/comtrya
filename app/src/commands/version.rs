@@ -3,8 +3,7 @@ use crate::Runtime;
 
 use clap::Parser;
 
-#[derive(Parser, Debug)]
-#[command()]
+#[derive(Parser, Debug, PartialEq)]
 pub(crate) struct Version {}
 
 impl ComtryaCommand for Version {
