@@ -5,9 +5,9 @@ pub use comtrya_lib::config::Config;
 use tracing::instrument;
 
 #[instrument(name = "load_config", level = "info")]
-pub(crate) fn load_config(args: GlobalArgs) -> Result<Config> {
+pub(crate) fn load_config(args: &GlobalArgs) -> Result<Config> {
     match lib_config() {
-        Ok(config) => match args.manifest_directory {
+        Ok(config) => match args.manifest_directory.clone() {
             Some(manifest_path) => Ok(Config {
                 manifest_paths: vec![manifest_path],
                 ..config

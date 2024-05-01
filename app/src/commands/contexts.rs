@@ -2,12 +2,14 @@ use super::ComtryaCommand;
 use crate::Runtime;
 use colored::Colorize;
 use comfy_table::{presets::NOTHING, Attribute, Cell, ContentArrangement, Table};
-use structopt::StructOpt;
 
-#[derive(Clone, Debug, StructOpt)]
+use clap::Parser;
+
+#[derive(Parser, Debug)]
+#[command()]
 pub(crate) struct Contexts {
     /// Show the values of the contexts
-    #[structopt(long)]
+    #[arg(long)]
     show_values: bool,
 }
 
