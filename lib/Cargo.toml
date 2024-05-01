@@ -15,7 +15,7 @@ gethostname = "0.4"
 gitsync = "0.1"
 ignore = "0.4"
 normpath = "1.2"
-octocrab = "0.37"
+octocrab = "0.38"
 os_info = "3.7"
 petgraph = "0.6"
 rand = "0.8"
@@ -24,7 +24,7 @@ reqwest = { version = "0.12", default-features = false, features = [
     "blocking",
     "rustls-tls",
 ] }
-rhai = { version = "1.17", features = ["serde"] }
+rhai = { version = "1.18", features = ["serde"] }
 schemars = "0.8"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
@@ -39,10 +39,10 @@ walkdir = "2.3"
 which = "6.0"
 whoami = "1.4"
 tar = "0.4.40"
-flate2 = "1.0.28"
+flate2 = "1.0.30"
 
 [target.'cfg(unix)'.dependencies]
-uzers = "0.11"
+uzers = "0.12"
 
 [dependencies.openssl-sys]
 version="0.9"

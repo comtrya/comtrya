@@ -13,7 +13,7 @@ colored = "2.1"
 comfy-table = "7"
 comtrya-lib = { path = "../lib", version = "0.8.8" }
 petgraph = "0.6"
-rhai = { version = "1.17", features = ["serde"] }
+rhai = { version = "1.18", features = ["serde"] }
 strip-ansi-escapes = "0.2"
 tracing = "0.1"
 tracing-journald = "0.3.0"
