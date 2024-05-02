@@ -1,11 +1,13 @@
 use super::ComtryaCommand;
 use crate::Runtime;
 use clap::Parser;
+use comfy_table::{Cell, ContentArrangement, Table};
 use comtrya_lib::contexts::to_rhai;
 use comtrya_lib::manifests::{load, Manifest};
 use core::panic;
 use petgraph::{visit::DfsPostOrder, Graph};
 use rhai::Engine;
+use std::path::PathBuf;
 use std::{collections::HashMap, ops::Deref};
 use tracing::{debug, error, info, instrument, span, trace, warn};
 
@@ -24,9 +26,8 @@ pub(crate) struct Apply {
     pub label: Option<String>,
 }
 
-impl ComtryaCommand for Apply {
-    #[instrument(skip(self, runtime))]
-    fn execute(&self, runtime: &Runtime) -> anyhow::Result<()> {
+impl Apply {
+    fn manifest_path(&self, runtime: &Runtime) -> anyhow::Result<PathBuf> {
         let first_manifest_path = runtime.config.manifest_paths.first().ok_or_else(|| {
             anyhow::anyhow!(
                 "No manifest paths found in config file, please add at least one path to your manifests"
@@ -44,9 +45,40 @@ impl ComtryaCommand for Apply {
         };
 
         trace!(manifests = self.manifests.join(",").deref(),);
+        Ok(manifest_path)
+    }
 
+    #[instrument(skip(self, runtime))]
+    pub fn status(&self, runtime: &Runtime) -> anyhow::Result<()> {
         let contexts = &runtime.contexts;
+        let manifest_path = self.manifest_path(&runtime)?;
 
+        println!("Load manifests from path: {:#?}", manifest_path);
+
+        let manifests = load(manifest_path, contexts);
+
+        let mut table = Table::new();
+        table
+            .set_content_arrangement(ContentArrangement::Dynamic)
+            .set_width(40)
+            .set_header(vec!["Manifest", "Count of Actions"]);
+
+        for (name, manifest) in manifests.iter() {
+            table.add_row(vec![
+                Cell::new(format!("{name}")),
+                Cell::new(format!("{}", manifest.actions.len())),
+            ]);
+        }
+        println!("{table}");
+        Ok(())
+    }
+}
+
+impl ComtryaCommand for Apply {
+    #[instrument(skip(self, runtime))]
+    fn execute(&self, runtime: &Runtime) -> anyhow::Result<()> {
+        let contexts = &runtime.contexts;
+        let manifest_path = self.manifest_path(&runtime)?;
         let manifests = load(manifest_path, contexts);
 
         // Build DAG
