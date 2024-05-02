@@ -24,6 +24,9 @@ pub enum Commands {
     #[clap(aliases = &["do", "run"])]
     Apply(Apply),
 
+    ///  List manifests status (ALPHA)
+    Status(Apply),
+
     /// Print version information
     Version(Version),
 
@@ -43,6 +46,7 @@ impl Commands {
     pub fn execute(self, runtime: &Runtime) -> anyhow::Result<()> {
         match self {
             Self::Apply(apply) => apply.execute(&runtime),
+            Self::Status(apply) => apply.status(&runtime),
             Self::Version(version) => version.execute(&runtime),
             Self::Contexts(contexts) => contexts.execute(&runtime),
             Self::GenCompletions(gen_completions) => gen_completions.execute(&runtime),
