@@ -8,13 +8,13 @@ description = "A tool to simplify reprovisioning a fresh OS. Installs packages a
 
 [dependencies]
 anyhow = "1.0"
-clap = { version = "4.5.4", features = ["derive"] }
-clap_complete = "4.5.2"
+clap = { version = "4.5.8", features = ["derive"] }
+clap_complete = "4.5.7"
 colored = "2.1"
 comfy-table = "7"
 comtrya-lib = { path = "../lib", version = "0.8.8" }
 petgraph = "0.6"
-rhai = { version = "1.18", features = ["serde"] }
+rhai = { version = "1.19", features = ["serde"] }
 strip-ansi-escapes = "0.2"
 tracing = "0.1"
 tracing-journald = "0.3.0"
