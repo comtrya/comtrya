@@ -68,7 +68,7 @@ impl PackageProvider for Aptitude {
             let key = repository.clone().key.unwrap();
 
             let key_name = key.name.unwrap_or_else(|| digest(&*key.url));
-            let key_path = format!("/usr/sharekeyrings/{}.asc", key_name);
+            let key_path = format!("/usr/share/keyrings/{}.asc", key_name);
 
             signed_by = format!("signed-by={}", key_path);
 
