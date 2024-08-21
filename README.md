@@ -1,8 +1,8 @@
 # Comtrya
 
-![Comtrya](/Comtrya.gif "Hello")
+![Comtrya](/help.webp "Hello")
 
-> This is better, yes?
+> See [#436](https://github.com/comtrya/comtrya/issues/436) for more detail
 
 ---
 
