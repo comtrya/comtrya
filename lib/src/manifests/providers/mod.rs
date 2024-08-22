@@ -3,9 +3,7 @@ use local::LocalManifestProvider;
 use std::path::PathBuf;
 
 pub fn register_providers() -> Vec<Box<dyn ManifestProvider>> {
-    vec![
-        Box::new(LocalManifestProvider),
-    ]
+    vec![Box::new(LocalManifestProvider)]
 }
 
 #[derive(Debug, PartialEq, Eq)]
