@@ -1,7 +1,6 @@
 pub mod command;
 pub mod directory;
 pub mod file;
-pub mod git;
 pub mod http;
 
 pub enum SideEffect {}
