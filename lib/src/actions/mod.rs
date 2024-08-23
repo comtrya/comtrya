@@ -2,7 +2,6 @@ mod binary;
 mod command;
 mod directory;
 mod file;
-mod git;
 mod group;
 mod macos;
 mod package;
@@ -19,7 +18,6 @@ use file::copy::FileCopy;
 use file::download::FileDownload;
 use file::link::FileLink;
 use file::remove::FileRemove;
-use git::GitClone;
 use group::add::GroupAdd;
 use macos::MacOSDefault;
 use package::{PackageInstall, PackageRepository};
@@ -136,9 +134,6 @@ pub enum Actions {
     )]
     BinaryGitHub(ConditionalVariantAction<BinaryGitHub>),
 
-    #[serde(rename = "git.clone")]
-    GitClone(ConditionalVariantAction<GitClone>),
-
     #[serde(rename = "group.add")]
     GroupAdd(ConditionalVariantAction<GroupAdd>),
 
@@ -168,7 +163,6 @@ impl Actions {
             Actions::FileCopy(a) => a,
             Actions::FileDownload(a) => a,
             Actions::FileLink(a) => a,
-            Actions::GitClone(a) => a,
             Actions::GroupAdd(a) => a,
             Actions::MacOSDefault(a) => a,
             Actions::PackageInstall(a) => a,
@@ -193,7 +187,6 @@ impl Display for Actions {
             Actions::FileRemove(_) => "file.remove",
             Actions::DirectoryRemove(_) => "directory.remove",
             Actions::BinaryGitHub(_) => "github.binary",
-            Actions::GitClone(_) => "git.clone",
             Actions::GroupAdd(_) => "group.add",
             Actions::MacOSDefault(_) => "macos.default",
             Actions::PackageInstall(_) => "package.install",
