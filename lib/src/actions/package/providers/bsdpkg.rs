@@ -66,7 +66,7 @@ impl PackageProvider for BsdPkg {
             Step {
                 atom: Box::new(Exec {
                     command: String::from("/usr/sbin/pkg"),
-                    arguments: vec![String::from("install"), String::from("-n")]
+                    arguments: vec![String::from("install"), String::from("-y")]
                         .into_iter()
                         .chain(package.extra_args.clone())
                         .chain(package.packages())
