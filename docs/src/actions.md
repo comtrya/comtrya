@@ -24,8 +24,10 @@ Comtrya provides multiple actions which are broken down into groups with the act
 - [Binary](./binary.md)
 - [Commands](./command.md)
 - [Files and Directories](./files-and-directories.md)
-- [Git](./git.md)
+- [Git](./git.md)[^note]
 - [Group](./group.md)
 - [macOS](./macos.md)
 - [Packages](./packages.md)
 - [User](./user.md)
+
+[^note]: Git actions will no longer be available in main or versions after 0.8.8.

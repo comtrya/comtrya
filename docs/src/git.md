@@ -2,6 +2,10 @@
 
 - git.clone
 
+## Deprecation notice
+
+This functionality will no longer be available in the main branch or versions of comtrya later than 0.8.8.
+
 ## git.clone
 
 Perform a git clone on a repository from github.
