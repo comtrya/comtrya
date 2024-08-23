@@ -8,6 +8,9 @@ title: "Bug:"
 **Description**
 Describe the bug in your own words.
 
+**Example manifest**
+Can you provide an example manifest that can demonstrate the problem?
+
 **Steps to reproduce**
 Step by step explanation. Please add the output of with `-vvv` flag enabled (be careful not to include any secrets from your config).
 
