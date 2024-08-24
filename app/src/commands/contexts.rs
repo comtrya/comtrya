@@ -15,9 +15,6 @@ pub(crate) struct Contexts {
 
 impl ComtryaCommand for Contexts {
     fn execute(&self, runtime: &Runtime) -> anyhow::Result<()> {
-        println!("{}", "This command is a BETA feature. If you have any feedback: https://github.com/comtrya/comtrya/issues/304".italic().bold());
-        println!();
-
         for (name, context) in runtime.contexts.iter() {
             println!("{}", name.to_string().underline().bold());
 
