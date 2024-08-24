@@ -110,7 +110,7 @@ jobs:
             target: aarch64-apple-darwin
             bin: comtrya
             name: comtrya-aarch64-apple-darwin
-            cross: true
+            cross: false
             cargo_command: ./cross
             skip_tests: false
     steps:
