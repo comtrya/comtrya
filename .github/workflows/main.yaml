@@ -106,7 +106,7 @@ jobs:
             cargo_command: cargo
             skip_tests: false
           - os_name: macOS-aarch64
-            os: macos-12
+            os: macos-14
             target: aarch64-apple-darwin
             bin: comtrya
             name: comtrya-aarch64-apple-darwin
