@@ -1,6 +1,6 @@
 [package]
 name = "comtrya"
-version = "0.8.8"
+version = "0.8.9"
 authors = ["David McKay <david@rawkode.dev>"]
 edition = "2021"
 license = "MIT"
@@ -12,7 +12,7 @@ clap = { version = "4.5.13", features = ["derive"] }
 clap_complete = "4.5.12"
 colored = "2.1"
 comfy-table = "7"
-comtrya-lib = { path = "../lib", version = "0.8.8" }
+comtrya-lib = { path = "../lib", version = "0.8.9" }
 petgraph = "0.6"
 rhai = { version = "1.19", features = ["serde"] }
 strip-ansi-escapes = "0.2"
