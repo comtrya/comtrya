@@ -74,7 +74,7 @@ jobs:
       matrix:
         platform:
           - os_name: Linux-x86_64-gnu
-            os: ubuntu-22.04
+            os: ubuntu-24.04
             target: x86_64-unknown-linux-gnu
             bin: comtrya
             name: comtrya-x86_64-unknown-linux-gnu
@@ -82,7 +82,7 @@ jobs:
             cargo_command: cargo
             skip_tests: false
           - os_name: Linux-aarch64-gnu
-            os: ubuntu-22.04
+            os: ubuntu-24.04
             target: aarch64-unknown-linux-gnu
             bin: comtrya
             name: comtrya-aarch64-unknown-linux-gnu
@@ -110,7 +110,7 @@ jobs:
             target: aarch64-apple-darwin
             bin: comtrya
             name: comtrya-aarch64-apple-darwin
-            cross: true
+            cross: false
             cargo_command: ./cross
             skip_tests: false
     steps:
