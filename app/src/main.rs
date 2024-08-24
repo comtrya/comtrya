@@ -43,7 +43,7 @@ enum Commands {
     /// Print version information
     Version(commands::Version),
 
-    /// List available contexts (BETA)
+    /// List available contexts
     Contexts(commands::Contexts),
 
     /// Auto generate completions
