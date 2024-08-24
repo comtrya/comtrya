@@ -4,6 +4,7 @@
 - [Supported Systems](./supported-systems.md)
 - [Installation](./installation.md)
 - [CLI](./cli.md)
+- [Commands](./commands.md)
 - [Manifests](./manifests.md)
   - [Actions](./actions.md)
 	- [Binary](./binary.md)
