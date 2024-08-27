@@ -1,7 +1,7 @@
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, path::PathBuf, vec};
-use tracing::{debug, instrument, trace};
+use tracing::{instrument, trace, warn};
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct Config {
@@ -62,7 +62,7 @@ fn find_configs() -> Option<PathBuf> {
         let local_config = cwd.join("Comtrya.yaml");
 
         if local_config.is_file() {
-            debug!("Comtrya.yaml found in current working directory");
+            warn!("Comtrya.yaml found in current working directory");
             return Some(local_config);
         }
         trace!("No Comtrya.yaml found in current working directory");
@@ -73,7 +73,7 @@ fn find_configs() -> Option<PathBuf> {
         let local_config = config_dir.join("Comtrya.yaml");
 
         if local_config.is_file() {
-            debug!("Comtrya.yaml found in users config directory");
+            warn!("Comtrya.yaml found in users config directory");
             return Some(local_config);
         }
         trace!("No Comtrya.yaml found in users config directory");
