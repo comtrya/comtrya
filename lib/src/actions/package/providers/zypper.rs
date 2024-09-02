@@ -72,7 +72,7 @@ mod test {
             list: vec![],
             extra_args: vec![],
             provider: PackageProviders::Zypper,
-						file: false,
+            file: false,
         });
 
         assert_eq!(steps.unwrap().len(), 1);
