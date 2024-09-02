@@ -6,6 +6,9 @@ use crate::manifests::Manifest;
 use crate::steps::Step;
 use std::ops::Deref;
 
+#[cfg(unix)]
+use tracing::debug;
+
 pub type UserAdd = User;
 
 impl Action for UserAdd {
@@ -16,6 +19,17 @@ impl Action for UserAdd {
 
         let mut atoms: Vec<Step> = vec![];
 
+        if variant.username.is_empty() {
+            return Ok(atoms);
+        }
+
+        #[cfg(unix)]
+        match uzers::get_user_by_name(&variant.username) {
+            Some(_user) => debug!(message = "User already exists", username = ?variant.username),
+            None => atoms.append(&mut provider.add_user(&variant)?),
+        }
+
+        #[cfg(not(unix))]
         atoms.append(&mut provider.add_user(&variant)?);
 
         Ok(atoms)
