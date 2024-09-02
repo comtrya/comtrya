@@ -1,3 +1,4 @@
+use super::providers::PackageProviders;
 use super::Package;
 use super::PackageVariant;
 use crate::actions::Action;
@@ -6,6 +7,7 @@ use crate::manifests::Manifest;
 use crate::steps::Step;
 use anyhow::anyhow;
 use std::ops::Deref;
+use tracing::debug;
 use tracing::span;
 
 pub type PackageInstall = Package;
@@ -32,6 +34,18 @@ impl Action for PackageInstall {
                     "Package Provider, {}, isn't available. Skipping action",
                     provider.name()
                 ));
+            }
+
+            if variant.file {
+                match variant.provider {
+                    PackageProviders::BsdPkg => debug!("Will attempt to install from local file."),
+                    _ => {
+                        return Err(anyhow!(
+                        "Package Provider, {}, isn't capabale of local file installs. Skipping action.",
+                        provider.name()
+                    ));
+                    }
+                }
             }
 
             atoms.append(&mut provider.bootstrap());

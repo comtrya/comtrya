@@ -62,6 +62,23 @@ impl PackageProvider for BsdPkg {
     }
 
     fn install(&self, package: &PackageVariant) -> anyhow::Result<Vec<Step>> {
+        if package.file {
+            return Ok(vec![Step {
+                atom: Box::new(Exec {
+                    command: String::from("/usr/sbin/pkg"),
+                    arguments: vec![String::from("add")]
+                        .into_iter()
+                        .chain(package.extra_args.clone())
+                        .chain(package.packages())
+                        .collect(),
+                    privileged: true,
+                    ..Default::default()
+                }),
+                initializers: vec![],
+                finalizers: vec![],
+            }]);
+        }
+
         Ok(vec![
             Step {
                 atom: Box::new(Exec {

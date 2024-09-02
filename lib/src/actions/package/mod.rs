@@ -32,6 +32,9 @@ pub struct Package {
 
     #[serde(default)]
     variants: HashMap<os_info::Type, PackageVariant>,
+
+    #[serde(default)]
+    file: bool,
 }
 
 #[derive(JsonSchema, Clone, Debug, Default, Serialize, Deserialize)]
@@ -46,6 +49,9 @@ pub struct PackageVariant {
 
     #[serde(default)]
     extra_args: Vec<String>,
+
+    #[serde(default)]
+    file: bool,
 }
 
 impl PackageVariant {
@@ -71,6 +77,7 @@ impl From<&Package> for PackageVariant {
                 list: package.list.clone(),
                 provider: package.provider.clone(),
                 extra_args: package.extra_args.clone(),
+                file: package.file.clone(),
             };
         };
 
@@ -84,6 +91,7 @@ impl From<&Package> for PackageVariant {
             list: package.list.clone(),
             provider: variant.provider.clone(),
             extra_args: variant.extra_args.clone(),
+            file: package.file.clone(),
         };
 
         if variant.name.is_some() {
