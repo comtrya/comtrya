@@ -30,13 +30,15 @@ Some package manager providers can implement a `bootstrap` method that will auto
 
 ## package.install
 
-| Key        | Type   | Optional | Description                                    |
-|:-----------|:-------|:---------|:-----------------------------------------------|
-| action     | string | no       | `package.install`                              |
-| name       | string | no       | name of target package                         |
-| list       | list   | yes      | list of multiple packages                      |
-| provider   | string | yes      | Specify package provider                       |
-| repository | string | yes      | specific repository for a provider and package |
+| Key        | Type   | Optional | Description                                                                        |
+|:-----------|:-------|:---------|:-----------------------------------------------------------------------------------|
+| action     | string | no       | `package.install`                                                                  |
+| name       | string | no       | name of target package                                                             |
+| list       | list   | yes      | list of multiple packages                                                          |
+| provider   | string | yes      | Specify package provider                                                           |
+| repository | string | yes      | specific repository for a provider and package                                     |
+| file       | bool   | yes      | Specify that package is a local package on the file system.                        |
+|            |        |          | Default value is `false`                                                           |
 
 
 ### Example
@@ -62,4 +64,21 @@ Some package manager providers can implement a `bootstrap` method that will auto
   name: blox
   provider: homebrew
   repository: cueblox/tap
+```
+
+### Local package install support
+
+Some package providers allow for the ability to install a package from the local file system. An example of this would be `.pkg` files that can be utilized with FreeBSD's package manager `pkg`. As of this time, it requires that the file property be set in the action's definition.
+
+List of supported package providers:
+- pkg (FreeBSD)
+
+If you would like to have this feature supported on another package provider, please open an issue at the [comtrya github](https://github.com/comtrya/comtrya).
+
+#### Example
+
+```
+- action: package.instal
+  name: /some/path/to/file/nano-8.1.pkg
+  file: true
 ```
