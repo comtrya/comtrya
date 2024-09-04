@@ -195,4 +195,30 @@ mod test {
 
         assert_eq!(steps.unwrap().len(), 3);
     }
+
+    #[test]
+    fn test_regression_share_ring() {
+        let aptitude = Aptitude {};
+        let steps = aptitude.add_repository(&PackageRepository {
+            name: String::from("test"),
+            key: Some(RepositoryKey {
+                url: String::from("abc"),
+                fingerprint: Some(String::from("abc")),
+                ..Default::default()
+            }),
+            ..Default::default()
+        });
+
+        let steps = match steps {
+            Ok(s) => s,
+            Err(_) => vec![],
+        };
+
+        if let Some(step) = steps.first() {
+            let exec = step.atom.to_string();
+            assert!(exec.contains(" /usr/share/keyrings/"));
+        } else {
+            assert!(false);
+        }
+    }
 }
