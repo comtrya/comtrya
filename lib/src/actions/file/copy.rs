@@ -14,7 +14,10 @@ use tera::Tera;
 
 #[derive(JsonSchema, Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct FileCopy {
+		#[serde(alias = "source")]
     pub from: String,
+
+		#[serde(alias = "target")]
     pub to: String,
 
     #[serde(default = "default_chmod", deserialize_with = "from_octal")]
