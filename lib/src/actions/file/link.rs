@@ -117,6 +117,10 @@ impl FileLink {
 impl FileAction for FileLink {}
 
 impl Action for FileLink {
+		fn summarize(&self) -> String {
+				format!("Linking file {} to {}", self.from.clone().unwrap_or(String::from("unknown")), self.to.clone().unwrap_or(String::from("unknown")))
+		}
+		
     fn plan(&self, manifest: &Manifest, _: &Contexts) -> anyhow::Result<Vec<Step>> {
         let from: PathBuf = self.resolve(manifest, self.source().as_str())?;
 

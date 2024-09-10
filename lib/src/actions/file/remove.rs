@@ -17,6 +17,10 @@ impl FileRemove {}
 impl FileAction for FileRemove {}
 
 impl Action for FileRemove {
+		fn summarize(&self) -> String {
+				format!("Removing file {}", self.target)
+		}
+		
     fn plan(
         &self,
         _: &crate::manifests::Manifest,

@@ -12,6 +12,10 @@ pub struct DirectoryCreate {
 }
 
 impl Action for DirectoryCreate {
+		fn summarize(&self) -> String {
+				format!("Creating directory {}", self.path)
+		}
+		
     fn plan(&self, _: &Manifest, _context: &Contexts) -> anyhow::Result<Vec<Step>> {
         Ok(vec![Step {
             atom: Box::new(DirectoryCreateAtom {

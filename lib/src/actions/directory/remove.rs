@@ -18,6 +18,10 @@ impl DirectoryRemove {}
 impl DirectoryAction for DirectoryRemove {}
 
 impl Action for DirectoryRemove {
+		fn summarize(&self) -> String {
+				format!("Removing directory {}", self.target)
+		}
+		
     fn plan(
         &self,
         _manifest: &crate::manifests::Manifest,

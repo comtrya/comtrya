@@ -29,6 +29,10 @@ fn get_cwd() -> String {
 }
 
 impl Action for RunCommand {
+		fn summarize(&self) -> String {
+				format!("Running {} command", self.command)
+		}
+		
     fn plan(&self, _: &Manifest, _: &Contexts) -> anyhow::Result<Vec<Step>> {
         use crate::atoms::command::Exec;
 
