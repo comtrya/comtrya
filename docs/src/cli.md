@@ -45,8 +45,9 @@ Usage: comtrya [OPTIONS] <COMMAND>
 
 Commands:
   apply            Apply manifests
+  status           List manifests status (ALPHA)
   version          Print version information
-  contexts         List available contexts (BETA)
+  contexts         List available contexts
   gen-completions  Auto generate completions
   help             Print this message or the help of the given subcommand(s)
 

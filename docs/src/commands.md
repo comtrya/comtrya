@@ -13,6 +13,7 @@ The primary command of use will be the apply command, which will apply the actio
 | Command         | Description                                  |
 |:----------------|:---------------------------------------------|
 | apply           | Apply manifests                              |
+| status          | List manifest status                         |
 | version         | Print version information                    |
 | contexts        | List available contexts                      |
 | gen-completions | Auto generate completions                    |
@@ -74,4 +75,20 @@ You can also view the values that these contexts have by passing in a `show-valu
 
 ```
 comtrya contexts --show-values
+```
+
+## Status
+
+Provides an overview of manifests.
+
+```
++-------------------+------------------+
+| Manifest          | Count of Actions |
++======================================+
+| kubectl.krew      | 3                |
+|-------------------+------------------|
+| kubectl.kubesess  | 3                |
+|-------------------+------------------|
+| kdash.kdash       | 1                |
++-------------------+------------------+
 ```
