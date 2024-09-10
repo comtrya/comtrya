@@ -36,8 +36,9 @@ impl FileAction for FileCopy {}
 
 impl Action for FileCopy {
     fn summarize(&self) -> String {
-        format!("copy file from {} to {}", self.from, self.to)
+        format!("Copy file from {} to {}", self.from, self.to)
     }
+
     fn plan(
         &self,
         manifest: &Manifest,
