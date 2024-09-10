@@ -40,6 +40,9 @@ enum Commands {
     #[clap(aliases = &["do", "run"])]
     Apply(commands::Apply),
 
+    ///  List manifests status (ALPHA)
+    Status(commands::Apply),
+
     /// Print version information
     Version(commands::Version),
 
@@ -65,6 +68,7 @@ pub struct Runtime {
 pub(crate) fn execute(runtime: Runtime) -> anyhow::Result<()> {
     match &runtime.args.command {
         Commands::Apply(apply) => apply.execute(&runtime),
+        Commands::Status(apply) => apply.status(&runtime),
         Commands::Version(version) => version.execute(&runtime),
         Commands::Contexts(contexts) => contexts.execute(&runtime),
         Commands::GenCompletions(gen_completions) => gen_completions.execute(&runtime),
