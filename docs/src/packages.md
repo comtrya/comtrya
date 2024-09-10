@@ -72,6 +72,7 @@ Some package providers allow for the ability to install a package from the local
 
 List of supported package providers:
 - pkg (FreeBSD)
+- aptitude (debian/ubuntu)
 
 If you would like to have this feature supported on another package provider, please open an issue at the [comtrya github](https://github.com/comtrya/comtrya).
 
