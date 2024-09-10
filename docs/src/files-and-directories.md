@@ -53,6 +53,7 @@ This action will download a file.
 | from   | string | no       | source location  |
 | to     | string | no       | destination file |
 
+An alias also exists such that `source` can be used in lieu of `from` and `target` can be used in lieu of `to`.
 
 ### Example
 

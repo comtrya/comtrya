@@ -14,7 +14,10 @@ use tera::Tera;
 
 #[derive(JsonSchema, Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct FileCopy {
+    #[serde(alias = "source")]
     pub from: String,
+
+    #[serde(alias = "target")]
     pub to: String,
 
     #[serde(default = "default_chmod", deserialize_with = "from_octal")]
@@ -86,7 +89,14 @@ impl Action for FileCopy {
         use crate::atoms::directory::Create as DirCreate;
         use crate::atoms::file::{Chmod, Create, SetContents};
 
-        let path = PathBuf::from(&self.to);
+        let mut path = PathBuf::from(&self.to);
+
+        if path.is_dir() {
+            if let Some(file_name) = PathBuf::from(self.from.clone()).file_name() {
+                path = path.join(file_name);
+            }
+        }
+
         let parent = path.clone();
         let mut steps = vec![
             Step {
