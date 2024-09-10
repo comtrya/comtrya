@@ -29,10 +29,10 @@ impl FileDownload {}
 impl FileAction for FileDownload {}
 
 impl Action for FileDownload {
-		fn summarize(&self) -> String {
-				format!("Downloading file {} to {}", self.from, self.to)
-		}
-		
+    fn summarize(&self) -> String {
+        format!("Downloading file {} to {}", self.from, self.to)
+    }
+
     fn plan(&self, _manifest: &Manifest, _context: &Contexts) -> anyhow::Result<Vec<Step>> {
         use crate::atoms::directory::Create as DirCreate;
         use crate::atoms::file::Chmod;

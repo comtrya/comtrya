@@ -29,10 +29,10 @@ pub struct RepositoryKey {
 }
 
 impl Action for PackageRepository {
-		fn summarize(&self) -> String {
-				format!("Adding repository {}", self.name)
-		}
-		
+    fn summarize(&self) -> String {
+        format!("Adding repository {}", self.name)
+    }
+
     fn plan(&self, _manifest: &Manifest, _context: &Contexts) -> anyhow::Result<Vec<Step>> {
         let box_provider = self.provider.clone().get_provider();
         let provider = box_provider.deref();

@@ -9,10 +9,10 @@ use std::ops::Deref;
 pub type GroupAdd = Group;
 
 impl Action for GroupAdd {
-		fn summarize(&self) -> String {
-				format!("Creating group {}", self.group_name)
-		}
-		
+    fn summarize(&self) -> String {
+        format!("Creating group {}", self.group_name)
+    }
+
     fn plan(&self, _manifest: &Manifest, _context: &Contexts) -> anyhow::Result<Vec<Step>> {
         let variant: GroupVariant = self.into();
         let box_provider = variant.provider.clone().get_provider();
