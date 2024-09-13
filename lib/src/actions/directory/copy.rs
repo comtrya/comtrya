@@ -44,7 +44,11 @@ impl Action for DirectoryCopy {
     }
 
     fn plan(&self, manifest: &Manifest, _context: &Contexts) -> anyhow::Result<Vec<Step>> {
-        let from: String = self.resolve(manifest, &self.from).display().to_string();
+        let mut from: String = self.resolve(manifest, &self.from).display().to_string();
+
+        if self.to.ends_with("/") {
+            from += "/."
+        }
 
         Ok(vec![
             Step {
