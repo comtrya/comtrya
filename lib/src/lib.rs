@@ -5,5 +5,5 @@ pub mod contexts;
 pub mod manifests;
 pub mod steps;
 pub mod tera_functions;
-pub mod values;
 mod utilities;
+pub mod values;

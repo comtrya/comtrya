@@ -1,9 +1,9 @@
 use crate::atoms::Outcome;
 
 use super::super::Atom;
+use crate::utilities;
 use anyhow::anyhow;
 use tracing::debug;
-use crate::utilities;
 
 #[derive(Default)]
 pub struct Exec {
