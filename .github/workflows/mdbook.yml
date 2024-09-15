@@ -49,6 +49,7 @@ jobs:
   upload:
     if: ${{ github.repository_owner == 'comtrya' }}
     runs-on: ubuntu-latest
+    needs: build
     steps:
       - name: Restore cached docs
         id: cache-mdbook-restore
@@ -71,7 +72,7 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
-    needs: build
+    needs: upload
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
