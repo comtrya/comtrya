@@ -1,6 +1,7 @@
 use crate::atoms::Outcome;
 
 use super::super::Atom;
+use crate::utilities;
 use anyhow::anyhow;
 use tracing::debug;
 
@@ -105,6 +106,9 @@ impl Atom for Exec {
 
     fn execute(&mut self) -> anyhow::Result<()> {
         let (command, arguments) = self.elevate_if_required();
+
+        let command = utilities::get_binary_path(&command)
+            .or_else(|_| Err(anyhow!("Command `{}` not found in path", command)))?;
 
         // If we require root, we need to use sudo with inherited IO
         // to ensure the user can respond if prompted for a password
