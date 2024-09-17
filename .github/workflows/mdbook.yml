@@ -27,6 +27,7 @@ concurrency:
 jobs:
   # Build job
   build:
+    if: ${{ github.repository_owner == 'comtrya' }}
     runs-on: ubuntu-latest
     env:
       MDBOOK_VERSION: 0.4.36
@@ -49,6 +50,7 @@ jobs:
 
   # Deployment job
   deploy:
+    if: ${{ github.repository_owner == 'comtrya' }}
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
