@@ -13,7 +13,8 @@ use tracing::{debug, error, info, instrument, span, trace, warn};
 
 #[derive(Parser, Debug)]
 pub(crate) struct Apply {
-    /// Run a subset of your manifests, comma separated list
+    /// Run a subset of your manifests, comma separated list.
+    /// This should be a list of manifest names. No paths.
     #[arg(short, long, value_delimiter = ',')]
     manifests: Vec<String>,
 
@@ -28,6 +29,14 @@ pub(crate) struct Apply {
 
 impl Apply {
     fn manifest_path(&self, runtime: &Runtime) -> anyhow::Result<PathBuf> {
+        for manifest in &self.manifests {
+            if manifest.contains(std::path::MAIN_SEPARATOR) {
+                return Err(anyhow::anyhow!(
+                    "Found a path, expected only names in the manifests list!"
+                ));
+            }
+        }
+
         let first_manifest_path = runtime.config.manifest_paths.first().ok_or_else(|| {
             anyhow::anyhow!(
                 "No manifest paths found in config file, please add at least one path to your manifests"
