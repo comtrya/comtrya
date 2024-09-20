@@ -31,7 +31,9 @@ impl Apply {
     fn manifest_path(&self, runtime: &Runtime) -> anyhow::Result<PathBuf> {
         for manifest in &self.manifests {
             if manifest.contains(std::path::MAIN_SEPARATOR) {
-                return Err(anyhow::anyhow!("Found a path, expected only names in the manifests list!"));
+                return Err(anyhow::anyhow!(
+                    "Found a path, expected only names in the manifests list!"
+                ));
             }
         }
 
