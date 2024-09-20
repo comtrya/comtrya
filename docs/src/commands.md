@@ -19,6 +19,48 @@ The primary command of use will be the apply command, which will apply the actio
 | gen-completions | Auto generate completions                    |
 | help            | Print out help information for using comtrya |
 
+## Apply
+
+The apply command will execute and run the manifests. There are a few ways to do this. First, it to point to a directory
+of manifests and have comtrya execute them all.
+
+```shell
+comtrya -d ./manifests apply
+```
+
+As shown, this is achieved with the `-d` option, which tells comtrya the directory that house the manifests to be
+executed.
+
+You can also specify the specific manifest(s).
+
+```shell
+comtrya apply -m one,two,three
+```
+
+The `-m` option is used to tell comtrya the specific manifests to run. Note that the name of the manifest (i.e. one.yaml)
+is only the name of the manifest and does not contain any pathing information. So, `/manifests/one` is not a valid input.
+So it is expected to be located in the directory of the manifests you are specifying to run.
+
+Suppose you have a directory `manifests/` that contains the manifests `one.yaml` and `two.yaml`. You want to *only*
+execute `one.yaml`. There are three ways to achieve this.
+
+```shell
+cd manifests/
+comtrya apply -m one
+```
+
+Or
+
+```shell
+comtrya -d manifests/one.yaml apply
+```
+
+Or, the third and final way is a combination of the two.
+
+```shell
+comtrya -d manifests/ apply -m one
+```
+
 ## Contexts
 
 The contexts command is useful to see what comtrya knows about. This can be environment variables, included variables, information about the OS, user information and other variables. Below is an exmaple of the output.

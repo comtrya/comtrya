@@ -15,6 +15,8 @@ comtrya apply -m one,two,three
 comtrya -d ./manifests apply
 ```
 
+Please refer to the [commands](commands.md) section for more information about the usage of apply.
+
 ## Basic usage on remote manifests
 
 Comtrya also has the ability to run remote manifests, normally hosted in a git repository on github.
