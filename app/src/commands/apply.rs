@@ -13,7 +13,8 @@ use tracing::{debug, error, info, instrument, span, trace, warn};
 
 #[derive(Parser, Debug)]
 pub(crate) struct Apply {
-    /// Run a subset of your manifests, comma separated list
+    /// Run a subset of your manifests, comma separated list.
+    /// This should be a list of manifest names. No paths.
     #[arg(short, long, value_delimiter = ',')]
     manifests: Vec<String>,
 
