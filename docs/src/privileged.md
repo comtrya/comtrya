@@ -19,6 +19,5 @@ privilege escalation. A more generic way to write the above action would be to u
 ```
 - action: command.run
   command: whoami
-  sudo: true
   privileged: true
 ```
