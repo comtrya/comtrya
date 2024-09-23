@@ -122,7 +122,7 @@ mod test {
             ..Default::default()
         });
 
-        assert_eq!(steps.len(), 1);
+        assert_eq!(steps.unwrap().len(), 1);
     }
 
     #[test]
@@ -137,7 +137,7 @@ mod test {
             ..Default::default()
         });
 
-        assert_eq!(steps.len(), 0);
+        assert_eq!(steps.unwrap().len(), 0);
     }
 
     #[test]
@@ -149,7 +149,7 @@ mod test {
             ..Default::default()
         });
 
-        assert_eq!(steps.len(), 2);
+        assert_eq!(steps.unwrap().len(), 2);
     }
 
     #[test]
@@ -164,6 +164,6 @@ mod test {
             ..Default::default()
         });
 
-        assert_eq!(steps.len(), 2);
+        assert_eq!(steps.unwrap().len(), 2);
     }
 }
