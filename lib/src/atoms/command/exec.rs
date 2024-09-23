@@ -43,9 +43,24 @@ impl Exec {
 
             // Requested priviledged, but is not root
             (true, _) => (
-                String::from("sudo"),
+                self.sudo_path().unwrap(),
                 [vec![self.command.clone()], self.arguments.clone()].concat(),
             ),
+        }
+    }
+
+    fn sudo_path(&self) -> anyhow::Result<String> {
+        match utilities::get_binary_path("sudo") {
+            Ok(path) => Ok(path),
+            Err(_) => match utilities::get_binary_path("doas") {
+                Ok(path) => Ok(path),
+                Err(err) => {
+                    return Err(anyhow!(
+                        "Command requires sudo, but neither sudo nor doas exists: {}",
+                        err
+                    ))
+                }
+            },
         }
     }
 
@@ -56,7 +71,7 @@ impl Exec {
             &self.arguments.join(" ")
         );
 
-        match std::process::Command::new("sudo")
+        match std::process::Command::new(self.sudo_path().unwrap())
             .stdin(std::process::Stdio::inherit())
             .stdout(std::process::Stdio::inherit())
             .stderr(std::process::Stdio::inherit())
@@ -105,20 +120,24 @@ impl Atom for Exec {
     }
 
     fn execute(&mut self) -> anyhow::Result<()> {
-        let (command, arguments) = self.elevate_if_required();
-
-        let command = utilities::get_binary_path(&command)
-            .or_else(|_| Err(anyhow!("Command `{}` not found in path", command)))?;
+        let (mut command, arguments) = self.elevate_if_required();
 
         // If we require root, we need to use sudo with inherited IO
         // to ensure the user can respond if prompted for a password
-        if command.eq("sudo") {
+        let command_prefix = command
+            .split(' ')
+            .next()
+            .expect("Could not find command prefix");
+        if command_prefix.ends_with("sudo") || command.ends_with("doas") {
             match self.elevate() {
                 Ok(_) => (),
                 Err(err) => {
                     return Err(anyhow!(err));
                 }
             }
+        } else {
+            command = utilities::get_binary_path(&command)
+                .or_else(|_| Err(anyhow!("Command `{}` not found in path", command)))?;
         }
 
         match std::process::Command::new(&command)
@@ -207,7 +226,7 @@ mod tests {
         command_run.privileged = true;
         let (command, args) = command_run.elevate_if_required();
 
-        assert_eq!(String::from("sudo"), command);
+        assert_eq!(command.ends_with("sudo") || command.ends_with("doas"), true);
         assert_eq!(
             vec![String::from("echo"), String::from("Hello, world!")],
             args
