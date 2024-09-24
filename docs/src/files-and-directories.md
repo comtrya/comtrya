@@ -6,6 +6,16 @@
 - file.remove
 - directory.copy
 
+## Note
+The following commands expect the `from`/`source` to point to files/directories which are themselves under a "files" directory.
+This is a restriction so that comtrya knows not to parse any .yaml file e.g. a config for a different tool as a manifest.
+To see how it works check the [examples](https://github.com/comtrya/comtrya/tree/main/examples/file) 
+
+- file.link
+- file.copy
+- directory.copy
+
+
 ## file.copy
 
 Action used to copy a file from one location to another.
