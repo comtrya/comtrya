@@ -33,8 +33,16 @@ impl Action for RunCommand {
         format!("Running {} command", self.command)
     }
 
-    fn plan(&self, _: &Manifest, _: &Contexts) -> anyhow::Result<Vec<Step>> {
+    fn plan(&self, _: &Manifest, contexts: &Contexts) -> anyhow::Result<Vec<Step>> {
         use crate::atoms::command::Exec;
+
+        let privilege_provider = contexts
+            .get("privilege")
+            .unwrap()
+            .first_key_value()
+            .unwrap()
+            .1;
+        tracing::debug!("{:#?}", privilege_provider);
 
         Ok(vec![Step {
             atom: Box::new(Exec {
@@ -42,6 +50,7 @@ impl Action for RunCommand {
                 arguments: self.args.clone(),
                 privileged: self.privileged,
                 working_dir: Some(self.dir.clone()),
+                privilege_provider: privilege_provider.to_string().clone(),
                 ..Default::default()
             }),
             initializers: vec![],

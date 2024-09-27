@@ -1,8 +1,10 @@
 use crate::atoms::Outcome;
 
 use super::super::Atom;
+use crate::contexts::privilege::Privilege;
 use crate::utilities;
 use anyhow::anyhow;
+use serde_yml::libyml::util;
 use tracing::debug;
 
 #[derive(Default)]
@@ -12,6 +14,7 @@ pub struct Exec {
     pub working_dir: Option<String>,
     pub environment: Vec<(String, String)>,
     pub privileged: bool,
+    pub privilege_provider: String,
     pub(crate) status: ExecStatus,
 }
 
@@ -34,6 +37,9 @@ impl Exec {
     fn elevate_if_required(&self) -> (String, Vec<String>) {
         // Depending on the priviledged flag and who who the current user is
         // we can determine if we need to prepend sudo to the command
+
+        let privilege_provider = self.privilege_provider.clone();
+
         match (self.privileged, whoami::username().as_str()) {
             // Hasn't requested priviledged, so never try to elevate
             (false, _) => (self.command.clone(), self.arguments.clone()),
@@ -43,7 +49,7 @@ impl Exec {
 
             // Requested priviledged, but is not root
             (true, _) => (
-                String::from("sudo"),
+                privilege_provider,
                 [vec![self.command.clone()], self.arguments.clone()].concat(),
             ),
         }
@@ -51,12 +57,14 @@ impl Exec {
 
     fn elevate(&mut self) -> anyhow::Result<()> {
         tracing::info!(
-            "Sudo required for privilege elevation to run `{} {}`. Validating sudo ...",
+            "Privilege elevation required to run `{} {}`. Validating privileges ...",
             &self.command,
             &self.arguments.join(" ")
         );
 
-        match std::process::Command::new("sudo")
+        let privilege_provider = utilities::get_binary_path(&self.privilege_provider)?;
+
+        match std::process::Command::new(privilege_provider)
             .stdin(std::process::Stdio::inherit())
             .stdout(std::process::Stdio::inherit())
             .stderr(std::process::Stdio::inherit())
@@ -66,12 +74,12 @@ impl Exec {
             Ok(std::process::Output { status, .. }) if status.success() => Ok(()),
 
             Ok(std::process::Output { stderr, .. }) => Err(anyhow!(
-                "Command requires sudo, but couldn't elevate privileges: {}",
+                "Command requires privilege escalation, but couldn't elevate privileges: {}",
                 String::from_utf8(stderr)?
             )),
 
             Err(err) => Err(anyhow!(
-                "Command requires sudo, but couldn't elevate privileges: {}",
+                "Command requires privilege escalation, but couldn't elevate privileges: {}",
                 err
             )),
         }
@@ -112,7 +120,7 @@ impl Atom for Exec {
 
         // If we require root, we need to use sudo with inherited IO
         // to ensure the user can respond if prompted for a password
-        if command.eq("sudo") {
+        if command.eq("doas") {
             match self.elevate() {
                 Ok(_) => (),
                 Err(err) => {

@@ -1,3 +1,4 @@
+use crate::contexts::privilege::Privilege;
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, path::PathBuf, vec};
@@ -16,6 +17,9 @@ pub struct Config {
 
     #[serde(default)]
     pub disable_update_check: bool,
+
+    #[serde(default)]
+    pub privilege: Privilege,
 }
 
 /// Check the current working directory for a `Comtrya.yaml` file
