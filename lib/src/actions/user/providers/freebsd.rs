@@ -114,6 +114,7 @@ impl UserProvider for FreeBSDUserProvider {
     }
 }
 
+#[cfg(target_os = "freebsd")]
 #[cfg(test)]
 mod test {
     use crate::actions::user::providers::{FreeBSDUserProvider, UserProvider};
