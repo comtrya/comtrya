@@ -51,7 +51,7 @@ mod test {
     #[test]
     fn test_add_group() {
         let group_provider = LinuxGroupProvider {};
-        let context = Contexts::default();
+        let contexts = Contexts::default();
         let steps = group_provider.add_group(
             &GroupVariant {
                 group_name: String::from("test"),
@@ -66,7 +66,7 @@ mod test {
     #[test]
     fn test_add_group_no_group_name() {
         let group_provider = LinuxGroupProvider {};
-        let context = Contexts::default();
+        let contexts = Contexts::default();
         let steps = group_provider.add_group(
             &GroupVariant {
                 // empty for test purposes
