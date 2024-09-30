@@ -114,23 +114,27 @@ impl UserProvider for FreeBSDUserProvider {
     }
 }
 
-#[cfg(target_os = "freebsd")]
 #[cfg(test)]
 mod test {
     use crate::actions::user::providers::{FreeBSDUserProvider, UserProvider};
     use crate::actions::user::{add_group::UserAddGroup, UserVariant};
+    use crate::contexts::Contexts;
 
     #[test]
     fn test_add_user() {
         let user_provider = FreeBSDUserProvider {};
-        let steps = user_provider.add_user(&UserVariant {
-            username: String::from("test"),
-            shell: String::from("sh"),
-            home_dir: String::from("/home/test"),
-            fullname: String::from("Test User"),
-            group: vec![],
-            ..Default::default()
-        });
+        let contexts = Contexts::default();
+        let steps = user_provider.add_user(
+            &UserVariant {
+                username: String::from("test"),
+                shell: String::from("sh"),
+                home_dir: String::from("/home/test"),
+                fullname: String::from("Test User"),
+                group: vec![],
+                ..Default::default()
+            },
+            &contexts,
+        );
 
         assert_eq!(steps.unwrap().len(), 1);
     }

@@ -127,7 +127,6 @@ impl UserProvider for MacOSUserProvider {
     }
 }
 
-#[cfg(target_os = "macos")]
 #[cfg(test)]
 mod test {
     use crate::actions::user::providers::{MacOSUserProvider, UserProvider};

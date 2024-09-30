@@ -123,23 +123,27 @@ impl UserProvider for LinuxUserProvider {
     }
 }
 
-#[cfg(target_os = "linux")]
 #[cfg(test)]
 mod test {
     use crate::actions::user::providers::{LinuxUserProvider, UserProvider};
     use crate::actions::user::{add_group::UserAddGroup, UserVariant};
+    use crate::contexts::Contexts;
 
     #[test]
     fn test_add_user() {
         let user_provider = LinuxUserProvider {};
-        let steps = user_provider.add_user(&UserVariant {
-            username: String::from("test"),
-            shell: String::from("sh"),
-            home_dir: String::from("/home/test"),
-            fullname: String::from("Test User"),
-            group: vec![],
-            ..Default::default()
-        });
+        let contexts = Contexts::default();
+        let steps = user_provider.add_user(
+            &UserVariant {
+                username: String::from("test"),
+                shell: String::from("sh"),
+                home_dir: String::from("/home/test"),
+                fullname: String::from("Test User"),
+                group: vec![],
+                ..Default::default()
+            },
+            &contexts,
+        );
 
         assert_eq!(steps.unwrap().len(), 1);
     }
@@ -147,14 +151,18 @@ mod test {
     #[test]
     fn test_add_user_no_username() {
         let user_provider = LinuxUserProvider {};
-        let steps = user_provider.add_user(&UserVariant {
-            username: String::from(""),
-            shell: String::from("sh"),
-            home_dir: String::from("/home/test"),
-            fullname: String::from("Test User"),
-            group: vec![],
-            ..Default::default()
-        });
+        let contexts = Contexts::default();
+        let steps = user_provider.add_user(
+            &UserVariant {
+                username: String::from(""),
+                shell: String::from("sh"),
+                home_dir: String::from("/home/test"),
+                fullname: String::from("Test User"),
+                group: vec![],
+                ..Default::default()
+            },
+            &contexts,
+        );
 
         assert_eq!(steps.unwrap().len(), 0);
     }
@@ -162,11 +170,15 @@ mod test {
     #[test]
     fn test_add_to_group() {
         let user_provider = LinuxUserProvider {};
-        let steps = user_provider.add_to_group(&UserAddGroup {
-            username: String::from("test"),
-            group: vec![String::from("testgroup"), String::from("wheel")],
-            ..Default::default()
-        });
+        let contexts = Contexts::default();
+        let steps = user_provider.add_to_group(
+            &UserAddGroup {
+                username: String::from("test"),
+                group: vec![String::from("testgroup"), String::from("wheel")],
+                ..Default::default()
+            },
+            &contexts,
+        );
 
         assert_eq!(steps.unwrap().len(), 2);
     }
@@ -174,14 +186,18 @@ mod test {
     #[test]
     fn test_create_user_add_to_group() {
         let user_provider = LinuxUserProvider {};
-        let steps = user_provider.add_user(&UserVariant {
-            username: String::from("test"),
-            shell: String::from(""),
-            home_dir: String::from(""),
-            fullname: String::from(""),
-            group: vec![String::from("testgroup")],
-            ..Default::default()
-        });
+        let contexts = Contexts::default();
+        let steps = user_provider.add_user(
+            &UserVariant {
+                username: String::from("test"),
+                shell: String::from(""),
+                home_dir: String::from(""),
+                fullname: String::from(""),
+                group: vec![String::from("testgroup")],
+                ..Default::default()
+            },
+            &contexts,
+        );
 
         assert_eq!(steps.unwrap().len(), 2);
     }
