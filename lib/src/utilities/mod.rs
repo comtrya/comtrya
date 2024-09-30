@@ -10,13 +10,6 @@ pub fn get_binary_path(binary: &str) -> Result<String, anyhow::Error> {
 }
 
 pub fn get_privilege_provider(contexts: &Contexts) -> Option<String> {
-    // safe because this is guaranteed to be present in contexts
-    // let privilege_provider = contexts
-    //     .get("privilege")
-    //     .unwrap()
-    //     .first_key_value()
-    //     .unwrap()
-    //     .1.to_string();
     let privilege_provider = contexts.get("privilege").and_then(|s| s.first_key_value());
 
     if let Some(privilege_provider) = privilege_provider {
