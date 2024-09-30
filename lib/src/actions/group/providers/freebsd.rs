@@ -37,14 +37,19 @@ impl GroupProvider for FreeBSDGroupProvider {
 mod test {
     use crate::actions::group::providers::{FreeBSDGroupProvider, GroupProvider};
     use crate::actions::group::GroupVariant;
+    use crate::contexts::Contexts;
 
     #[test]
     fn test_add_group() {
         let group_provider = FreeBSDGroupProvider {};
-        let steps = group_provider.add_group(&GroupVariant {
-            group_name: String::from("test"),
-            ..Default::default()
-        });
+        let contexts = Contexts::default();
+        let steps = group_provider.add_group(
+            &GroupVariant {
+                group_name: String::from("test"),
+                ..Default::default()
+            },
+            &contexts,
+        );
 
         assert_eq!(steps.len(), 1);
     }
@@ -52,10 +57,14 @@ mod test {
     #[test]
     fn test_add_group_no_group_name() {
         let group_provider = FreeBSDGroupProvider {};
-        let steps = group_provider.add_group(&GroupVariant {
-            // empty for test purposes
-            ..Default::default()
-        });
+        let contexts = Contexts::default();
+        let steps = group_provider.add_group(
+            &GroupVariant {
+                // empty for test purposes
+                ..Default::default()
+            },
+            &contexts,
+        );
 
         assert_eq!(steps.len(), 0);
     }

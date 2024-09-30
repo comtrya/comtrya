@@ -46,14 +46,19 @@ impl GroupProvider for LinuxGroupProvider {
 mod test {
     use crate::actions::group::providers::{GroupProvider, LinuxGroupProvider};
     use crate::actions::group::GroupVariant;
+    use crate::contexts::Contexts;
 
     #[test]
     fn test_add_group() {
         let group_provider = LinuxGroupProvider {};
-        let steps = group_provider.add_group(&GroupVariant {
-            group_name: String::from("test"),
-            ..Default::default()
-        });
+        let context = Contexts::default();
+        let steps = group_provider.add_group(
+            &GroupVariant {
+                group_name: String::from("test"),
+                ..Default::default()
+            },
+            &contexts,
+        );
 
         assert_eq!(steps.len(), 1);
     }
@@ -61,10 +66,14 @@ mod test {
     #[test]
     fn test_add_group_no_group_name() {
         let group_provider = LinuxGroupProvider {};
-        let steps = group_provider.add_group(&GroupVariant {
-            // empty for test purposes
-            ..Default::default()
-        });
+        let context = Contexts::default();
+        let steps = group_provider.add_group(
+            &GroupVariant {
+                // empty for test purposes
+                ..Default::default()
+            },
+            &contexts,
+        );
 
         assert_eq!(steps.len(), 0);
     }
