@@ -223,6 +223,28 @@ mod tests {
     }
 
     #[test]
+    fn elevate_doas() {
+        let mut command_run = new_run_command(String::from("echo"));
+        command_run.arguments = vec![String::from("Hello, world!")];
+        let (command, args) = command_run.elevate_if_required();
+
+        assert_eq!(String::from("echo"), command);
+        assert_eq!(vec![String::from("Hello, world!")], args);
+
+        let mut command_run = new_run_command(String::from("echo"));
+        command_run.arguments = vec![String::from("Hello, world!")];
+        command_run.privileged = true;
+        command_run.privilege_provider = Privilege::Doas.to_string();
+        let (command, args) = command_run.elevate_if_required();
+
+        assert_eq!(String::from("doas"), command);
+        assert_eq!(
+            vec![String::from("echo"), String::from("Hello, world!")],
+            args
+        );
+    }
+
+    #[test]
     fn error_propagation() {
         let mut command_run = new_run_command(String::from("non-existant-command"));
         command_run.execute().expect_err("Command should fail");
