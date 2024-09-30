@@ -1,6 +1,7 @@
 use super::GroupProvider;
+use crate::contexts::Contexts;
 use crate::steps::Step;
-use crate::{actions::group::GroupVariant, atoms::command::Exec};
+use crate::{actions::group::GroupVariant, atoms::command::Exec, utilities};
 use serde::{Deserialize, Serialize};
 use tracing::warn;
 
@@ -8,17 +9,21 @@ use tracing::warn;
 pub struct FreeBSDGroupProvider {}
 
 impl GroupProvider for FreeBSDGroupProvider {
-    fn add_group(&self, group: &GroupVariant) -> Vec<Step> {
+    fn add_group(&self, group: &GroupVariant, contexts: &Contexts) -> Vec<Step> {
         if group.group_name.is_empty() {
             warn!(message = "Unable to create group without a group name");
             return vec![];
         }
+
+        let privilege_provider =
+            utilities::get_privilege_provider(&contexts).unwrap_or_else(|| "sudo".to_string());
 
         vec![Step {
             atom: Box::new(Exec {
                 command: String::from("/usr/bin/pw"),
                 arguments: vec![String::from("groupadd"), group.group_name.clone()],
                 privileged: true,
+                privilege_provider: privilege_provider.clone(),
                 ..Default::default()
             }),
             initializers: vec![],

@@ -1,10 +1,8 @@
 use crate::atoms::Outcome;
 
 use super::super::Atom;
-use crate::contexts::privilege::Privilege;
 use crate::utilities;
 use anyhow::anyhow;
-use serde_yml::libyml::util;
 use tracing::debug;
 
 #[derive(Default)]
@@ -120,7 +118,7 @@ impl Atom for Exec {
 
         // If we require root, we need to use sudo with inherited IO
         // to ensure the user can respond if prompted for a password
-        if command.eq("doas") {
+        if command.eq("doas") || command.eq("sudo") {
             match self.elevate() {
                 Ok(_) => (),
                 Err(err) => {
@@ -178,6 +176,7 @@ impl Atom for Exec {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::contexts::privilege::Privilege;
     use pretty_assertions::assert_eq;
 
     #[test]
@@ -213,6 +212,7 @@ mod tests {
         let mut command_run = new_run_command(String::from("echo"));
         command_run.arguments = vec![String::from("Hello, world!")];
         command_run.privileged = true;
+        command_run.privilege_provider = Privilege::Sudo.to_string();
         let (command, args) = command_run.elevate_if_required();
 
         assert_eq!(String::from("sudo"), command);

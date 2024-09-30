@@ -21,13 +21,13 @@ pub struct UserAddGroup {
 }
 
 impl Action for UserAddGroup {
-    fn plan(&self, _manifest: &Manifest, _context: &Contexts) -> anyhow::Result<Vec<Step>> {
+    fn plan(&self, _manifest: &Manifest, context: &Contexts) -> anyhow::Result<Vec<Step>> {
         let box_provider = self.provider.clone().get_provider();
         let provider = box_provider.deref();
 
         let mut atoms: Vec<Step> = vec![];
 
-        atoms.append(&mut provider.add_to_group(self)?);
+        atoms.append(&mut provider.add_to_group(self, &context)?);
 
         Ok(atoms)
     }

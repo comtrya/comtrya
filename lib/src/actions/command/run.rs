@@ -1,6 +1,6 @@
 use crate::contexts::Contexts;
 use crate::steps::Step;
-use crate::{actions::Action, manifests::Manifest};
+use crate::{actions::Action, manifests::Manifest, utilities};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -36,13 +36,8 @@ impl Action for RunCommand {
     fn plan(&self, _: &Manifest, contexts: &Contexts) -> anyhow::Result<Vec<Step>> {
         use crate::atoms::command::Exec;
 
-        let privilege_provider = contexts
-            .get("privilege")
-            .unwrap()
-            .first_key_value()
-            .unwrap()
-            .1;
-        tracing::debug!("{:#?}", privilege_provider);
+        let privilege_provider =
+            utilities::get_privilege_provider(&contexts).unwrap_or_else(|| "sudo".to_string());
 
         Ok(vec![Step {
             atom: Box::new(Exec {
@@ -50,7 +45,7 @@ impl Action for RunCommand {
                 arguments: self.args.clone(),
                 privileged: self.privileged,
                 working_dir: Some(self.dir.clone()),
-                privilege_provider: privilege_provider.to_string().clone(),
+                privilege_provider: privilege_provider.clone(),
                 ..Default::default()
             }),
             initializers: vec![],

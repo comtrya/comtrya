@@ -1,7 +1,9 @@
 use super::UserProvider;
 use crate::actions::user::{add_group::UserAddGroup, UserVariant};
 use crate::atoms::command::Exec;
+use crate::contexts::Contexts;
 use crate::steps::Step;
+use crate::utilities;
 use serde::{Deserialize, Serialize};
 use tracing::warn;
 
@@ -9,10 +11,10 @@ use tracing::warn;
 pub struct FreeBSDUserProvider {}
 
 impl UserProvider for FreeBSDUserProvider {
-    fn add_user(&self, user: &UserVariant) -> anyhow::Result<Vec<Step>> {
+    fn add_user(&self, user: &UserVariant, contexts: &Contexts) -> anyhow::Result<Vec<Step>> {
         let mut args: Vec<String> = vec![];
 
-        // is a user name isn't provided, cant create a new user
+        // is a username isn't provided, cant create a new user
         if user.username.is_empty() {
             return Ok(vec![]);
         }
@@ -40,6 +42,9 @@ impl UserProvider for FreeBSDUserProvider {
         args.push(String::from("-w"));
         args.push(String::from("random"));
 
+        let privilege_provider =
+            utilities::get_privilege_provider(&contexts).unwrap_or_else(|| "sudo".to_string());
+
         let mut steps: Vec<Step> = vec![Step {
             atom: Box::new(Exec {
                 command: String::from("/usr/sbin/pw"),
@@ -48,6 +53,7 @@ impl UserProvider for FreeBSDUserProvider {
                     .chain(args.clone())
                     .collect(),
                 privileged: true,
+                privilege_provider: privilege_provider.clone(),
                 ..Default::default()
             }),
             initializers: vec![],
@@ -60,7 +66,7 @@ impl UserProvider for FreeBSDUserProvider {
                 group: user.group.clone(),
                 provider: user.provider.clone(),
             };
-            for group in self.add_to_group(&user_groups)? {
+            for group in self.add_to_group(&user_groups, &contexts)? {
                 steps.push(group);
             }
         }
@@ -68,7 +74,7 @@ impl UserProvider for FreeBSDUserProvider {
         Ok(steps)
     }
 
-    fn add_to_group(&self, user: &UserAddGroup) -> anyhow::Result<Vec<Step>> {
+    fn add_to_group(&self, user: &UserAddGroup, contexts: &Contexts) -> anyhow::Result<Vec<Step>> {
         let mut steps: Vec<Step> = vec![];
 
         if user.group.is_empty() {
@@ -80,6 +86,9 @@ impl UserProvider for FreeBSDUserProvider {
             warn!(message = "No user specified to add to group(s)");
             return Ok(steps);
         }
+
+        let privilege_provider =
+            utilities::get_privilege_provider(&contexts).unwrap_or_else(|| "sudo".to_string());
 
         for group in user.group.iter() {
             steps.push(Step {
@@ -93,6 +102,7 @@ impl UserProvider for FreeBSDUserProvider {
                         String::from(group),
                     ],
                     privileged: true,
+                    privilege_provider: privilege_provider.clone(),
                     ..Default::default()
                 }),
                 initializers: vec![],

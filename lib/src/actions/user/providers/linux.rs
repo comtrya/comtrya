@@ -1,7 +1,9 @@
 use super::UserProvider;
+use crate::contexts::Contexts;
 use crate::steps::Step;
 use crate::{
     actions::user::add_group::UserAddGroup, actions::user::UserVariant, atoms::command::Exec,
+    utilities,
 };
 use serde::{Deserialize, Serialize};
 use tracing::warn;
@@ -11,7 +13,7 @@ use which::which;
 pub struct LinuxUserProvider {}
 
 impl UserProvider for LinuxUserProvider {
-    fn add_user(&self, user: &UserVariant) -> anyhow::Result<Vec<Step>> {
+    fn add_user(&self, user: &UserVariant, contexts: &Contexts) -> anyhow::Result<Vec<Step>> {
         let mut args: Vec<String> = vec![];
         let cli = match which("useradd") {
             Ok(c) => c,
@@ -45,11 +47,15 @@ impl UserProvider for LinuxUserProvider {
             args.push(user.fullname.clone());
         }
 
+        let privilege_provider =
+            utilities::get_privilege_provider(&contexts).unwrap_or_else(|| "sudo".to_string());
+
         let mut steps: Vec<Step> = vec![Step {
             atom: Box::new(Exec {
                 command: cli.display().to_string(),
                 arguments: vec![].into_iter().chain(args.clone()).collect(),
                 privileged: true,
+                privilege_provider: privilege_provider.clone(),
                 ..Default::default()
             }),
             initializers: vec![],
@@ -62,7 +68,7 @@ impl UserProvider for LinuxUserProvider {
                 group: user.group.clone(),
                 provider: user.provider.clone(),
             };
-            for group in self.add_to_group(&user_groups)? {
+            for group in self.add_to_group(&user_groups, &contexts)? {
                 steps.push(group);
             }
         }
@@ -70,7 +76,7 @@ impl UserProvider for LinuxUserProvider {
         Ok(steps)
     }
 
-    fn add_to_group(&self, user: &UserAddGroup) -> anyhow::Result<Vec<Step>> {
+    fn add_to_group(&self, user: &UserAddGroup, contexts: &Contexts) -> anyhow::Result<Vec<Step>> {
         let cli = match which("usermod") {
             Ok(c) => c,
             Err(_) => {
@@ -89,6 +95,9 @@ impl UserProvider for LinuxUserProvider {
             return Ok(vec![]);
         }
 
+        let privilege_provider =
+            utilities::get_privilege_provider(&contexts).unwrap_or_else(|| "sudo".to_string());
+
         let mut steps: Vec<Step> = vec![];
 
         for group in user.group.iter() {
@@ -102,6 +111,7 @@ impl UserProvider for LinuxUserProvider {
                         user.username.clone(),
                     ],
                     privileged: true,
+                    privilege_provider: privilege_provider.clone(),
                     ..Default::default()
                 }),
                 initializers: vec![],
