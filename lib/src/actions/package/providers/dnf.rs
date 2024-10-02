@@ -48,7 +48,11 @@ impl PackageProvider for Dnf {
         false
     }
 
-    fn add_repository(&self, repository: &PackageRepository, contexts: &Contexts) -> anyhow::Result<Vec<Step>> {
+    fn add_repository(
+        &self,
+        repository: &PackageRepository,
+        contexts: &Contexts,
+    ) -> anyhow::Result<Vec<Step>> {
         let mut steps: Vec<Step> = vec![];
 
         let privilege_provider =
@@ -141,17 +145,22 @@ impl PackageProvider for Dnf {
 #[cfg(test)]
 mod test {
     use crate::actions::package::{providers::PackageProviders, repository::RepositoryKey};
+    use crate::contexts::Contexts;
 
     use super::*;
 
     #[test]
     fn test_add_repository_without_key() {
         let dnf = Dnf {};
-        let steps = dnf.add_repository(&PackageRepository {
-            name: String::from("test"),
-            provider: PackageProviders::Dnf,
-            ..Default::default()
-        });
+        let contexts = Contexts::default();
+        let steps = dnf.add_repository(
+            &PackageRepository {
+                name: String::from("test"),
+                provider: PackageProviders::Dnf,
+                ..Default::default()
+            },
+            &contexts,
+        );
 
         assert_eq!(steps.unwrap().len(), 2);
     }
@@ -159,14 +168,18 @@ mod test {
     #[test]
     fn test_repository_with_key() {
         let dnf = Dnf {};
-        let steps = dnf.add_repository(&PackageRepository {
-            name: String::from("test"),
-            key: Some(RepositoryKey {
-                url: String::from("abc"),
-                ..Default::default()
-            }),
-            provider: PackageProviders::Dnf,
-        });
+        let contexts = Contexts::default();
+        let steps = dnf.add_repository(
+            &PackageRepository {
+                name: String::from("test"),
+                key: Some(RepositoryKey {
+                    url: String::from("abc"),
+                    ..Default::default()
+                }),
+                provider: PackageProviders::Dnf,
+            },
+            &contexts,
+        );
 
         assert_eq!(steps.unwrap().len(), 3);
     }

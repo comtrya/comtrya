@@ -34,7 +34,11 @@ impl PackageProvider for Zypper {
         false
     }
 
-    fn add_repository(&self, _repository: &PackageRepository, _contexts: &Contexts) -> anyhow::Result<Vec<Step>> {
+    fn add_repository(
+        &self,
+        _repository: &PackageRepository,
+        _contexts: &Contexts,
+    ) -> anyhow::Result<Vec<Step>> {
         Ok(vec![])
     }
 
