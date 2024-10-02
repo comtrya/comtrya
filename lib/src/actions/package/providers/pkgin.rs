@@ -1,13 +1,13 @@
 use super::PackageProvider;
 use crate::actions::package::repository::PackageRepository;
+use crate::contexts::Contexts;
 use crate::steps::finalizers::FlowControl::StopIf;
 use crate::steps::finalizers::OutputContains;
 use crate::steps::Step;
-use crate::{actions::package::PackageVariant, atoms::command::Exec};
+use crate::{actions::package::PackageVariant, atoms::command::Exec, utilities};
 use serde::{Deserialize, Serialize};
 use tracing::{instrument, warn};
 use which::which;
-// use os_info;
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Pkgin {}
@@ -48,7 +48,10 @@ impl PackageProvider for Pkgin {
         Ok(package.packages())
     }
 
-    fn install(&self, package: &PackageVariant) -> anyhow::Result<Vec<Step>> {
+    fn install(&self, package: &PackageVariant, contexts: &Contexts) -> anyhow::Result<Vec<Step>> {
+        let privilege_provider =
+            utilities::get_privilege_provider(&contexts).unwrap_or_else(|| "sudo".to_string());
+
         Ok(vec![
             Step {
                 atom: Box::new(Exec {
@@ -59,6 +62,7 @@ impl PackageProvider for Pkgin {
                         .chain(package.packages())
                         .collect(),
                     privileged: true,
+                    privilege_provider: privilege_provider.clone(),
                     ..Default::default()
                 }),
                 initializers: vec![],
@@ -73,6 +77,7 @@ impl PackageProvider for Pkgin {
                         .chain(package.packages())
                         .collect(),
                     privileged: true,
+                    privilege_provider: privilege_provider.clone(),
                     ..Default::default()
                 }),
                 initializers: vec![],

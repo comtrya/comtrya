@@ -1,5 +1,6 @@
 use super::PackageProvider;
 use crate::actions::package::repository::PackageRepository;
+use crate::contexts::Contexts;
 use crate::steps::Step;
 use crate::{actions::package::PackageVariant, atoms::command::Exec};
 use serde::{Deserialize, Serialize};
@@ -41,7 +42,9 @@ impl PackageProvider for Winget {
         Ok(package.packages())
     }
 
-    fn install(&self, package: &PackageVariant) -> anyhow::Result<Vec<Step>> {
+    fn install(&self, package: &PackageVariant, _contexts: &Contexts) -> anyhow::Result<Vec<Step>> {
+        // does not require privilege escalation
+
         Ok(package
             .packages()
             .iter()

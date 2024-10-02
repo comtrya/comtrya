@@ -1,7 +1,9 @@
 use super::PackageProvider;
 use crate::actions::package::{repository::PackageRepository, PackageVariant};
 use crate::atoms::command::Exec;
+use crate::contexts::Contexts;
 use crate::steps::Step;
+use crate::utilities;
 use serde::{Deserialize, Serialize};
 use sha256::digest;
 use tracing::warn;
@@ -125,7 +127,10 @@ impl PackageProvider for Aptitude {
         Ok(package.packages())
     }
 
-    fn install(&self, package: &PackageVariant) -> anyhow::Result<Vec<Step>> {
+    fn install(&self, package: &PackageVariant, contexts: &Contexts) -> anyhow::Result<Vec<Step>> {
+        let privilege_provider =
+            utilities::get_privilege_provider(&contexts).unwrap_or_else(|| "sudo".to_string());
+
         Ok(vec![Step {
             atom: Box::new(Exec {
                 command: String::from("apt"),
@@ -136,6 +141,7 @@ impl PackageProvider for Aptitude {
                     .collect(),
                 environment: self.env(),
                 privileged: true,
+                privilege_provider: privilege_provider.clone(),
                 ..Default::default()
             }),
             initializers: vec![],

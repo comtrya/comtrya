@@ -14,10 +14,10 @@ pub type PackageInstall = Package;
 
 impl Action for PackageInstall {
     fn summarize(&self) -> String {
-        format!("Installing packages")
+        "Installing packages".to_string()
     }
 
-    fn plan(&self, _manifest: &Manifest, _context: &Contexts) -> anyhow::Result<Vec<Step>> {
+    fn plan(&self, _manifest: &Manifest, context: &Contexts) -> anyhow::Result<Vec<Step>> {
         let variant: PackageVariant = self.into();
         let box_provider = variant.provider.clone().get_provider();
         let provider = box_provider.deref();
@@ -58,7 +58,7 @@ impl Action for PackageInstall {
             atoms.append(&mut provider.bootstrap());
         }
 
-        atoms.append(&mut provider.install(&variant)?);
+        atoms.append(&mut provider.install(&variant, &context)?);
 
         span.exit();
 

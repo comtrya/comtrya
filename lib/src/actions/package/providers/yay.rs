@@ -2,7 +2,9 @@ use super::PackageProvider;
 use crate::actions::package::repository::PackageRepository;
 use crate::actions::package::PackageVariant;
 use crate::atoms::command::Exec;
+use crate::contexts::Contexts;
 use crate::steps::Step;
+use crate::utilities;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::process::Command;
@@ -114,7 +116,9 @@ impl PackageProvider for Yay {
             .collect())
     }
 
-    fn install(&self, package: &PackageVariant) -> anyhow::Result<Vec<Step>> {
+    fn install(&self, package: &PackageVariant, _contexts: &Contexts) -> anyhow::Result<Vec<Step>> {
+        // Does not require privilege escalation?
+
         let need_installed = self.query(package)?;
         if need_installed.is_empty() {
             return Ok(vec![]);
