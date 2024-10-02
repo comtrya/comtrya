@@ -38,7 +38,7 @@ impl PackageProvider for Homebrew {
         false
     }
 
-    fn add_repository(&self, repository: &PackageRepository) -> anyhow::Result<Vec<Step>> {
+    fn add_repository(&self, repository: &PackageRepository, _contexts: &Contexts) -> anyhow::Result<Vec<Step>> {
         Ok(vec![Step {
             atom: Box::new(Exec {
                 command: String::from("brew"),

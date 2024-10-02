@@ -48,8 +48,11 @@ impl PackageProvider for Dnf {
         false
     }
 
-    fn add_repository(&self, repository: &PackageRepository) -> anyhow::Result<Vec<Step>> {
+    fn add_repository(&self, repository: &PackageRepository, contexts: &Contexts) -> anyhow::Result<Vec<Step>> {
         let mut steps: Vec<Step> = vec![];
+
+        let privilege_provider =
+            utilities::get_privilege_provider(&contexts).unwrap_or_else(|| "sudo".to_string());
 
         if repository.key.is_some() {
             // .unwrap() is safe here because we checked for key presence above
@@ -60,6 +63,7 @@ impl PackageProvider for Dnf {
                     command: String::from("rpm"),
                     arguments: vec![String::from("--import"), key.url],
                     privileged: true,
+                    privilege_provider: privilege_provider.clone(),
                     ..Default::default()
                 }),
                 initializers: vec![],
@@ -78,6 +82,7 @@ impl PackageProvider for Dnf {
                         repository.name.clone(),
                     ],
                     privileged: true,
+                    privilege_provider: privilege_provider.clone(),
                     ..Default::default()
                 }),
                 initializers: vec![],
@@ -92,6 +97,7 @@ impl PackageProvider for Dnf {
                         String::from("--refresh"),
                     ],
                     privileged: true,
+                    privilege_provider: privilege_provider.clone(),
                     ..Default::default()
                 }),
                 initializers: vec![],

@@ -116,7 +116,7 @@ pub trait PackageProvider {
     fn available(&self) -> bool;
     fn bootstrap(&self) -> Vec<Step>;
     fn has_repository(&self, package: &PackageRepository) -> bool;
-    fn add_repository(&self, package: &PackageRepository) -> anyhow::Result<Vec<Step>>;
+    fn add_repository(&self, package: &PackageRepository, contexts: &Contexts) -> anyhow::Result<Vec<Step>>;
     fn query(&self, package: &PackageVariant) -> anyhow::Result<Vec<String>>;
     fn install(&self, package: &PackageVariant, contexts: &Contexts) -> anyhow::Result<Vec<Step>>;
 }

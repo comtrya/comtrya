@@ -2,7 +2,7 @@ use super::PackageProvider;
 use crate::actions::package::repository::PackageRepository;
 use crate::actions::package::PackageVariant;
 use crate::atoms::command::Exec;
-use crate::contexts::Contexts;
+use crate::contexts::{Context, Contexts};
 use crate::steps::Step;
 use crate::utilities;
 use serde::{Deserialize, Serialize};
@@ -77,7 +77,7 @@ impl PackageProvider for Yay {
         false
     }
 
-    fn add_repository(&self, _: &PackageRepository) -> anyhow::Result<Vec<Step>> {
+    fn add_repository(&self, _: &PackageRepository, _contexts: &Contexts) -> anyhow::Result<Vec<Step>> {
         Ok(vec![])
     }
 

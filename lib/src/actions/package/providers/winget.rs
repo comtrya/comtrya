@@ -33,7 +33,7 @@ impl PackageProvider for Winget {
         true
     }
 
-    fn add_repository(&self, _: &PackageRepository) -> anyhow::Result<Vec<Step>> {
+    fn add_repository(&self, _: &PackageRepository, _contexts: &Contexts) -> anyhow::Result<Vec<Step>> {
         Ok(vec![])
     }
 

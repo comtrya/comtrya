@@ -33,7 +33,7 @@ impl Action for PackageRepository {
         format!("Adding repository {}", self.name)
     }
 
-    fn plan(&self, _manifest: &Manifest, _context: &Contexts) -> anyhow::Result<Vec<Step>> {
+    fn plan(&self, _manifest: &Manifest, context: &Contexts) -> anyhow::Result<Vec<Step>> {
         let box_provider = self.provider.clone().get_provider();
         let provider = box_provider.deref();
 
@@ -59,7 +59,7 @@ impl Action for PackageRepository {
         }
 
         if !provider.has_repository(self) {
-            atoms.append(&mut provider.add_repository(self)?);
+            atoms.append(&mut provider.add_repository(self, &context)?);
         }
 
         span.exit();

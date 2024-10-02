@@ -60,10 +60,13 @@ impl PackageProvider for Aptitude {
         false
     }
 
-    fn add_repository(&self, repository: &PackageRepository) -> anyhow::Result<Vec<Step>> {
+    fn add_repository(&self, repository: &PackageRepository, contexts: &Contexts) -> anyhow::Result<Vec<Step>> {
         let mut steps: Vec<Step> = vec![];
 
         let mut signed_by = String::from("");
+
+        let privilege_provider =
+            utilities::get_privilege_provider(&contexts).unwrap_or_else(|| "sudo".to_string());
 
         if repository.key.is_some() {
             // .unwrap() is safe here because we checked for key.is_some() above
@@ -80,6 +83,7 @@ impl PackageProvider for Aptitude {
                     arguments: vec![String::from("-o"), key_path, key.url],
                     environment: self.env(),
                     privileged: true,
+                    privilege_provider: privilege_provider.clone(),
                     ..Default::default()
                 }),
                 initializers: vec![],
@@ -102,6 +106,7 @@ impl PackageProvider for Aptitude {
                     ],
                     environment: self.env(),
                     privileged: true,
+                    privilege_provider: privilege_provider.clone(),
                     ..Default::default()
                 }),
                 initializers: vec![],
@@ -113,6 +118,7 @@ impl PackageProvider for Aptitude {
                     arguments: vec![String::from("update")],
                     environment: self.env(),
                     privileged: true,
+                    privilege_provider: privilege_provider.clone(),
                     ..Default::default()
                 }),
                 initializers: vec![],
