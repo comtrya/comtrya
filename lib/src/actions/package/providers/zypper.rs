@@ -67,19 +67,24 @@ impl PackageProvider for Zypper {
 #[cfg(test)]
 mod test {
     use crate::actions::package::providers::PackageProviders;
+    use crate::contexts::Contexts;
 
     use super::*;
 
     #[test]
     fn test_install() {
         let zypper = Zypper {};
-        let steps = zypper.install(&PackageVariant {
-            name: Some(String::from("")),
-            list: vec![],
-            extra_args: vec![],
-            provider: PackageProviders::Zypper,
-            file: false,
-        });
+        let contexts = Contexts::default();
+        let steps = zypper.install(
+            &PackageVariant {
+                name: Some(String::from("")),
+                list: vec![],
+                extra_args: vec![],
+                provider: PackageProviders::Zypper,
+                file: false,
+            },
+            &contexts,
+        );
 
         assert_eq!(steps.unwrap().len(), 1);
     }
