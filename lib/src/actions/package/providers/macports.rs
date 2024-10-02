@@ -25,7 +25,7 @@ impl PackageProvider for Macports {
         }
     }
 
-    fn bootstrap(&self) -> Vec<Step> {
+    fn bootstrap(&self, _contexts: &Contexts) -> Vec<Step> {
         vec![]
     }
 

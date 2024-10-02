@@ -2,7 +2,7 @@ use super::PackageProvider;
 use crate::actions::package::repository::PackageRepository;
 use crate::actions::package::PackageVariant;
 use crate::atoms::command::Exec;
-use crate::contexts::{Context, Contexts};
+use crate::contexts::Contexts;
 use crate::steps::Step;
 use crate::utilities;
 use serde::{Deserialize, Serialize};
@@ -30,7 +30,10 @@ impl PackageProvider for Yay {
         }
     }
 
-    fn bootstrap(&self) -> Vec<Step> {
+    fn bootstrap(&self, contexts: &Contexts) -> Vec<Step> {
+        let privilege_provider =
+            utilities::get_privilege_provider(&contexts).unwrap_or_else(|| "sudo".to_string());
+
         vec![
             Step {
                 atom: Box::new(Exec {
@@ -42,6 +45,7 @@ impl PackageProvider for Yay {
                         String::from("git"),
                     ],
                     privileged: true,
+                    privilege_provider: privilege_provider.clone(),
                     ..Default::default()
                 }),
                 initializers: vec![],

@@ -2,7 +2,7 @@ use super::PackageProvider;
 use crate::actions::package::repository::PackageRepository;
 use crate::contexts::Contexts;
 use crate::steps::Step;
-use crate::{actions::package::PackageVariant, atoms::command::Exec, utilities};
+use crate::{actions::package::PackageVariant, atoms::command::Exec};
 use serde::{Deserialize, Serialize};
 use std::{path::Path, process::Command};
 use tracing::{debug, trace};
@@ -20,7 +20,7 @@ impl PackageProvider for Homebrew {
         which("brew").is_ok()
     }
 
-    fn bootstrap(&self) -> Vec<Step> {
+    fn bootstrap(&self, _contexts: &Contexts) -> Vec<Step> {
         vec![Step { atom: Box::new(Exec {
             command: String::from("bash"),
             arguments: vec![

@@ -34,13 +34,17 @@ impl PackageProvider for BsdPkg {
     }
 
     #[instrument(name = "bootstrap", level = "info", skip(self))]
-    fn bootstrap(&self) -> Vec<Step> {
+    fn bootstrap(&self, contexts: &Contexts) -> Vec<Step> {
+        let privilege_provider =
+            utilities::get_privilege_provider(&contexts).unwrap_or_else(|| "sudo".to_string());
+
         vec![Step {
             atom: Box::new(Exec {
                 command: String::from("/usr/sbin/pkg"),
                 arguments: vec![String::from("bootstrap")],
                 environment: self.env(),
                 privileged: true,
+                privilege_provider: privilege_provider.clone(),
                 ..Default::default()
             }),
             initializers: vec![],

@@ -36,7 +36,10 @@ impl PackageProvider for Aptitude {
         }
     }
 
-    fn bootstrap(&self) -> Vec<Step> {
+    fn bootstrap(&self, contexts: &Contexts) -> Vec<Step> {
+        let privilege_provider =
+            utilities::get_privilege_provider(&contexts).unwrap_or_else(|| "sudo".to_string());
+
         vec![Step {
             atom: Box::new(Exec {
                 command: String::from("apt"),
@@ -49,6 +52,7 @@ impl PackageProvider for Aptitude {
                 ],
                 environment: self.env(),
                 privileged: true,
+                privilege_provider: privilege_provider.clone(),
                 ..Default::default()
             }),
             initializers: vec![],

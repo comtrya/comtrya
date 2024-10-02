@@ -28,7 +28,7 @@ impl PackageProvider for Pkgin {
     }
 
     #[instrument(name = "bootstrap", level = "info", skip(self))]
-    fn bootstrap(&self) -> Vec<Step> {
+    fn bootstrap(&self, _contexts: &Contexts) -> Vec<Step> {
         // TODO: Adjust for boot strapping pkgin
         vec![]
     }

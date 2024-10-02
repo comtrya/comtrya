@@ -41,7 +41,7 @@ impl PackageProvider for Xbps {
         install && query
     }
 
-    fn bootstrap(&self) -> Vec<Step> {
+    fn bootstrap(&self, _contexts: &Contexts) -> Vec<Step> {
         vec![]
     }
 

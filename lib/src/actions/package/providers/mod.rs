@@ -114,7 +114,7 @@ impl Default for PackageProviders {
 pub trait PackageProvider {
     fn name(&self) -> &str;
     fn available(&self) -> bool;
-    fn bootstrap(&self) -> Vec<Step>;
+    fn bootstrap(&self, contexts: &Contexts) -> Vec<Step>;
     fn has_repository(&self, package: &PackageRepository) -> bool;
     fn add_repository(
         &self,
