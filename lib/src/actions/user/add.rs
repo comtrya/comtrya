@@ -30,7 +30,7 @@ impl Action for UserAdd {
         }
 
         #[cfg(not(unix))]
-        atoms.append(&mut provider.add_user(&variant)?);
+        atoms.append(&mut provider.add_user(&variant, &context)?);
 
         Ok(atoms)
     }
