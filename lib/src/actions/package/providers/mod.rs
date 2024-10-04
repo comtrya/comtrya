@@ -20,6 +20,7 @@ use self::xbps::Xbps;
 mod zypper;
 use self::zypper::Zypper;
 use super::{repository::PackageRepository, PackageVariant};
+use crate::contexts::Contexts;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -113,9 +114,13 @@ impl Default for PackageProviders {
 pub trait PackageProvider {
     fn name(&self) -> &str;
     fn available(&self) -> bool;
-    fn bootstrap(&self) -> Vec<Step>;
+    fn bootstrap(&self, contexts: &Contexts) -> Vec<Step>;
     fn has_repository(&self, package: &PackageRepository) -> bool;
-    fn add_repository(&self, package: &PackageRepository) -> anyhow::Result<Vec<Step>>;
+    fn add_repository(
+        &self,
+        package: &PackageRepository,
+        contexts: &Contexts,
+    ) -> anyhow::Result<Vec<Step>>;
     fn query(&self, package: &PackageVariant) -> anyhow::Result<Vec<String>>;
-    fn install(&self, package: &PackageVariant) -> anyhow::Result<Vec<Step>>;
+    fn install(&self, package: &PackageVariant, contexts: &Contexts) -> anyhow::Result<Vec<Step>>;
 }

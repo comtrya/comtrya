@@ -2,7 +2,9 @@ use super::PackageProvider;
 
 use crate::actions::package::{repository::PackageRepository, PackageVariant};
 use crate::atoms::command::Exec;
+use crate::contexts::Contexts;
 use crate::steps::Step;
+use crate::utilities;
 use serde::{Deserialize, Serialize};
 use tracing::warn;
 use which::which;
@@ -25,7 +27,10 @@ impl PackageProvider for Dnf {
         }
     }
 
-    fn bootstrap(&self) -> Vec<Step> {
+    fn bootstrap(&self, contexts: &Contexts) -> Vec<Step> {
+        let privilege_provider =
+            utilities::get_privilege_provider(&contexts).unwrap_or_else(|| "sudo".to_string());
+
         vec![Step {
             atom: Box::new(Exec {
                 command: String::from("yum"),
@@ -35,6 +40,7 @@ impl PackageProvider for Dnf {
                     String::from("dnf"),
                 ],
                 privileged: true,
+                privilege_provider: privilege_provider.clone(),
                 ..Default::default()
             }),
             initializers: vec![],
@@ -46,8 +52,15 @@ impl PackageProvider for Dnf {
         false
     }
 
-    fn add_repository(&self, repository: &PackageRepository) -> anyhow::Result<Vec<Step>> {
+    fn add_repository(
+        &self,
+        repository: &PackageRepository,
+        contexts: &Contexts,
+    ) -> anyhow::Result<Vec<Step>> {
         let mut steps: Vec<Step> = vec![];
+
+        let privilege_provider =
+            utilities::get_privilege_provider(&contexts).unwrap_or_else(|| "sudo".to_string());
 
         if repository.key.is_some() {
             // .unwrap() is safe here because we checked for key presence above
@@ -58,6 +71,7 @@ impl PackageProvider for Dnf {
                     command: String::from("rpm"),
                     arguments: vec![String::from("--import"), key.url],
                     privileged: true,
+                    privilege_provider: privilege_provider.clone(),
                     ..Default::default()
                 }),
                 initializers: vec![],
@@ -76,6 +90,7 @@ impl PackageProvider for Dnf {
                         repository.name.clone(),
                     ],
                     privileged: true,
+                    privilege_provider: privilege_provider.clone(),
                     ..Default::default()
                 }),
                 initializers: vec![],
@@ -90,6 +105,7 @@ impl PackageProvider for Dnf {
                         String::from("--refresh"),
                     ],
                     privileged: true,
+                    privilege_provider: privilege_provider.clone(),
                     ..Default::default()
                 }),
                 initializers: vec![],
@@ -104,7 +120,10 @@ impl PackageProvider for Dnf {
         Ok(package.packages())
     }
 
-    fn install(&self, package: &PackageVariant) -> anyhow::Result<Vec<Step>> {
+    fn install(&self, package: &PackageVariant, contexts: &Contexts) -> anyhow::Result<Vec<Step>> {
+        let privilege_provider =
+            utilities::get_privilege_provider(&contexts).unwrap_or_else(|| "sudo".to_string());
+
         Ok(vec![Step {
             atom: Box::new(Exec {
                 command: String::from("dnf"),
@@ -118,6 +137,7 @@ impl PackageProvider for Dnf {
                 .chain(self.query(package)?)
                 .collect(),
                 privileged: true,
+                privilege_provider: privilege_provider.clone(),
                 ..Default::default()
             }),
             initializers: vec![],
@@ -129,17 +149,22 @@ impl PackageProvider for Dnf {
 #[cfg(test)]
 mod test {
     use crate::actions::package::{providers::PackageProviders, repository::RepositoryKey};
+    use crate::contexts::Contexts;
 
     use super::*;
 
     #[test]
     fn test_add_repository_without_key() {
         let dnf = Dnf {};
-        let steps = dnf.add_repository(&PackageRepository {
-            name: String::from("test"),
-            provider: PackageProviders::Dnf,
-            ..Default::default()
-        });
+        let contexts = Contexts::default();
+        let steps = dnf.add_repository(
+            &PackageRepository {
+                name: String::from("test"),
+                provider: PackageProviders::Dnf,
+                ..Default::default()
+            },
+            &contexts,
+        );
 
         assert_eq!(steps.unwrap().len(), 2);
     }
@@ -147,14 +172,18 @@ mod test {
     #[test]
     fn test_repository_with_key() {
         let dnf = Dnf {};
-        let steps = dnf.add_repository(&PackageRepository {
-            name: String::from("test"),
-            key: Some(RepositoryKey {
-                url: String::from("abc"),
-                ..Default::default()
-            }),
-            provider: PackageProviders::Dnf,
-        });
+        let contexts = Contexts::default();
+        let steps = dnf.add_repository(
+            &PackageRepository {
+                name: String::from("test"),
+                key: Some(RepositoryKey {
+                    url: String::from("abc"),
+                    ..Default::default()
+                }),
+                provider: PackageProviders::Dnf,
+            },
+            &contexts,
+        );
 
         assert_eq!(steps.unwrap().len(), 3);
     }

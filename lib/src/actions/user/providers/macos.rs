@@ -1,7 +1,9 @@
 use super::UserProvider;
 use crate::actions::user::{add_group::UserAddGroup, UserVariant};
 use crate::atoms::command::Exec;
+use crate::contexts::Contexts;
 use crate::steps::Step;
+use crate::utilities;
 use serde::{Deserialize, Serialize};
 use tracing::warn;
 use which::which;
@@ -10,7 +12,7 @@ use which::which;
 pub struct MacOSUserProvider {}
 
 impl UserProvider for MacOSUserProvider {
-    fn add_user(&self, user: &UserVariant) -> anyhow::Result<Vec<Step>> {
+    fn add_user(&self, user: &UserVariant, contexts: &Contexts) -> anyhow::Result<Vec<Step>> {
         let mut args: Vec<String> = vec![];
         let cli = match which("dscl") {
             Ok(c) => c,
@@ -43,11 +45,15 @@ impl UserProvider for MacOSUserProvider {
             args.push(String::from("\"{user.fullename}\""));
         }
 
+        let privilege_provider =
+            utilities::get_privilege_provider(&contexts).unwrap_or_else(|| "sudo".to_string());
+
         let mut steps: Vec<Step> = vec![Step {
             atom: Box::new(Exec {
                 command: cli.display().to_string(),
                 arguments: vec![].into_iter().chain(args.clone()).collect(),
                 privileged: true,
+                privilege_provider: privilege_provider.clone(),
                 ..Default::default()
             }),
             initializers: vec![],
@@ -60,7 +66,7 @@ impl UserProvider for MacOSUserProvider {
                 group: user.group.clone(),
                 provider: user.provider.clone(),
             };
-            for group in self.add_to_group(&user_group)? {
+            for group in self.add_to_group(&user_group, &contexts)? {
                 steps.push(group);
             }
         }
@@ -68,7 +74,7 @@ impl UserProvider for MacOSUserProvider {
         Ok(steps)
     }
 
-    fn add_to_group(&self, user: &UserAddGroup) -> anyhow::Result<Vec<Step>> {
+    fn add_to_group(&self, user: &UserAddGroup, contexts: &Contexts) -> anyhow::Result<Vec<Step>> {
         let cli = match which("dscl") {
             Ok(c) => c,
             Err(_) => {
@@ -86,6 +92,9 @@ impl UserProvider for MacOSUserProvider {
             warn!(message = "No user specified to add to group(s)");
             return Ok(vec![]);
         }
+
+        let privilege_provider =
+            utilities::get_privilege_provider(&contexts).unwrap_or_else(|| "sudo".to_string());
 
         let mut steps: Vec<Step> = vec![];
 
@@ -106,6 +115,7 @@ impl UserProvider for MacOSUserProvider {
                     command: cli.display().to_string().clone(),
                     arguments: args.into_iter().collect(),
                     privileged: true,
+                    privilege_provider: privilege_provider.clone(),
                     ..Default::default()
                 }),
                 initializers: vec![],
@@ -122,18 +132,23 @@ impl UserProvider for MacOSUserProvider {
 mod test {
     use crate::actions::user::providers::{MacOSUserProvider, UserProvider};
     use crate::actions::user::{add_group::UserAddGroup, UserVariant};
+    use crate::contexts::Contexts;
 
     #[test]
     fn test_add_user() {
         let user_provider = MacOSUserProvider {};
-        let steps = user_provider.add_user(&UserVariant {
-            username: String::from("test"),
-            shell: String::from("sh"),
-            home_dir: String::from("/home/test"),
-            fullname: String::from("Test User"),
-            group: vec![],
-            ..Default::default()
-        });
+        let contexts = Contexts::default();
+        let steps = user_provider.add_user(
+            &UserVariant {
+                username: String::from("test"),
+                shell: String::from("sh"),
+                home_dir: String::from("/home/test"),
+                fullname: String::from("Test User"),
+                group: vec![],
+                ..Default::default()
+            },
+            &contexts,
+        );
 
         assert_eq!(steps.unwrap().len(), 1);
     }
@@ -141,14 +156,18 @@ mod test {
     #[test]
     fn test_add_user_no_username() {
         let user_provider = MacOSUserProvider {};
-        let steps = user_provider.add_user(&UserVariant {
-            username: String::from(""),
-            shell: String::from("sh"),
-            home_dir: String::from("/home/test"),
-            fullname: String::from("Test User"),
-            group: vec![],
-            ..Default::default()
-        });
+        let contexts = Contexts::default();
+        let steps = user_provider.add_user(
+            &UserVariant {
+                username: String::from(""),
+                shell: String::from("sh"),
+                home_dir: String::from("/home/test"),
+                fullname: String::from("Test User"),
+                group: vec![],
+                ..Default::default()
+            },
+            &contexts,
+        );
 
         assert_eq!(steps.unwrap().len(), 0);
     }
@@ -156,11 +175,15 @@ mod test {
     #[test]
     fn test_add_to_group() {
         let user_provider = MacOSUserProvider {};
-        let steps = user_provider.add_to_group(&UserAddGroup {
-            username: String::from("test"),
-            group: vec![String::from("testgroup"), String::from("wheel")],
-            ..Default::default()
-        });
+        let contexts = Contexts::default();
+        let steps = user_provider.add_to_group(
+            &UserAddGroup {
+                username: String::from("test"),
+                group: vec![String::from("testgroup"), String::from("wheel")],
+                ..Default::default()
+            },
+            &contexts,
+        );
 
         assert_eq!(steps.unwrap().len(), 2);
     }
@@ -168,14 +191,18 @@ mod test {
     #[test]
     fn test_create_user_add_to_group() {
         let user_provider = MacOSUserProvider {};
-        let steps = user_provider.add_user(&UserVariant {
-            username: String::from("test"),
-            shell: String::from(""),
-            home_dir: String::from(""),
-            fullname: String::from(""),
-            group: vec![String::from("testgroup")],
-            ..Default::default()
-        });
+        let contexts = Contexts::default();
+        let steps = user_provider.add_user(
+            &UserVariant {
+                username: String::from("test"),
+                shell: String::from(""),
+                home_dir: String::from(""),
+                fullname: String::from(""),
+                group: vec![String::from("testgroup")],
+                ..Default::default()
+            },
+            &contexts,
+        );
 
         assert_eq!(steps.unwrap().len(), 2);
     }

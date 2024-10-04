@@ -4,8 +4,10 @@ use crate::steps::Step;
 mod none;
 use self::{freebsd::FreeBSDGroupProvider, none::NoneGroupProvider};
 use super::GroupVariant;
+use crate::contexts::Contexts;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+
 mod freebsd;
 mod linux;
 use self::linux::LinuxGroupProvider;
@@ -58,5 +60,5 @@ impl Default for GroupProviders {
 }
 
 pub trait GroupProvider {
-    fn add_group(&self, group: &GroupVariant) -> Vec<Step>;
+    fn add_group(&self, group: &GroupVariant, contexts: &Contexts) -> Vec<Step>;
 }

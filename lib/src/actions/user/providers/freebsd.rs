@@ -1,7 +1,9 @@
 use super::UserProvider;
 use crate::actions::user::{add_group::UserAddGroup, UserVariant};
 use crate::atoms::command::Exec;
+use crate::contexts::Contexts;
 use crate::steps::Step;
+use crate::utilities;
 use serde::{Deserialize, Serialize};
 use tracing::warn;
 
@@ -9,10 +11,10 @@ use tracing::warn;
 pub struct FreeBSDUserProvider {}
 
 impl UserProvider for FreeBSDUserProvider {
-    fn add_user(&self, user: &UserVariant) -> anyhow::Result<Vec<Step>> {
+    fn add_user(&self, user: &UserVariant, contexts: &Contexts) -> anyhow::Result<Vec<Step>> {
         let mut args: Vec<String> = vec![];
 
-        // is a user name isn't provided, cant create a new user
+        // is a username isn't provided, cant create a new user
         if user.username.is_empty() {
             return Ok(vec![]);
         }
@@ -40,6 +42,9 @@ impl UserProvider for FreeBSDUserProvider {
         args.push(String::from("-w"));
         args.push(String::from("random"));
 
+        let privilege_provider =
+            utilities::get_privilege_provider(&contexts).unwrap_or_else(|| "sudo".to_string());
+
         let mut steps: Vec<Step> = vec![Step {
             atom: Box::new(Exec {
                 command: String::from("/usr/sbin/pw"),
@@ -48,6 +53,7 @@ impl UserProvider for FreeBSDUserProvider {
                     .chain(args.clone())
                     .collect(),
                 privileged: true,
+                privilege_provider: privilege_provider.clone(),
                 ..Default::default()
             }),
             initializers: vec![],
@@ -60,7 +66,7 @@ impl UserProvider for FreeBSDUserProvider {
                 group: user.group.clone(),
                 provider: user.provider.clone(),
             };
-            for group in self.add_to_group(&user_groups)? {
+            for group in self.add_to_group(&user_groups, &contexts)? {
                 steps.push(group);
             }
         }
@@ -68,7 +74,7 @@ impl UserProvider for FreeBSDUserProvider {
         Ok(steps)
     }
 
-    fn add_to_group(&self, user: &UserAddGroup) -> anyhow::Result<Vec<Step>> {
+    fn add_to_group(&self, user: &UserAddGroup, contexts: &Contexts) -> anyhow::Result<Vec<Step>> {
         let mut steps: Vec<Step> = vec![];
 
         if user.group.is_empty() {
@@ -80,6 +86,9 @@ impl UserProvider for FreeBSDUserProvider {
             warn!(message = "No user specified to add to group(s)");
             return Ok(steps);
         }
+
+        let privilege_provider =
+            utilities::get_privilege_provider(&contexts).unwrap_or_else(|| "sudo".to_string());
 
         for group in user.group.iter() {
             steps.push(Step {
@@ -93,6 +102,7 @@ impl UserProvider for FreeBSDUserProvider {
                         String::from(group),
                     ],
                     privileged: true,
+                    privilege_provider: privilege_provider.clone(),
                     ..Default::default()
                 }),
                 initializers: vec![],
@@ -109,18 +119,23 @@ impl UserProvider for FreeBSDUserProvider {
 mod test {
     use crate::actions::user::providers::{FreeBSDUserProvider, UserProvider};
     use crate::actions::user::{add_group::UserAddGroup, UserVariant};
+    use crate::contexts::Contexts;
 
     #[test]
     fn test_add_user() {
         let user_provider = FreeBSDUserProvider {};
-        let steps = user_provider.add_user(&UserVariant {
-            username: String::from("test"),
-            shell: String::from("sh"),
-            home_dir: String::from("/home/test"),
-            fullname: String::from("Test User"),
-            group: vec![],
-            ..Default::default()
-        });
+        let contexts = Contexts::default();
+        let steps = user_provider.add_user(
+            &UserVariant {
+                username: String::from("test"),
+                shell: String::from("sh"),
+                home_dir: String::from("/home/test"),
+                fullname: String::from("Test User"),
+                group: vec![],
+                ..Default::default()
+            },
+            &contexts,
+        );
 
         assert_eq!(steps.unwrap().len(), 1);
     }
@@ -128,14 +143,18 @@ mod test {
     #[test]
     fn test_add_user_no_username() {
         let user_provider = FreeBSDUserProvider {};
-        let steps = user_provider.add_user(&UserVariant {
-            username: String::from(""),
-            shell: String::from("sh"),
-            home_dir: String::from("/home/test"),
-            fullname: String::from("Test User"),
-            group: vec![],
-            ..Default::default()
-        });
+        let contexts = Contexts::default();
+        let steps = user_provider.add_user(
+            &UserVariant {
+                username: String::from(""),
+                shell: String::from("sh"),
+                home_dir: String::from("/home/test"),
+                fullname: String::from("Test User"),
+                group: vec![],
+                ..Default::default()
+            },
+            &contexts,
+        );
 
         assert_eq!(steps.unwrap().len(), 0);
     }
@@ -143,11 +162,15 @@ mod test {
     #[test]
     fn test_add_to_group() {
         let user_provider = FreeBSDUserProvider {};
-        let steps = user_provider.add_to_group(&UserAddGroup {
-            username: String::from("test"),
-            group: vec![String::from("testgroup"), String::from("wheel")],
-            ..Default::default()
-        });
+        let contexts = Contexts::default();
+        let steps = user_provider.add_to_group(
+            &UserAddGroup {
+                username: String::from("test"),
+                group: vec![String::from("testgroup"), String::from("wheel")],
+                ..Default::default()
+            },
+            &contexts,
+        );
 
         assert_eq!(steps.unwrap().len(), 2);
     }
@@ -155,14 +178,18 @@ mod test {
     #[test]
     fn test_create_user_add_to_group() {
         let user_provider = FreeBSDUserProvider {};
-        let steps = user_provider.add_user(&UserVariant {
-            username: String::from("test"),
-            shell: String::from(""),
-            home_dir: String::from(""),
-            fullname: String::from(""),
-            group: vec![String::from("testgroup")],
-            ..Default::default()
-        });
+        let contexts = Contexts::default();
+        let steps = user_provider.add_user(
+            &UserVariant {
+                username: String::from("test"),
+                shell: String::from(""),
+                home_dir: String::from(""),
+                fullname: String::from(""),
+                group: vec![String::from("testgroup")],
+                ..Default::default()
+            },
+            &contexts,
+        );
 
         assert_eq!(steps.unwrap().len(), 2);
     }

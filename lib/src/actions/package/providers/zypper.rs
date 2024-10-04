@@ -1,7 +1,9 @@
 use super::PackageProvider;
 use crate::actions::package::{repository::PackageRepository, PackageVariant};
 use crate::atoms::command::Exec;
+use crate::contexts::Contexts;
 use crate::steps::Step;
+use crate::utilities;
 use serde::{Deserialize, Serialize};
 use tracing::warn;
 use which::which;
@@ -24,7 +26,7 @@ impl PackageProvider for Zypper {
         }
     }
 
-    fn bootstrap(&self) -> Vec<Step> {
+    fn bootstrap(&self, _contexts: &Contexts) -> Vec<Step> {
         vec![]
     }
 
@@ -32,7 +34,11 @@ impl PackageProvider for Zypper {
         false
     }
 
-    fn add_repository(&self, _repository: &PackageRepository) -> anyhow::Result<Vec<Step>> {
+    fn add_repository(
+        &self,
+        _repository: &PackageRepository,
+        _contexts: &Contexts,
+    ) -> anyhow::Result<Vec<Step>> {
         Ok(vec![])
     }
 
@@ -40,7 +46,10 @@ impl PackageProvider for Zypper {
         Ok(package.packages())
     }
 
-    fn install(&self, package: &PackageVariant) -> anyhow::Result<Vec<Step>> {
+    fn install(&self, package: &PackageVariant, contexts: &Contexts) -> anyhow::Result<Vec<Step>> {
+        let privilege_provider =
+            utilities::get_privilege_provider(&contexts).unwrap_or_else(|| "sudo".to_string());
+
         Ok(vec![Step {
             atom: Box::new(Exec {
                 command: String::from("zypper"),
@@ -50,6 +59,7 @@ impl PackageProvider for Zypper {
                     .chain(package.packages())
                     .collect(),
                 privileged: true,
+                privilege_provider: privilege_provider.clone(),
                 ..Default::default()
             }),
             initializers: vec![],
@@ -61,19 +71,24 @@ impl PackageProvider for Zypper {
 #[cfg(test)]
 mod test {
     use crate::actions::package::providers::PackageProviders;
+    use crate::contexts::Contexts;
 
     use super::*;
 
     #[test]
     fn test_install() {
         let zypper = Zypper {};
-        let steps = zypper.install(&PackageVariant {
-            name: Some(String::from("")),
-            list: vec![],
-            extra_args: vec![],
-            provider: PackageProviders::Zypper,
-            file: false,
-        });
+        let contexts = Contexts::default();
+        let steps = zypper.install(
+            &PackageVariant {
+                name: Some(String::from("")),
+                list: vec![],
+                extra_args: vec![],
+                provider: PackageProviders::Zypper,
+                file: false,
+            },
+            &contexts,
+        );
 
         assert_eq!(steps.unwrap().len(), 1);
     }

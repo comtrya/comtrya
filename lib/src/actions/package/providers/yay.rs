@@ -2,7 +2,9 @@ use super::PackageProvider;
 use crate::actions::package::repository::PackageRepository;
 use crate::actions::package::PackageVariant;
 use crate::atoms::command::Exec;
+use crate::contexts::Contexts;
 use crate::steps::Step;
+use crate::utilities;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::process::Command;
@@ -28,7 +30,10 @@ impl PackageProvider for Yay {
         }
     }
 
-    fn bootstrap(&self) -> Vec<Step> {
+    fn bootstrap(&self, contexts: &Contexts) -> Vec<Step> {
+        let privilege_provider =
+            utilities::get_privilege_provider(&contexts).unwrap_or_else(|| "sudo".to_string());
+
         vec![
             Step {
                 atom: Box::new(Exec {
@@ -40,6 +45,7 @@ impl PackageProvider for Yay {
                         String::from("git"),
                     ],
                     privileged: true,
+                    privilege_provider: privilege_provider.clone(),
                     ..Default::default()
                 }),
                 initializers: vec![],
@@ -75,7 +81,11 @@ impl PackageProvider for Yay {
         false
     }
 
-    fn add_repository(&self, _: &PackageRepository) -> anyhow::Result<Vec<Step>> {
+    fn add_repository(
+        &self,
+        _: &PackageRepository,
+        _contexts: &Contexts,
+    ) -> anyhow::Result<Vec<Step>> {
         Ok(vec![])
     }
 
@@ -114,7 +124,9 @@ impl PackageProvider for Yay {
             .collect())
     }
 
-    fn install(&self, package: &PackageVariant) -> anyhow::Result<Vec<Step>> {
+    fn install(&self, package: &PackageVariant, _contexts: &Contexts) -> anyhow::Result<Vec<Step>> {
+        // Does not require privilege escalation?
+
         let need_installed = self.query(package)?;
         if need_installed.is_empty() {
             return Ok(vec![]);

@@ -13,14 +13,14 @@ impl Action for GroupAdd {
         format!("Creating group {}", self.group_name)
     }
 
-    fn plan(&self, _manifest: &Manifest, _context: &Contexts) -> anyhow::Result<Vec<Step>> {
+    fn plan(&self, _manifest: &Manifest, contexts: &Contexts) -> anyhow::Result<Vec<Step>> {
         let variant: GroupVariant = self.into();
         let box_provider = variant.provider.clone().get_provider();
         let provider = box_provider.deref();
 
         let mut atoms: Vec<Step> = vec![];
 
-        atoms.append(&mut provider.add_group(&variant));
+        atoms.append(&mut provider.add_group(&variant, &contexts));
 
         Ok(atoms)
     }

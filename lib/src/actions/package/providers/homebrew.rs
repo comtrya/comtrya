@@ -1,5 +1,6 @@
 use super::PackageProvider;
 use crate::actions::package::repository::PackageRepository;
+use crate::contexts::Contexts;
 use crate::steps::Step;
 use crate::{actions::package::PackageVariant, atoms::command::Exec};
 use serde::{Deserialize, Serialize};
@@ -19,7 +20,7 @@ impl PackageProvider for Homebrew {
         which("brew").is_ok()
     }
 
-    fn bootstrap(&self) -> Vec<Step> {
+    fn bootstrap(&self, _contexts: &Contexts) -> Vec<Step> {
         vec![Step { atom: Box::new(Exec {
             command: String::from("bash"),
             arguments: vec![
@@ -37,7 +38,11 @@ impl PackageProvider for Homebrew {
         false
     }
 
-    fn add_repository(&self, repository: &PackageRepository) -> anyhow::Result<Vec<Step>> {
+    fn add_repository(
+        &self,
+        repository: &PackageRepository,
+        _contexts: &Contexts,
+    ) -> anyhow::Result<Vec<Step>> {
         Ok(vec![Step {
             atom: Box::new(Exec {
                 command: String::from("brew"),
@@ -74,7 +79,9 @@ impl PackageProvider for Homebrew {
             .collect())
     }
 
-    fn install(&self, package: &PackageVariant) -> anyhow::Result<Vec<Step>> {
+    fn install(&self, package: &PackageVariant, _contexts: &Contexts) -> anyhow::Result<Vec<Step>> {
+        // Does not require privilege escalation
+
         let need_installed = self.query(package)?;
 
         if need_installed.is_empty() {

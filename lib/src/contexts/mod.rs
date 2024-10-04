@@ -5,6 +5,7 @@ use std::collections::BTreeMap;
 use tracing::{instrument, trace, warn};
 use user::UserContextProvider;
 
+use crate::contexts::privilege::PrivilegeContextProvider;
 use crate::{
     config::Config,
     contexts::{
@@ -16,6 +17,7 @@ use crate::{
 
 pub mod env;
 pub mod os;
+pub mod privilege;
 /// User context provider: understands the user running the command
 pub mod user;
 pub mod variable_include;
@@ -44,6 +46,7 @@ pub fn build_contexts(config: &Config) -> Contexts {
         Box::new(EnvContextProvider {}),
         Box::new(VariablesContextProvider { config }),
         Box::new(VariableIncludeContextProvider { config }),
+        Box::new(PrivilegeContextProvider { config }),
     ];
 
     context_providers.iter().for_each(|provider| {

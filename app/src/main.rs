@@ -118,7 +118,6 @@ fn main() -> anyhow::Result<()> {
 
     // Run Context Providers
     let contexts = build_contexts(&config);
-
     let runtime = Runtime {
         args,
         config,

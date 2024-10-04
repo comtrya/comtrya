@@ -1,7 +1,9 @@
 use super::PackageProvider;
 use crate::actions::package::{repository::PackageRepository, PackageVariant};
 use crate::atoms::command::Exec;
+use crate::contexts::Contexts;
 use crate::steps::Step;
+use crate::utilities;
 use serde::{Deserialize, Serialize};
 use sha256::digest;
 use tracing::warn;
@@ -34,7 +36,10 @@ impl PackageProvider for Aptitude {
         }
     }
 
-    fn bootstrap(&self) -> Vec<Step> {
+    fn bootstrap(&self, contexts: &Contexts) -> Vec<Step> {
+        let privilege_provider =
+            utilities::get_privilege_provider(&contexts).unwrap_or_else(|| "sudo".to_string());
+
         vec![Step {
             atom: Box::new(Exec {
                 command: String::from("apt"),
@@ -47,6 +52,7 @@ impl PackageProvider for Aptitude {
                 ],
                 environment: self.env(),
                 privileged: true,
+                privilege_provider: privilege_provider.clone(),
                 ..Default::default()
             }),
             initializers: vec![],
@@ -58,10 +64,17 @@ impl PackageProvider for Aptitude {
         false
     }
 
-    fn add_repository(&self, repository: &PackageRepository) -> anyhow::Result<Vec<Step>> {
+    fn add_repository(
+        &self,
+        repository: &PackageRepository,
+        contexts: &Contexts,
+    ) -> anyhow::Result<Vec<Step>> {
         let mut steps: Vec<Step> = vec![];
 
         let mut signed_by = String::from("");
+
+        let privilege_provider =
+            utilities::get_privilege_provider(&contexts).unwrap_or_else(|| "sudo".to_string());
 
         if repository.key.is_some() {
             // .unwrap() is safe here because we checked for key.is_some() above
@@ -78,6 +91,7 @@ impl PackageProvider for Aptitude {
                     arguments: vec![String::from("-o"), key_path, key.url],
                     environment: self.env(),
                     privileged: true,
+                    privilege_provider: privilege_provider.clone(),
                     ..Default::default()
                 }),
                 initializers: vec![],
@@ -100,6 +114,7 @@ impl PackageProvider for Aptitude {
                     ],
                     environment: self.env(),
                     privileged: true,
+                    privilege_provider: privilege_provider.clone(),
                     ..Default::default()
                 }),
                 initializers: vec![],
@@ -111,6 +126,7 @@ impl PackageProvider for Aptitude {
                     arguments: vec![String::from("update")],
                     environment: self.env(),
                     privileged: true,
+                    privilege_provider: privilege_provider.clone(),
                     ..Default::default()
                 }),
                 initializers: vec![],
@@ -125,7 +141,10 @@ impl PackageProvider for Aptitude {
         Ok(package.packages())
     }
 
-    fn install(&self, package: &PackageVariant) -> anyhow::Result<Vec<Step>> {
+    fn install(&self, package: &PackageVariant, contexts: &Contexts) -> anyhow::Result<Vec<Step>> {
+        let privilege_provider =
+            utilities::get_privilege_provider(&contexts).unwrap_or_else(|| "sudo".to_string());
+
         Ok(vec![Step {
             atom: Box::new(Exec {
                 command: String::from("apt"),
@@ -136,6 +155,7 @@ impl PackageProvider for Aptitude {
                     .collect(),
                 environment: self.env(),
                 privileged: true,
+                privilege_provider: privilege_provider.clone(),
                 ..Default::default()
             }),
             initializers: vec![],
@@ -147,6 +167,7 @@ impl PackageProvider for Aptitude {
 #[cfg(test)]
 mod test {
     use crate::actions::package::repository::RepositoryKey;
+    use crate::contexts::Contexts;
 
     use super::*;
 
@@ -157,10 +178,14 @@ mod test {
     #[test]
     fn test_add_repository_without_key() {
         let aptitude = Aptitude {};
-        let steps = aptitude.add_repository(&PackageRepository {
-            name: String::from("test"),
-            ..Default::default()
-        });
+        let contexts = Contexts::default();
+        let steps = aptitude.add_repository(
+            &PackageRepository {
+                name: String::from("test"),
+                ..Default::default()
+            },
+            &contexts,
+        );
 
         assert_eq!(steps.unwrap().len(), 2);
     }
@@ -168,14 +193,18 @@ mod test {
     #[test]
     fn test_add_repository_with_key() {
         let aptitude = Aptitude {};
-        let steps = aptitude.add_repository(&PackageRepository {
-            name: String::from("test"),
-            key: Some(RepositoryKey {
-                url: String::from("abc"),
+        let contexts = Contexts::default();
+        let steps = aptitude.add_repository(
+            &PackageRepository {
+                name: String::from("test"),
+                key: Some(RepositoryKey {
+                    url: String::from("abc"),
+                    ..Default::default()
+                }),
                 ..Default::default()
-            }),
-            ..Default::default()
-        });
+            },
+            &contexts,
+        );
 
         assert_eq!(steps.unwrap().len(), 3);
     }
@@ -183,15 +212,19 @@ mod test {
     #[test]
     fn test_add_repository_with_key_and_fingerprint() {
         let aptitude = Aptitude {};
-        let steps = aptitude.add_repository(&PackageRepository {
-            name: String::from("test"),
-            key: Some(RepositoryKey {
-                url: String::from("abc"),
-                fingerprint: Some(String::from("abc")),
+        let contexts = Contexts::default();
+        let steps = aptitude.add_repository(
+            &PackageRepository {
+                name: String::from("test"),
+                key: Some(RepositoryKey {
+                    url: String::from("abc"),
+                    fingerprint: Some(String::from("abc")),
+                    ..Default::default()
+                }),
                 ..Default::default()
-            }),
-            ..Default::default()
-        });
+            },
+            &contexts,
+        );
 
         assert_eq!(steps.unwrap().len(), 3);
     }
@@ -199,15 +232,19 @@ mod test {
     #[test]
     fn test_regression_share_ring() {
         let aptitude = Aptitude {};
-        let steps = aptitude.add_repository(&PackageRepository {
-            name: String::from("test"),
-            key: Some(RepositoryKey {
-                url: String::from("abc"),
-                fingerprint: Some(String::from("abc")),
+        let contexts = Contexts::default();
+        let steps = aptitude.add_repository(
+            &PackageRepository {
+                name: String::from("test"),
+                key: Some(RepositoryKey {
+                    url: String::from("abc"),
+                    fingerprint: Some(String::from("abc")),
+                    ..Default::default()
+                }),
                 ..Default::default()
-            }),
-            ..Default::default()
-        });
+            },
+            &contexts,
+        );
 
         let steps = match steps {
             Ok(s) => s,

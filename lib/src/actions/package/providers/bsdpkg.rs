@@ -1,9 +1,10 @@
 use super::PackageProvider;
 use crate::actions::package::repository::PackageRepository;
+use crate::contexts::Contexts;
 use crate::steps::finalizers::FlowControl::StopIf;
 use crate::steps::finalizers::OutputContains;
 use crate::steps::Step;
-use crate::{actions::package::PackageVariant, atoms::command::Exec};
+use crate::{actions::package::PackageVariant, atoms::command::Exec, utilities};
 use serde::{Deserialize, Serialize};
 use tracing::{instrument, warn};
 use which::which;
@@ -33,13 +34,17 @@ impl PackageProvider for BsdPkg {
     }
 
     #[instrument(name = "bootstrap", level = "info", skip(self))]
-    fn bootstrap(&self) -> Vec<Step> {
+    fn bootstrap(&self, contexts: &Contexts) -> Vec<Step> {
+        let privilege_provider =
+            utilities::get_privilege_provider(&contexts).unwrap_or_else(|| "sudo".to_string());
+
         vec![Step {
             atom: Box::new(Exec {
                 command: String::from("/usr/sbin/pkg"),
                 arguments: vec![String::from("bootstrap")],
                 environment: self.env(),
                 privileged: true,
+                privilege_provider: privilege_provider.clone(),
                 ..Default::default()
             }),
             initializers: vec![],
@@ -51,7 +56,11 @@ impl PackageProvider for BsdPkg {
         false
     }
 
-    fn add_repository(&self, _: &PackageRepository) -> anyhow::Result<Vec<Step>> {
+    fn add_repository(
+        &self,
+        _: &PackageRepository,
+        _contexts: &Contexts,
+    ) -> anyhow::Result<Vec<Step>> {
         Ok(vec![])
     }
 
@@ -61,7 +70,10 @@ impl PackageProvider for BsdPkg {
         Ok(package.packages())
     }
 
-    fn install(&self, package: &PackageVariant) -> anyhow::Result<Vec<Step>> {
+    fn install(&self, package: &PackageVariant, contexts: &Contexts) -> anyhow::Result<Vec<Step>> {
+        let privilege_provider =
+            utilities::get_privilege_provider(&contexts).unwrap_or_else(|| "sudo".to_string());
+
         if package.file {
             return Ok(vec![Step {
                 atom: Box::new(Exec {
@@ -72,6 +84,7 @@ impl PackageProvider for BsdPkg {
                         .chain(package.packages())
                         .collect(),
                     privileged: true,
+                    privilege_provider: privilege_provider.clone(),
                     ..Default::default()
                 }),
                 initializers: vec![],
@@ -89,6 +102,7 @@ impl PackageProvider for BsdPkg {
                         .chain(package.packages())
                         .collect(),
                     privileged: true,
+                    privilege_provider: privilege_provider.clone(),
                     ..Default::default()
                 }),
                 initializers: vec![],
@@ -103,6 +117,7 @@ impl PackageProvider for BsdPkg {
                         .chain(package.packages())
                         .collect(),
                     privileged: true,
+                    privilege_provider: privilege_provider.clone(),
                     ..Default::default()
                 }),
                 initializers: vec![],
