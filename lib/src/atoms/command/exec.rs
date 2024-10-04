@@ -265,7 +265,6 @@ mod tests {
         );
     }
 
-
     #[test]
     fn error_propagation() {
         let mut command_run = new_run_command(String::from("non-existant-command"));
