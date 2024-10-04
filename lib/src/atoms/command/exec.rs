@@ -118,7 +118,7 @@ impl Atom for Exec {
 
         // If we require root, we need to use sudo with inherited IO
         // to ensure the user can respond if prompted for a password
-        if command.eq("doas") || command.eq("sudo") {
+        if command.eq("doas") || command.eq("sudo") || command.eq("run0") {
             match self.elevate() {
                 Ok(_) => (),
                 Err(err) => {
@@ -243,6 +243,28 @@ mod tests {
             args
         );
     }
+    #[test]
+    fn elevate_run0() {
+        let mut command_run = new_run_command(String::from("echo"));
+        command_run.arguments = vec![String::from("Hello, world!")];
+        let (command, args) = command_run.elevate_if_required();
+
+        assert_eq!(String::from("echo"), command);
+        assert_eq!(vec![String::from("Hello, world!")], args);
+
+        let mut command_run = new_run_command(String::from("echo"));
+        command_run.arguments = vec![String::from("Hello, world!")];
+        command_run.privileged = true;
+        command_run.privilege_provider = Privilege::Run0.to_string();
+        let (command, args) = command_run.elevate_if_required();
+
+        assert_eq!(String::from("run0"), command);
+        assert_eq!(
+            vec![String::from("echo"), String::from("Hello, world!")],
+            args
+        );
+    }
+
 
     #[test]
     fn error_propagation() {

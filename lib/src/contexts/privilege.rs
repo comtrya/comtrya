@@ -9,6 +9,9 @@ pub enum Privilege {
 
     #[serde(alias = "doas")]
     Doas,
+
+    #[serde(alias = "run0")]
+    Run0,
 }
 
 impl Default for Privilege {
@@ -22,6 +25,7 @@ impl Display for Privilege {
         let str = match self {
             Privilege::Sudo => "sudo".to_string(),
             Privilege::Doas => "doas".to_string(),
+            Privilege::Run0 => "run0".to_string(),
         };
         write!(f, "{}", str)
     }
