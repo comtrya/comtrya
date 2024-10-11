@@ -11,6 +11,8 @@ mod macports;
 use self::macports::Macports;
 mod pkgin;
 use self::pkgin::Pkgin;
+mod snapcraft;
+use self::snapcraft::Snapcraft;
 mod yay;
 use self::yay::Yay;
 mod winget;
@@ -44,6 +46,9 @@ pub enum PackageProviders {
     #[serde(rename = "pkgin")]
     Pkgin,
 
+    #[serde(rename = "snapcraft", alias = "snap")]
+    Snapcraft,
+
     #[serde(rename = "yay", alias = "pacman")]
     Yay,
 
@@ -70,6 +75,7 @@ impl PackageProviders {
             PackageProviders::Winget => Box::new(Winget {}),
             PackageProviders::Xbps => Box::new(Xbps {}),
             PackageProviders::Zypper => Box::new(Zypper {}),
+            PackageProviders::Snapcraft => Box::new(Snapcraft {}),
         }
     }
 }
