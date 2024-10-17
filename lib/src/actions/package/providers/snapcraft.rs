@@ -4,13 +4,12 @@ use crate::contexts::Contexts;
 use crate::steps::Step;
 use crate::{actions::package::PackageVariant, atoms::command::Exec, utilities};
 use serde::{Deserialize, Serialize};
-use which::which;
 use std::default::Default;
 use tracing::warn;
+use which::which;
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Snapcraft {}
-
 
 impl PackageProvider for Snapcraft {
     fn name(&self) -> &str {
@@ -65,24 +64,23 @@ impl PackageProvider for Snapcraft {
     }
 
     fn install(&self, package: &PackageVariant, contexts: &Contexts) -> anyhow::Result<Vec<Step>> {
-        let privilege_provider = utilities::get_privilege_provider(&contexts).unwrap_or_else(|| "sudo".to_string());
-        Ok(vec![
-            Step {
-                atom: Box::new(Exec {
-                    command: String::from("snap"),
-                    arguments: vec![String::from("install"), String::from("--yes")]
-                        .into_iter()
-                        .chain(package.extra_args.clone())
-                        .chain(package.packages())
-                        .collect(),
-                    privileged: true,
-                    privilege_provider: privilege_provider.clone(),
-                    ..Default::default()
-                }),
-                initializers: vec![],
-                finalizers: vec![],
-            }
-        ])
+        let privilege_provider =
+            utilities::get_privilege_provider(&contexts).unwrap_or_else(|| "sudo".to_string());
+        Ok(vec![Step {
+            atom: Box::new(Exec {
+                command: String::from("snap"),
+                arguments: vec![String::from("install"), String::from("--yes")]
+                    .into_iter()
+                    .chain(package.extra_args.clone())
+                    .chain(package.packages())
+                    .collect(),
+                privileged: true,
+                privilege_provider: privilege_provider.clone(),
+                ..Default::default()
+            }),
+            initializers: vec![],
+            finalizers: vec![],
+        }])
     }
 }
 
