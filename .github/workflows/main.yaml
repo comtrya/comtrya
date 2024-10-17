@@ -98,7 +98,7 @@ jobs:
             cargo_command: cargo
             skip_tests: false
           - os_name: macOS-x86_64
-            os: macos-12
+            os: macos-13
             target: x86_64-apple-darwin
             bin: comtrya
             name: comtrya-x86_64-apple-darwin
