@@ -2,3 +2,4 @@
 /_cicd-intermediates
 /.build
 .DS_Store
+.idea/
