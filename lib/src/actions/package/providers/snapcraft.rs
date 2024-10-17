@@ -88,14 +88,26 @@ impl PackageProvider for Snapcraft {
 
 #[cfg(test)]
 mod test {
-    use crate::actions::package::repository::RepositoryKey;
+    use crate::actions::package::providers::PackageProviders;
     use crate::contexts::Contexts;
 
     use super::*;
 
     #[test]
-    fn test_snapcraft_available() {
+    fn test_install() {
         let snapcraft = Snapcraft {};
-        assert!(snapcraft.available());
+        let contexts = Contexts::default();
+        let steps = snapcraft.install(
+            &PackageVariant {
+                name: Some(String::from("")),
+                list: vec![],
+                extra_args: vec![],
+                provider: PackageProviders::Snapcraft,
+                file: false,
+            },
+            &contexts,
+        );
+
+        assert_eq!(steps.unwrap().len(), 1);
     }
 }
