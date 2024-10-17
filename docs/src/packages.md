@@ -22,6 +22,7 @@ Not all package managers are supported. This is a list of currently supported pa
 | zypper     | OpenSUSE          |
 | macports   | macOS             |
 | dnf        | Fedora            |
+| snapcraft  | Linux             |
 
 
 ### Important note on homebrew and macOS
