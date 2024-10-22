@@ -9,6 +9,8 @@ mod homebrew;
 use self::homebrew::Homebrew;
 mod macports;
 use self::macports::Macports;
+mod paru;
+use self::paru::Paru;
 mod pkgin;
 use self::pkgin::Pkgin;
 mod snapcraft;
@@ -52,6 +54,9 @@ pub enum PackageProviders {
     #[serde(rename = "yay", alias = "pacman")]
     Yay,
 
+    #[serde(rename = "paru")]
+    Paru,
+
     #[serde(rename = "winget")]
     Winget,
 
@@ -72,6 +77,7 @@ impl PackageProviders {
             PackageProviders::Macports => Box::new(Macports {}),
             PackageProviders::Pkgin => Box::new(Pkgin {}),
             PackageProviders::Yay => Box::new(Yay {}),
+            PackageProviders::Paru => Box::new(Paru {}),
             PackageProviders::Winget => Box::new(Winget {}),
             PackageProviders::Xbps => Box::new(Xbps {}),
             PackageProviders::Zypper => Box::new(Zypper {}),

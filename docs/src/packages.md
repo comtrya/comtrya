@@ -13,6 +13,7 @@ Not all package managers are supported. This is a list of currently supported pa
 | Provider   | OS                |
 |:-----------|:------------------|
 | pacman/yay | Arch              |
+| paru       | Arch              |
 | apt        | Debian/Ubuntu     |
 | pkg        | FreeBSD           |
 | pkgin      | NetBSD (Multiple) |
@@ -48,7 +49,7 @@ Some package manager providers can implement a `bootstrap` method that will auto
 # Install package using default provider
 - action: package.install
   name: curl
-  
+
 # Install a list of packages using default provider
 - action: package.install
   list:
@@ -59,7 +60,7 @@ Some package manager providers can implement a `bootstrap` method that will auto
 - action: package install
   name: curl
   provider: pkgin
-  
+
 # Install a package specifying a repository
 - action: package.install
   name: blox
