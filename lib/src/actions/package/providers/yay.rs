@@ -136,11 +136,7 @@ impl PackageProvider for Yay {
             atom: Box::new(Exec {
                 command: String::from("yay"),
                 arguments: [
-                    vec![
-                        String::from("-S"),
-                        String::from("--noconfirm"),
-                        String::from("--nodiffmenu"),
-                    ],
+                    vec![String::from("-S"), String::from("--noconfirm")],
                     package.extra_args.clone(),
                     need_installed,
                 ]
