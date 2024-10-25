@@ -139,7 +139,6 @@ impl PackageProvider for Yay {
                     vec![
                         String::from("-S"),
                         String::from("--noconfirm"),
-                        String::from("--nodiffmenu"),
                     ],
                     package.extra_args.clone(),
                     need_installed,
