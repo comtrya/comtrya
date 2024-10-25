@@ -92,7 +92,7 @@ impl PackageProvider for Paru {
 
     fn query(&self, package: &PackageVariant) -> anyhow::Result<Vec<String>> {
         let requested_already_installed: HashSet<String> = String::from_utf8(
-            Command::new("paru")
+            Command::new("pacman")
                 .args(
                     vec![String::from("-Qq")]
                         .into_iter()
