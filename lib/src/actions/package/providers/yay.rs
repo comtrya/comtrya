@@ -91,7 +91,7 @@ impl PackageProvider for Yay {
 
     fn query(&self, package: &PackageVariant) -> anyhow::Result<Vec<String>> {
         let requested_already_installed: HashSet<String> = String::from_utf8(
-            Command::new("yay")
+            Command::new("pacman")
                 .args(
                     vec![String::from("-Q"), String::from("-q")]
                         .into_iter()
