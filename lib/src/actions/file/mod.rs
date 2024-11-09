@@ -1,8 +1,8 @@
+pub mod chown;
 pub mod copy;
 pub mod download;
 pub mod link;
 pub mod remove;
-pub mod chown;
 
 use crate::actions::Action;
 use crate::manifests::Manifest;

@@ -1,13 +1,13 @@
 use std::path::PathBuf;
 
+use crate::{actions::Action, steps::Step};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use tracing::error;
-use crate::{actions::Action, steps::Step};
 
+use super::FileAction;
 use crate::atoms::file::Chown;
 use crate::atoms::Outcome;
-use super::FileAction;
 
 #[derive(JsonSchema, Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct FileChown {
@@ -30,17 +30,15 @@ impl Action for FileChown {
         _: &crate::manifests::Manifest,
         _: &crate::contexts::Contexts,
     ) -> anyhow::Result<Vec<crate::steps::Step>> {
-        let mut steps = vec![
-            Step {
-                atom: Box::new(Chown {
-                    path: self.path.clone().parse()?,
-                    owner: self.user.clone().unwrap_or("".to_string()),
-                    group: self.group.clone().unwrap_or("".to_string()),
-                }),
-                initializers: vec![],
-                finalizers: vec![],
-            }
-        ];
+        let mut steps = vec![Step {
+            atom: Box::new(Chown {
+                path: self.path.clone().parse()?,
+                owner: self.user.clone().unwrap_or("".to_string()),
+                group: self.group.clone().unwrap_or("".to_string()),
+            }),
+            initializers: vec![],
+            finalizers: vec![],
+        }];
 
         Ok(steps)
     }

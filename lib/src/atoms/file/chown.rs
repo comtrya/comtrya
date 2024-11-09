@@ -32,9 +32,9 @@ impl std::fmt::Display for Chown {
     }
 }
 
+use file_owner::PathExt;
 #[cfg(unix)]
 use std::os::unix::prelude::MetadataExt;
-use file_owner::PathExt;
 
 #[cfg(unix)]
 impl Atom for Chown {
