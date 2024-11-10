@@ -1,9 +1,6 @@
-use std::path::PathBuf;
-
 use crate::{actions::Action, steps::Step};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use tracing::error;
 
 use super::FileAction;
 use crate::atoms::file::Chown;
@@ -30,7 +27,7 @@ impl Action for FileChown {
         _: &crate::manifests::Manifest,
         _: &crate::contexts::Contexts,
     ) -> anyhow::Result<Vec<crate::steps::Step>> {
-        warn!("This action is not supported on windows.");
+        tracing::warn!("This action is not supported on windows.");
         Ok(vec![])
     }
 
