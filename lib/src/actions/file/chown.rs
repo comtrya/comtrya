@@ -7,7 +7,6 @@ use tracing::error;
 
 use super::FileAction;
 use crate::atoms::file::Chown;
-use crate::atoms::Outcome;
 
 #[derive(JsonSchema, Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct FileChown {
@@ -41,7 +40,7 @@ impl Action for FileChown {
         _: &crate::manifests::Manifest,
         _: &crate::contexts::Contexts,
     ) -> anyhow::Result<Vec<crate::steps::Step>> {
-        let mut steps = vec![Step {
+        let steps = vec![Step {
             atom: Box::new(Chown {
                 path: self.path.clone().parse()?,
                 owner: self.user.clone().unwrap_or("".to_string()),
