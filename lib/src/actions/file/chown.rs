@@ -25,6 +25,17 @@ impl Action for FileChown {
         format!("Changing ownership for file {}", self.path)
     }
 
+    #[cfg(not(unix))]
+    fn plan(
+        &self,
+        _: &crate::manifests::Manifest,
+        _: &crate::contexts::Contexts,
+    ) -> anyhow::Result<Vec<crate::steps::Step>> {
+        warn!("This action is not supported on windows.");
+        Ok(vec![])
+    }
+
+    #[cfg(unix)]
     fn plan(
         &self,
         _: &crate::manifests::Manifest,
