@@ -32,11 +32,11 @@ impl std::fmt::Display for Chown {
     }
 }
 
-use file_owner::PathExt;
 #[cfg(unix)]
 use std::os::unix::prelude::MetadataExt;
 
 #[cfg(unix)]
+use file_owner::PathExt;
 impl Atom for Chown {
     fn plan(&self) -> anyhow::Result<Outcome> {
         // If the file doesn't exist, assume it's because
