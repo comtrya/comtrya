@@ -39,6 +39,7 @@ which = "7.0"
 whoami = "1.5"
 tar = "0.4.42"
 flate2 = "1.0.34"
+file-owner = "0.1.2"
 
 [target.'cfg(unix)'.dependencies]
 uzers = "0.12"

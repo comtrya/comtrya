@@ -14,6 +14,7 @@ use anyhow::anyhow;
 use binary::BinaryGitHub;
 use command::run::RunCommand;
 use directory::{DirectoryCopy, DirectoryCreate, DirectoryRemove};
+use file::chown::FileChown;
 use file::copy::FileCopy;
 use file::download::FileDownload;
 use file::link::FileLink;
@@ -114,6 +115,9 @@ pub enum Actions {
     #[serde(rename = "file.copy")]
     FileCopy(ConditionalVariantAction<FileCopy>),
 
+    #[serde(rename = "file.chown")]
+    FileChown(ConditionalVariantAction<FileChown>),
+
     #[serde(rename = "file.download")]
     FileDownload(ConditionalVariantAction<FileDownload>),
 
@@ -161,6 +165,7 @@ impl Actions {
             Actions::DirectoryCopy(a) => a,
             Actions::DirectoryCreate(a) => a,
             Actions::FileCopy(a) => a,
+            Actions::FileChown(a) => a,
             Actions::FileDownload(a) => a,
             Actions::FileLink(a) => a,
             Actions::GroupAdd(a) => a,
@@ -182,6 +187,7 @@ impl Display for Actions {
             Actions::DirectoryCopy(_) => "directory.copy",
             Actions::DirectoryCreate(_) => "directory.create",
             Actions::FileCopy(_) => "file.copy",
+            Actions::FileChown(_) => "file.chown",
             Actions::FileDownload(_) => "file.download",
             Actions::FileLink(_) => "file.link",
             Actions::FileRemove(_) => "file.remove",

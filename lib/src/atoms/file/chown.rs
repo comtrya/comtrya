@@ -7,6 +7,7 @@ use std::path::PathBuf;
 #[cfg(unix)]
 use tracing::error;
 
+#[derive(Debug)]
 pub struct Chown {
     pub path: PathBuf,
     pub owner: String,
@@ -33,6 +34,9 @@ impl std::fmt::Display for Chown {
 
 #[cfg(unix)]
 use std::os::unix::prelude::MetadataExt;
+
+#[cfg(unix)]
+use file_owner::PathExt;
 
 #[cfg(unix)]
 impl Atom for Chown {
@@ -110,6 +114,8 @@ impl Atom for Chown {
             }
         }
 
+        error!("Something happened here");
+
         Ok(Outcome {
             side_effects: vec![],
             should_run: false,
@@ -117,6 +123,15 @@ impl Atom for Chown {
     }
 
     fn execute(&mut self) -> anyhow::Result<()> {
+        println!("{:#?}", self);
+        if !self.owner.is_empty() {
+            self.path.set_owner(self.owner.as_str())?;
+        }
+
+        if !self.group.is_empty() {
+            self.path.set_group(self.group.as_str())?;
+        }
+
         Ok(())
     }
 }
