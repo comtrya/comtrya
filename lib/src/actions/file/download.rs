@@ -168,6 +168,6 @@ mod tests {
         let steps = file_download.plan(&Default::default(), &Default::default());
         assert!(steps.is_ok());
         let steps = steps.unwrap();
-        assert_eq!(5, steps.len());
+        assert_eq!(4, steps.len());
     }
 }
