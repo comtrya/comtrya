@@ -123,7 +123,6 @@ impl Atom for Chown {
     }
 
     fn execute(&mut self) -> anyhow::Result<()> {
-        println!("{:#?}", self);
         if !self.owner.is_empty() {
             self.path.set_owner(self.owner.as_str())?;
         }
