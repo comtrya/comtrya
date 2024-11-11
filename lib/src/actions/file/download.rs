@@ -130,35 +130,12 @@ mod tests {
 
     #[test]
     #[cfg(unix)]
-    fn it_can_be_deserialized_user_owner() {
+    fn it_can_be_deserialized_owners() {
         let yaml = r#"
 - action: file.download
   from: a
   to: b
   owned_by_user: test
-"#;
-
-        let mut actions: Vec<Actions> = serde_yml::from_str(yaml).unwrap();
-
-        match actions.pop() {
-            Some(Actions::FileDownload(action)) => {
-                assert_eq!("a", action.action.from);
-                assert_eq!("b", action.action.to);
-                assert_eq!("test", action.action.owner_user.unwrap());
-            }
-            _ => {
-                panic!("FileDownload didn't deserialize to the correct type");
-            }
-        };
-    }
-
-    #[test]
-    #[cfg(unix)]
-    fn it_can_be_deserialized_group_owner() {
-        let yaml = r#"
-- action: file.download
-  from: a
-  to: b
   owned_by_group: test
 "#;
 
@@ -168,6 +145,7 @@ mod tests {
             Some(Actions::FileDownload(action)) => {
                 assert_eq!("a", action.action.from);
                 assert_eq!("b", action.action.to);
+                assert_eq!("test", action.action.owner_user.unwrap());
                 assert_eq!("test", action.action.owner_group.unwrap());
             }
             _ => {
@@ -178,47 +156,7 @@ mod tests {
 
     #[test]
     #[cfg(unix)]
-    fn contains_owner_user() {
-        let file_download = FileDownload {
-            from: "test".to_string(),
-            to: "abc".to_string(),
-            chmod: 1,
-            template: false,
-            owner_user: Some("test".to_string()),
-            owner_group: None,
-        };
-
-        let steps = file_download.plan(&Default::default(), &Default::default());
-
-        assert_eq!(true, steps.is_ok());
-
-        let steps = steps.unwrap();
-        assert_eq!(4, steps.len());
-    }
-
-    #[test]
-    #[cfg(unix)]
-    fn contains_owner_group() {
-        let file_download = FileDownload {
-            from: "test".to_string(),
-            to: "abc".to_string(),
-            chmod: 1,
-            template: false,
-            owner_user: None,
-            owner_group: Some("test".to_string()),
-        };
-
-        let steps = file_download.plan(&Default::default(), &Default::default());
-
-        assert_eq!(true, steps.is_ok());
-
-        let steps = steps.unwrap();
-        assert_eq!(4, steps.len());
-    }
-
-    #[test]
-    #[cfg(unix)]
-    fn contains_owner_group_and_owner_user() {
+    fn contains_chown_step() {
         let file_download = FileDownload {
             from: "test".to_string(),
             to: "abc".to_string(),
