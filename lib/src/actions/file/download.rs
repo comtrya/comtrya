@@ -105,7 +105,6 @@ impl Action for FileDownload {
 mod tests {
     use crate::actions::file::download::FileDownload;
     use crate::actions::{Action, Actions};
-    use crate::atoms::file::Chown;
 
     #[test]
     fn it_can_be_deserialized() {
