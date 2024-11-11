@@ -53,6 +53,29 @@ Action used to copy a file from one location to another.
 
 ```
 
+## file.chown
+
+This action will change the user and group owner of a file.
+
+*Note: In order to utilize this, must run comtrya as root*
+
+| Key    | Type    | Optional | Description                    |
+|:-------|:--------|:---------|:-------------------------------|
+| action | string  | no       | `file.chown`                   |
+| path   | string  | no       | file to change ownership on    |
+| user   | string  | no       | user to specify as file owner  |
+| group  | string  | no       | group to specify as file owner |
+
+### Examples
+
+```yaml
+actions:
+  - action: file.chown
+    path: ./files/some-file
+    user: test
+    group: test
+```
+
 ## file.download
 
 This action will download a file.
