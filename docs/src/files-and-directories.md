@@ -57,7 +57,7 @@ Action used to copy a file from one location to another.
 
 This action will change the user and group owner of a file.
 
-*Note: In order to utilize this, must run comtrya as root*
+*Note: In order to utilize this, must run comtrya as root. Also both a user and group need to be specified.*
 
 | Key    | Type    | Optional | Description                    |
 |:-------|:--------|:---------|:-------------------------------|
@@ -85,6 +85,8 @@ This action will download a file.
 | action | string | no       | `file.download`  |
 | from   | string | no       | source location  |
 | to     | string | no       | destination file |
+| owned_by_user | string | yes | user for chown |
+| owned_by_group | string | yes | group for chown |
 
 An alias also exists such that `source` can be used in lieu of `from` and `target` can be used in lieu of `to`.
 
@@ -96,7 +98,17 @@ actions:
   - action: file.download
     from: https://google.com/robots.txt
     to: /tmp/google-robots.txt
+    
+  # This whill also run a chown step on downloaded file
+  - action: file.download
+    from: https://google.com/robots.txt
+    to: /tmp/google-robots.txt
+    owned_by_user: nobody
+    owned_by_group: nobody
 ```
+
+*Note: utilizing chown functionality will require running comtrya as root. Also, both a user and a group need to
+be specified.*
 
 ## file.link
 
