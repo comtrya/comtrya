@@ -21,24 +21,24 @@ The primary command of use will be the apply command, which will apply the actio
 
 ## Apply
 
-The apply command will execute and run the manifests. There are a few ways to do this. First, it to point to a directory
-of manifests and have comtrya execute them all.
+The apply command will execute and run the manifests. There are a few ways to do this.
+
+First, point it to a directory of manifests and have comtrya execute them all.
 
 ```shell
 comtrya -d ./manifests apply
 ```
 
-As shown, this is achieved with the `-d` option, which tells comtrya the directory that house the manifests to be
-executed.
+As shown, this is achieved with the `-d` option, which tells comtrya the directory that houses the manifests to be executed.
 
-You can also specify the specific manifest(s).
+Second, specify specific manifest(s) to be executed.
 
 ```shell
 comtrya apply -m one,two,three
 ```
 
 The `-m` option is used to tell comtrya the specific manifests to run. Note that the name of the manifest (i.e. one.yaml)
-is only the name of the manifest and does not contain any pathing information. So, `/manifests/one` is not a valid input.
+is only the name of the manifest and does not contain any path information or file extension (.yaml). So, `/manifests/one` is not a valid input.
 So it is expected to be located in the directory of the manifests you are specifying to run.
 
 Suppose you have a directory `manifests/` that contains the manifests `one.yaml` and `two.yaml`. You want to *only*

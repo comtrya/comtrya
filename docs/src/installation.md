@@ -20,7 +20,7 @@ cargo install comtrya
 
 ## Shell Script
 
-A shell script is provided to fetch a pre-compile comtrya binary and it install it onto your system. To do this, in your terminal or command prompt, run the following line:
+A shell script is provided to fetch a pre-compiled comtrya binary and install it onto your system. To do this, in your terminal or command prompt, run the following line:
 
 ```
 curl -fsSL https://get.comtrya.dev | sh
@@ -32,7 +32,7 @@ Or, optionally, you can get a specific version of comtrya using the following on
 curl -fsSL https://get.comtrya.dev | VERSION=v0.9.0  sh
 ```
 
-## Precompile-binaries
+## Precompiled-binaries
 
 Pre-compiled binaries are also included on our [github repository](https://github.com/comtrya/comtrya) under our [releases](https://github.com/comtrya/comtrya/releases/).
 
@@ -42,4 +42,4 @@ Some package managers may provide comtrya. Check with your package manager. As o
 
 ## Building from source
 
-Building from source should be a straight forward task for anyone familiar with the Rust toolchian. It is recommended that you go through the [cargo book](https://doc.rust-lang.org/cargo/) and have some familiarity. Outside of that, it is simply cloning our repository and building. However, it is important to note that you may need to ensure you have the development libraries for openssl installed on your system. Check with your operating system and package manager what what these packages are as they can often vary in naming between different systems. 
+Building from source should be a straight forward task for anyone familiar with the Rust toolchian. It is recommended that you go through the [cargo book](https://doc.rust-lang.org/cargo/) and have some familiarity. Outside of that, it is simply cloning our repository and building. However, it is important to note that you may need to ensure you have the development libraries for openssl installed on your system. Check with your operating system and package manager what these packages are as they can often vary in naming between different systems.
