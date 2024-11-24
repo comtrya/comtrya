@@ -1,6 +1,6 @@
 use super::FileAction;
 use super::{default_chmod, from_octal};
-use crate::atoms::file::Decrypt;
+use crate::atoms::file::{Chown, Decrypt};
 use crate::manifests::Manifest;
 use crate::steps::Step;
 use crate::tera_functions::register_functions;
@@ -27,6 +27,12 @@ pub struct FileCopy {
     pub template: bool,
 
     pub passphrase: Option<String>,
+
+    #[serde(rename = "owned_by_user")]
+    pub owner_user: Option<String>,
+
+    #[serde(rename = "owned_by_group")]
+    pub owner_group: Option<String>,
 }
 
 fn default_template() -> bool {
@@ -126,6 +132,7 @@ impl Action for FileCopy {
             },
         ];
 
+        let path_clone = path.clone();
         if let Some(passphrase) = self.passphrase.to_owned() {
             steps.push(Step {
                 atom: Box::new(Decrypt {
@@ -136,17 +143,30 @@ impl Action for FileCopy {
                 initializers: vec![],
                 finalizers: vec![],
             });
-
-            Ok(steps)
         } else {
             steps.push(Step {
                 atom: Box::new(SetContents { path, contents }),
                 initializers: vec![],
                 finalizers: vec![],
             });
-
-            Ok(steps)
         }
+
+        #[cfg(unix)]
+        if let Some(user) = self.owner_user.clone() {
+            if let Some(group) = self.owner_group.clone() {
+                steps.push(Step {
+                    atom: Box::new(Chown {
+                        path: path_clone,
+                        owner: user.clone(),
+                        group: group.clone(),
+                    }),
+                    initializers: vec![],
+                    finalizers: vec![],
+                })
+            }
+        }
+
+        Ok(steps)
     }
 }
 
@@ -170,6 +190,33 @@ mod tests {
                 assert_eq!("a", action.action.from);
                 assert_eq!("b", action.action.to);
                 assert_eq!(0o777, action.action.chmod);
+            }
+            _ => {
+                panic!("FileCopy didn't deserialize to the correct type");
+            }
+        };
+    }
+
+    #[test]
+    fn it_can_be_deserialized_chown() {
+        let yaml = r#"
+- action: file.copy
+  from: a
+  to: b
+  chmod: "0777"
+  owned_by_user: test
+  owned_by_group: test
+"#;
+
+        let mut actions: Vec<Actions> = serde_yml::from_str(yaml).unwrap();
+
+        match actions.pop() {
+            Some(Actions::FileCopy(action)) => {
+                assert_eq!("a", action.action.from);
+                assert_eq!("b", action.action.to);
+                assert_eq!(0o777, action.action.chmod);
+                assert_eq!("test", action.action.owner_user.as_deref().unwrap());
+                assert_eq!("test", action.action.owner_group.as_deref().unwrap());
             }
             _ => {
                 panic!("FileCopy didn't deserialize to the correct type");
