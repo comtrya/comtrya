@@ -20,14 +20,16 @@ To see how it works check the [examples](https://github.com/comtrya/comtrya/tree
 
 Action used to copy a file from one location to another.
 
-| Key      | Type    | Optional | Description                           |
-|:---------|:--------|:---------|:--------------------------------------|
-| action   | string  | no       | `file.copy`                           |
-| from     | string  | no       | source file                           |
-| to       | string  | no       | destination file                      |
-| template | boolean | yes      | renders files using context providers |
-|          |         |          | default: `false`                      |
-| chmod    | integer | yes      | octal permissions                     |
+| Key            | Type    | Optional | Description                           |
+|:---------------|:--------|:---------|:--------------------------------------|
+| action         | string  | no       | `file.copy`                           |
+| from           | string  | no       | source file                           |
+| to             | string  | no       | destination file                      |
+| template       | boolean | yes      | renders files using context providers |
+|                |         |          | default: `false`                      |
+| chmod          | integer | yes      | octal permissions                     |
+| owned_by_user  | string  | yes      | user for chown                        |
+| owned_by_group | string  | yes      | group for chown                       |
 
 
 ### Examples
@@ -50,8 +52,18 @@ Action used to copy a file from one location to another.
   from: encrypted-file
   to: /tmp/some-decrypted-file
   passphrase: "1KZ2EXDHSQKZFQP43JK2LPXUFZ8D365CM5WQXRSH97U7N9WKRVFKS0TCS30"
+  
+  # file copy with chown on unix systems
+  - action: file.copy
+    from: procs-config.toml
+    to: "{{ user.config_dir }}/procs/config.toml"
+    owned_by_user: test
+    owned_by_group: test
 
 ```
+
+*Note: utilizing chown functionality will require running comtrya as root. Also, both a user and a group need to
+be specified.*
 
 ## file.chown
 
@@ -80,13 +92,13 @@ actions:
 
 This action will download a file.
 
-| Key    | Type   | Optional | Description      |
-|:-------|:-------|:---------|:-----------------|
-| action | string | no       | `file.download`  |
-| from   | string | no       | source location  |
-| to     | string | no       | destination file |
-| owned_by_user | string | yes | user for chown |
-| owned_by_group | string | yes | group for chown |
+| Key            | Type   | Optional | Description      |
+|:---------------|:-------|:---------|:-----------------|
+| action         | string | no       | `file.download`  |
+| from           | string | no       | source location  |
+| to             | string | no       | destination file |
+| owned_by_user  | string | yes      | user for chown   |
+| owned_by_group | string | yes      | group for chown  |
 
 An alias also exists such that `source` can be used in lieu of `from` and `target` can be used in lieu of `to`.
 
