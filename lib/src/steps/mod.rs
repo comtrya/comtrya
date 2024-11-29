@@ -1,4 +1,5 @@
 use crate::atoms::Atom;
+use crate::steps::finalizers::FlowControl;
 use tracing::error;
 
 pub mod finalizers;
@@ -16,16 +17,13 @@ impl Step {
             .iter()
             .fold(true, |_, flow_control| match flow_control {
                 initializers::FlowControl::Ensure(i) => {
-                    match i.initialize() {
-                        Ok(should) => should,
-                        Err(err) => {
-                            error!("Failed to run initializer: {}", err.to_string());
+                    i.initialize().unwrap_or_else(|err| {
+                        error!("Failed to run initializer: {}", err.to_string());
 
-                            // On an error, we can't really determine if this Atom should
-                            // run; so lets play it safe and filter it out too
-                            false
-                        }
-                    }
+                        // On an error, we can't really determine if this Atom should
+                        // run; so lets play it safe and filter it out too
+                        false
+                    })
                 }
 
                 initializers::FlowControl::SkipIf(i) => {
@@ -61,7 +59,20 @@ impl Step {
                         }
                         Ok(false) => true,
                         Err(err) => {
-                            error!("Failed to run initializer: {}", err.to_string());
+                            error!("Failed to run finalizers: {}", err.to_string());
+
+                            // On an error, we can't really determine if this Atom should
+                            // run; so lets play it safe and filter it out too
+                            false
+                        }
+                    }
+                }
+                FlowControl::Ensure(i) => {
+                    match i.finalize(self.atom.as_ref()) {
+                        Ok(true) => true,
+                        Ok(false) => false,
+                        Err(err) => {
+                            error!("Failed to run finalizers: {}", err.to_string());
 
                             // On an error, we can't really determine if this Atom should
                             // run; so lets play it safe and filter it out too
