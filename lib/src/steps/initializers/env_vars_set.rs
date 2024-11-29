@@ -1,5 +1,4 @@
 use super::Initializer;
-use petgraph::visit::Walker;
 use std::collections::HashMap;
 
 #[derive(Clone, Debug)]
@@ -18,7 +17,6 @@ impl Initializer for SetEnvVars {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::steps::initializers::CommandFound;
     use std::env;
 
     #[test]

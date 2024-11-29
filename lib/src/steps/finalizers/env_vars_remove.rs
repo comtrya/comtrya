@@ -6,8 +6,8 @@ use std::collections::HashMap;
 pub struct RemoveEnvVars(pub HashMap<String, String>);
 
 impl Finalizer for RemoveEnvVars {
-    fn finalize(&self, atom: &dyn Atom) -> anyhow::Result<bool> {
-        for (key, value) in self.0.iter() {
+    fn finalize(&self, _atom: &dyn Atom) -> anyhow::Result<bool> {
+        for (key, _value) in self.0.iter() {
             std::env::remove_var(key);
         }
 
@@ -24,7 +24,7 @@ mod tests {
     #[test]
     fn test_env_vars() {
         let atom = Echo("goodbye-world");
-        std::env::set_var("FOO", "bar");
+        env::set_var("FOO", "bar");
 
         let map = HashMap::from([("FOO".to_string(), "bar".to_string())]);
         let finalizer = RemoveEnvVars(map);

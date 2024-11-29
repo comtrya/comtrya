@@ -1,7 +1,5 @@
 use crate::contexts::Contexts;
 use crate::steps::finalizers::RemoveEnvVars;
-use crate::steps::initializers::FlowControl;
-use crate::steps::initializers::Initializer;
 use crate::steps::initializers::SetEnvVars;
 use crate::steps::Step;
 use crate::{actions::Action, manifests::Manifest, steps, utilities};
@@ -69,7 +67,6 @@ impl Action for RunCommand {
 #[cfg(test)]
 mod tests {
     use crate::actions::Actions;
-    use crate::manifests::Manifest;
 
     #[test]
     fn it_can_be_deserialize() {
