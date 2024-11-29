@@ -1,7 +1,10 @@
 mod command_found;
 pub use command_found::CommandFound;
 
+mod env_vars_set;
 mod file_exists;
+pub use env_vars_set::SetEnvVars;
+
 pub use file_exists::FileExists;
 
 #[allow(dead_code)]

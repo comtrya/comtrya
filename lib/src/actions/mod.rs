@@ -269,7 +269,8 @@ actions:
                     .unwrap()
                     .into_os_string()
                     .into_string()
-                    .unwrap()
+                    .unwrap(),
+                ..Default::default()
             }
         );
 

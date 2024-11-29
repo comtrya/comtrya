@@ -21,3 +21,16 @@ actions:
       - "curl -sfL https://get.k3s.io | sh -"
     dir: .
     privileged: true
+
+  # we should see the gobin set in the go env output now
+  - action: command.run
+    command: go
+    args:
+      - env
+    env:
+      GOBIN: /Users/test
+
+  - action: command.run
+    command: go
+    args:
+      - env
