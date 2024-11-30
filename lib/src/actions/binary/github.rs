@@ -25,6 +25,13 @@ struct GitHubAsset {
 }
 
 impl Action for BinaryGitHub {
+    fn summarize(&self) -> String {
+        format!(
+            "Downloading binary from {} to {}",
+            self.repository, self.directory
+        )
+    }
+
     fn plan(&self, _: &Manifest, _: &Contexts) -> anyhow::Result<Vec<Step>> {
         // Don't need to do anything if something already exists at the path
         if std::path::Path::new(format!("{}/{}", self.directory, self.name).as_str()).exists() {
