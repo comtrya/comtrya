@@ -4,6 +4,7 @@
 - file.download
 - file.link
 - file.remove
+- file.unarchive
 - directory.copy
 
 ## Note
@@ -167,6 +168,30 @@ Removes a file.
 ```
 - action: file.remove
   target: /tmp/some-file-rendered
+```
+
+## file.unarchive
+
+This action provides the ability to unarchive a `tar.gz` file.
+
+| Key    | Type   | Optional | Description                           |
+|:-------|:-------|:---------|:--------------------------------------|
+| action | string | no       | `file.unarchive`                      |
+| from   | string | no       | full path to archive                  |
+| to     | string | no       | destination of unarchived contents    |
+| force  | bool   | yes      | force the unarchiving (defaults true) |
+
+### Example
+
+```yaml
+actions:
+  - action: file.download
+    from: https://github.com/comtrya/comtrya/archive/refs/tags/v0.9.0.tar.gz
+    to: /tmp/comtrya
+
+  - action: file.unarchive
+    from: /tmp/comtrya
+    to: /tmp/
 ```
 
 ## directory.copy
