@@ -19,6 +19,7 @@ use file::copy::FileCopy;
 use file::download::FileDownload;
 use file::link::FileLink;
 use file::remove::FileRemove;
+use file::unarchive::FileUnarchive;
 use group::add::GroupAdd;
 use macos::MacOSDefault;
 use package::{PackageInstall, PackageRepository};
@@ -127,6 +128,9 @@ pub enum Actions {
     #[serde(rename = "file.remove")]
     FileRemove(ConditionalVariantAction<FileRemove>),
 
+    #[serde(rename = "file.unarchive")]
+    FileUnarchive(ConditionalVariantAction<FileUnarchive>),
+
     #[serde(rename = "directory.remove", alias = "dir.remove")]
     DirectoryRemove(ConditionalVariantAction<DirectoryRemove>),
 
@@ -168,6 +172,7 @@ impl Actions {
             Actions::FileChown(a) => a,
             Actions::FileDownload(a) => a,
             Actions::FileLink(a) => a,
+            Actions::FileUnarchive(a) => a,
             Actions::GroupAdd(a) => a,
             Actions::MacOSDefault(a) => a,
             Actions::PackageInstall(a) => a,
@@ -191,6 +196,7 @@ impl Display for Actions {
             Actions::FileDownload(_) => "file.download",
             Actions::FileLink(_) => "file.link",
             Actions::FileRemove(_) => "file.remove",
+            Actions::FileUnarchive(_) => "file.unarchive",
             Actions::DirectoryRemove(_) => "directory.remove",
             Actions::BinaryGitHub(_) => "github.binary",
             Actions::GroupAdd(_) => "group.add",

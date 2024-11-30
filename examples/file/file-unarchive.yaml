@@ -1,0 +1,8 @@
+actions:
+  - action: file.download
+    from: https://github.com/comtrya/comtrya/archive/refs/tags/v0.9.0.tar.gz
+    to: /tmp/comtrya
+  
+  - action: file.unarchive
+    from: /tmp/comtrya
+    to: /tmp/
