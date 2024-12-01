@@ -8,14 +8,14 @@ description = "Contains the interfaces for comtrya plugins"
 
 [dependencies]
 anyhow = "1.0"
-age = { version = "0.10", features = ["armor"] }
+age = { version = "0.11", features = ["armor"] }
 dirs-next = "2.0"
 file_diff = "1.0"
 gethostname = "0.5"
 ignore = "0.4"
 normpath = "1.2"
-octocrab = "0.41"
-os_info = "3.7"
+octocrab = "0.42"
+os_info = "3.9"
 petgraph = "0.6"
 rand = "0.8"
 regex = "1.11"
@@ -23,7 +23,7 @@ reqwest = { version = "0.12", default-features = false, features = [
     "blocking",
     "rustls-tls",
 ] }
-rhai = { version = "1.19", features = ["serde"] }
+rhai = { version = "1.20", features = ["serde"] }
 schemars = "0.8"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
@@ -37,13 +37,13 @@ trust-dns-resolver = "0.23.2"
 walkdir = "2.3"
 which = "7.0"
 whoami = "1.5"
-tar = "0.4.42"
-flate2 = "1.0.34"
+tar = "0.4.43"
+flate2 = "1.0.35"
 file-owner = "0.1.2"
 
 [target.'cfg(unix)'.dependencies]
 uzers = "0.12"
 
 [dev-dependencies]
-tempfile = "3.13"
+tempfile = "3.14"
 pretty_assertions = "1.4"
