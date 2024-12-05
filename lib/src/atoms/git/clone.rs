@@ -38,7 +38,7 @@ impl Atom for Clone {
             interrupt::init_handler(1, || {})?;
         };
 
-	std::fs::create_dir_all(&self.directory)?;
+        std::fs::create_dir_all(&self.directory)?;
 
         let mut prepare_clone = gix::prepare_clone(self.repository.clone(), &self.directory)?;
         let (mut prepare_checkout, _) = prepare_clone
@@ -46,7 +46,9 @@ impl Atom for Clone {
 
         let (repo, _) = prepare_checkout.main_worktree(Discard, &interrupt::IS_INTERRUPTED)?;
 
-	let remote = repo.find_default_remote(gix::remote::Direction::Fetch).expect("always present after clone")?;
+        let remote = repo
+            .find_default_remote(gix::remote::Direction::Fetch)
+            .expect("always present after clone")?;
 
         Ok(())
     }
