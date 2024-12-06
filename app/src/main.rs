@@ -1,62 +1,21 @@
+use crate::config::{Commands, GlobalArgs};
+use crate::commands::ComtryaCommand;
+
 use std::io;
 
-use commands::ComtryaCommand;
-
-use clap::{Parser, Subcommand};
 use comtrya_lib::contexts::build_contexts;
 use comtrya_lib::contexts::Contexts;
 use comtrya_lib::manifests;
 
 use tracing::{error, Level};
+use clap::Parser;
 
 #[allow(unused_imports)]
 use tracing_subscriber::{fmt::writer::MakeWriterExt, layer::SubscriberExt, FmtSubscriber};
 
 mod commands;
 mod config;
-
-use config::{load_config, Config};
-#[derive(Parser, Debug)]
-#[command(version, about, name="comtrya", long_about = None)]
-struct GlobalArgs {
-    #[arg(short = 'd', long)]
-    pub manifest_directory: Option<String>,
-
-    /// Disable color printing
-    #[arg(long)]
-    pub no_color: bool,
-
-    /// Debug & tracing mode (-v, -vv)
-    #[arg(short, action = clap::ArgAction::Count)]
-    verbose: u8,
-
-    #[command(subcommand)]
-    command: Commands,
-}
-
-#[derive(Debug, Subcommand)]
-enum Commands {
-    /// Apply manifests
-    #[clap(aliases = &["do", "run"])]
-    Apply(commands::Apply),
-
-    ///  List manifests status (ALPHA)
-    Status(commands::Apply),
-
-    /// Print version information
-    Version(commands::Version),
-
-    /// List available contexts
-    Contexts(commands::Contexts),
-
-    /// Auto generate completions
-    ///
-    /// for examples:
-    ///  - bash: ```source <(comtrya gen-completions bash)```
-    ///  - fish: ```comtrya gen-completions fish | source```
-    #[command(long_about, verbatim_doc_comment)]
-    GenCompletions(commands::GenCompletions),
-}
+use config::Config;
 
 #[derive(Debug)]
 pub struct Runtime {
@@ -104,7 +63,7 @@ fn main() -> anyhow::Result<()> {
     let args = GlobalArgs::parse();
     configure_tracing(&args);
 
-    let config = match load_config(&args) {
+    let config = match config::load_config(&args) {
         Ok(config) => config,
         Err(error) => {
             error!("{}", error.to_string());
