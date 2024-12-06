@@ -1,7 +1,6 @@
 use super::super::Atom;
 use crate::atoms::Outcome;
 use gix::interrupt;
-use gix::Progress;
 use gix::{progress::Discard, Url};
 use std::path::PathBuf;
 use tracing::instrument;
@@ -46,7 +45,7 @@ impl Atom for Clone {
 
         let (repo, _) = prepare_checkout.main_worktree(Discard, &interrupt::IS_INTERRUPTED)?;
 
-        let remote = repo
+        let _ = repo
             .find_default_remote(gix::remote::Direction::Fetch)
             .expect("always present after clone")?;
 
