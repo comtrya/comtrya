@@ -1,22 +1,16 @@
 use crate::commands;
 use clap::{Parser, Subcommand};
 
-use anyhow::Context;
-use anyhow::Result;
+use anyhow::{anyhow, Context, Result};
 pub use comtrya_lib::config::Config;
 use std::{
     path::{Path, PathBuf},
     vec,
-    // fs::File,
-    // io::Write,
 };
 
-// use tempfile::tempdir;
-use tracing::error;
 use tracing::{trace, warn};
 
-
-#[derive(Parser, Debug)]
+#[derive(Parser, Debug, Default)]
 #[command(version, about, name="comtrya", long_about = None)]
 pub struct GlobalArgs {
     #[arg(short = 'd', long)]
@@ -61,6 +55,12 @@ pub enum Commands {
     GenCompletions(commands::GenCompletions),
 }
 
+impl Default for Commands {
+    fn default() -> Self {
+        Commands::Version(commands::Version {})
+    }
+}
+
 pub(crate) fn load_config(args: &GlobalArgs) -> Result<Config> {
     match lib_config(&args) {
         Ok(config) => match args.manifest_directory.clone() {
@@ -93,7 +93,7 @@ pub(crate) fn load_config(args: &GlobalArgs) -> Result<Config> {
 ///
 /// Exits if the user specified an invalid config file path
 /// returns errors if file read fails or yaml content is not successfully deserialized
-pub fn lib_config(args: &GlobalArgs) -> Result<Config> {
+pub fn lib_config(args: &GlobalArgs) -> anyhow::Result<Config> {
     let config = match find_configs(&args) {
         Some(config_path) => {
             let yaml = std::fs::read_to_string(&config_path)
@@ -121,8 +121,10 @@ pub fn lib_config(args: &GlobalArgs) -> Result<Config> {
         None => {
             // Panic early if an incorrect configuration path was specified by the user.
             if let Some(cfg_path) = &args.config_path {
-                error!("The user specified a file at {} but none exists.", cfg_path);
-                std::process::exit(1);
+                return Err(anyhow!(
+                    "The user specified a file at {} but none exists.",
+                    cfg_path
+                ));
             }
 
             Config {
@@ -201,19 +203,44 @@ fn find_configs(args: &GlobalArgs) -> Option<PathBuf> {
     None
 }
 
-// fn create_temp_config(content: &str) -> std::path::PathBuf {
-//     let temp_dir = tempdir().unwrap();
-//     let config_path = temp_dir.path().join("Comtrya.yaml");
-//     let mut file = File::create(&config_path).unwrap();
-//     file.write_all(content.as_bytes()).unwrap();
-//     config_path
-// }
-//
-// #[test]
-// fn test_lib_config_with_valid_config_path() {
-//     let valid_config_path = create_temp_config("some: value\n");
-//     let args = GlobalArgs {
-//         config_path: Some(valid_config_path.to_string_lossy().to_string()),
-//         ..Default::default()
-//     };
-// }
+#[cfg(test)]
+mod tests {
+    use crate::config::{lib_config, GlobalArgs};
+    use std::path::PathBuf;
+
+    fn get_config_file() -> PathBuf {
+        std::env::current_dir()
+            .unwrap()
+            .parent()
+            .unwrap()
+            .join("examples")
+            .join("Comtrya.yaml")
+    }
+
+    /// Test config returns an error when an invalid configuration path is supplied
+    #[test]
+    fn load_config_invalid_path() {
+        let args = GlobalArgs {
+            config_path: Some("/invalid/path/to/config.yaml".to_string()),
+            ..Default::default()
+        };
+
+        let result = lib_config(&args);
+        assert!(
+            result.is_err(),
+            "Expected an error when the user supplied config path is invalid"
+        );
+    }
+
+    /// Test valid configuration path
+    #[test]
+    fn load_config_valid_path() {
+        let args = GlobalArgs {
+            config_path: Some(get_config_file().to_string_lossy().to_string()),
+            ..Default::default()
+        };
+
+        let result = lib_config(&args);
+        assert!(!result.is_err());
+    }
+}

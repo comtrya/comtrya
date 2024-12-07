@@ -1,5 +1,5 @@
-use crate::config::{Commands, GlobalArgs};
 use crate::commands::ComtryaCommand;
+use crate::config::{Commands, GlobalArgs};
 
 use std::io;
 
@@ -7,8 +7,8 @@ use comtrya_lib::contexts::build_contexts;
 use comtrya_lib::contexts::Contexts;
 use comtrya_lib::manifests;
 
-use tracing::{error, Level};
 use clap::Parser;
+use tracing::{error, Level};
 
 #[allow(unused_imports)]
 use tracing_subscriber::{fmt::writer::MakeWriterExt, layer::SubscriberExt, FmtSubscriber};
