@@ -16,6 +16,7 @@ pub struct GlobalArgs {
     #[arg(short = 'd', long)]
     pub manifest_directory: Option<String>,
 
+    /// Specify a configuration path (if invalid Comtrya will exit)
     #[arg(short = 'c', long)]
     pub config_path: Option<String>,
 
