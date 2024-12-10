@@ -37,10 +37,6 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           clippy_flags: --all-features --all-targets
 
-      - uses: actions-rs/tarpaulin@v0.1
-        with:
-          args: "--workspace -- --test-threads 1"
-
       - uses: codecov/codecov-action@v5
 
   test:
