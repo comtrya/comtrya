@@ -30,4 +30,4 @@ Comtrya provides multiple actions which are broken down into groups with the act
 - [Packages](./packages.md)
 - [User](./user.md)
 
-[^note]: Git actions will no longer be available in main or versions after 0.8.8.
+[^note]: Git actions are not avaible for 0.8.8 through 0.9.0, see action documentation for me information
