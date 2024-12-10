@@ -39,7 +39,6 @@ jobs:
 
       - uses: actions-rs/tarpaulin@v0.1
         with:
-          version: "latest"
           args: "--workspace -- --test-threads 1"
 
       - uses: codecov/codecov-action@v5
