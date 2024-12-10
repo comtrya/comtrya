@@ -38,12 +38,6 @@ jobs:
         with:
           command: test
 
-      - name: Run Tarpaulin
-        uses: actions-rs/tarpaulin@v0.1
-        with:
-          version: "0.22.0"
-          args: "--workspace -- --test-threads 1"
-
       - name: Upload to codecov.io
         uses: codecov/codecov-action@v5
 
