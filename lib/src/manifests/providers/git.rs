@@ -44,7 +44,7 @@ impl ManifestProvider for GitManifestProvider {
         if !cache_path.exists() {
             self.fetch_and_clone(&cache_path, &config)?;
         }
-	
+
         Ok(cache_path)
     }
 }
@@ -55,7 +55,7 @@ impl GitManifestProvider {
         cache_path: &std::path::PathBuf,
         config: &GitConfig,
     ) -> anyhow::Result<(), super::ManifestProviderError> {
-	info!("Preparing to fetch and clone manifests.");
+        info!("Preparing to fetch and clone manifests.");
         let r = std::fs::create_dir_all(cache_path.clone());
         if let Err(_) = r {
             return Err(ManifestProviderError::NoResolution);
