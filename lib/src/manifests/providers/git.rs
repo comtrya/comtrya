@@ -33,7 +33,7 @@ impl ManifestProvider for GitManifestProvider {
         &self,
         url: &str,
     ) -> anyhow::Result<std::path::PathBuf, super::ManifestProviderError> {
-        let config = self.parse_config_url(&url);
+        let config = self.parse_config_url(url);
         let clean_url = self.clean_git_url(&config.repository);
         let cache_path = dirs_next::cache_dir()
             .ok_or(ManifestProviderError::NoResolution)?
@@ -52,18 +52,18 @@ impl ManifestProvider for GitManifestProvider {
 impl GitManifestProvider {
     fn fetch_and_clone(
         &self,
-        cache_path: &std::path::PathBuf,
+        cache_path: &std::path::Path,
         config: &GitConfig,
     ) -> anyhow::Result<(), super::ManifestProviderError> {
         info!("Preparing to fetch and clone manifests.");
-        let r = std::fs::create_dir_all(cache_path.clone());
-        if let Err(_) = r {
+        let r = std::fs::create_dir_all(cache_path);
+        if r.is_err() {
             return Err(ManifestProviderError::NoResolution);
         }
 
         let url = gix::url::parse(config.repository.clone().as_str().into());
 
-        if let Err(_) = url {
+        if url.is_err() {
             return Err(ManifestProviderError::NoResolution);
         }
 
@@ -71,26 +71,26 @@ impl GitManifestProvider {
 
         unsafe {
             let handler = interrupt::init_handler(1, || {});
-            if let Err(_) = handler {
+            if handler.is_err() {
                 return Err(ManifestProviderError::NoResolution);
             }
         };
 
-        let prepare_clone = gix::prepare_clone(url.clone(), cache_path.clone());
-        if let Err(_) = prepare_clone {
+        let prepare_clone = gix::prepare_clone(url.clone(), cache_path);
+        if prepare_clone.is_err() {
             return Err(ManifestProviderError::NoResolution);
         }
         let mut prepare_clone = prepare_clone.unwrap();
 
         let prepare_checkout =
             prepare_clone.fetch_then_checkout(gix::progress::Discard, &interrupt::IS_INTERRUPTED);
-        if let Err(_) = prepare_checkout {
+        if prepare_checkout.is_err() {
             return Err(ManifestProviderError::NoResolution);
         }
         let mut prepare_checkout = prepare_checkout.unwrap().0;
 
         let repo = prepare_checkout.main_worktree(Discard, &interrupt::IS_INTERRUPTED);
-        if let Err(_) = repo {
+        if repo.is_err() {
             return Err(ManifestProviderError::NoResolution);
         }
         let repo = repo.unwrap().0;
@@ -98,7 +98,7 @@ impl GitManifestProvider {
         let success = repo
             .find_default_remote(gix::remote::Direction::Fetch)
             .expect("always present after clone");
-        if let Err(_) = success {
+        if success.is_err() {
             return Err(ManifestProviderError::NoResolution);
         }
 
