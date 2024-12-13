@@ -1,9 +1,14 @@
 mod local;
 use local::LocalManifestProvider;
 use std::path::PathBuf;
+mod git;
+use git::GitManifestProvider;
 
 pub fn register_providers() -> Vec<Box<dyn ManifestProvider>> {
-    vec![Box::new(LocalManifestProvider)]
+    vec![
+        Box::new(LocalManifestProvider),
+        Box::new(GitManifestProvider),
+    ]
 }
 
 #[derive(Debug, PartialEq, Eq)]
