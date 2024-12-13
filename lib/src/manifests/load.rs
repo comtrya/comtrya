@@ -23,6 +23,10 @@ pub fn load(manifest_path: PathBuf, contexts: &Contexts) -> HashMap<String, Mani
         .same_file_system(true)
         // Arbitrary for now, 9 "should" be enough?
         .max_depth(Some(9))
+        .filter_entry(|entry| {
+            !(entry.metadata().map(|md| md.is_file()).unwrap_or(false)
+            && entry.file_name() == OsStr::new("files"))
+        })
         .build()
         // Don't walk directories
         .filter(|entry| {
@@ -41,18 +45,6 @@ pub fn load(manifest_path: PathBuf, contexts: &Contexts) -> HashMap<String, Mani
                     file_name.ends_with(".yaml")
                         || file_name.ends_with(".yml")
                         || file_name.ends_with(".toml")
-                })
-                .unwrap_or(false)
-        })
-        // Don't consider anything in a `files` directory a manifest
-        .filter(|entry| {
-            !entry
-                .as_ref()
-                .ok()
-                .and_then(|entry| {
-                    entry.path().parent().and_then(|parent| {
-                        parent.file_name().map(|file_name| file_name.eq("files"))
-                    })
                 })
                 .unwrap_or(false)
         })
