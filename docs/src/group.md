@@ -22,7 +22,7 @@ Adds a group to the system
 
 ### Example
 
-```
+```yaml
 actions:
   - action: group.add
     group_name: testgroup

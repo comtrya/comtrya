@@ -45,7 +45,7 @@ Some package manager providers can implement a `bootstrap` method that will auto
 
 ### Example
 
-```
+```yaml
 # Install package using default provider
 - action: package.install
   name: curl
@@ -80,8 +80,8 @@ If you would like to have this feature supported on another package provider, pl
 
 #### Example
 
-```
-- action: package.instal
+```yaml
+- action: package.install
   name: /some/path/to/file/nano-8.1.pkg
   file: true
 ```
