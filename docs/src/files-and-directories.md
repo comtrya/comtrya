@@ -10,7 +10,7 @@
 ## Note
 The following commands expect the `from`/`source` to point to files/directories which are themselves under a "files" directory.
 This is a restriction so that comtrya knows not to parse any .yaml file e.g. a config for a different tool as a manifest.
-To see how it works check the [examples](https://github.com/comtrya/comtrya/tree/main/examples/file) 
+To see how it works check the [examples](https://github.com/comtrya/comtrya/tree/main/examples/file)
 
 - file.link
 - file.copy
@@ -35,7 +35,7 @@ Action used to copy a file from one location to another.
 
 ### Examples
 
-```
+```yaml
 # Simple file copy
 - action: file.copy
   from: procs-config.toml
@@ -47,20 +47,19 @@ Action used to copy a file from one location to another.
   to: /root/file
   template: true
   chmod: 644
-  
+
 # With encrypted file
 - action: file.copy
   from: encrypted-file
   to: /tmp/some-decrypted-file
   passphrase: "1KZ2EXDHSQKZFQP43JK2LPXUFZ8D365CM5WQXRSH97U7N9WKRVFKS0TCS30"
-  
-  # file copy with chown on unix systems
-  - action: file.copy
-    from: procs-config.toml
-    to: "{{ user.config_dir }}/procs/config.toml"
-    owned_by_user: test
-    owned_by_group: test
 
+# file copy with chown on unix systems
+- action: file.copy
+  from: procs-config.toml
+  to: "{{ user.config_dir }}/procs/config.toml"
+  owned_by_user: test
+  owned_by_group: test
 ```
 
 *Note: utilizing chown functionality will require running comtrya as root. Also, both a user and a group need to
@@ -105,13 +104,13 @@ An alias also exists such that `source` can be used in lieu of `from` and `targe
 
 ### Example
 
-```
+```yaml
 actions:
   # This will be rendered with contexts
   - action: file.download
     from: https://google.com/robots.txt
     to: /tmp/google-robots.txt
-    
+
   # This whill also run a chown step on downloaded file
   - action: file.download
     from: https://google.com/robots.txt
@@ -140,12 +139,12 @@ Create a symlink for files. This action can be used to symlink a single file or 
 
 ### Example
 
-```
+```yaml
 # Symlink for a single file
 - action: file.link
   from: /root/symlink
   to: managed_file
-  
+
 # Symlink for all files in a directory
 - action: file.link
   source: walker
@@ -165,7 +164,7 @@ Removes a file.
 
 ### Example
 
-```
+```yaml
 - action: file.remove
   target: /tmp/some-file-rendered
 ```
@@ -207,7 +206,7 @@ Copies a directory on the filesystem to another location.
 
 ### Example
 
-```
+```yaml
 - action: directory.copy
   from: managed_directory
   to: /root/location

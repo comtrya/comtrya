@@ -2,7 +2,7 @@
 
 As mentioned under the [Manifests](./manifests.md), actions are used to dictate an action that needs to be done to configuration a system. The following is an example of a simple action:
 
-```
+```yaml
 actions:
   # Action ID can be command.run or cmd.run
   - action: command.run
@@ -13,7 +13,7 @@ actions:
 
 The above does the following. It defines a list of actions. The action defined in a list of actions is the action for `command.run`, which runs the echo command, providing the argument of 'hi.' This results in something equivalent to running the following on a unix based system:
 
-```
+```shell
 echo hi
 ```
 

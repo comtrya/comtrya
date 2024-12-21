@@ -16,7 +16,7 @@ This action will grab a binary from github and place it in a target directory.
 
 ### Example
 
-```
+```yaml
 - action: binary.github
   name: comtrya
   directory: /usr/local/bin

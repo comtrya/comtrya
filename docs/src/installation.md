@@ -6,7 +6,7 @@ There are several ways to install Comtrya on a system; cargo, shell script, prov
 
 If your system has the Rust programming language tools such as cargo. Cargo can be used to fetch the source and build a binary on your machine placing it in location accessible by your path environment variable. First, ensure that the Rust programming language tool is installed by running the following:
 
-```
+```shell
 cargo --version
 ```
 
@@ -14,7 +14,7 @@ You should see the version of cargo installed on your system printed out. If you
 
 Once you have cargo and rustc on your system, you can fetch the sources and build with the following command:
 
-```
+```shell
 cargo install comtrya
 ```
 
@@ -22,13 +22,13 @@ cargo install comtrya
 
 A shell script is provided to fetch a pre-compiled comtrya binary and install it onto your system. To do this, in your terminal or command prompt, run the following line:
 
-```
+```shell
 curl -fsSL https://get.comtrya.dev | sh
 ```
 
 Or, optionally, you can get a specific version of comtrya using the following one-liner:
 
-```
+```shell
 curl -fsSL https://get.comtrya.dev | VERSION=v0.9.0  sh
 ```
 

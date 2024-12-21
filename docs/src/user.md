@@ -19,14 +19,14 @@ Adds a user to the system.
 
 ### Example
 
-```
+```yaml
 - action: user.add
   fullname: testuser
   home_dir: /home/test
   username: test
   shell: sh
-  
-## Add user while also adding to groups
+
+# Add user while also adding to groups
 - action: user.add
   fullname: testuser
   home_dir: /home/test
@@ -49,7 +49,7 @@ Adds an already created user to a group.
 
 ### Example
 
-```
+```yaml
 - action: user.group
   username: test
   group:

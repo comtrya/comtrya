@@ -38,7 +38,7 @@ Perform a git clone on a repository from github.
 
 ### Example
 
-```
+```yaml
 - action: git.clone
   repository: comtrya/comtrya
   directory: {{ user.home_dir }}/Code/src/

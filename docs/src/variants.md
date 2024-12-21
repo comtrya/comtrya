@@ -4,7 +4,7 @@ All comtrya actions support the concept of variants. Variants allow you to modif
 
 A command example of a variant is a variant based on the operating system. Suppose you have an action that is going to differ slightly between a linux, windows, and macOS system. The following is an example of that.
 
-```
+```yaml
 actions:
   # This action has a "default" execution for when the variants don't overlay,
   # as it does not provide its own "where"
@@ -25,7 +25,7 @@ actions:
 
 Variants can can allow targeting an OS family or a specific distributions.
 
-```
+```yaml
 actions:
   - action: command.run
     command: echo
@@ -45,7 +45,7 @@ actions:
 
 Lastly, the `where` clause can be used to selectively skip or run tasks:
 
-```
+```yaml
 actions:
   - action: command.run
     where: os.name == "linux"

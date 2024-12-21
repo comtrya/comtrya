@@ -25,13 +25,13 @@ variables are supported.
 
 ### Example
 
-```
+```yaml
 - action: command.run
   dir: .
   command: echo
   args:
   - Hello world
-  
+
 # we should see the GOBIN set in the go env output now
 - action: command.run
   command: go
@@ -39,7 +39,7 @@ variables are supported.
     - env
   env:
     GOBIN: /Users/test
-    
+
 # we should see that GOBIN is no longer set, showing that the variable has been cleaned up
 - action: command.run
   command: go
