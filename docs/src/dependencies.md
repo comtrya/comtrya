@@ -5,17 +5,17 @@ In comtrya, manifests can depend on other manifests. This is helpful when you ne
 Suppose we have a manifest for creating users and another manifest for creating groups. We may want to ensure that the groups are created before adding users to a group. In this examples, we have two files; `users.yaml` and `groups.yaml`. To ensure that groups.yaml runs before users.yaml, we write our groups.yaml as we normally would.
 
 ## groups.yaml
-```
+```yaml
 actions:
   - action: group.add
     group_name: testgroup
 ```
 
 ## users.yaml
-```
+```yaml
 depends:
-  - ./groups
-  
+  - groups
+
 actions:
   - action: user.add
     fullename: testuser

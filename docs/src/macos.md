@@ -15,13 +15,13 @@
 
 ### Example
 
-```
+```yaml
 - action: macos.default
   domain: com.apple.dock
   key: orientation
   kind: string
   value: left
-  
+
 - action: macos.default
   domain: com.apple.screencapture
   key: include-date
