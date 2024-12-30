@@ -1,12 +1,12 @@
 # Commands
 
-Comtrya offer several commands for use. They can be listed in the terminal by running comtrya with the help command.
+Comtrya offers several commands for use. They can be listed in the terminal by running comtrya with the help command.
 
 ```shell
 comtrya help
 ```
 
-The primary command of use will be the apply command, which will apply the actions of provided manifests to the system.
+The most frequently used command s the **apply** command, which will apply the actions of provided manifests to the system.
 
 ## Available Commands
 
@@ -21,41 +21,38 @@ The primary command of use will be the apply command, which will apply the actio
 
 ## Apply
 
-The apply command will execute and run the manifests. There are a few ways to do this.
+The apply command executes and runs the manifests. There are a few ways to do this.
 
-First, point it to a directory of manifests and have comtrya execute them all.
+The first option is to point comtrya to a directory of manifests and have it execute them all:
 
 ```shell
 comtrya -d ./manifests apply
 ```
 
-As shown, this is achieved with the `-d` option, which tells comtrya the directory that houses the manifests to be executed.
+As shown, this is done with the `-d` option, which tells comtrya the directory that contains the manifests to be applied.
 
-Second, specify specific manifest(s) to be executed.
+The second option is to specify specific manifest(s) to be executed:
 
 ```shell
 comtrya apply -m one,two,three
 ```
 
-The `-m` option is used to tell comtrya the specific manifests to run. Note that the name of the manifest (i.e. one.yaml)
-is only the name of the manifest and does not contain any path information or file extension (.yaml). So, `/manifests/one` is not a valid input.
-So it is expected to be located in the directory of the manifests you are specifying to run.
+The `-m` option is used to let comtrya know which manifests to apply. Note that the name of the manifest (i.e. one.yaml) is only the name and must not contain any path information or file extension (.yaml). So, `/manifests/one` is not a valid input. Any manifests are expected to be located in the directory of the manifests you specified.
 
-Suppose you have a directory `manifests/` that contains the manifests `one.yaml` and `two.yaml`. You want to *only*
-execute `one.yaml`. There are three ways to achieve this.
+Suppose you have a directory `manifests/` that contains the manifests `one.yaml` and `two.yaml`. You want to *only* execute `one.yaml`. There are three ways to achieve this. You can simply specify the manifest if it's in the current working directory:
 
 ```shell
 cd manifests/
 comtrya apply -m one
 ```
 
-Or
+Or you can specify the directory:
 
 ```shell
 comtrya -d manifests/one.yaml apply
 ```
 
-Or, the third and final way is a combination of the two.
+Alternatively a combination of the two is possible as well:
 
 ```shell
 comtrya -d manifests/ apply -m one
@@ -63,7 +60,7 @@ comtrya -d manifests/ apply -m one
 
 ## Contexts
 
-The contexts command is useful to see what comtrya knows about. This can be environment variables, included variables, information about the OS, user information and other variables. Below is an exmaple of the output.
+The **contexts** command is useful to see what comtrya knows about your system. This can be environment variables, included variables, information about the OS, user information and other variables. Below is an exmaple of the output.
 
 ```text
 env
@@ -113,7 +110,7 @@ variables
 
 ```
 
-You can also view the values that these contexts have by passing in a `show-values` option as demonstrated below.
+You can also view the values that these contexts have by passing in a `show-values` option as demonstrated below:
 
 ```shell
 comtrya contexts --show-values
@@ -121,7 +118,7 @@ comtrya contexts --show-values
 
 ## Status
 
-Provides an overview of manifests.
+The **status** command provides an overview of manifests.
 
 | Manifest          | Count of Actions |
 | :---------------- | :--------------- |

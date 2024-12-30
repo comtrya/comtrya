@@ -4,7 +4,7 @@
 
 ## binary.github
 
-This action will grab a binary from github and place it in a target directory.
+This action will grab a binary from GitHub and place it in the target directory.
 
 | Key        | Type   | Optional | Description                           |
 |:-----------|:-------|:---------|:--------------------------------------|
