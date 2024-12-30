@@ -4,15 +4,17 @@
 
 ## Support
 
-Not all systems are currently supported. The following is a list of group providers. If the system of your choice is not listed, feel free to either contribute support by opening a pull request or requesting that support be added in the [repository's](https://github.com/comtrya/comtrya) issue tracker.
+Not all systems are currently supported. The following is a list of group providers:
 
 - FreeBSD
 - Linux
 - macOS
 
+If your OS of choice is not listed, feel free to either contribute support by opening a pull request or requesting that support be added in the [repository's](https://github.com/comtrya/comtrya) issue tracker.
+
 ## group.add
 
-Adds a group to the system
+Adds a group to the system.
 
 | Key        | Type   | Optional | Description          |
 |:-----------|:-------|:---------|:---------------------|

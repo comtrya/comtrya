@@ -8,7 +8,7 @@ This functionality was removed in 0.8.8. However, it is back as of version 0.9.1
 
 ## git.clone [0.9.1 and later]
 
-Perform a git clone on a repository from github.
+Perform a git clone on a repository from GitHub.
 
 | Key        | Type   | Optional | Description           |
 |:-----------|:-------|:---------|:----------------------|
@@ -27,7 +27,7 @@ actions:
 
 ## git.clone [0.8.7 and prior]
 
-Perform a git clone on a repository from github.
+Perform a git clone on a repository from GitHub.
 
 | Key        | Type   | Optional | Description           |
 |:-----------|:-------|:---------|:----------------------|

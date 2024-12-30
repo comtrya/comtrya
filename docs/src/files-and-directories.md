@@ -95,8 +95,8 @@ This action will download a file.
 | Key            | Type   | Optional | Description      |
 |:---------------|:-------|:---------|:-----------------|
 | action         | string | no       | `file.download`  |
-| from           | string | no       | source location  |
-| to             | string | no       | destination file |
+| from|source    | string | no       | source location  |
+| to|target      | string | no       | destination file |
 | owned_by_user  | string | yes      | user for chown   |
 | owned_by_group | string | yes      | group for chown  |
 
