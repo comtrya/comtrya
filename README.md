@@ -48,7 +48,7 @@ curl -fsSL https://get.comtrya.dev | sh
 or specify `VERSION=vx.x.x` to pin to a release version
 
 ```shell
-curl -fsSL https://get.comtrya.dev | VERSION=v0.9.0 sh
+curl -fsSL https://get.comtrya.dev | VERSION=v0.9.1 sh
 ```
 
 If this doesn't work for your OS and architecture, please open an issue and we'll do our best to support it.
