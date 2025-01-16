@@ -12,6 +12,10 @@ use tracing::debug;
 pub type UserAdd = User;
 
 impl Action for UserAdd {
+    fn summarize(&self) -> String {
+        format!("Adding user: {}", self.username)
+    }
+
     fn plan(&self, _manifest: &Manifest, context: &Contexts) -> anyhow::Result<Vec<Step>> {
         let variant: UserVariant = self.into();
         let box_provider = variant.provider.clone().get_provider();
