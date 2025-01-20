@@ -58,10 +58,19 @@ Commands:
 
 Options:
   -d, --manifest-directory <MANIFEST_DIRECTORY>
-      --no-color                                 Disable color printing
-  -v...                                          Debug & tracing mode (-v, -vv)
-  -h, --help                                     Print help
-  -V, --version                                  Print version
+
+  -c, --config-path <CONFIG_PATH>
+          Specify a configuration path (if invalid Comtrya will exit)
+      --no-color
+          Disable color printing
+  -D, --defines <DEFINES>
+
+  -v...
+          Debug & tracing mode (-v, -vv)
+  -h, --help
+          Print help
+  -V, --version
+          Print versionA tool to simplify reprovisioning a fresh OS. Installs packages and manages dotfiles.
 ```
 
 ## Auto generate completions
@@ -80,4 +89,21 @@ source <(comtrya gen-completions bash)
 for fish:
 ```shell
 comtrya gen-completions fish | source
+```
+
+## Define variables via CLI
+
+Comtrya offers the ability to set variables to use throughout manifests. Variables have normally been defined via the Comtrya config file named `Comtrya.yaml` at the root directory of the manifests. However, variables can also be defined in the command line interface by using the `defines` options.
+
+```shell
+comtrya -v -d ./ --defines foo=bar apply -m sample
+```
+
+In the sample, a variable is created in comtrya with the name `foo` and is set to the value `bar`. An action, like the sample below, can utilize this variable.
+
+```yaml
+- action: command.run
+  command: echo
+  args:
+    - "{{ variables.foo }}"
 ```
