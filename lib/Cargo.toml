@@ -42,6 +42,9 @@ flate2 = "1.0.34"
 file-owner = "0.1.2"
 gix = { version = "0.68.0", features = ["blocking-http-transport-reqwest-rust-tls", "blocking-network-client"] }
 gix-protocol = "0.46.1"
+rpassword = "7.3.1"
+zeroize = { version = "1.8.1", features = ["derive", "std"] }
+async-trait = "0.1.85"
 
 [target.'cfg(unix)'.dependencies]
 uzers = "0.12"

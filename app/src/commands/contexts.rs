@@ -5,7 +5,7 @@ use comfy_table::{presets::NOTHING, Attribute, Cell, ContentArrangement, Table};
 
 use clap::Parser;
 
-#[derive(Parser, Debug)]
+#[derive(Parser, Debug, Clone)]
 #[command()]
 pub(crate) struct Contexts {
     /// Show the values of the contexts
@@ -14,7 +14,7 @@ pub(crate) struct Contexts {
 }
 
 impl ComtryaCommand for Contexts {
-    fn execute(&self, runtime: &Runtime) -> anyhow::Result<()> {
+    async fn execute(&self, runtime: &mut Runtime) -> anyhow::Result<()> {
         for (name, context) in runtime.contexts.iter() {
             println!("{}", name.to_string().underline().bold());
 

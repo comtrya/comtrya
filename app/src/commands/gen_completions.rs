@@ -8,7 +8,7 @@ use clap_complete::{generate, Generator, Shell};
 
 use crate::GlobalArgs;
 
-#[derive(Parser, Debug)]
+#[derive(Parser, Debug, Clone)]
 #[command(arg_required_else_help = true)]
 pub(crate) struct GenCompletions {
     /// If provided, outputs the completion file for given shell
@@ -21,7 +21,7 @@ fn print_completions<G: Generator>(gen: G, cmd: &mut Command) {
 }
 
 impl ComtryaCommand for GenCompletions {
-    fn execute(&self, _runtime: &Runtime) -> anyhow::Result<()> {
+    async fn execute(&self, _runtime: &mut Runtime) -> anyhow::Result<()> {
         print_completions(self.shell, &mut GlobalArgs::command());
 
         Ok(())

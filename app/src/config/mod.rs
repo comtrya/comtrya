@@ -10,7 +10,7 @@ use std::{
 
 use tracing::{trace, warn};
 
-#[derive(Parser, Debug, Default)]
+#[derive(Parser, Debug, Default, Clone)]
 #[command(version, about, name="comtrya", long_about = None)]
 pub struct GlobalArgs {
     #[arg(short = 'd', long)]
@@ -32,7 +32,7 @@ pub struct GlobalArgs {
     pub command: Commands,
 }
 
-#[derive(Debug, Subcommand)]
+#[derive(Debug, Subcommand, Clone)]
 pub enum Commands {
     /// Apply manifests
     #[clap(aliases = &["do", "run"])]

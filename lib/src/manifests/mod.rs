@@ -7,6 +7,7 @@ pub use providers::register_providers;
 pub use providers::ManifestProvider;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use std::fmt;
 use std::path::{Path, PathBuf};
 use tracing::error;
 
@@ -33,6 +34,22 @@ pub struct Manifest {
 
     #[serde(skip)]
     pub dag_index: Option<NodeIndex<u32>>,
+}
+
+impl fmt::Display for Manifest {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "{}",
+            self.name.as_deref().unwrap_or("Cannot extract name")
+        )
+    }
+}
+
+impl AsRef<Manifest> for Manifest {
+    fn as_ref(&self) -> &Manifest {
+        self
+    }
 }
 
 pub fn resolve(uri: &String) -> Option<PathBuf> {

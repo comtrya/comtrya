@@ -1,4 +1,5 @@
 use crate::atoms::Outcome;
+use crate::utilities::password_manager::PasswordManager;
 
 use super::super::Atom;
 use super::FileAtom;
@@ -39,6 +40,7 @@ use std::os::unix::prelude::MetadataExt;
 use file_owner::PathExt;
 
 #[cfg(unix)]
+#[async_trait::async_trait]
 impl Atom for Chown {
     fn plan(&self) -> anyhow::Result<Outcome> {
         // If the file doesn't exist, assume it's because
@@ -122,7 +124,7 @@ impl Atom for Chown {
         })
     }
 
-    fn execute(&mut self) -> anyhow::Result<()> {
+    async fn execute(&mut self, _: Option<PasswordManager>) -> anyhow::Result<()> {
         if !self.owner.is_empty() {
             self.path.set_owner(self.owner.as_str())?;
         }

@@ -16,70 +16,42 @@ impl Step {
         self.initializers
             .iter()
             .fold(true, |_, flow_control| match flow_control {
-                initializers::FlowControl::Ensure(i) => {
-                    i.initialize().unwrap_or_else(|err| {
+                initializers::FlowControl::Ensure(i) => i.initialize().unwrap_or_else(|err| {
+                    error!("Failed to run initializer: {}", err.to_string());
+                    false
+                }),
+
+                initializers::FlowControl::SkipIf(i) => match i.initialize() {
+                    Ok(true) => false,
+                    Ok(false) => true,
+                    Err(err) => {
                         error!("Failed to run initializer: {}", err.to_string());
-
-                        // On an error, we can't really determine if this Atom should
-                        // run; so lets play it safe and filter it out too
                         false
-                    })
-                }
-
-                initializers::FlowControl::SkipIf(i) => {
-                    match i.initialize() {
-                        Ok(true) => {
-                            // Returning false because we should Skip if true, so false
-                            // will filter this out of the atom list
-                            false
-                        }
-                        Ok(false) => true,
-                        Err(err) => {
-                            error!("Failed to run initializer: {}", err.to_string());
-
-                            // On an error, we can't really determine if this Atom should
-                            // run; so lets play it safe and filter it out too
-                            false
-                        }
                     }
-                }
+                },
             })
     }
 
-    pub fn do_finalizers_allow_us_to_continue(&self) -> bool {
+    pub fn do_finalizers_allow_us_to_continue(&mut self) -> bool {
         self.finalizers
             .iter()
             .fold(true, |_, flow_control| match flow_control {
-                finalizers::FlowControl::StopIf(i) => {
-                    match i.finalize(self.atom.as_ref()) {
-                        Ok(true) => {
-                            // Returning false because we should Skip if true, so false
-                            // will filter this out of the atom list
-                            false
-                        }
-                        Ok(false) => true,
-                        Err(err) => {
-                            error!("Failed to run finalizers: {}", err.to_string());
-
-                            // On an error, we can't really determine if this Atom should
-                            // run; so lets play it safe and filter it out too
-                            false
-                        }
+                finalizers::FlowControl::StopIf(i) => match i.finalize(self.atom.as_ref()) {
+                    Ok(true) => false,
+                    Ok(false) => true,
+                    Err(err) => {
+                        error!("Failed to run finalizers: {}", err.to_string());
+                        false
                     }
-                }
-                FlowControl::Ensure(i) => {
-                    match i.finalize(self.atom.as_ref()) {
-                        Ok(true) => true,
-                        Ok(false) => false,
-                        Err(err) => {
-                            error!("Failed to run finalizers: {}", err.to_string());
-
-                            // On an error, we can't really determine if this Atom should
-                            // run; so lets play it safe and filter it out too
-                            false
-                        }
+                },
+                FlowControl::Ensure(i) => match i.finalize(self.atom.as_ref()) {
+                    Ok(true) => true,
+                    Ok(false) => false,
+                    Err(err) => {
+                        error!("Failed to run finalizers: {}", err.to_string());
+                        false
                     }
-                }
+                },
             })
     }
 }
@@ -175,7 +147,7 @@ mod tests {
 
     #[test]
     fn finalizers_can_control_execution() {
-        let step = Step {
+        let mut step = Step {
             atom: Box::new(EchoAtom("hello-world")),
             initializers: vec![],
             finalizers: vec![FinalizerFlowControl::StopIf(Box::new(EchoFinalizer(false)))],
@@ -183,7 +155,7 @@ mod tests {
 
         assert_eq!(true, step.do_finalizers_allow_us_to_continue());
 
-        let step = Step {
+        let mut step = Step {
             atom: Box::new(EchoAtom("hello-world")),
             initializers: vec![],
             finalizers: vec![FinalizerFlowControl::StopIf(Box::new(EchoFinalizer(true)))],
@@ -191,7 +163,7 @@ mod tests {
 
         assert_eq!(false, step.do_finalizers_allow_us_to_continue());
 
-        let step = Step {
+        let mut step = Step {
             atom: Box::new(EchoAtom("hello-world")),
             initializers: vec![],
             finalizers: vec![
@@ -205,7 +177,7 @@ mod tests {
 
     #[test]
     fn finalizers_that_error_block_execution() {
-        let step = Step {
+        let mut step = Step {
             atom: Box::new(EchoAtom("hello-world")),
             initializers: vec![],
             finalizers: vec![FinalizerFlowControl::StopIf(Box::new(ErrorFinalizer()))],
@@ -213,7 +185,7 @@ mod tests {
 
         assert_eq!(false, step.do_finalizers_allow_us_to_continue());
 
-        let step = Step {
+        let mut step = Step {
             atom: Box::new(EchoAtom("hello-world")),
             initializers: vec![],
             finalizers: vec![

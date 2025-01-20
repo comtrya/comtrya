@@ -23,6 +23,11 @@ update-informer = "1.1"
 dirs-next = "2.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_yml = "0"
+tokio = { version = "1.43.0", features = ["full"] }
+crossbeam-queue = "0.3.12"
+yapp = "0.4.1"
+zeroize = { version = "1.8.1", features = ["derive", "std"] }
+rpassword = "7.3.1"
 
 [dev-dependencies]
 assert_cmd = "2.0"

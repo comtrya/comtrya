@@ -1,4 +1,5 @@
 use crate::atoms::Outcome;
+use crate::utilities::password_manager::PasswordManager;
 
 use super::super::Atom;
 use std::io::Write;
@@ -15,6 +16,7 @@ impl std::fmt::Display for Download {
     }
 }
 
+#[async_trait::async_trait]
 impl Atom for Download {
     fn plan(&self) -> anyhow::Result<Outcome> {
         // Initial implementation will return false if the local file
@@ -27,7 +29,7 @@ impl Atom for Download {
         })
     }
 
-    fn execute(&mut self) -> anyhow::Result<()> {
+    async fn execute(&mut self, _: Option<PasswordManager>) -> anyhow::Result<()> {
         let response = reqwest::blocking::get(&self.url)?;
 
         let mut file = File::create(&self.to)?;
@@ -45,8 +47,8 @@ mod tests {
     use pretty_assertions::assert_eq;
     use tempfile::tempdir;
 
-    #[test]
-    fn it_can() {
+    #[tokio::test]
+    async fn it_can() {
         let tmpdir = tempdir().unwrap();
         let to_file = tmpdir.path().join("download");
 
@@ -57,7 +59,7 @@ mod tests {
 
         assert_eq!(true, atom.plan().unwrap().should_run);
 
-        let result = atom.execute();
+        let result = atom.execute(PasswordManager::new(None).ok()).await;
         assert_eq!(true, result.is_ok());
         assert_eq!(false, atom.plan().unwrap().should_run);
     }

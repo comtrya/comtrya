@@ -14,7 +14,7 @@ pub enum FlowControl {
 
 /// Finalizers allow us to store data within the manifests KV store,
 /// or to end the execution of atoms for the action
-pub trait Finalizer {
+pub trait Finalizer: Send + Sync {
     fn finalize(&self, atom: &dyn Atom) -> anyhow::Result<bool>;
 }
 

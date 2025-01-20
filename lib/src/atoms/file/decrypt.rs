@@ -2,6 +2,7 @@ use crate::atoms::Outcome;
 
 use super::super::Atom;
 use super::FileAtom;
+use crate::utilities::password_manager::PasswordManager;
 use age::armor::ArmoredReader;
 use age::secrecy::Secret;
 use std::io::Read;
@@ -30,6 +31,7 @@ impl std::fmt::Display for Decrypt {
     }
 }
 
+#[async_trait::async_trait]
 impl Atom for Decrypt {
     fn plan(&self) -> anyhow::Result<Outcome> {
         // If the file doesn't exist, assume it's because
@@ -62,7 +64,7 @@ impl Atom for Decrypt {
         }
     }
 
-    fn execute(&mut self) -> anyhow::Result<()> {
+    async fn execute(&mut self, _: Option<PasswordManager>) -> anyhow::Result<()> {
         let decrypted_content = decrypt(&self.passphrase, &self.encrypted_content)?;
 
         std::fs::write(&self.path, decrypted_content)?;
@@ -127,8 +129,8 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn it_can_execute() -> anyhow::Result<()> {
+    #[tokio::test]
+    async fn it_can_execute() -> anyhow::Result<()> {
         // encrypt and write to file
         let passphrase = "Teal'c".to_string();
         let content = b"Shol'va";
@@ -147,7 +149,7 @@ mod tests {
 
         // plan, execute
         assert_eq!(true, decrypt.plan().unwrap().should_run);
-        assert_eq!(true, decrypt.execute().is_ok());
+        assert_eq!(true, decrypt.execute(None).await.is_ok());
 
         Ok(())
     }

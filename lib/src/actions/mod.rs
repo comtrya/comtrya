@@ -1,5 +1,5 @@
 mod binary;
-mod command;
+pub mod command;
 mod directory;
 mod file;
 mod git;
@@ -238,7 +238,7 @@ impl<E: std::error::Error> From<E> for ActionError {
     }
 }
 
-pub trait Action {
+pub trait Action: Send + Sync {
     fn summarize(&self) -> String {
         warn!("need to define action summarize");
         "not found action summarize".to_string()
