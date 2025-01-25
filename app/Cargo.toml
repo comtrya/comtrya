@@ -15,6 +15,7 @@ comfy-table = "7"
 comtrya-lib = { path = "../lib", version = "0.9.1" }
 petgraph = "0.6"
 rhai = { version = "1.19", features = ["serde"] }
+backoff = { version = "0.4", features = ["tokio"] }
 strip-ansi-escapes = "0.2"
 tracing = "0.1"
 tracing-journald = "0.3.0"
@@ -24,10 +25,7 @@ dirs-next = "2.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_yml = "0"
 tokio = { version = "1.43.0", features = ["full"] }
-crossbeam-queue = "0.3.12"
-yapp = "0.4.1"
-zeroize = { version = "1.8.1", features = ["derive", "std"] }
-rpassword = "7.3.1"
+scopeguard = "1.2.0"
 
 [dev-dependencies]
 assert_cmd = "2.0"

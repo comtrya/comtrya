@@ -1,12 +1,14 @@
 use crate::atoms::Atom;
 use crate::steps::finalizers::FlowControl;
+use crate::utilities::password_manager::PasswordManager;
+use anyhow::{anyhow, Result};
 use tracing::error;
 
 pub mod finalizers;
 pub mod initializers;
 
 pub struct Step {
-    pub atom: Box<dyn Atom>,
+    pub atom: Box<dyn Atom + Send + Sync>,
     pub initializers: Vec<initializers::FlowControl>,
     pub finalizers: Vec<finalizers::FlowControl>,
 }
@@ -53,6 +55,20 @@ impl Step {
                     }
                 },
             })
+    }
+
+    pub async fn execute(&mut self, password_manager: Option<PasswordManager>) -> Result<()> {
+        let result = self.atom.execute(password_manager.clone()).await;
+        if let Err(err) = result {
+            return Err(anyhow!("Atom failed to execute: {:?}", err));
+        }
+
+        if !self.do_finalizers_allow_us_to_continue() {
+            return Err(anyhow!(
+                "Finalizers won't allow us to continue with this action"
+            ));
+        }
+        Ok(())
     }
 }
 

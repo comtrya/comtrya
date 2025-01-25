@@ -1,16 +1,52 @@
 mod load;
 pub use load::load;
+use tokio::sync::Barrier;
 mod providers;
 use crate::actions::Actions;
+use crate::contexts::{to_rhai, Contexts};
+use crate::utilities::password_manager::PasswordManager;
+use anyhow::{Error, Result};
 use petgraph::prelude::*;
 pub use providers::register_providers;
 pub use providers::ManifestProvider;
+use rhai::Engine;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::fmt;
+use std::mem::discriminant;
 use std::path::{Path, PathBuf};
-use tracing::error;
+use std::sync::Arc;
+use tracing::{debug, error, info, instrument};
 
+#[derive(Debug, Clone, Default)]
+pub enum ManifestState {
+    #[default]
+    Pending,
+    Working,
+    Completed,
+    Failed(Arc<Error>),
+}
+
+impl fmt::Display for ManifestState {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "Manifest {}",
+            match self {
+                Self::Pending => String::from("Pending"),
+                Self::Working => String::from("Working"),
+                Self::Completed => String::from("Completed"),
+                Self::Failed(e) => format!("Failed {}", e),
+            }
+        )
+    }
+}
+
+impl PartialEq for ManifestState {
+    fn eq(&self, other: &Self) -> bool {
+        discriminant(self) == discriminant(other)
+    }
+}
 #[derive(JsonSchema, Clone, Debug, Default, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Manifest {
@@ -33,7 +69,13 @@ pub struct Manifest {
     pub root_dir: Option<PathBuf>,
 
     #[serde(skip)]
-    pub dag_index: Option<NodeIndex<u32>>,
+    pub dag_index: Option<NodeIndex>,
+
+    #[serde(skip)]
+    pub dependency_barrier: Option<Arc<Barrier>>,
+
+    #[serde(skip)]
+    pub state: ManifestState,
 }
 
 impl fmt::Display for Manifest {
@@ -49,6 +91,59 @@ impl fmt::Display for Manifest {
 impl AsRef<Manifest> for Manifest {
     fn as_ref(&self) -> &Manifest {
         self
+    }
+}
+
+impl Manifest {
+    pub fn get_name(&self) -> String {
+        self.name
+            .as_deref()
+            .unwrap_or("Cannot extract name")
+            .to_string()
+    }
+
+    #[instrument(skip(self, dry_run, label, contexts, password_manager))]
+    pub async fn execute(
+        &self,
+        dry_run: bool,
+        label: Option<String>,
+        contexts: &Contexts,
+        password_manager: Option<PasswordManager>,
+    ) -> Result<()> {
+        if let Some(label) = label {
+            if !self.labels.contains(&label) {
+                info!(
+                    message = "Skipping manifest, label not found",
+                    label = label.as_str()
+                );
+                return Ok(());
+            }
+        }
+
+        if let Some(where_condition) = &self.r#where {
+            let result = {
+                let engine = Engine::new();
+                let mut scope = to_rhai(contexts);
+                engine
+                    .eval_with_scope::<bool>(&mut scope, where_condition)
+                    .unwrap()
+            };
+
+            debug!("Result of 'where' condition '{where_condition}' -> '{result}'");
+            if !result {
+                info!("Skipping manifest, because 'where' conditions were false!");
+                return Ok(());
+            }
+        }
+
+        for action in self.actions.iter() {
+            let act = action.inner_ref();
+            act.execute(dry_run, action, self, contexts, password_manager.clone())
+                .await?;
+        }
+
+        info!("Completed: {self}",);
+        Ok(())
     }
 }
 

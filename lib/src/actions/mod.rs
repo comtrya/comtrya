@@ -8,9 +8,9 @@ mod macos;
 mod package;
 mod user;
 
-use crate::contexts::Contexts;
 use crate::manifests::Manifest;
 use crate::steps::Step;
+use crate::{contexts::Contexts, utilities::password_manager::PasswordManager};
 use anyhow::anyhow;
 use binary::BinaryGitHub;
 use command::run::RunCommand;
@@ -29,7 +29,7 @@ use rhai::Engine;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
-use tracing::{error, warn};
+use tracing::{debug, error, info, instrument, warn};
 use user::add::UserAdd;
 
 use self::user::add_group::UserAddGroup;
@@ -238,12 +238,55 @@ impl<E: std::error::Error> From<E> for ActionError {
     }
 }
 
+#[async_trait::async_trait]
 pub trait Action: Send + Sync {
     fn summarize(&self) -> String {
         warn!("need to define action summarize");
         "not found action summarize".to_string()
     }
     fn plan(&self, manifest: &Manifest, context: &Contexts) -> anyhow::Result<Vec<Step>>;
+
+    #[instrument(skip_all)]
+    async fn execute(
+        &self,
+        dry_run: bool,
+        action: &Actions,
+        manifest: &Manifest,
+        contexts: &Contexts,
+        password_manager: Option<PasswordManager>,
+    ) -> anyhow::Result<()> {
+        let steps: Vec<_> = match self.plan(manifest, contexts) {
+            Ok(steps) => steps
+                .into_iter()
+                .filter(|step| step.do_initializers_allow_us_to_run())
+                .filter(|step| match step.atom.plan() {
+                    Ok(outcome) => outcome.should_run,
+                    Err(_) => false,
+                })
+                .collect(),
+            Err(err) => {
+                error!("Failed Processing: {action}. Action failed to get plan: {err:?}",);
+                return Ok(());
+            }
+        };
+
+        if steps.is_empty() {
+            info!("nothing to be done to reconcile action");
+            return Ok(());
+        }
+
+        if dry_run {
+            return Ok(());
+        }
+
+        for mut step in steps {
+            if let Err(e) = step.execute(password_manager.clone()).await {
+                debug!("{e}");
+            }
+        }
+        info!("{}", self.summarize());
+        Ok(())
+    }
 }
 
 #[cfg(test)]

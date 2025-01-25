@@ -1,19 +1,19 @@
-use std::{
-    io::{BufRead, BufReader, Write},
-    process::Stdio,
-    sync::{Arc, RwLock},
-};
+use std::{process::Stdio, sync::Arc};
 
 use anyhow::{anyhow, Result};
-use tracing::debug;
+use tracing::{debug, trace};
 
 use super::super::Atom;
 use crate::atoms::Outcome;
 use crate::utilities;
 use crate::utilities::password_manager::PasswordManager;
 use tokio::process::Command;
-use tokio::time::Duration;
-use tokio::io::AsyncWriteExt;
+use tokio::{
+    io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
+    sync::RwLock,
+    task::JoinSet,
+    time::{sleep, Duration},
+};
 
 #[derive(Default)]
 pub struct Exec {
@@ -42,7 +42,7 @@ pub fn new_run_command(command: String) -> Exec {
 }
 
 impl Exec {
-    fn elevate_if_required(&self) -> (String, Vec<String>) {
+    fn elevate_if_required(&self) -> (bool, String, Vec<String>) {
         // Depending on the priviledged flag and who who the current user is
         // we can determine if we need to prepend sudo to the command
 
@@ -50,52 +50,17 @@ impl Exec {
 
         match (self.privileged, whoami::username().as_str()) {
             // Hasn't requested priviledged, so never try to elevate
-            (false, _) => (self.command.clone(), self.arguments.clone()),
+            (false, _) => (false, self.command.clone(), self.arguments.clone()),
 
             // Requested priviledged, but is already root
-            (true, "root") => (self.command.clone(), self.arguments.clone()),
+            (true, "root") => (true, self.command.clone(), self.arguments.clone()),
 
             // Requested priviledged, but is not root
             (true, _) => (
+                true,
                 privilege_provider,
                 [vec![self.command.clone()], self.arguments.clone()].concat(),
             ),
-        }
-    }
-
-    async fn elevate(&mut self, password_manager: &Option<PasswordManager>) -> Result<()> {
-        tracing::info!(
-            "Privilege elevation required to run `{} {}`. Validating privileges ...",
-            &self.command,
-            &self.arguments.join(" ")
-        );
-
-        let privilege_provider = utilities::get_binary_path(&self.privilege_provider)?;
-
-        let mut child = Command::new(privilege_provider)
-            .args(["-S", "--validate"])
-            .stdin(Stdio::piped())
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .spawn()?;
-        
-        if let Some(mut stdin) = child.stdin.take() {
-            if let Some(secret) = password_manager.as_ref().and_then(|pm| pm.secret.clone()) {
-                stdin.write_all(secret.as_bytes()).await?;
-                stdin.write_all(b"\n").await?;
-            }
-        }
-
-        match child.wait_with_output().await {
-            Ok(std::process::Output { status, .. }) if status.success() => Ok(()),
-            Ok(std::process::Output { stderr, .. }) => Err(anyhow!(
-                "Command requires privilege escalation, but couldn't elevate privileges: {}",
-                String::from_utf8(stderr)?
-            )),
-            Err(err) => Err(anyhow!(
-                "Command requires privilege escalation, but couldn't elevate privileges: {}",
-                err
-            )),
         }
     }
 }
@@ -128,25 +93,18 @@ impl Atom for Exec {
     }
 
     async fn execute(&mut self, password_manager: Option<PasswordManager>) -> anyhow::Result<()> {
-        let (command, arguments) = self.elevate_if_required();
-        println!("{}", self);
+        let (elevated, command, mut arguments) = self.elevate_if_required();
 
         let command = utilities::get_binary_path(&command)
             .map_err(|_| anyhow!("Command `{}` not found in path", command))?;
 
         // If we require root, we need to use sudo with inherited IO
         // to ensure the user can respond if prompted for a password
-        if command.eq("doas") || command.eq("sudo") || command.eq("run0") {
-            println!("elevating {}", command);
-            match self.elevate(&password_manager).await {
-                Ok(_) => (),
-                Err(err) => {
-                    return Err(anyhow!(err));
-                }
-            }
+        if elevated && command.eq("sudo") {
+            arguments.insert(0, String::from("-S"));
         }
 
-        let mut child = std::process::Command::new(&command)
+        let mut child = Command::new(&command)
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
@@ -159,53 +117,65 @@ impl Atom for Exec {
             }))
             .spawn()?;
 
-        let secret = Arc::new(password_manager
-            .and_then(|pm| pm.secret.clone())
-            .map_or(String::new(), |s| format!("{}\n", s.as_str())));
+        let secret = Arc::new(
+            password_manager
+                .and_then(|pm| pm.secret.clone())
+                .map_or(String::new(), |s| format!("{}\n", s.as_str())),
+        );
         let stdin = Arc::new(RwLock::new(child.stdin.take().unwrap()));
         let stdout = child.stdout.take().unwrap();
         let stderr = child.stderr.take().unwrap();
 
-        let secret1 = secret.clone();
-        let stdin1 = stdin.clone();
+        let secret1 = Arc::clone(&secret);
+        let stdin1 = Arc::clone(&stdin);
 
-        let stdout_handle = tokio::spawn(async move {
-            let reader = BufReader::new(stdout);
-            for line in reader.lines().map_while(Result::ok) {
-                if line.to_lowercase().contains("password") {
-                    let stdin = stdin1.clone();
-                    let secret = secret1.clone();
-                    tokio::spawn(async move {
-                        tokio::time::sleep(Duration::from_millis(100)).await;
-                        if let Ok(mut stdin) = stdin.write() {
-                            stdin.write_all(secret.as_bytes()).unwrap();
-                            stdin.flush().unwrap();
-                        }
-                    });
+        let mut watchers = JoinSet::<Result<()>>::new();
+
+        watchers.spawn(async move {
+            let stdin = Arc::clone(&stdin1);
+            let secret = secret1.clone();
+            let reader = &mut BufReader::new(stdout);
+
+            while let Ok(line) = reader.lines().next_line().await {
+                if let Some(line) = line {
+                    trace!("{line}");
+                    if line.to_lowercase().contains("password") {
+                        let mut stdin = stdin.write().await;
+                        stdin.write_all(secret.as_bytes()).await.unwrap();
+                        stdin.flush().await.unwrap();
+                        sleep(Duration::from_millis(100)).await;
+                    }
+                } else {
+                    break;
                 }
             }
+            Ok(())
         });
 
-        tokio::spawn(async move {
-            let reader = BufReader::new(stderr);
-            for line in reader.lines().map_while(Result::ok) {
-                if line.to_lowercase().contains("password") {
-                    let stdin = stdin.clone();
-                    let secret = secret.clone();
-                    tokio::spawn(async move {
-                        tokio::time::sleep(Duration::from_millis(100)).await;
-                        if let Ok(mut stdin) = stdin.write() {
-                            stdin.write_all(secret.as_bytes()).unwrap();
-                            stdin.flush().unwrap();
-                        }
-                    });
+        watchers.spawn(async move {
+            let stdin = Arc::clone(&stdin);
+            let secret = secret.clone();
+            let reader = &mut BufReader::new(stderr);
+
+            while let Ok(line) = reader.lines().next_line().await {
+                if let Some(line) = line {
+                    trace!("{line}");
+                    if line.to_lowercase().contains("password") {
+                        sleep(Duration::from_millis(100)).await;
+                        let mut stdin = stdin.write().await;
+                        stdin.write_all(secret.as_bytes()).await.unwrap();
+                        stdin.flush().await.unwrap();
+                    }
+                } else {
+                    break;
                 }
             }
-        }).await?;
+            Ok(())
+        });
 
-        let _ = stdout_handle.await;
+        watchers.join_all().await;
 
-        match child.wait_with_output() {
+        match child.wait_with_output().await {
             Ok(output) if output.status.success() => {
                 self.status.stdout = String::from_utf8(output.stdout)?;
                 self.status.stderr = String::from_utf8(output.stderr)?;
@@ -273,7 +243,7 @@ mod tests {
     fn elevate() {
         let mut command_run = new_run_command(String::from("echo"));
         command_run.arguments = vec![String::from("Hello, world!")];
-        let (command, args) = command_run.elevate_if_required();
+        let (_, command, args) = command_run.elevate_if_required();
 
         assert_eq!(String::from("echo"), command);
         assert_eq!(vec![String::from("Hello, world!")], args);
@@ -282,7 +252,7 @@ mod tests {
         command_run.arguments = vec![String::from("Hello, world!")];
         command_run.privileged = true;
         command_run.privilege_provider = Privilege::Sudo.to_string();
-        let (command, args) = command_run.elevate_if_required();
+        let (_, command, args) = command_run.elevate_if_required();
 
         assert_eq!(String::from("sudo"), command);
         assert_eq!(
@@ -295,7 +265,7 @@ mod tests {
     fn elevate_doas() {
         let mut command_run = new_run_command(String::from("echo"));
         command_run.arguments = vec![String::from("Hello, world!")];
-        let (command, args) = command_run.elevate_if_required();
+        let (_, command, args) = command_run.elevate_if_required();
 
         assert_eq!(String::from("echo"), command);
         assert_eq!(vec![String::from("Hello, world!")], args);
@@ -304,7 +274,7 @@ mod tests {
         command_run.arguments = vec![String::from("Hello, world!")];
         command_run.privileged = true;
         command_run.privilege_provider = Privilege::Doas.to_string();
-        let (command, args) = command_run.elevate_if_required();
+        let (_, command, args) = command_run.elevate_if_required();
 
         assert_eq!(String::from("doas"), command);
         assert_eq!(
@@ -316,7 +286,7 @@ mod tests {
     fn elevate_run0() {
         let mut command_run = new_run_command(String::from("echo"));
         command_run.arguments = vec![String::from("Hello, world!")];
-        let (command, args) = command_run.elevate_if_required();
+        let (_, command, args) = command_run.elevate_if_required();
 
         assert_eq!(String::from("echo"), command);
         assert_eq!(vec![String::from("Hello, world!")], args);
@@ -325,7 +295,7 @@ mod tests {
         command_run.arguments = vec![String::from("Hello, world!")];
         command_run.privileged = true;
         command_run.privilege_provider = Privilege::Run0.to_string();
-        let (command, args) = command_run.elevate_if_required();
+        let (_, command, args) = command_run.elevate_if_required();
 
         assert_eq!(String::from("run0"), command);
         assert_eq!(
