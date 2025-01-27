@@ -1,7 +1,7 @@
 use std::{process::Stdio, sync::Arc};
 
 use anyhow::{anyhow, Result};
-use tracing::{debug, trace};
+use tracing::{debug, error, trace};
 
 use super::super::Atom;
 use crate::atoms::Outcome;
@@ -134,19 +134,24 @@ impl Atom for Exec {
         watchers.spawn(async move {
             let stdin = Arc::clone(&stdin1);
             let secret = secret1.clone();
-            let reader = &mut BufReader::new(stdout);
 
-            while let Ok(line) = reader.lines().next_line().await {
-                if let Some(line) = line {
-                    trace!("{line}");
-                    if line.to_lowercase().contains("password") {
-                        let mut stdin = stdin.write().await;
-                        stdin.write_all(secret.as_bytes()).await.unwrap();
-                        stdin.flush().await.unwrap();
-                        sleep(Duration::from_millis(100)).await;
+            let mut lines = BufReader::new(stdout).lines();
+            loop {
+                match lines.next_line().await {
+                    Ok(Some(line)) => {
+                        trace!("{line}");
+                        if line.to_lowercase().contains("password") {
+                            let mut stdin = stdin.write().await;
+                            stdin.write_all(secret.as_bytes()).await.unwrap();
+                            stdin.flush().await.unwrap();
+                            sleep(Duration::from_millis(100)).await;
+                        }
                     }
-                } else {
-                    break;
+                    Ok(None) => break,
+                    Err(e) => {
+                        error!("Error while reading stdout. {e}");
+                        break;
+                    }
                 }
             }
             Ok(())
@@ -157,17 +162,23 @@ impl Atom for Exec {
             let secret = secret.clone();
             let reader = &mut BufReader::new(stderr);
 
-            while let Ok(line) = reader.lines().next_line().await {
-                if let Some(line) = line {
-                    trace!("{line}");
-                    if line.to_lowercase().contains("password") {
-                        sleep(Duration::from_millis(100)).await;
-                        let mut stdin = stdin.write().await;
-                        stdin.write_all(secret.as_bytes()).await.unwrap();
-                        stdin.flush().await.unwrap();
+            let mut lines = reader.lines();
+            loop {
+                match lines.next_line().await {
+                    Ok(Some(line)) => {
+                        trace!("{line}");
+                        if line.to_lowercase().contains("password") {
+                            let mut stdin = stdin.write().await;
+                            stdin.write_all(secret.as_bytes()).await.unwrap();
+                            stdin.flush().await.unwrap();
+                            sleep(Duration::from_millis(100)).await;
+                        }
                     }
-                } else {
-                    break;
+                    Ok(None) => break,
+                    Err(e) => {
+                        error!("Error while reading stdout. {e}");
+                        break;
+                    }
                 }
             }
             Ok(())

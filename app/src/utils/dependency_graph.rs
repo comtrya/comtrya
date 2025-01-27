@@ -1,12 +1,17 @@
-use std::{collections::HashMap, iter::from_fn, ops::Deref, sync::Arc};
+use std::{
+    collections::HashMap,
+    iter::from_fn,
+    ops::Deref,
+    sync::{Arc, LazyLock},
+};
 
 use anyhow::Result;
 use petgraph::{
     graph::{DiGraph, NodeIndex},
-    visit::Topo,
-    // Direction::*,
+    visit::{Reversed, Topo},
+    Direction::{Incoming, Outgoing},
 };
-use tokio::sync::Mutex;
+use tokio::sync::Barrier;
 
 use super::ZipLongest;
 use crate::Runtime;
@@ -17,10 +22,12 @@ use comtrya_lib::{
     utilities::{get_privilege_provider, password_manager::PasswordManager},
 };
 
+type LockedManifest = Arc<LazyLock<Manifest, Box<dyn FnOnce() -> Manifest + Send>>>;
 #[derive(Debug)]
 pub struct DependencyGraph {
-    pub(crate) graph: DiGraph<Arc<Mutex<Manifest>>, ()>,
+    pub(crate) graph: DiGraph<LockedManifest, ()>,
     pub(crate) name_to_idx: HashMap<String, NodeIndex>,
+    pub(crate) barrier_map: HashMap<NodeIndex, Arc<Barrier>>,
 }
 
 impl DependencyGraph {
@@ -32,18 +39,19 @@ impl DependencyGraph {
         let mut this = Self {
             graph: DiGraph::new(),
             name_to_idx: HashMap::new(),
+            barrier_map: HashMap::new(),
         };
 
         let mut first_package_install: Option<NodeIndex> = None;
 
         let mut should_ask_for_pass = false;
         for (_, manifest) in manifests.iter() {
-            let from_index = this.add_manifest(manifest).await;
+            let to_index = this.add_manifest(manifest.clone()).await;
 
             for (dependant, action) in manifest.depends.iter().zip_longest(manifest.actions.iter())
             {
                 if let Some(dependency_manifest) = dependant.and_then(|dep| manifests.get(dep)) {
-                    let to_index = this.add_manifest(dependency_manifest).await;
+                    let from_index = this.add_manifest(dependency_manifest.clone()).await;
                     this.graph.add_edge(from_index, to_index, ());
                 }
 
@@ -51,7 +59,7 @@ impl DependencyGraph {
                     Some(PackageInstall(_)) | Some(PackageRepository(_)) => {
                         if let Some(index) = first_package_install {
                             first_package_install = first_package_install.or(Some(index));
-                            this.graph.add_edge(from_index, index, ());
+                            this.graph.add_edge(index, to_index, ());
                         }
                         true
                     }
@@ -60,6 +68,20 @@ impl DependencyGraph {
                 };
             }
         }
+
+        this.barrier_map.extend(
+            this.graph
+                .node_indices()
+                .map(|node| {
+                    (
+                        node,
+                        Arc::new(Barrier::new(
+                            this.graph.neighbors_directed(node, Outgoing).count() + 1,
+                        )),
+                    )
+                })
+                .collect::<HashMap<_, _>>(),
+        );
 
         if should_ask_for_pass {
             let mut password_manager =
@@ -72,107 +94,47 @@ impl DependencyGraph {
     }
 
     fn get_ordered_nodes(&self) -> impl Iterator<Item = NodeIndex> + '_ {
-        let mut topo = Topo::new(&self.graph);
+        let graph = Reversed(&self.graph);
+        let mut topo = Topo::new(&graph);
 
-        from_fn(move || topo.next(&self.graph))
+        from_fn(move || topo.next(&graph))
     }
 
-    pub fn get_ordered_manifests(&self) -> Vec<Arc<Mutex<Manifest>>> {
+    pub fn get_ordered_manifests(&self) -> Vec<LockedManifest> {
         self.get_ordered_nodes()
             .flat_map(|idx| self.graph.node_weight(idx))
             .cloned()
             .collect::<Vec<_>>()
     }
 
-    pub async fn add_manifest(&mut self, manifest: impl AsRef<Manifest>) -> NodeIndex {
-        let manifest = manifest.as_ref();
-        *self
-            .name_to_idx
-            .entry(manifest.get_name())
-            .or_insert_with(|| self.graph.add_node(Arc::new(Mutex::new(manifest.clone()))))
+    pub async fn add_manifest(&mut self, manifest: Manifest) -> NodeIndex {
+        *self.name_to_idx.entry(manifest.get_name()).or_insert(
+            self.graph
+                .add_node(Arc::new(LazyLock::new(Box::new(|| manifest)))),
+        )
+    }
+
+    pub fn get_barrier(&self, index: NodeIndex) -> &Arc<Barrier> {
+        self.barrier_map.get(&index).unwrap()
     }
 
     #[allow(dead_code)]
-    async fn get_node_index<M>(&self, manifest: M) -> &NodeIndex
+    pub async fn get_node_index<M>(&self, manifest: M) -> &NodeIndex
     where
-        M: AsRef<Mutex<Manifest>> + Deref<Target = Mutex<Manifest>>,
+        M: AsRef<LazyLock<LockedManifest>> + Deref<Target = LazyLock<LockedManifest>>,
     {
-        self.name_to_idx
-            .get(&manifest.lock().await.get_name())
-            .unwrap()
+        self.name_to_idx.get(&manifest.get_name()).unwrap()
     }
 
-    // #[allow(dead_code)]
-    // async fn get_next_nodes(
-    //     &self,
-    //     manifest: Arc<Mutex<Manifest>>,
-    // ) -> impl Iterator<Item = &Arc<Mutex<Manifest>>> {
-    //     let futures: Vec<&Arc<Mutex<Manifest>>> = Vec::new();
-    //     self.graph
-    //         .neighbors_directed(*self.get_node_index(manifest).await, Outgoing)
-    //         .map(|idx| self.graph.node_weight(idx).unwrap())
-    //         .filter(|m| self.are_dependencies_completed(*self.get_node_index(Arc::clone(m))))
-    // }
+    #[allow(dead_code)]
+    pub async fn get_successors(&self, manifest: &LockedManifest) -> Vec<NodeIndex> {
+        self.graph
+            .neighbors_directed(*self.get_node_from_manifest(manifest).await, Incoming)
+            .collect()
+    }
 
-    // #[allow(dead_code)]
-    // pub async fn get_ready_dependencies(
-    //     &mut self,
-    //     manifest: Arc<Mutex<Manifest>>,
-    // ) -> Vec<&Arc<Mutex<Manifest>>> {
-    //     manifest
-    //         .lock()
-    //         .await
-    //         .depends
-    //         .iter()
-    //         .map(|dep| self.name_to_idx.get(dep).unwrap())
-    //         .map(|idx| self.graph.node_weight(*idx).unwrap())
-    //         .filter(|m| m.blocking_lock().state == ManifestState::Completed)
-    //         .collect::<Vec<_>>()
-    // }
-
-    // #[allow(dead_code)]
-    // async fn dependencies_completed(&self, node: NodeIndex) -> bool {
-    //     self.graph
-    //         .neighbors_directed(node, Incoming)
-    //         .flat_map(|idx| self.graph.node_weight(idx))
-    //         .all(|dep| dep.blocking_lock().state == ManifestState::Completed)
-    // }
-
-    pub async fn get_node_from_manifest(&self, manifest: &Arc<Mutex<Manifest>>) -> &NodeIndex {
+    pub async fn get_node_from_manifest(&self, manifest: &LockedManifest) -> &NodeIndex {
         // let join_set = JoinSet::new();
-        self.name_to_idx
-            .get(&manifest.lock().await.get_name())
-            .unwrap()
+        self.name_to_idx.get(&manifest.get_name()).unwrap()
     }
-
-    // #[allow(dead_code)]
-    // pub fn are_dependencies_completed(&self, idx: NodeIndex) -> bool {
-    //     self.graph.neighbors_directed(idx, Outgoing).all(|idx| {
-    //         self.graph.node_weight(idx).unwrap().blocking_lock().state == ManifestState::Completed
-    //     })
-    // }
-
-    // #[allow(dead_code)]
-    // pub fn get_ready_manifests(&self) -> impl Iterator<Item = &Arc<Mutex<Manifest>>> {
-    //     self.graph.node_weights().filter(|m| {
-    //         m.blocking_lock().state == ManifestState::Pending
-    //             && self.are_dependencies_completed(
-    //                 *self.name_to_idx.get(&m.blocking_lock().get_name()).unwrap(),
-    //             )
-    //     })
-    // }
-
-    // #[allow(dead_code)]
-    // pub fn all_manifests_completed(&self) -> bool {
-    //     self.graph
-    //         .node_weights()
-    //         .all(|m| m.blocking_lock().state == ManifestState::Completed)
-    // }
-
-    // #[allow(dead_code)]
-    // pub fn all_manifests_queued(&self) -> bool {
-    //     self.graph
-    //         .node_weights()
-    //         .all(|m| m.blocking_lock().state != ManifestState::Pending)
-    // }
 }

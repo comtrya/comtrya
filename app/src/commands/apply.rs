@@ -1,21 +1,13 @@
 use std::{
-    collections::HashMap,
     path::PathBuf,
-    sync::{
-        atomic::{AtomicBool, Ordering},
-        Arc,
-    },
+    sync::{Arc, LazyLock},
 };
 
 use anyhow::{anyhow, Context, Result};
 use clap::Parser;
 use comfy_table::{Cell, ContentArrangement, Table};
-use petgraph::{graph::NodeIndex, Direction::*};
-use tokio::{
-    sync::{Barrier, RwLock},
-    task::JoinSet,
-};
-use tracing::{debug, info, instrument, trace};
+use tokio::task::JoinSet;
+use tracing::{debug, instrument, trace};
 
 use super::ComtryaCommand;
 use crate::{utils::DependencyGraph, Runtime};
@@ -89,142 +81,42 @@ impl Apply {
 }
 
 impl ComtryaCommand for Apply {
-    // #[instrument(skip(self, runtime))]
+    #[instrument(skip_all)]
     async fn execute(&self, runtime: &mut Runtime) -> Result<()> {
         let contexts = runtime.contexts.clone();
         let manifest_path = self.manifest_path(runtime)?;
-
         debug!("Load manifests from path: {manifest_path:#?}");
-
         let manifests = load(manifest_path, &contexts);
 
-        let manifest_manager = Arc::new(RwLock::new(
-            DependencyGraph::new(manifests, &contexts, runtime).await?,
-        ));
+        let manifest_manager = {
+            let graph = DependencyGraph::new(manifests, &contexts, runtime).await?;
+            Arc::new(LazyLock::new(|| graph))
+        };
 
-        let mut barrier_map: HashMap<NodeIndex<u32>, Arc<Barrier>> = HashMap::new();
-        for node in manifest_manager.read().await.graph.node_indices() {
-            barrier_map.insert(
-                node,
-                Arc::new(Barrier::new(
-                    manifest_manager
-                        .read()
-                        .await
-                        .graph
-                        .neighbors_directed(node, Incoming)
-                        .count()
-                        .max(1),
-                )),
-            );
-        }
-
-        let ordered_manifests = manifest_manager.read().await.get_ordered_manifests();
         let mut workers = JoinSet::<Result<()>>::new();
-        let dry_run = Arc::new(AtomicBool::new(self.dry_run));
+        let dry_run = self.dry_run;
         let password_manager = &runtime.password_manager;
-        let barrier_map = Arc::new(barrier_map);
-        for manifest in ordered_manifests {
+
+        for manifest in manifest_manager.get_ordered_manifests() {
             // Need to clone all these because they'll be in their own threads
-            let dry_run = Arc::clone(&dry_run);
             let label = self.label.clone();
             let contexts = contexts.clone();
             let password_manager = password_manager.clone();
-            let barrier_map = Arc::clone(&barrier_map);
-            let manager = Arc::clone(&manifest_manager);
-            let barrier = Arc::clone(
-                barrier_map
-                    .get(manager.read().await.get_node_from_manifest(&manifest).await)
-                    .unwrap(),
-            );
+            let manifest_manager = Arc::clone(&manifest_manager);
 
             workers.spawn(async move {
-                let manifest = Arc::clone(&manifest);
-                let manifest_guard = manifest.lock().await;
-                let manifest_manager = Arc::clone(&manager);
-
-                let dependents: Vec<_> = manifest_manager
-                    .read()
-                    .await
-                    .graph
-                    .neighbors_directed(
-                        *manifest_manager
-                            .read()
-                            .await
-                            .get_node_from_manifest(&manifest)
-                            .await,
-                        petgraph::Outgoing,
-                    )
-                    .collect();
-
-                for dep in dependents.iter() {
-                    debug!(
-                        "Dependencies for manifest {}: {:?}",
-                        manifest_guard,
-                        manifest_manager
-                            .read()
-                            .await
-                            .graph
-                            .node_weight(*dep)
-                            .unwrap()
-                            .lock()
-                            .await
-                            .get_name()
-                    );
+                for successor in manifest_manager.get_successors(&manifest).await {
+                    manifest_manager.get_barrier(successor).wait().await;
                 }
 
-                info!(
-                    "Worker for manifest {:?} waiting on dependencies",
-                    &manifest_guard.get_name()
-                );
-
-                // let is_leader = barrier.wait().await.is_leader();
-                for &dependent in &dependents {
-                    let dependent_barrier = barrier_map.get(&dependent).unwrap();
-                    dependent_barrier.wait().await;
-                }
-
-                info!(
-                    "Worker for manifest {:?} executing manifest",
-                    &manifest_guard.get_name()
-                );
-
-                manifest_guard
-                    .execute(
-                        dry_run.load(Ordering::Relaxed),
-                        label.clone(),
-                        &contexts,
-                        password_manager.clone(),
-                    )
+                manifest
+                    .execute(dry_run, label.clone(), &contexts, password_manager.clone())
                     .await?;
 
-                info!(
-                    "Worker for manifest {:?} finished executing",
-                    &manifest_guard.get_name()
-                );
-
-                let has_dependees = manifest_manager
-                    .read()
-                    .await
-                    .graph
-                    .neighbors_directed(
-                        *manifest_manager
-                            .read()
-                            .await
-                            .get_node_from_manifest(&manifest)
-                            .await,
-                        Outgoing,
-                    )
-                    .peekable()
-                    .peek()
-                    .is_none();
-
-                if has_dependees {
-                    barrier.wait().await;
-                }
-                info!(
-                    "Worker for manifest {:?} FINISHED executing",
-                    &manifest_guard.get_name()
-                );
+                manifest_manager
+                    .get_barrier(*manifest_manager.get_node_from_manifest(&manifest).await)
+                    .wait()
+                    .await;
                 Ok(())
             });
         }
