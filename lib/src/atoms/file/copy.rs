@@ -1,4 +1,5 @@
 use crate::atoms::Outcome;
+use crate::utilities::password_manager::PasswordManager;
 
 use super::super::Atom;
 use super::FileAtom;
@@ -28,6 +29,7 @@ impl std::fmt::Display for Copy {
     }
 }
 
+#[async_trait::async_trait]
 impl Atom for Copy {
     fn plan(&self) -> anyhow::Result<Outcome> {
         if !self.to.is_file() {
@@ -48,7 +50,7 @@ impl Atom for Copy {
         });
     }
 
-    fn execute(&mut self) -> anyhow::Result<()> {
+    async fn execute(&mut self, _: Option<PasswordManager>) -> anyhow::Result<()> {
         std::fs::copy(&self.from, &self.to)?;
 
         Ok(())
@@ -103,8 +105,8 @@ mod tests {
         assert_eq!(false, file_copy.plan().unwrap().should_run);
     }
 
-    #[test]
-    fn it_can_execute() {
+    #[tokio::test]
+    async fn it_can_execute() {
         use std::io::Write;
 
         let to_file = match tempfile::NamedTempFile::new() {
@@ -138,12 +140,12 @@ mod tests {
         };
 
         assert_eq!(true, file_copy.plan().unwrap().should_run);
-        assert_eq!(true, file_copy.execute().is_ok());
+        assert_eq!(true, file_copy.execute(None).await.is_ok());
         assert_eq!(false, file_copy.plan().unwrap().should_run);
     }
 
-    #[test]
-    fn it_wont_destroy_directories() {
+    #[tokio::test]
+    async fn it_wont_destroy_directories() {
         let to = match tempfile::TempDir::new() {
             std::result::Result::Ok(dir) => dir,
             std::result::Result::Err(_) => {

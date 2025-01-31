@@ -1,4 +1,5 @@
 use crate::atoms::Outcome;
+use crate::utilities::password_manager::PasswordManager;
 
 use super::super::Atom;
 use super::FileAtom;
@@ -26,6 +27,7 @@ impl std::fmt::Display for SetContents {
     }
 }
 
+#[async_trait::async_trait]
 impl Atom for SetContents {
     fn plan(&self) -> anyhow::Result<Outcome> {
         // If the file doesn't exist, assume it's because
@@ -58,7 +60,7 @@ impl Atom for SetContents {
         })
     }
 
-    fn execute(&mut self) -> anyhow::Result<()> {
+    async fn execute(&mut self, _: Option<PasswordManager>) -> anyhow::Result<()> {
         std::fs::write(&self.path, &self.contents)?;
 
         Ok(())
@@ -70,8 +72,8 @@ mod tests {
     use super::*;
     use pretty_assertions::assert_eq;
 
-    #[test]
-    fn it_can() {
+    #[tokio::test]
+    async fn it_can() {
         let file = match tempfile::NamedTempFile::new() {
             std::result::Result::Ok(file) => file,
             std::result::Result::Err(_) => {
@@ -93,7 +95,7 @@ mod tests {
         };
 
         assert_eq!(true, file_contents.plan().unwrap().should_run);
-        assert_eq!(true, file_contents.execute().is_ok());
+        assert_eq!(true, file_contents.execute(None).await.is_ok());
         assert_eq!(false, file_contents.plan().unwrap().should_run);
     }
 }

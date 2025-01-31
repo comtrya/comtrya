@@ -2,6 +2,7 @@ use crate::atoms::Outcome;
 
 use super::super::Atom;
 use super::FileAtom;
+use crate::utilities::password_manager::PasswordManager;
 use std::path::PathBuf;
 use tracing::{error, warn};
 
@@ -27,6 +28,7 @@ impl std::fmt::Display for Link {
     }
 }
 
+#[async_trait::async_trait]
 impl Atom for Link {
     fn plan(&self) -> anyhow::Result<Outcome> {
         // First, ensure source exists and can be linked to
@@ -83,14 +85,14 @@ impl Atom for Link {
     }
 
     #[cfg(unix)]
-    fn execute(&mut self) -> anyhow::Result<()> {
+    async fn execute(&mut self, _: Option<PasswordManager>) -> anyhow::Result<()> {
         std::os::unix::fs::symlink(&self.source, &self.target)?;
 
         Ok(())
     }
 
     #[cfg(windows)]
-    fn execute(&mut self) -> anyhow::Result<()> {
+    async fn execute(&mut self) -> anyhow::Result<()> {
         if self.target.is_dir() {
             std::os::windows::fs::symlink_dir(&self.source, &self.target)?;
         } else {
@@ -106,8 +108,8 @@ mod tests {
     use super::*;
     use pretty_assertions::assert_eq;
 
-    #[test]
-    fn it_can() {
+    #[tokio::test]
+    async fn it_can() {
         let from_dir = match tempfile::tempdir() {
             Ok(dir) => dir,
             Err(_) => {
@@ -129,7 +131,7 @@ mod tests {
             source: to_file.path().to_path_buf(),
         };
         assert_eq!(true, atom.plan().unwrap().should_run);
-        assert_eq!(true, atom.execute().is_ok());
+        assert_eq!(true, atom.execute(None).await.is_ok());
         assert_eq!(false, atom.plan().unwrap().should_run);
     }
 }

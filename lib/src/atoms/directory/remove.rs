@@ -1,3 +1,4 @@
+use crate::utilities::password_manager::PasswordManager;
 use std::path::PathBuf;
 
 use tracing::error;
@@ -18,6 +19,7 @@ impl std::fmt::Display for Remove {
     }
 }
 
+#[async_trait::async_trait]
 impl Atom for Remove {
     fn plan(&self) -> anyhow::Result<Outcome> {
         let path_to_dir = PathBuf::from(&self.target);
@@ -53,7 +55,7 @@ impl Atom for Remove {
         })
     }
 
-    fn execute(&mut self) -> anyhow::Result<()> {
+    async fn execute(&mut self, _: Option<PasswordManager>) -> anyhow::Result<()> {
         std::fs::remove_dir(&self.target)?;
         Ok(())
     }
@@ -91,8 +93,8 @@ mod tests {
         assert_eq!(false, atom.plan().unwrap().should_run)
     }
 
-    #[test]
-    fn it_can_execute() {
+    #[tokio::test]
+    async fn it_can_execute() {
         let temp_dir = match tempfile::tempdir() {
             std::result::Result::Ok(dir) => dir,
             std::result::Result::Err(_) => {
@@ -110,7 +112,7 @@ mod tests {
         };
 
         // Deletes dir
-        assert_eq!(true, atom.execute().is_ok());
+        assert_eq!(true, atom.execute(None).await.is_ok());
         // Dir is deleted and dont exists
         assert_eq!(false, temp_dir.path().exists())
     }

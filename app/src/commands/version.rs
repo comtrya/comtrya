@@ -3,12 +3,12 @@ use crate::Runtime;
 
 use clap::Parser;
 
-#[derive(Parser, Debug)]
+#[derive(Parser, Debug, Clone)]
 #[command()]
 pub(crate) struct Version {}
 
 impl ComtryaCommand for Version {
-    fn execute(&self, _: &Runtime) -> anyhow::Result<()> {
+    async fn execute(&self, _: &mut Runtime) -> anyhow::Result<()> {
         const VERSION: Option<&'static str> = option_env!("CARGO_PKG_VERSION");
         println!("{}", VERSION.unwrap_or("unknown"));
 

@@ -13,5 +13,5 @@ pub(crate) use gen_completions::GenCompletions;
 use crate::Runtime;
 
 pub trait ComtryaCommand {
-    fn execute(&self, runtime: &Runtime) -> anyhow::Result<()>;
+    async fn execute(&self, runtime: &mut Runtime) -> anyhow::Result<()>;
 }

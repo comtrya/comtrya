@@ -15,22 +15,25 @@ use tracing_subscriber::{fmt::writer::MakeWriterExt, layer::SubscriberExt, FmtSu
 
 mod commands;
 mod config;
+mod utils;
+use comtrya_lib::utilities::password_manager::PasswordManager;
 use config::Config;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Runtime {
     pub(crate) args: GlobalArgs,
     pub(crate) config: Config,
     pub(crate) contexts: Contexts,
+    pub(crate) password_manager: Option<PasswordManager>,
 }
 
-pub(crate) fn execute(runtime: Runtime) -> anyhow::Result<()> {
-    match &runtime.args.command {
-        Commands::Apply(apply) => apply.execute(&runtime),
-        Commands::Status(apply) => apply.status(&runtime),
-        Commands::Version(version) => version.execute(&runtime),
-        Commands::Contexts(contexts) => contexts.execute(&runtime),
-        Commands::GenCompletions(gen_completions) => gen_completions.execute(&runtime),
+pub(crate) async fn execute(runtime: &mut Runtime) -> anyhow::Result<()> {
+    match runtime.clone().args.command {
+        Commands::Apply(apply) => apply.execute(runtime).await,
+        Commands::Status(apply) => apply.status(runtime).await,
+        Commands::Version(version) => version.execute(runtime).await,
+        Commands::Contexts(contexts) => contexts.execute(runtime).await,
+        Commands::GenCompletions(gen_completions) => gen_completions.execute(runtime).await,
     }
 }
 
@@ -59,7 +62,8 @@ fn configure_tracing(args: &GlobalArgs) {
         .expect("Unable to set a global subscriber");
 }
 
-fn main() -> anyhow::Result<()> {
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
     let args = GlobalArgs::parse();
     configure_tracing(&args);
 
@@ -77,13 +81,14 @@ fn main() -> anyhow::Result<()> {
 
     // Run Context Providers
     let contexts = build_contexts(&config);
-    let runtime = Runtime {
+    let mut runtime = Runtime {
         args,
         config,
         contexts,
+        password_manager: None,
     };
 
-    execute(runtime)?;
+    execute(&mut runtime).await?;
 
     Ok(())
 }

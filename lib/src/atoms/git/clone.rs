@@ -1,5 +1,6 @@
 use super::super::Atom;
 use crate::atoms::Outcome;
+use crate::utilities::password_manager::PasswordManager;
 use gix::interrupt;
 use gix::{progress::Discard, Url};
 use std::path::PathBuf;
@@ -22,6 +23,7 @@ impl std::fmt::Display for Clone {
     }
 }
 
+#[async_trait::async_trait]
 impl Atom for Clone {
     #[instrument(name = "git.clone.plan", level = "info", skip(self))]
     fn plan(&self) -> anyhow::Result<Outcome> {
@@ -32,7 +34,7 @@ impl Atom for Clone {
     }
 
     #[instrument(name = "git.clone.execute", level = "info", skip(self))]
-    fn execute(&mut self) -> anyhow::Result<()> {
+    async fn execute(&mut self, _: Option<PasswordManager>) -> anyhow::Result<()> {
         unsafe {
             interrupt::init_handler(1, || {})?;
         };
