@@ -1,7 +1,6 @@
 use std::{
     collections::HashMap,
     iter::from_fn,
-    ops::Deref,
     sync::{Arc, LazyLock},
 };
 
@@ -9,91 +8,94 @@ use anyhow::Result;
 use petgraph::{
     graph::{DiGraph, NodeIndex},
     visit::{Reversed, Topo},
-    Direction::{Incoming, Outgoing},
+    Direction::*,
 };
-use tokio::sync::Barrier;
+use tracing::{error, trace};
 
-use super::ZipLongest;
 use crate::Runtime;
 use comtrya_lib::{
-    actions::Actions::*,
+    actions::Actions,
     contexts::Contexts,
-    manifests::Manifest,
+    manifests::{DependencyBarrier, Manifest},
     utilities::{get_privilege_provider, password_manager::PasswordManager},
 };
 
 type LockedManifest = Arc<LazyLock<Manifest, Box<dyn FnOnce() -> Manifest + Send>>>;
+
 #[derive(Debug)]
 pub struct DependencyGraph {
     pub(crate) graph: DiGraph<LockedManifest, ()>,
     pub(crate) name_to_idx: HashMap<String, NodeIndex>,
-    pub(crate) barrier_map: HashMap<NodeIndex, Arc<Barrier>>,
 }
 
 impl DependencyGraph {
     pub async fn new(
-        manifests: HashMap<String, Manifest>,
+        mut manifests: HashMap<String, Manifest>,
         contexts: &Contexts,
         runtime: &mut Runtime,
     ) -> Result<Self> {
         let mut this = Self {
             graph: DiGraph::new(),
             name_to_idx: HashMap::new(),
-            barrier_map: HashMap::new(),
         };
-
-        let mut first_package_install: Option<NodeIndex> = None;
-
         let mut should_ask_for_pass = false;
-        for (_, manifest) in manifests.iter() {
-            let to_index = this.add_manifest(manifest.clone()).await;
+        let mut dependency_map = Vec::new();
 
-            for (dependant, action) in manifest.depends.iter().zip_longest(manifest.actions.iter())
-            {
-                if let Some(dependency_manifest) = dependant.and_then(|dep| manifests.get(dep)) {
-                    let from_index = this.add_manifest(dependency_manifest.clone()).await;
-                    this.graph.add_edge(from_index, to_index, ());
-                }
+        for (_, manifest) in manifests.iter_mut() {
+            manifest.barrier = Some(DependencyBarrier::new(manifest.depends.len() + 1));
+            let node = this.add_manifest(manifest.clone()).await;
+            this.name_to_idx.insert(manifest.get_name(), node);
+        }
 
-                should_ask_for_pass = match action {
-                    Some(PackageInstall(_)) | Some(PackageRepository(_)) => {
-                        if let Some(index) = first_package_install {
-                            first_package_install = first_package_install.or(Some(index));
-                            this.graph.add_edge(index, to_index, ());
-                        }
-                        true
-                    }
-                    Some(CommandRun(cva)) => cva.action.privileged,
-                    _ => false,
+        for (node, manifest) in this.graph.node_indices().map(|n| (n, &this.graph[n])) {
+            manifest.depends.iter().for_each(|dependency_name| {
+                let name = manifest.get_name();
+
+                let dep_prefix = name.rsplit_once('.').map(|(n, _)| n).unwrap_or(&name);
+                let dependency_name = dependency_name.replace("./", &format!("{dep_prefix}."));
+
+                let Some(dependency_manifest) = manifests.get(&dependency_name) else {
+                    return error!(
+                        message = "Unresolved dependency",
+                        dependency = dependency_name
+                    );
                 };
+
+                trace!(
+                    message = "Dependency Registered",
+                    from = name,
+                    to = dependency_manifest.get_name()
+                );
+
+                dependency_map.push((node, this.name_to_idx[&dependency_manifest.get_name()]));
+            });
+
+            if !should_ask_for_pass {
+                should_ask_for_pass = manifest.actions.iter().any(|action| match action {
+                    Actions::CommandRun(cva) => cva.action.privileged,
+                    Actions::PackageInstall(_) | Actions::PackageRepository(_) => true,
+                    _ => false,
+                });
             }
         }
 
-        this.barrier_map.extend(
-            this.graph
-                .node_indices()
-                .map(|node| {
-                    (
-                        node,
-                        Arc::new(Barrier::new(
-                            this.graph.neighbors_directed(node, Outgoing).count() + 1,
-                        )),
-                    )
-                })
-                .collect::<HashMap<_, _>>(),
-        );
+        for (from, to) in dependency_map {
+            this.graph.add_edge(from, to, ());
+        }
 
         if should_ask_for_pass {
+            debug!("Should be prompting for password. Asking now");
+
             let mut password_manager =
                 PasswordManager::new(get_privilege_provider(contexts).as_deref())?;
-            password_manager.prompt("Please enter password:").await?;
+            password_manager.prompt("Please enter password:")?;
             runtime.password_manager = Some(password_manager);
         }
 
         Ok(this)
     }
 
-    fn get_ordered_nodes(&self) -> impl Iterator<Item = NodeIndex> + '_ {
+    fn ordered_nodes(&self) -> impl Iterator<Item = NodeIndex> + '_ {
         let graph = Reversed(&self.graph);
         let mut topo = Topo::new(&graph);
 
@@ -101,40 +103,29 @@ impl DependencyGraph {
     }
 
     pub fn get_ordered_manifests(&self) -> Vec<LockedManifest> {
-        self.get_ordered_nodes()
+        self.ordered_nodes()
             .flat_map(|idx| self.graph.node_weight(idx))
             .cloned()
             .collect::<Vec<_>>()
     }
 
     pub async fn add_manifest(&mut self, manifest: Manifest) -> NodeIndex {
-        *self.name_to_idx.entry(manifest.get_name()).or_insert(
+        let idx = self.name_to_idx.entry(manifest.get_name()).or_insert(
             self.graph
                 .add_node(Arc::new(LazyLock::new(Box::new(|| manifest)))),
-        )
+        );
+        *idx
     }
 
-    pub fn get_barrier(&self, index: NodeIndex) -> &Arc<Barrier> {
-        self.barrier_map.get(&index).unwrap()
-    }
-
-    #[allow(dead_code)]
-    pub async fn get_node_index<M>(&self, manifest: M) -> &NodeIndex
-    where
-        M: AsRef<LazyLock<LockedManifest>> + Deref<Target = LazyLock<LockedManifest>>,
-    {
-        self.name_to_idx.get(&manifest.get_name()).unwrap()
-    }
-
-    #[allow(dead_code)]
-    pub async fn get_successors(&self, manifest: &LockedManifest) -> Vec<NodeIndex> {
+    pub async fn get_successors(&self, manifest: &LockedManifest) -> Vec<LockedManifest> {
         self.graph
-            .neighbors_directed(*self.get_node_from_manifest(manifest).await, Incoming)
+            .neighbors_directed(self.get_node_from_manifest(manifest).await, Incoming)
+            .map(|node| Arc::clone(&self.graph[node].clone()))
             .collect()
     }
 
-    pub async fn get_node_from_manifest(&self, manifest: &LockedManifest) -> &NodeIndex {
+    pub async fn get_node_from_manifest(&self, manifest: &LockedManifest) -> NodeIndex {
         // let join_set = JoinSet::new();
-        self.name_to_idx.get(&manifest.get_name()).unwrap()
+        *self.name_to_idx.get(&manifest.get_name()).unwrap()
     }
 }

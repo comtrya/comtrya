@@ -65,4 +65,5 @@ impl PasswordManager {
             wait.tick().await;
         });
     }
+    }
 }

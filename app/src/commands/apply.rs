@@ -7,7 +7,7 @@ use anyhow::{anyhow, Context, Result};
 use clap::Parser;
 use comfy_table::{Cell, ContentArrangement, Table};
 use tokio::task::JoinSet;
-use tracing::{debug, instrument, trace};
+use tracing::{debug, error, instrument, trace};
 
 use super::ComtryaCommand;
 use crate::{utils::DependencyGraph, Runtime};
@@ -84,19 +84,19 @@ impl ComtryaCommand for Apply {
     #[instrument(skip_all)]
     async fn execute(&self, runtime: &mut Runtime) -> Result<()> {
         let contexts = runtime.contexts.clone();
-        let manifest_path = self.manifest_path(runtime)?;
-        debug!("Load manifests from path: {manifest_path:#?}");
+        let manifest_path = self
+            .manifest_path(runtime)
+            .inspect(|path| debug!("Load manifests from path: {path:#?}"))?;
         let manifests = load(manifest_path, &contexts);
-
         let manifest_manager = {
             let graph = DependencyGraph::new(manifests, &contexts, runtime).await?;
             Arc::new(LazyLock::new(|| graph))
         };
-
         let mut workers = JoinSet::<Result<()>>::new();
         let dry_run = self.dry_run;
         let password_manager = &runtime.password_manager;
 
+        println!("Total: {}", manifest_manager.get_ordered_manifests().len());
         for manifest in manifest_manager.get_ordered_manifests() {
             // Need to clone all these because they'll be in their own threads
             let label = self.label.clone();
@@ -106,22 +106,40 @@ impl ComtryaCommand for Apply {
 
             workers.spawn(async move {
                 for successor in manifest_manager.get_successors(&manifest).await {
-                    manifest_manager.get_barrier(successor).wait().await;
+                    // May need to remove this unwrap and handle the option instead
+                    if !successor.barrier.as_ref().unwrap().wait(true).await {
+                        return Err(anyhow!(
+                            "Debug unable to run manifest {manifest:?} due dependency failure."
+                        ));
+                    }
                 }
 
-                manifest
-                    .execute(dry_run, label.clone(), &contexts, password_manager.clone())
-                    .await?;
-
-                manifest_manager
-                    .get_barrier(*manifest_manager.get_node_from_manifest(&manifest).await)
-                    .wait()
+                let exec_result = manifest
+                    .execute(
+                        dry_run,
+                        label.clone(),
+                        &contexts.clone(),
+                        password_manager.clone(),
+                    )
                     .await;
-                Ok(())
+
+                manifest
+                    .barrier
+                    .as_ref()
+                    .unwrap()
+                    .wait(exec_result.is_ok())
+                    .await;
+
+                exec_result.context("Manifest {manifest:?} failed. {e}")
             });
         }
 
-        workers.join_all().await;
+        while let Some(result) = workers.join_next().await {
+            if let Err(e) = result {
+                error!("{e}");
+            }
+        }
+
         Ok(())
     }
 }

@@ -29,7 +29,7 @@ use rhai::Engine;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
-use tracing::{debug, error, info, instrument, warn};
+use tracing::{error, info, instrument, warn};
 use user::add::UserAdd;
 
 use self::user::add_group::UserAddGroup;
@@ -280,9 +280,7 @@ pub trait Action: Send + Sync {
         }
 
         for mut step in steps {
-            if let Err(e) = step.execute(password_manager.clone()).await {
-                debug!("{e}");
-            }
+            step.execute(password_manager.clone()).await?;
         }
         info!("{}", self.summarize());
         Ok(())

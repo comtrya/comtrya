@@ -28,13 +28,19 @@ pub struct Runtime {
 }
 
 pub(crate) async fn execute(runtime: &mut Runtime) -> anyhow::Result<()> {
-    match runtime.clone().args.command {
+    let result = match runtime.clone().args.command {
         Commands::Apply(apply) => apply.execute(runtime).await,
         Commands::Status(apply) => apply.status(runtime).await,
         Commands::Version(version) => version.execute(runtime).await,
         Commands::Contexts(contexts) => contexts.execute(runtime).await,
         Commands::GenCompletions(gen_completions) => gen_completions.execute(runtime).await,
+    };
+
+    if let Err(e) = result {
+        println!("{e}");
     }
+
+    Ok(())
 }
 
 fn configure_tracing(args: &GlobalArgs) {

@@ -1,52 +1,49 @@
 mod load;
 pub use load::load;
-use tokio::sync::Barrier;
 mod providers;
 use crate::actions::Actions;
 use crate::contexts::{to_rhai, Contexts};
 use crate::utilities::password_manager::PasswordManager;
-use anyhow::{Error, Result};
-use petgraph::prelude::*;
+use ::std::hash::Hasher;
+use anyhow::{anyhow, Result};
+use fnv_rs::{Fnv64, FnvHasher};
 pub use providers::register_providers;
 pub use providers::ManifestProvider;
 use rhai::Engine;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::fmt;
-use std::mem::discriminant;
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
+use std::sync::{
+    atomic::{AtomicBool, Ordering::SeqCst},
+    Arc,
+};
+use tokio::sync::Barrier;
 use tracing::{debug, error, info, instrument};
 
-#[derive(Debug, Clone, Default)]
-pub enum ManifestState {
-    #[default]
-    Pending,
-    Working,
-    Completed,
-    Failed(Arc<Error>),
+#[derive(Debug, Clone)]
+pub struct DependencyBarrier {
+    barrier: Arc<Barrier>,
+    can_continue: Arc<AtomicBool>,
 }
 
-impl fmt::Display for ManifestState {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "Manifest {}",
-            match self {
-                Self::Pending => String::from("Pending"),
-                Self::Working => String::from("Working"),
-                Self::Completed => String::from("Completed"),
-                Self::Failed(e) => format!("Failed {}", e),
-            }
-        )
+impl DependencyBarrier {
+    pub fn new(n: usize) -> Self {
+        Self {
+            barrier: Arc::new(Barrier::new(n)),
+            can_continue: Arc::new(AtomicBool::new(true)),
+        }
+    }
+
+    pub async fn wait(&self, result: bool) -> bool {
+        let new_can_continue = result & self.can_continue.load(SeqCst);
+        self.can_continue.store(new_can_continue, SeqCst);
+        self.barrier.wait().await;
+
+        new_can_continue
     }
 }
 
-impl PartialEq for ManifestState {
-    fn eq(&self, other: &Self) -> bool {
-        discriminant(self) == discriminant(other)
-    }
-}
 #[derive(JsonSchema, Clone, Debug, Default, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Manifest {
@@ -69,13 +66,10 @@ pub struct Manifest {
     pub root_dir: Option<PathBuf>,
 
     #[serde(skip)]
-    pub dag_index: Option<NodeIndex>,
+    pub barrier: Option<DependencyBarrier>,
 
     #[serde(skip)]
-    pub dependency_barrier: Option<Arc<Barrier>>,
-
-    #[serde(skip)]
-    pub state: ManifestState,
+    pub dependencies: Vec<u64>,
 }
 
 impl fmt::Display for Manifest {
@@ -102,14 +96,24 @@ impl Manifest {
             .to_string()
     }
 
-    #[instrument(skip(self, dry_run, label, contexts, password_manager))]
+    pub fn id(&self) -> u64 {
+        let mut hasher = Fnv64::new();
+        hasher.update(self.get_name().as_bytes());
+        if let Some(root_dir) = &self.root_dir {
+            hasher.update(root_dir.to_string_lossy().as_bytes());
+        }
+        hasher.finish()
+    }
+
+    #[instrument(skip_all)]
     pub async fn execute(
         &self,
         dry_run: bool,
         label: Option<String>,
         contexts: &Contexts,
         password_manager: Option<PasswordManager>,
-    ) -> Result<()> {
+    ) -> Result<()>
+where {
         if let Some(label) = label {
             if !self.labels.contains(&label) {
                 info!(
@@ -121,12 +125,12 @@ impl Manifest {
         }
 
         if let Some(where_condition) = &self.r#where {
-            let result = {
-                let engine = Engine::new();
-                let mut scope = to_rhai(contexts);
-                engine
-                    .eval_with_scope::<bool>(&mut scope, where_condition)
-                    .unwrap()
+            let Ok(result) =
+                Engine::new().eval_with_scope::<bool>(&mut to_rhai(contexts), where_condition)
+            else {
+                return Err(anyhow!(
+                    "Unable to evaluate 'where' condition '{where_condition}'"
+                ));
             };
 
             debug!("Result of 'where' condition '{where_condition}' -> '{result}'");
@@ -137,8 +141,9 @@ impl Manifest {
         }
 
         for action in self.actions.iter() {
-            let act = action.inner_ref();
-            act.execute(dry_run, action, self, contexts, password_manager.clone())
+            action
+                .inner_ref()
+                .execute(dry_run, action, self, contexts, password_manager.clone())
                 .await?;
         }
 

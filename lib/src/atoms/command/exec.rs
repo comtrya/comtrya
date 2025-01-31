@@ -1,19 +1,19 @@
 use std::{process::Stdio, sync::Arc};
 
 use anyhow::{anyhow, Result};
+use tokio::{
+    io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
+    process::Command,
+    sync::RwLock,
+    task::JoinSet,
+    time::{sleep, Duration},
+};
 use tracing::{debug, error, trace};
 
 use super::super::Atom;
 use crate::atoms::Outcome;
 use crate::utilities;
 use crate::utilities::password_manager::PasswordManager;
-use tokio::process::Command;
-use tokio::{
-    io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
-    sync::RwLock,
-    task::JoinSet,
-    time::{sleep, Duration},
-};
 
 #[derive(Default)]
 pub struct Exec {
@@ -96,11 +96,12 @@ impl Atom for Exec {
         let (elevated, command, mut arguments) = self.elevate_if_required();
 
         let command = utilities::get_binary_path(&command)
-            .map_err(|_| anyhow!("Command `{}` not found in path", command))?;
+            .map_err(|_| anyhow!("Command `{command}` not found in path"))?;
 
         // If we require root, we need to use sudo with inherited IO
         // to ensure the user can respond if prompted for a password
-        if elevated && command.eq("sudo") {
+
+        if elevated && command.eq("echo") {
             arguments.insert(0, String::from("-S"));
         }
 
@@ -120,20 +121,22 @@ impl Atom for Exec {
         let secret = Arc::new(
             password_manager
                 .and_then(|pm| pm.secret.clone())
-                .map_or(String::new(), |s| format!("{}\n", s.as_str())),
+                .map(|s| format!("{}\n", s.as_str())),
         );
-        let stdin = Arc::new(RwLock::new(child.stdin.take().unwrap()));
-        let stdout = child.stdout.take().unwrap();
-        let stderr = child.stderr.take().unwrap();
+        let stdin = Arc::new(RwLock::new(
+            child.stdin.take().context("Error executing command")?,
+        ));
+        let stdout = child.stdout.take().context("Error executing command")?;
+        let stderr = child.stderr.take().context("Error executing command")?;
 
-        let secret1 = Arc::clone(&secret);
-        let stdin1 = Arc::clone(&stdin);
+        let secret_out = Arc::clone(&secret);
+        let stdin_out = Arc::clone(&stdin);
 
         let mut watchers = JoinSet::<Result<()>>::new();
 
         watchers.spawn(async move {
-            let stdin = Arc::clone(&stdin1);
-            let secret = secret1.clone();
+            let stdin = Arc::clone(&stdin_out);
+            let secret = secret_out.clone();
 
             let mut lines = BufReader::new(stdout).lines();
             loop {
@@ -141,10 +144,12 @@ impl Atom for Exec {
                     Ok(Some(line)) => {
                         trace!("{line}");
                         if line.to_lowercase().contains("password") {
-                            let mut stdin = stdin.write().await;
-                            stdin.write_all(secret.as_bytes()).await.unwrap();
-                            stdin.flush().await.unwrap();
-                            sleep(Duration::from_millis(100)).await;
+                            if let Some(pass) = secret.as_deref() {
+                                let mut stdin = stdin.write().await;
+                                stdin.write_all(pass.as_bytes()).await.unwrap();
+                                stdin.flush().await.unwrap();
+                                sleep(Duration::from_millis(100)).await;
+                            }
                         }
                     }
                     Ok(None) => break,
@@ -160,18 +165,19 @@ impl Atom for Exec {
         watchers.spawn(async move {
             let stdin = Arc::clone(&stdin);
             let secret = secret.clone();
-            let reader = &mut BufReader::new(stderr);
 
-            let mut lines = reader.lines();
+            let mut lines = BufReader::new(stderr).lines();
             loop {
                 match lines.next_line().await {
                     Ok(Some(line)) => {
                         trace!("{line}");
                         if line.to_lowercase().contains("password") {
-                            let mut stdin = stdin.write().await;
-                            stdin.write_all(secret.as_bytes()).await.unwrap();
-                            stdin.flush().await.unwrap();
-                            sleep(Duration::from_millis(100)).await;
+                            if let Some(pass) = secret.as_deref() {
+                                let mut stdin = stdin.write().await;
+                                stdin.write_all(pass.as_bytes()).await.unwrap();
+                                stdin.flush().await.unwrap();
+                                sleep(Duration::from_millis(100)).await;
+                            }
                         }
                     }
                     Ok(None) => break,
