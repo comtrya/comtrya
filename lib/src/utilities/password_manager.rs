@@ -1,13 +1,11 @@
-use std::{process::Stdio, sync::Arc};
-
-use anyhow::Result;
-use rpassword::prompt_password;
-use tokio::{
-    io::AsyncWriteExt,
-    process::Command,
-    time::{interval, Duration},
+use std::{
+    io::Write,
+    process::{Command, Stdio},
 };
-use tracing::error;
+
+use anyhow::{anyhow, Context, Result};
+use rpassword::prompt_password;
+use tracing::warn;
 use zeroize::{Zeroize, ZeroizeOnDrop, Zeroizing};
 
 #[derive(Debug, Zeroize, ZeroizeOnDrop, Clone)]
@@ -32,38 +30,38 @@ impl PasswordManager {
         Ok(this)
     }
 
-    #[cfg(target_os = "linux")]
-    pub async fn prompt(&mut self, prompt: &str) -> Result<()> {
-        self.secret = Some(Zeroizing::new(prompt_password(prompt)?));
-        self.keep_elevated().await;
-        Ok(())
-    }
+    #[cfg(any(target_os = "linux", target_os = "macos"))]
+    pub fn prompt(&mut self, prompt: &str) -> Result<()> {
+        let attempts = 3;
 
-    async fn keep_elevated(&self) {
-        let shared_self = Arc::new(self.clone());
-        let mut wait = interval(Duration::from_secs(60 * 10));
-        tokio::spawn(async move {
-            let this = Arc::clone(&shared_self);
-            let mut command = Command::new(this.privilege_provider.clone())
-                .arg("-S") // Read password from stdin
-                .arg("-v") // Validate and update timestamp
-                .stdin(Stdio::piped())
-                .stdout(Stdio::piped())
-                .stderr(Stdio::piped())
-                .spawn()
-                .expect("Failed to refresh sudo");
+        for attempt in 1..=attempts {
+            let secret = Zeroizing::new(prompt_password(prompt)?);
 
-            if let (Some(mut stdin), Some(secret)) = (command.stdin.take(), this.secret.clone()) {
-                stdin
-                    .write_all(format!("{}\n", secret.as_str()).as_bytes())
-                    .await
-                    .unwrap();
-            } else {
-                error!("Unable to elevate privilege")
+            if !self.try_password(&secret)? {
+                warn!("Incorrect Password. Try again! (attempt: {attempt}/{attempts})");
+                continue;
             }
 
-            wait.tick().await;
-        });
+            self.secret = Some(secret);
+            return Ok(());
+        }
+
+        Err(anyhow!("Too many incorrect attempts. Access denied."))
     }
+
+    #[cfg(any(target_os = "linux", target_os = "macos"))]
+    fn try_password(&self, secret: &Zeroizing<String>) -> Result<bool> {
+        let mut pass_cmd = Command::new("sudo")
+            .arg("-Sv")
+            .stdin(Stdio::piped())
+            .spawn()?;
+
+        pass_cmd
+            .stdin
+            .take()
+            .context("Error occured while attempting pasword verificaton")?
+            .write_all(format!("{}\n", secret.as_str()).as_bytes())?;
+
+        Ok(pass_cmd.wait()?.success())
     }
 }
