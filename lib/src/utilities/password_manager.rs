@@ -54,6 +54,8 @@ impl PasswordManager {
         let mut pass_cmd = Command::new("sudo")
             .arg("-Sv")
             .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
             .spawn()?;
 
         pass_cmd
@@ -62,6 +64,12 @@ impl PasswordManager {
             .context("Error occured while attempting pasword verificaton")?
             .write_all(format!("{}\n", secret.as_str()).as_bytes())?;
 
-        Ok(pass_cmd.wait()?.success())
+        let output = pass_cmd.wait_with_output()?;
+        println!(
+            "{}, {}",
+            unsafe { String::from_utf8_unchecked(output.stdout) },
+            unsafe { String::from_utf8_unchecked(output.stderr) },
+        );
+        Ok(output.status.success())
     }
 }

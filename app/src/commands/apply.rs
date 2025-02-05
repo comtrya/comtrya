@@ -7,7 +7,7 @@ use anyhow::{anyhow, Context, Result};
 use clap::Parser;
 use comfy_table::{Cell, ContentArrangement, Table};
 use tokio::task::JoinSet;
-use tracing::{debug, error, instrument, trace};
+use tracing::{debug, instrument, trace};
 
 use super::ComtryaCommand;
 use crate::{utils::DependencyGraph, Runtime};
@@ -52,7 +52,7 @@ impl Apply {
         Ok(manifest_path)
     }
 
-    #[instrument(skip(self, runtime))]
+    #[instrument(skip_all)]
     pub async fn status(&self, runtime: &Runtime) -> anyhow::Result<()> {
         let contexts = &runtime.contexts;
         let manifest_path = self.manifest_path(runtime)?;
@@ -83,61 +83,66 @@ impl Apply {
 impl ComtryaCommand for Apply {
     #[instrument(skip_all)]
     async fn execute(&self, runtime: &mut Runtime) -> Result<()> {
-        let contexts = runtime.contexts.clone();
         let manifest_path = self
             .manifest_path(runtime)
-            .inspect(|path| debug!("Load manifests from path: {path:#?}"))?;
+            .inspect(|path| debug!("Load manifests from path: {:#?}", path))?;
+
+        let contexts = runtime.contexts.clone();
         let manifests = load(manifest_path, &contexts);
         let manifest_manager = {
+            // Can't have async in closure
             let graph = DependencyGraph::new(manifests, &contexts, runtime).await?;
             Arc::new(LazyLock::new(|| graph))
         };
+
         let mut workers = JoinSet::<Result<()>>::new();
         let dry_run = self.dry_run;
         let password_manager = &runtime.password_manager;
 
-        println!("Total: {}", manifest_manager.get_ordered_manifests().len());
         for manifest in manifest_manager.get_ordered_manifests() {
+            let name = manifest.get_name();
+
             // Need to clone all these because they'll be in their own threads
             let label = self.label.clone();
             let contexts = contexts.clone();
-            let password_manager = password_manager.clone();
+            let pm = password_manager.clone();
             let manifest_manager = Arc::clone(&manifest_manager);
 
             workers.spawn(async move {
-                for successor in manifest_manager.get_successors(&manifest).await {
-                    // May need to remove this unwrap and handle the option instead
-                    if !successor.barrier.as_ref().unwrap().wait(true).await {
-                        return Err(anyhow!(
-                            "Debug unable to run manifest {manifest:?} due dependency failure."
-                        ));
-                    }
-                }
-
-                let exec_result = manifest
-                    .execute(
-                        dry_run,
-                        label.clone(),
-                        &contexts.clone(),
-                        password_manager.clone(),
-                    )
-                    .await;
-
+                // Wait on current manifest's barrier. If a dependency
+                // fails it propugates the failure upward as false.
                 manifest
                     .barrier
                     .as_ref()
-                    .unwrap()
-                    .wait(exec_result.is_ok())
-                    .await;
+                    .with_context(|| format!("Cannot lock manifest '{}' for execution", name))?
+                    .wait(true)
+                    .await
+                    .then_some(())
+                    .context(format!("Skipping manifest '{}' Dependancy(s) failed", name))?;
 
-                exec_result.context("Manifest {manifest:?} failed. {e}")
+                let result = manifest.execute(dry_run, label, &contexts, pm).await;
+
+                // Inform successors (dependants) of pass or fail
+                for successor in manifest_manager
+                    .get_successors(&manifest)
+                    .await
+                    // should never be None but can't hurt to be careful
+                    .context(format!("Cannot resolve dependants for manifest '{}'", name))?
+                {
+                    successor
+                        .barrier
+                        .as_ref()
+                        .context(format!("Cannot mark manifest '{}' completed", name))?
+                        .wait(result.is_ok())
+                        .await;
+                }
+
+                Ok(())
             });
         }
 
-        while let Some(result) = workers.join_next().await {
-            if let Err(e) = result {
-                error!("{e}");
-            }
+        while let Some(Err(error)) = workers.join_next().await {
+            eprintln!("{error}");
         }
 
         Ok(())

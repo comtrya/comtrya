@@ -125,6 +125,8 @@ impl PackageProvider for Paru {
                 arguments: [
                     vec![
                         String::from("-Sq"),
+                        String::from("--sudoflags"),
+                        String::from("-S"),
                         String::from("--batchinstall"),
                         String::from("--needed"),
                         String::from("--noconfirm"),

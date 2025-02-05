@@ -14,7 +14,6 @@ use tracing::{error, trace};
 
 use crate::Runtime;
 use comtrya_lib::{
-    actions::Actions,
     contexts::Contexts,
     manifests::{DependencyBarrier, Manifest},
     utilities::{get_privilege_provider, password_manager::PasswordManager},
@@ -41,7 +40,7 @@ impl DependencyGraph {
         let mut should_ask_for_pass = false;
         let mut dependency_map = Vec::new();
 
-        for (_, manifest) in manifests.iter_mut() {
+        for manifest in manifests.values_mut() {
             manifest.barrier = Some(DependencyBarrier::new(manifest.depends.len() + 1));
             let node = this.add_manifest(manifest.clone()).await;
             this.name_to_idx.insert(manifest.get_name(), node);
@@ -54,7 +53,7 @@ impl DependencyGraph {
                 let dep_prefix = name.rsplit_once('.').map(|(n, _)| n).unwrap_or(&name);
                 let dependency_name = dependency_name.replace("./", &format!("{dep_prefix}."));
 
-                let Some(dependency_manifest) = manifests.get(&dependency_name) else {
+                let Some(dependency) = manifests.get(&dependency_name) else {
                     return error!(
                         message = "Unresolved dependency",
                         dependency = dependency_name
@@ -64,28 +63,20 @@ impl DependencyGraph {
                 trace!(
                     message = "Dependency Registered",
                     from = name,
-                    to = dependency_manifest.get_name()
+                    to = dependency.get_name()
                 );
 
-                dependency_map.push((node, this.name_to_idx[&dependency_manifest.get_name()]));
+                dependency_map.push((node, this.name_to_idx[&dependency.get_name()]));
             });
 
-            if !should_ask_for_pass {
-                should_ask_for_pass = manifest.actions.iter().any(|action| match action {
-                    Actions::CommandRun(cva) => cva.action.privileged,
-                    Actions::PackageInstall(_) | Actions::PackageRepository(_) => true,
-                    _ => false,
-                });
-            }
+            should_ask_for_pass |= manifest.actions.iter().any(|action| action.is_privileged());
         }
 
-        for (from, to) in dependency_map {
-            this.graph.add_edge(from, to, ());
+        for (from, to) in &dependency_map {
+            this.graph.add_edge(*from, *to, ());
         }
 
         if should_ask_for_pass {
-            debug!("Should be prompting for password. Asking now");
-
             let mut password_manager =
                 PasswordManager::new(get_privilege_provider(contexts).as_deref())?;
             password_manager.prompt("Please enter password:")?;
@@ -117,15 +108,17 @@ impl DependencyGraph {
         *idx
     }
 
-    pub async fn get_successors(&self, manifest: &LockedManifest) -> Vec<LockedManifest> {
-        self.graph
-            .neighbors_directed(self.get_node_from_manifest(manifest).await, Incoming)
+    pub async fn get_successors(&self, manifest: &LockedManifest) -> Option<Vec<LockedManifest>> {
+        let manifests = self
+            .graph
+            .neighbors_directed(self.get_node_from_manifest(manifest).await?, Incoming)
             .map(|node| Arc::clone(&self.graph[node].clone()))
-            .collect()
+            .collect();
+
+        Some(manifests)
     }
 
-    pub async fn get_node_from_manifest(&self, manifest: &LockedManifest) -> NodeIndex {
-        // let join_set = JoinSet::new();
-        *self.name_to_idx.get(&manifest.get_name()).unwrap()
+    pub async fn get_node_from_manifest(&self, manifest: &LockedManifest) -> Option<NodeIndex> {
+        self.name_to_idx.get(&manifest.get_name()).copied()
     }
 }

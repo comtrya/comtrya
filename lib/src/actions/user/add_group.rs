@@ -35,7 +35,7 @@ impl Action for UserAddGroup {
 
         let mut atoms: Vec<Step> = vec![];
 
-        atoms.append(&mut provider.add_to_group(self, &context)?);
+        atoms.append(&mut provider.add_to_group(self, context)?);
 
         Ok(atoms)
     }

@@ -62,6 +62,10 @@ impl Action for RunCommand {
             ))],
         }])
     }
+
+    fn is_privileged(&self) -> bool {
+        self.privileged
+    }
 }
 
 #[cfg(test)]

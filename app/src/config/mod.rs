@@ -81,7 +81,7 @@ where
 }
 
 pub(crate) fn load_config(args: &GlobalArgs) -> Result<Config> {
-    match lib_config(&args) {
+    match lib_config(args) {
         Ok(config) => match args.manifest_directory.clone() {
             Some(manifest_path) => Ok(Config {
                 manifest_paths: vec![manifest_path],

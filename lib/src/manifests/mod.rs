@@ -36,8 +36,7 @@ impl DependencyBarrier {
     }
 
     pub async fn wait(&self, result: bool) -> bool {
-        let new_can_continue = result & self.can_continue.load(SeqCst);
-        self.can_continue.store(new_can_continue, SeqCst);
+        let new_can_continue = result & self.can_continue.fetch_and(result, SeqCst);
         self.barrier.wait().await;
 
         new_can_continue
@@ -125,15 +124,12 @@ where {
         }
 
         if let Some(where_condition) = &self.r#where {
-            let Ok(result) =
-                Engine::new().eval_with_scope::<bool>(&mut to_rhai(contexts), where_condition)
-            else {
-                return Err(anyhow!(
-                    "Unable to evaluate 'where' condition '{where_condition}'"
-                ));
-            };
+            let result = Engine::new()
+                .eval_with_scope::<bool>(&mut to_rhai(contexts), where_condition)
+                .map_err(|_| anyhow!("Unable to evaluate 'where' condition '{where_condition}'"))?;
 
             debug!("Result of 'where' condition '{where_condition}' -> '{result}'");
+
             if !result {
                 info!("Skipping manifest, because 'where' conditions were false!");
                 return Ok(());
@@ -142,12 +138,11 @@ where {
 
         for action in self.actions.iter() {
             action
-                .inner_ref()
-                .execute(dry_run, action, self, contexts, password_manager.clone())
+                .execute(dry_run, self, contexts, password_manager.clone())
                 .await?;
         }
 
-        info!("Completed: {self}",);
+        info!("Completed: {self}");
         Ok(())
     }
 }

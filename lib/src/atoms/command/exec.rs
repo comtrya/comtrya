@@ -1,6 +1,6 @@
 use std::{process::Stdio, sync::Arc};
 
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, Context, Result};
 use tokio::{
     io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
     process::Command,
@@ -145,6 +145,7 @@ impl Atom for Exec {
                         trace!("{line}");
                         if line.to_lowercase().contains("password") {
                             if let Some(pass) = secret.as_deref() {
+                                println!("Printing password: {}", pass);
                                 let mut stdin = stdin.write().await;
                                 stdin.write_all(pass.as_bytes()).await.unwrap();
                                 stdin.flush().await.unwrap();
@@ -173,6 +174,7 @@ impl Atom for Exec {
                         trace!("{line}");
                         if line.to_lowercase().contains("password") {
                             if let Some(pass) = secret.as_deref() {
+                                println!("Printing password: {}", pass);
                                 let mut stdin = stdin.write().await;
                                 stdin.write_all(pass.as_bytes()).await.unwrap();
                                 stdin.flush().await.unwrap();
