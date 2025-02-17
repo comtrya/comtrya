@@ -30,11 +30,11 @@ impl Atom for Download {
     }
 
     async fn execute(&mut self, _: Option<PasswordManager>) -> anyhow::Result<()> {
-        let response = reqwest::blocking::get(&self.url)?;
+        let response = reqwest::get(&self.url).await?;
 
         let mut file = File::create(&self.to)?;
 
-        let content = response.bytes()?;
+        let content = response.bytes().await?;
         file.write_all(&content)?;
 
         Ok(())
