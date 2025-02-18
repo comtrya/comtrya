@@ -9,7 +9,7 @@ use anyhow::anyhow;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::error::Error as StdError;
-use std::{path::PathBuf, u32};
+use std::path::PathBuf;
 use tera::Tera;
 
 #[derive(JsonSchema, Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]

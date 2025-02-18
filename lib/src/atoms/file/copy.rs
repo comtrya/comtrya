@@ -41,13 +41,13 @@ impl Atom for Copy {
             });
         }
 
-        return Ok(Outcome {
+        Ok(Outcome {
             side_effects: vec![],
             should_run: !diff(
                 &self.from.display().to_string(),
                 &self.to.display().to_string(),
             ),
-        });
+        })
     }
 
     async fn execute(&mut self, _: Option<PasswordManager>) -> anyhow::Result<()> {

@@ -113,7 +113,7 @@ pub(crate) fn load_config(args: &GlobalArgs) -> Result<Config> {
 /// Exits if the user specified an invalid config file path
 /// returns errors if file read fails or yaml content is not successfully deserialized
 pub fn lib_config(args: &GlobalArgs) -> anyhow::Result<Config> {
-    let mut config = match find_configs(&args) {
+    let mut config = match find_configs(args) {
         Some(config_path) => {
             let yaml = std::fs::read_to_string(&config_path)
                 .with_context(|| "Found Comtrya.yaml, but was unable to read the contents.")?;
@@ -153,8 +153,8 @@ pub fn lib_config(args: &GlobalArgs) -> anyhow::Result<Config> {
         }
     };
 
-    let mut defines_iterator = args.defines.iter();
-    while let Some(pair) = defines_iterator.next() {
+    let defines_iterator = args.defines.iter();
+    for pair in defines_iterator {
         config.variables.insert(pair.0.clone(), pair.1.clone());
     }
 
@@ -265,6 +265,6 @@ mod tests {
         };
 
         let result = lib_config(&args);
-        assert!(!result.is_err());
+        assert!(result.is_ok());
     }
 }

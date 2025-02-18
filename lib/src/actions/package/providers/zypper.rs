@@ -48,7 +48,7 @@ impl PackageProvider for Zypper {
 
     fn install(&self, package: &PackageVariant, contexts: &Contexts) -> anyhow::Result<Vec<Step>> {
         let privilege_provider =
-            utilities::get_privilege_provider(&contexts).unwrap_or_else(|| "sudo".to_string());
+            utilities::get_privilege_provider(contexts).unwrap_or_else(|| "sudo".to_string());
 
         Ok(vec![Step {
             atom: Box::new(Exec {

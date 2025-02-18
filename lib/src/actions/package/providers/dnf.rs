@@ -29,7 +29,7 @@ impl PackageProvider for Dnf {
 
     fn bootstrap(&self, contexts: &Contexts) -> Vec<Step> {
         let privilege_provider =
-            utilities::get_privilege_provider(&contexts).unwrap_or_else(|| "sudo".to_string());
+            utilities::get_privilege_provider(contexts).unwrap_or_else(|| "sudo".to_string());
 
         vec![Step {
             atom: Box::new(Exec {
@@ -60,7 +60,7 @@ impl PackageProvider for Dnf {
         let mut steps: Vec<Step> = vec![];
 
         let privilege_provider =
-            utilities::get_privilege_provider(&contexts).unwrap_or_else(|| "sudo".to_string());
+            utilities::get_privilege_provider(contexts).unwrap_or_else(|| "sudo".to_string());
 
         if repository.key.is_some() {
             // .unwrap() is safe here because we checked for key presence above
@@ -122,7 +122,7 @@ impl PackageProvider for Dnf {
 
     fn install(&self, package: &PackageVariant, contexts: &Contexts) -> anyhow::Result<Vec<Step>> {
         let privilege_provider =
-            utilities::get_privilege_provider(&contexts).unwrap_or_else(|| "sudo".to_string());
+            utilities::get_privilege_provider(contexts).unwrap_or_else(|| "sudo".to_string());
 
         Ok(vec![Step {
             atom: Box::new(Exec {

@@ -12,7 +12,7 @@ pub struct VariableIncludeContextProvider<'a> {
     pub config: &'a Config,
 }
 
-impl<'a> ContextProvider for VariableIncludeContextProvider<'a> {
+impl ContextProvider for VariableIncludeContextProvider<'_> {
     fn get_prefix(&self) -> String {
         String::from("include_variables")
     }
