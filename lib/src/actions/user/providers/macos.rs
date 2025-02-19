@@ -46,7 +46,7 @@ impl UserProvider for MacOSUserProvider {
         }
 
         let privilege_provider =
-            utilities::get_privilege_provider(&contexts).unwrap_or_else(|| "sudo".to_string());
+            utilities::get_privilege_provider(contexts).unwrap_or_else(|| "sudo".to_string());
 
         let mut steps: Vec<Step> = vec![Step {
             atom: Box::new(Exec {
@@ -66,7 +66,7 @@ impl UserProvider for MacOSUserProvider {
                 group: user.group.clone(),
                 provider: user.provider.clone(),
             };
-            for group in self.add_to_group(&user_group, &contexts)? {
+            for group in self.add_to_group(&user_group, contexts)? {
                 steps.push(group);
             }
         }
@@ -94,7 +94,7 @@ impl UserProvider for MacOSUserProvider {
         }
 
         let privilege_provider =
-            utilities::get_privilege_provider(&contexts).unwrap_or_else(|| "sudo".to_string());
+            utilities::get_privilege_provider(contexts).unwrap_or_else(|| "sudo".to_string());
 
         let mut steps: Vec<Step> = vec![];
 

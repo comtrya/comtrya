@@ -1,17 +1,21 @@
 use super::providers::PackageProviders;
 use super::Package;
 use super::PackageVariant;
+use super::PACKAGE_LOCK;
 use crate::actions::Action;
+use crate::actions::Actions;
 use crate::contexts::Contexts;
 use crate::manifests::Manifest;
 use crate::steps::Step;
+use crate::utilities::password_manager::PasswordManager;
 use anyhow::anyhow;
 use std::ops::Deref;
 use tracing::debug;
-use tracing::span;
+use tracing::info_span;
 
 pub type PackageInstall = Package;
 
+#[async_trait::async_trait]
 impl Action for PackageInstall {
     fn summarize(&self) -> String {
         "Installing packages".to_string()
@@ -21,19 +25,13 @@ impl Action for PackageInstall {
         let variant: PackageVariant = self.into();
         let box_provider = variant.provider.clone().get_provider();
         let provider = box_provider.deref();
-
-        let span = span!(
-            tracing::Level::INFO,
-            "package.install",
-            provider = provider.name()
-        )
-        .entered();
-
+        let span = info_span!("package.install", provider = provider.name()).entered();
         let mut atoms: Vec<Step> = vec![];
 
         // If the provider isn't available, see if we can bootstrap it
         if !provider.available() {
-            if provider.bootstrap(&context).is_empty() {
+            let mut bootstrap = provider.bootstrap(context);
+            if bootstrap.is_empty() {
                 return Err(anyhow!(
                     "Package Provider, {}, isn't available. Skipping action",
                     provider.name()
@@ -48,21 +46,38 @@ impl Action for PackageInstall {
                     }
                     _ => {
                         return Err(anyhow!(
-                        "Package Provider, {}, isn't capabale of local file installs. Skipping action.",
-                        provider.name()
-                    ));
+                            "Package Provider, {}, isn't capabale of local file installs. Skipping action.",
+                            provider.name()
+                        ));
                     }
                 }
             }
 
-            atoms.append(&mut provider.bootstrap(&context));
+            atoms.append(&mut bootstrap);
         }
 
-        atoms.append(&mut provider.install(&variant, &context)?);
+        atoms.append(&mut provider.install(&variant, context)?);
 
         span.exit();
 
         Ok(atoms)
+    }
+
+    async fn execute(
+        &self,
+        dry_run: bool,
+        action: &Actions,
+        manifest: &Manifest,
+        contexts: &Contexts,
+        password_manager: Option<PasswordManager>,
+    ) -> anyhow::Result<()> {
+        // Limit concurrent package installs to run exclusively of each-other
+        let _permit = PACKAGE_LOCK.acquire().await?;
+        Action::execute(self, dry_run, action, manifest, contexts, password_manager).await
+    }
+
+    fn is_privileged(&self) -> bool {
+        true
     }
 }
 

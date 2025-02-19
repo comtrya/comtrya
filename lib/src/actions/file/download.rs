@@ -6,7 +6,7 @@ use crate::steps::Step;
 use crate::{actions::Action, contexts::Contexts};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use std::{path::PathBuf, u32};
+use std::path::PathBuf;
 
 #[derive(JsonSchema, Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename = "file.download")]

@@ -1,5 +1,5 @@
 mod binary;
-mod command;
+pub mod command;
 mod directory;
 mod file;
 mod git;
@@ -8,9 +8,9 @@ mod macos;
 mod package;
 mod user;
 
-use crate::contexts::Contexts;
 use crate::manifests::Manifest;
 use crate::steps::Step;
+use crate::{contexts::Contexts, utilities::password_manager::PasswordManager};
 use anyhow::anyhow;
 use binary::BinaryGitHub;
 use command::run::RunCommand;
@@ -29,7 +29,7 @@ use rhai::Engine;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
-use tracing::{error, warn};
+use tracing::{error, info, instrument, warn};
 use user::add::UserAdd;
 
 use self::user::add_group::UserAddGroup;
@@ -69,37 +69,31 @@ where
         let mut scope = crate::contexts::to_rhai(context);
 
         let variant = self.variants.iter().find(|variant| {
-            if variant.condition.is_none() {
-                return false;
-            }
-
-            // .unwrap() is safe here because we checked for None above
-            let condition = variant.condition.clone().unwrap();
-            match engine.eval_with_scope::<bool>(&mut scope, condition.as_str()) {
-                Ok(b) => b,
-                Err(error) => {
-                    error!("Failed execution condition for action: {}", error);
-                    false
-                }
-            }
+            variant.condition.as_ref().is_some_and(|condition| {
+                engine
+                    .eval_with_scope::<bool>(&mut scope, condition)
+                    .inspect_err(|e| error!("Failed execution condition: {}", e))
+                    .unwrap_or(false)
+            })
         });
 
         if let Some(variant) = variant {
             return variant.action.plan(manifest, context);
         }
 
-        if self.condition.is_none() {
+        let Some(condition) = self.condition.as_ref() else {
             return self.action.plan(manifest, context);
-        }
-
-        // .unwrap() is safe here because we checked for None above
-        let condition = self.condition.as_ref().unwrap();
+        };
 
         match engine.eval_with_scope::<bool>(&mut scope, condition.as_str()) {
             Ok(true) => self.action.plan(manifest, context),
             Ok(false) => Ok(vec![]),
             Err(error) => Err(anyhow!("Failed execution condition for action: {}", error)),
         }
+    }
+
+    fn is_privileged(&self) -> bool {
+        self.action.is_privileged()
     }
 }
 
@@ -169,24 +163,60 @@ pub enum Actions {
 impl Actions {
     pub fn inner_ref(&self) -> &dyn Action {
         match self {
-            Actions::BinaryGitHub(a) => a,
-            Actions::CommandRun(a) => a,
-            Actions::DirectoryCopy(a) => a,
-            Actions::DirectoryCreate(a) => a,
-            Actions::FileCopy(a) => a,
-            Actions::FileChown(a) => a,
-            Actions::FileDownload(a) => a,
-            Actions::FileLink(a) => a,
-            Actions::FileUnarchive(a) => a,
-            Actions::GitClone(a) => a,
-            Actions::GroupAdd(a) => a,
-            Actions::MacOSDefault(a) => a,
-            Actions::PackageInstall(a) => a,
-            Actions::PackageRepository(a) => a,
-            Actions::UserAdd(a) => a,
-            Actions::UserAddGroup(a) => a,
-            Actions::FileRemove(a) => a,
-            Actions::DirectoryRemove(a) => a,
+            Self::BinaryGitHub(a) => a,
+            Self::CommandRun(a) => a,
+            Self::DirectoryCopy(a) => a,
+            Self::DirectoryCreate(a) => a,
+            Self::FileCopy(a) => a,
+            Self::FileChown(a) => a,
+            Self::FileDownload(a) => a,
+            Self::FileLink(a) => a,
+            Self::FileUnarchive(a) => a,
+            Self::GitClone(a) => a,
+            Self::GroupAdd(a) => a,
+            Self::MacOSDefault(a) => a,
+            Self::PackageInstall(a) => a,
+            Self::PackageRepository(a) => a,
+            Self::UserAdd(a) => a,
+            Self::UserAddGroup(a) => a,
+            Self::FileRemove(a) => a,
+            Self::DirectoryRemove(a) => a,
+        }
+    }
+
+    pub fn is_privileged(&self) -> bool {
+        self.inner_ref().is_privileged()
+    }
+
+    pub async fn execute(
+        &self,
+        dry_run: bool,
+        manifest: &Manifest,
+        contexts: &Contexts,
+        pm: Option<PasswordManager>,
+    ) -> anyhow::Result<()> {
+        // Need this to ensure if execute is called on an action with it's own
+        // implementaion of execute, it uses that implementation instead of default.
+        // for some reason the dyn lookup doesn't resolve correctly.
+        match self {
+            Self::BinaryGitHub(a) => a.execute(dry_run, self, manifest, contexts, pm).await,
+            Self::CommandRun(a) => a.execute(dry_run, self, manifest, contexts, pm).await,
+            Self::DirectoryCopy(a) => a.execute(dry_run, self, manifest, contexts, pm).await,
+            Self::DirectoryCreate(a) => a.execute(dry_run, self, manifest, contexts, pm).await,
+            Self::FileCopy(a) => a.execute(dry_run, self, manifest, contexts, pm).await,
+            Self::FileChown(a) => a.execute(dry_run, self, manifest, contexts, pm).await,
+            Self::FileDownload(a) => a.execute(dry_run, self, manifest, contexts, pm).await,
+            Self::FileLink(a) => a.execute(dry_run, self, manifest, contexts, pm).await,
+            Self::FileUnarchive(a) => a.execute(dry_run, self, manifest, contexts, pm).await,
+            Self::GitClone(a) => a.execute(dry_run, self, manifest, contexts, pm).await,
+            Self::GroupAdd(a) => a.execute(dry_run, self, manifest, contexts, pm).await,
+            Self::MacOSDefault(a) => a.execute(dry_run, self, manifest, contexts, pm).await,
+            Self::PackageInstall(a) => a.execute(dry_run, self, manifest, contexts, pm).await,
+            Self::PackageRepository(a) => a.execute(dry_run, self, manifest, contexts, pm).await,
+            Self::UserAdd(a) => a.execute(dry_run, self, manifest, contexts, pm).await,
+            Self::UserAddGroup(a) => a.execute(dry_run, self, manifest, contexts, pm).await,
+            Self::FileRemove(a) => a.execute(dry_run, self, manifest, contexts, pm).await,
+            Self::DirectoryRemove(a) => a.execute(dry_run, self, manifest, contexts, pm).await,
         }
     }
 }
@@ -232,18 +262,66 @@ pub struct ActionError {
 
 impl<E: std::error::Error> From<E> for ActionError {
     fn from(e: E) -> Self {
-        ActionError {
-            message: format!("{}", e),
+        Self {
+            message: format!("{e}"),
         }
     }
 }
 
-pub trait Action {
+#[async_trait::async_trait]
+pub trait Action: Send + Sync {
     fn summarize(&self) -> String {
         warn!("need to define action summarize");
         "not found action summarize".to_string()
     }
+
     fn plan(&self, manifest: &Manifest, context: &Contexts) -> anyhow::Result<Vec<Step>>;
+
+    #[instrument(skip_all)]
+    async fn execute(
+        &self,
+        dry_run: bool,
+        action: &Actions,
+        manifest: &Manifest,
+        contexts: &Contexts,
+        password_manager: Option<PasswordManager>,
+    ) -> anyhow::Result<()> {
+        let steps: Vec<Step> = match self.plan(manifest, contexts) {
+            Ok(steps) => steps
+                .into_iter()
+                .filter(|step| step.do_initializers_allow_us_to_run())
+                .filter(|step| match step.atom.plan() {
+                    Ok(outcome) => outcome.should_run,
+                    Err(_) => false,
+                })
+                .collect(),
+            Err(err) => {
+                error!("Failed Processing: {action}. Action failed to get plan: {err:?}");
+                return Err(err);
+            }
+        };
+
+        if steps.is_empty() {
+            info!("nothing to be done to reconcile action");
+            return Ok(());
+        }
+
+        if dry_run {
+            return Ok(());
+        }
+
+        for mut step in steps {
+            step.execute(password_manager.clone()).await?;
+        }
+
+        info!("{}", self.summarize());
+
+        Ok(())
+    }
+
+    fn is_privileged(&self) -> bool {
+        false
+    }
 }
 
 #[cfg(test)]

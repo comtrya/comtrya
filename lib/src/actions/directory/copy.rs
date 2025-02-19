@@ -25,15 +25,15 @@ impl Action for DirectoryCopy {
     fn plan(&self, manifest: &Manifest, _context: &Contexts) -> anyhow::Result<Vec<Step>> {
         let from: String = self.resolve(manifest, &self.from).display().to_string();
 
-        Ok(vec![Step {
-            atom: Box::new(Exec {
+        Ok(vec![Step::new(
+            Exec {
                 command: String::from("Xcopy"),
                 arguments: vec!["/E".to_string(), "/I".to_string(), from, self.to.clone()],
                 ..Default::default()
-            }),
-            initializers: vec![],
-            finalizers: vec![],
-        }])
+            },
+            vec![],
+            vec![],
+        )])
     }
 }
 

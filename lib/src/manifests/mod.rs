@@ -2,13 +2,46 @@ mod load;
 pub use load::load;
 mod providers;
 use crate::actions::Actions;
-use petgraph::prelude::*;
+use crate::contexts::{to_rhai, Contexts};
+use crate::utilities::password_manager::PasswordManager;
+use ::std::hash::Hasher;
+use anyhow::{anyhow, Result};
+use fnv_rs::{Fnv64, FnvHasher};
 pub use providers::register_providers;
 pub use providers::ManifestProvider;
+use rhai::Engine;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use std::fmt;
 use std::path::{Path, PathBuf};
-use tracing::error;
+use std::sync::{
+    atomic::{AtomicBool, Ordering::SeqCst},
+    Arc,
+};
+use tokio::sync::Barrier;
+use tracing::{debug, error, info, instrument};
+
+#[derive(Debug, Clone)]
+pub struct DependencyBarrier {
+    barrier: Arc<Barrier>,
+    can_continue: Arc<AtomicBool>,
+}
+
+impl DependencyBarrier {
+    pub fn new(n: usize) -> Self {
+        Self {
+            barrier: Arc::new(Barrier::new(n)),
+            can_continue: Arc::new(AtomicBool::new(true)),
+        }
+    }
+
+    pub async fn wait(&self, result: bool) -> bool {
+        let new_can_continue = result & self.can_continue.fetch_and(result, SeqCst);
+        self.barrier.wait().await;
+
+        new_can_continue
+    }
+}
 
 #[derive(JsonSchema, Clone, Debug, Default, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -32,7 +65,86 @@ pub struct Manifest {
     pub root_dir: Option<PathBuf>,
 
     #[serde(skip)]
-    pub dag_index: Option<NodeIndex<u32>>,
+    pub barrier: Option<DependencyBarrier>,
+
+    #[serde(skip)]
+    pub dependencies: Vec<u64>,
+}
+
+impl fmt::Display for Manifest {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "{}",
+            self.name.as_deref().unwrap_or("Cannot extract name")
+        )
+    }
+}
+
+impl AsRef<Manifest> for Manifest {
+    fn as_ref(&self) -> &Manifest {
+        self
+    }
+}
+
+impl Manifest {
+    pub fn get_name(&self) -> String {
+        self.name
+            .as_deref()
+            .unwrap_or("Cannot extract name")
+            .to_string()
+    }
+
+    pub fn id(&self) -> u64 {
+        let mut hasher = Fnv64::new();
+        hasher.update(self.get_name().as_bytes());
+        if let Some(root_dir) = &self.root_dir {
+            hasher.update(root_dir.to_string_lossy().as_bytes());
+        }
+        hasher.finish()
+    }
+
+    #[instrument(skip_all)]
+    pub async fn execute(
+        &self,
+        dry_run: bool,
+        label: Option<String>,
+        contexts: &Contexts,
+        password_manager: Option<PasswordManager>,
+    ) -> Result<()>
+where {
+        if let Some(label) = label {
+            if !self.labels.contains(&label) {
+                info!(
+                    message = "Skipping manifest, label not found",
+                    label = label.as_str()
+                );
+                return Ok(());
+            }
+        }
+
+        if let Some(where_condition) = &self.r#where {
+            let result = Engine::new()
+                .eval_with_scope::<bool>(&mut to_rhai(contexts), where_condition)
+                .map_err(|_| anyhow!("Unable to evaluate 'where' condition '{where_condition}'"))?;
+
+            debug!("Result of 'where' condition '{where_condition}' -> '{result}'");
+
+            if !result {
+                info!("Skipping manifest, because 'where' conditions were false!");
+                return Ok(());
+            }
+        }
+
+        for action in self.actions.iter() {
+            action
+                .execute(dry_run, self, contexts, password_manager.clone())
+                .await?;
+        }
+
+        info!("Completed: {self}");
+        Ok(())
+    }
 }
 
 pub fn resolve(uri: &String) -> Option<PathBuf> {

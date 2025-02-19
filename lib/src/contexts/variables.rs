@@ -9,7 +9,7 @@ pub struct VariablesContextProvider<'a> {
     pub config: &'a Config,
 }
 
-impl<'a> ContextProvider for VariablesContextProvider<'a> {
+impl ContextProvider for VariablesContextProvider<'_> {
     fn get_prefix(&self) -> String {
         String::from("variables")
     }

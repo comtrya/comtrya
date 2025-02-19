@@ -8,7 +8,10 @@ pub(crate) use repository::PackageRepository;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use tokio::sync::Semaphore;
 use tracing::debug;
+
+static PACKAGE_LOCK: Semaphore = Semaphore::const_new(1);
 
 #[derive(JsonSchema, Clone, Debug, Default, Serialize, Deserialize)]
 #[serde(rename = "package.install")]
@@ -77,7 +80,7 @@ impl From<&Package> for PackageVariant {
                 list: package.list.clone(),
                 provider: package.provider.clone(),
                 extra_args: package.extra_args.clone(),
-                file: package.file.clone(),
+                file: package.file,
             };
         };
 
@@ -91,7 +94,7 @@ impl From<&Package> for PackageVariant {
             list: package.list.clone(),
             provider: variant.provider.clone(),
             extra_args: variant.extra_args.clone(),
-            file: package.file.clone(),
+            file: package.file,
         };
 
         if variant.name.is_some() {

@@ -92,22 +92,19 @@ impl FileLink {
         }];
 
         if let Ok(paths) = std::fs::read_dir(from) {
-            paths.for_each(|path| {
-                if let Ok(path) = path {
-                    let p = path.path();
+            steps.extend(paths.filter_map(|path| {
+                let p = path.ok()?.path();
+                let file_name = p.file_name()?;
 
-                    if let Some(file_name) = p.file_name() {
-                        steps.push(Step {
-                            atom: Box::new(Link {
-                                source: p.clone(),
-                                target: to.join(file_name),
-                            }),
-                            initializers: vec![Ensure(Box::new(FileExists(p.clone())))],
-                            finalizers: vec![],
-                        })
-                    }
-                }
-            })
+                Some(Step {
+                    atom: Box::new(Link {
+                        source: p.clone(),
+                        target: to.join(file_name),
+                    }),
+                    initializers: vec![Ensure(Box::new(FileExists(p.clone())))],
+                    finalizers: vec![],
+                })
+            }))
         }
 
         steps
@@ -209,7 +206,6 @@ mod tests {
             actions: vec![],
             depends: vec![],
             name: None,
-            dag_index: None,
             ..Default::default()
         };
 
@@ -265,7 +261,6 @@ mod tests {
             actions: vec![],
             depends: vec![],
             name: None,
-            dag_index: None,
             ..Default::default()
         };
 

@@ -1,7 +1,7 @@
 use std::{
     cmp::Ordering,
     ffi::OsString,
-    fmt::{Debug, Display},
+    fmt::{self, Debug, Display},
     path::PathBuf,
 };
 
@@ -317,18 +317,22 @@ impl<T: Into<Value>> From<Vec<T>> for Value {
     }
 }
 
-impl ToString for Value {
-    fn to_string(&self) -> String {
-        match self {
-            Value::Null => "null".to_string(),
-            Value::String(string) => string.to_owned(),
-            Value::Number(number) => number.to_string(),
-            Value::List(list) => list
-                .iter()
-                .map(|value| value.to_string())
-                .collect::<Vec<String>>()
-                .join(","),
-        }
+impl Display for Value {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                Value::Null => "null".to_string(),
+                Value::String(string) => string.to_owned(),
+                Value::Number(number) => number.to_string(),
+                Value::List(list) => list
+                    .iter()
+                    .map(|value| value.to_string())
+                    .collect::<Vec<String>>()
+                    .join(","),
+            }
+        )
     }
 }
 
