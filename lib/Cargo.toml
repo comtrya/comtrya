@@ -8,28 +8,28 @@ description = "Contains the interfaces for comtrya plugins"
 
 [dependencies]
 anyhow = "1.0"
-age = { version = "0.10", features = ["armor"] }
+age = { version = "0.11", features = ["armor"] }
 dirs-next = "2.0"
 file_diff = "1.0"
-gethostname = "0.5"
+gethostname = "1.0"
 ignore = "0.4"
 normpath = "1.2"
-octocrab = "0.41"
-os_info = "3.7"
-petgraph = "0.6"
-rand = "0.8"
+octocrab = "0.43"
+os_info = "3.10"
+petgraph = "0.7"
+rand = "0.9"
 regex = "1.11"
 reqwest = { version = "0.12", default-features = false, features = [
     "blocking",
     "rustls-tls",
 ] }
-rhai = { version = "1.19", features = ["serde"] }
+rhai = { version = "1.21", features = ["serde"] }
 schemars = "0.8"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_yml = "0"
 sha256 = "1.5"
-tokio = "1.41"
+tokio = "1.43"
 toml = "0.8"
 tera = "1.20"
 tracing = "0.1"
@@ -37,8 +37,8 @@ trust-dns-resolver = "0.23.2"
 walkdir = "2.3"
 which = "7.0"
 whoami = "1.5"
-tar = "0.4.42"
-flate2 = "1.0.34"
+tar = "0.4.44"
+flate2 = "1.1.0"
 file-owner = "0.1.2"
 gix = { version = "0.68.0", features = ["blocking-http-transport-reqwest-rust-tls", "blocking-network-client"] }
 gix-protocol = "0.46.1"
@@ -47,5 +47,5 @@ gix-protocol = "0.46.1"
 uzers = "0.12"
 
 [dev-dependencies]
-tempfile = "3.13"
+tempfile = "3.17"
 pretty_assertions = "1.4"
