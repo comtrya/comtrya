@@ -1,6 +1,7 @@
 # Packages
 
 - package.install
+- package.repository
 
 ## Package Providers
 
@@ -85,3 +86,22 @@ If you would like to have this feature supported on another package provider, pl
   name: /some/path/to/file/nano-8.1.pkg
   file: true
 ```
+
+## package.repository
+
+| Key      | Type          | Optional | Description                                     |
+|----------|---------------|----------|-------------------------------------------------|
+| name     | string        | no       | Alias of url                                    |
+| key      | RepositoryKey | yes      | See table below                                 |
+| provider | string        | yes      | Defaukt value provided, specify package manager |
+
+### RepositoryKey
+
+| Key         | Type   | Optional | Description |
+|-------------|--------|----------|-------------|
+| url         | string | no       |             |
+| name        | string | yes      |             |
+| key         | string | yes      |             |
+| fingerprint | string | yes      |             |
+
+*More documentation to come*

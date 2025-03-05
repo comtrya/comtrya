@@ -1,5 +1,6 @@
 use crate::commands;
 use clap::{Parser, Subcommand};
+use std::error::Error;
 
 use anyhow::{anyhow, Context, Result};
 pub use comtrya_lib::config::Config;
@@ -23,6 +24,9 @@ pub struct GlobalArgs {
     /// Disable color printing
     #[arg(long)]
     pub no_color: bool,
+
+    #[arg(short = 'D', long, value_parser = parse_key_val::<String, String>)]
+    pub defines: Vec<(String, String)>,
 
     /// Debug & tracing mode (-v, -vv)
     #[arg(short, action = clap::ArgAction::Count)]
@@ -62,6 +66,20 @@ impl Default for Commands {
     }
 }
 
+/// Parse a single key-value pair
+fn parse_key_val<T, U>(s: &str) -> Result<(T, U), Box<dyn Error + Send + Sync + 'static>>
+where
+    T: std::str::FromStr,
+    T::Err: Error + Send + Sync + 'static,
+    U: std::str::FromStr,
+    U::Err: Error + Send + Sync + 'static,
+{
+    let pos = s
+        .find('=')
+        .ok_or_else(|| format!("invalid KEY=value: no `=` found in `{s}`"))?;
+    Ok((s[..pos].parse()?, s[pos + 1..].parse()?))
+}
+
 pub(crate) fn load_config(args: &GlobalArgs) -> Result<Config> {
     match lib_config(&args) {
         Ok(config) => match args.manifest_directory.clone() {
@@ -95,7 +113,7 @@ pub(crate) fn load_config(args: &GlobalArgs) -> Result<Config> {
 /// Exits if the user specified an invalid config file path
 /// returns errors if file read fails or yaml content is not successfully deserialized
 pub fn lib_config(args: &GlobalArgs) -> anyhow::Result<Config> {
-    let config = match find_configs(&args) {
+    let mut config = match find_configs(&args) {
         Some(config_path) => {
             let yaml = std::fs::read_to_string(&config_path)
                 .with_context(|| "Found Comtrya.yaml, but was unable to read the contents.")?;
@@ -134,6 +152,11 @@ pub fn lib_config(args: &GlobalArgs) -> anyhow::Result<Config> {
             }
         }
     };
+
+    let mut defines_iterator = args.defines.iter();
+    while let Some(pair) = defines_iterator.next() {
+        config.variables.insert(pair.0.clone(), pair.1.clone());
+    }
 
     Ok(config)
 }

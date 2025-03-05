@@ -1,0 +1,13 @@
+# Can define variables in the Comtrya.yaml
+# See Comtrya.yaml in the examples directory for an example
+# Or define variables in the command line 
+
+actions:
+  - action: command.run
+    command: echo
+    args:
+      - "{{ variables.hello }}"
+  - action: command.run
+    command: echo
+    args:
+      - "{{ variables.foo }}"
