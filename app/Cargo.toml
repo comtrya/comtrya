@@ -23,6 +23,15 @@ update-informer = "1.1"
 dirs-next = "2.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_yml = "0"
+tealr = { version = "0.10.0", features = [
+    "mlua",
+    "mlua_lua54",
+    "tealr_derive",
+    "mlua_userdata-wrappers",
+    "mlua_serialize",
+    "mlua_macros",
+] }
+walkdir = "2.5.0"
 
 [dev-dependencies]
 assert_cmd = "2.0"

@@ -42,6 +42,18 @@ flate2 = "1.0.34"
 file-owner = "0.1.2"
 gix = { version = "0.68.0", features = ["blocking-http-transport-reqwest-rust-tls", "blocking-network-client"] }
 gix-protocol = "0.46.1"
+tealr = { version = "0.10.0", features = [
+    "mlua_lua54",
+    "mlua_anyhow",
+    "mlua_async",
+    "mlua_userdata-wrappers",
+    "tealr_derive",
+    "mlua_send",
+    "mlua_serialize",
+    "mlua",
+    "mlua_error-send",
+    "mlua_macros",
+] }
 
 [target.'cfg(unix)'.dependencies]
 uzers = "0.12"
