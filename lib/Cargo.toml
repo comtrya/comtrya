@@ -40,7 +40,10 @@ whoami = "1.5"
 tar = "0.4.42"
 flate2 = "1.0.34"
 file-owner = "0.1.2"
-gix = { version = "0.68.0", features = ["blocking-http-transport-reqwest-rust-tls", "blocking-network-client"] }
+gix = { version = "0.68.0", features = [
+    "blocking-http-transport-reqwest-rust-tls",
+    "blocking-network-client",
+] }
 gix-protocol = "0.46.1"
 tealr = { version = "0.10.0", features = [
     "mlua_lua54",
