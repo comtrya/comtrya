@@ -56,6 +56,7 @@ tealr = { version = "0.10.0", features = [
     "mlua",
     "mlua_error-send",
     "mlua_macros",
+    "mlua_vendored",
 ] }
 
 [target.'cfg(unix)'.dependencies]
