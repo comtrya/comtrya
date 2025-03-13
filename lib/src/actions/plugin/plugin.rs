@@ -8,7 +8,7 @@ use tracing::info;
 use super::{PluginSpec, PLUGINS};
 use crate::{
     actions::Action, atoms::plugin::PluginExec, contexts::Contexts, manifests::Manifest,
-    steps::Step,
+    steps::Step, utilities::lua::json_to_lua_value,
 };
 use schemars::JsonSchema;
 
@@ -41,20 +41,29 @@ impl Display for Plugin {
 }
 
 impl Action for Plugin {
-    // FIXME: this should be in the plugin spec
     fn summarize(&self) -> String {
-        "I am a plugin".to_string()
+        PLUGINS
+            .get(&self.name())
+            .and_then(|p| p.summary.clone())
+            .unwrap_or(format!("Ran {} plugin", self.name()))
     }
 
     fn plan(&self, _manifest: &Manifest, _context: &Contexts) -> Result<Vec<Step>> {
         info!("Plugin Config: {}", self);
 
+        let runtime = PLUGINS
+            .get(&self.name())
+            .context("Plugin not found")?
+            .to_owned();
+
+        runtime.plan.as_ref().and_then(|plan| {
+            plan.call::<()>(json_to_lua_value(self.spec.clone(), &runtime.lua).unwrap_or_default())
+                .ok()
+        });
+
         Ok(vec![Step {
             atom: Box::new(PluginExec {
-                runtime: PLUGINS
-                    .get(&self.name())
-                    .context("Plugin not found")?
-                    .clone(),
+                runtime,
                 spec: self.spec.clone(),
             }),
             initializers: vec![],

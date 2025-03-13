@@ -1,6 +1,7 @@
 use anyhow::Result;
 use serde_json::Value as JsonValue;
 use tealr::mlu::mlua::{Error as LuaError, Lua, Value as LuaValue};
+use tracing::error;
 
 #[allow(dead_code)]
 pub fn lua_value_to_json(value: LuaValue) -> JsonValue {
@@ -43,22 +44,23 @@ pub fn json_to_lua_value(json: JsonValue, lua: &Lua) -> Result<LuaValue, LuaErro
     match json {
         JsonValue::Null => Ok(LuaValue::Nil),
         JsonValue::Bool(b) => Ok(LuaValue::Boolean(b)),
-        JsonValue::Number(n) => {
-            if n.is_i64() {
-                let value = n.as_i64().unwrap();
-                Ok(LuaValue::Integer(value))
-            } else {
-                Ok(LuaValue::Number(n.as_f64().unwrap()))
-            }
-        }
+        JsonValue::Number(n) => n
+            .is_i64()
+            .then(|| n.as_i64().map(LuaValue::Integer))
+            .unwrap_or_else(|| n.as_f64().map(LuaValue::Number))
+            .ok_or_else(|| LuaError::external("Failed to convert number")),
         JsonValue::String(s) => Ok(LuaValue::String(lua.create_string(&s)?)),
-        JsonValue::Array(arr) => {
-            let table = lua.create_table()?;
-            for (i, value) in arr.into_iter().enumerate() {
-                table.set(i + 1, json_to_lua_value(value, lua)?)?;
-            }
-            Ok(LuaValue::Table(table))
-        }
+        JsonValue::Array(arr) => lua.create_table().map(|table| {
+            arr.into_iter()
+                .filter_map(|value| json_to_lua_value(value, lua).ok())
+                .enumerate()
+                .for_each(|(i, v)| {
+                    if let Err(e) = table.set(i + 1, v) {
+                        error!("Failed to set value in table: {}", e);
+                    };
+                });
+            LuaValue::Table(table)
+        }),
         JsonValue::Object(map) => {
             let table = lua.create_table()?;
             for (k, v) in map {

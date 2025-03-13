@@ -9,10 +9,13 @@ use crate::Runtime;
 
 use anyhow::{anyhow, Context, Result};
 use clap::{Parser, Subcommand};
+use colored::Colorize;
 use dirs_next::data_local_dir;
 use gix::{
-    interrupt::IS_INTERRUPTED, open as open_repo, progress::Discard,
-    remote::ref_map::Options as GixOptions, remote::Direction,
+    interrupt::IS_INTERRUPTED,
+    open as open_repo,
+    progress::Discard,
+    remote::{ref_map::Options as GixOptions, Direction},
 };
 
 fn plugin_path() -> PathBuf {
@@ -43,17 +46,36 @@ pub struct PluginCommands {
 }
 
 fn add_plugin(name: &str) -> Result<()> {
-    let plugin_path = plugin_path().join(name);
+    let (_, repo) = name.split_once('/').context(
+        "Invalid plugin schema. Please provide repository using: \"Username/Repository:tag\"",
+    )?;
 
-    if plugin_path.exists() {
+    let (plugin_name, path, tag) = repo
+        .split_once(':')
+        .map(|(n, t)| (n, plugin_path().join(n), Some(t)))
+        .unwrap_or((repo, plugin_path().join(repo), None));
+
+    if path.exists() {
         return Err(anyhow!("Plugin {} already loaded", name));
     }
 
+    println!("Installing {}", plugin_name);
+
+    create_dir_all(&path)?;
+
     let url = format!("https://github.com/{}", name);
 
-    let _ = gix::prepare_clone(url.as_str(), &plugin_path)
+    let _ = gix::prepare_clone(url.as_str(), &path)
         .context("Cannot find repository for plugin")?
-        .fetch_then_checkout(gix::progress::Discard, &IS_INTERRUPTED)?;
+        .with_ref_name(tag)?
+        .fetch_then_checkout(Discard, &IS_INTERRUPTED)?
+        .0
+        .main_worktree(Discard, &IS_INTERRUPTED)?
+        .0
+        .find_default_remote(Direction::Fetch)
+        .context("Always present after clone")?;
+
+    println!("Done!");
 
     Ok(())
 }
@@ -61,34 +83,54 @@ fn add_plugin(name: &str) -> Result<()> {
 fn list_plugins() -> Result<()> {
     let plugin_dir = plugin_path();
 
-    if fs::metadata(&plugin_dir).is_ok() || fs::read_dir(&plugin_dir)?.next().is_none() {
-        println!("No plugins found");
-        return Ok(());
-    }
+    fs::metadata(&plugin_dir).context("No metadata")?;
+    let _ = fs::read_dir(&plugin_dir)?.next().context("No folders")?;
+
+    println!("Plugins:");
 
     for entry in fs::read_dir(plugin_dir)?.filter_map(Result::ok) {
         if entry.file_type()?.is_dir() {
             let path = entry.path();
+            let repo = open_repo(&path)?;
             let name = path
                 .file_name()
                 .and_then(OsStr::to_str)
                 .context("Invalid path")?;
-            if name != ".git" {
-                println!("Plugin: {}", name);
-            }
+
+            let remote = repo.find_fetch_remote(None)?;
+
+            println!("\n{}Name: {}", " ".blue(), name.bold());
+            println!(
+                "  │ {}",
+                remote
+                    .url(Direction::Fetch)
+                    .context("Could not get remote address")?
+                    .to_string()
+                    .underline(),
+            );
+
+            println!(
+                "  └─ {}\n",
+                if repo.is_dirty()? {
+                    format!("{}Out of date.", " ".red())
+                } else {
+                    format!("{}Up to date.", " ".green())
+                },
+            );
         }
     }
+
     Ok(())
 }
 
 fn remove_plugin(name: &str) -> Result<()> {
-    let plugin_path = plugin_path().join(name);
+    let path = plugin_path().join(name);
 
-    if plugin_path.exists() {
-        fs::remove_dir_all(&plugin_path)?;
-        println!("Plugin removed: {}", name);
+    if path.exists() {
+        fs::remove_dir_all(&path)?;
+        println!("{}Removed: {}", " ".green(), name);
     } else {
-        println!("Plugin {} does not exist", name);
+        println!("{}{} does not exist", " ".red(), name);
     }
 
     Ok(())
@@ -97,7 +139,7 @@ fn remove_plugin(name: &str) -> Result<()> {
 fn update_plugins<S>(name: Option<S>) -> Result<()>
 where
     S: AsRef<str>,
-    PathBuf: std::convert::From<S>,
+    PathBuf: From<S>,
 {
     match name {
         Some(name) => {

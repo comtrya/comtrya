@@ -2,8 +2,7 @@
 pub mod plugin;
 
 use std::{
-    collections::HashMap,
-    ffi::OsStr,
+    collections::{HashMap, HashSet},
     fmt::{Display, Formatter, Result as FmtResult},
     fs::read_to_string,
     hash::{Hash, Hasher},
@@ -23,7 +22,10 @@ pub use plugin::Plugin;
 #[derive(Debug, Clone)]
 pub struct PluginSpec {
     pub name: String,
+    pub version: String,
+    pub summary: Option<String>,
     pub is_privileged: bool,
+    pub plan: Option<Function>,
     pub func: Function,
     pub lua: Lua,
 }
@@ -52,8 +54,11 @@ impl FromLua for PluginSpec {
 
         Ok(Self {
             name,
+            version: table.get("version").context("Spec must contain version")?,
             is_privileged: table.get("is_privileged").unwrap_or(false),
+            summary: table.get("summary").ok(),
             func,
+            plan: table.get("plan").ok(),
             lua: lua.clone(),
         })
     }
@@ -86,26 +91,34 @@ impl Hash for PluginSpec {
 }
 
 fn load_plugins() -> Result<HashMap<String, PluginSpec>> {
+    let entry_points = ["main.lua", "plugin.lua"]
+        .into_iter()
+        .collect::<HashSet<&str>>();
+
     let dir = data_local_dir()
         .context("Cannot access local data directory")?
         .join("comtrya")
         .join("plugins");
+
     println!("Dir: {dir:?}");
 
     let specs = WalkDir::new(dir)
+        .max_depth(2)
         .into_iter()
         .filter_map(Result::ok)
         .filter(|entry| {
-            entry.file_type().is_file() && entry.path().extension() == Some(OsStr::new("lua"))
+            println!("Entry: {}", entry.file_name().to_str().unwrap_or_default());
+            entry_points.contains(entry.file_name().to_str().unwrap_or_default())
         })
         .filter_map(|entry| {
             let path = entry.path();
+            println!("Found: {}", path.to_str().unwrap_or_default());
             let Ok(content) = read_to_string(path).inspect_err(|e| error!("Failed to read {e}"))
             else {
                 return None;
             };
-
             let lua = unsafe { Lua::unsafe_new() };
+
             lua.load(content)
                 .eval::<PluginSpec>()
                 .map(|spec| (spec.name.clone(), spec))
