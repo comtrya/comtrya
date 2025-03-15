@@ -31,6 +31,7 @@ pub(crate) fn execute(runtime: Runtime) -> anyhow::Result<()> {
         Commands::Version(version) => version.execute(&runtime),
         Commands::Contexts(contexts) => contexts.execute(&runtime),
         Commands::GenCompletions(gen_completions) => gen_completions.execute(&runtime),
+        Commands::Plugin(plugin) => plugin.execute(&runtime),
     }
 }
 

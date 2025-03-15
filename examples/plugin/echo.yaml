@@ -1,0 +1,3 @@
+actions:
+  - action: plugin.echo
+    output: hello world
