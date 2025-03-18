@@ -1,3 +1,6 @@
 actions:
-  - action: plugin.echo
-    output: hello world
+  - action: plugin
+    dir: ./examples/plugin/plugin.lua
+    opts:
+      echo:
+        output: hello world

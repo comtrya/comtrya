@@ -58,6 +58,8 @@ tealr = { version = "0.10.0", features = [
     "mlua_macros",
     "mlua_vendored",
 ] }
+camino = { version = "1.1.9", features = ["serde", "serde1"] }
+serde_with = { version = "3.12.0", features = ["schemars_0_8", "json"] }
 
 [target.'cfg(unix)'.dependencies]
 uzers = "0.12"

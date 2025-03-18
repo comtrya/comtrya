@@ -1,3 +1,3 @@
 mod exec;
 
-pub use exec::PluginExec;
+pub use exec::{PluginExec, PluginRuntimeSpec};

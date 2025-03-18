@@ -1,7 +1,24 @@
+use std::{
+    hash::{Hash, Hasher},
+    ops::{Deref, DerefMut},
+};
+
 use anyhow::Result;
 use serde_json::Value as JsonValue;
-use tealr::mlu::mlua::{Error as LuaError, Lua, Value as LuaValue};
+use tealr::{
+    mlu::{
+        mlua::{Error as LuaError, Function, Lua, Value as LuaValue},
+        FromToLua,
+    },
+    ToTypename,
+};
 use tracing::error;
+
+use schemars::{
+    gen::SchemaGenerator,
+    schema::{InstanceType, Metadata, Schema, SchemaObject},
+    JsonSchema,
+};
 
 #[allow(dead_code)]
 pub fn lua_value_to_json(value: LuaValue) -> JsonValue {
@@ -40,18 +57,18 @@ pub fn lua_value_to_json(value: LuaValue) -> JsonValue {
     }
 }
 
-pub fn json_to_lua_value(json: JsonValue, lua: &Lua) -> Result<LuaValue, LuaError> {
+pub fn json_to_lua_value(json: &JsonValue, lua: &Lua) -> Result<LuaValue, LuaError> {
     match json {
         JsonValue::Null => Ok(LuaValue::Nil),
-        JsonValue::Bool(b) => Ok(LuaValue::Boolean(b)),
+        JsonValue::Bool(b) => Ok(LuaValue::Boolean(*b)),
         JsonValue::Number(n) => n
             .is_i64()
             .then(|| n.as_i64().map(LuaValue::Integer))
             .unwrap_or_else(|| n.as_f64().map(LuaValue::Number))
             .ok_or_else(|| LuaError::external("Failed to convert number")),
-        JsonValue::String(s) => Ok(LuaValue::String(lua.create_string(&s)?)),
+        JsonValue::String(s) => Ok(LuaValue::String(lua.create_string(s)?)),
         JsonValue::Array(arr) => lua.create_table().map(|table| {
-            arr.into_iter()
+            arr.iter()
                 .filter_map(|value| json_to_lua_value(value, lua).ok())
                 .enumerate()
                 .for_each(|(i, v)| {
@@ -64,9 +81,117 @@ pub fn json_to_lua_value(json: JsonValue, lua: &Lua) -> Result<LuaValue, LuaErro
         JsonValue::Object(map) => {
             let table = lua.create_table()?;
             for (k, v) in map {
-                table.set(k, json_to_lua_value(v, lua)?)?;
+                table.set(k.clone(), json_to_lua_value(v, lua)?)?;
             }
             Ok(LuaValue::Table(table))
         }
+    }
+}
+
+#[derive(Clone, Debug, FromToLua, ToTypename, PartialEq)]
+pub struct LuaFunction(pub Function);
+
+impl Eq for LuaFunction {}
+
+impl PartialOrd for LuaFunction {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.0.dump(false).cmp(&other.0.dump(false)))
+    }
+}
+
+impl Ord for LuaFunction {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.0.dump(false).cmp(&other.0.dump(false))
+    }
+}
+
+impl Hash for LuaFunction {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.0.dump(false).hash(state);
+    }
+}
+
+impl Deref for LuaFunction {
+    type Target = Function;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for LuaFunction {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
+impl JsonSchema for LuaFunction {
+    fn schema_name() -> String {
+        "LuaFunction".to_string()
+    }
+
+    fn json_schema(_gen: &mut SchemaGenerator) -> Schema {
+        let schema_obj = SchemaObject {
+            instance_type: Some(InstanceType::Object.into()),
+            metadata: Some(Box::new(Metadata {
+                description: Some("Lua function reference (opaque to schema)".to_string()),
+                ..Default::default()
+            })),
+            ..Default::default()
+        };
+
+        Schema::Object(schema_obj)
+    }
+}
+
+impl Default for LuaFunction {
+    fn default() -> Self {
+        let lua = Lua::new();
+        let func = lua
+            .create_function(|_, ()| Ok(()))
+            .expect("Failed to create default function");
+        LuaFunction(func)
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct LuaRuntime(pub Lua);
+
+impl Deref for LuaRuntime {
+    type Target = Lua;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for LuaRuntime {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
+impl JsonSchema for LuaRuntime {
+    fn schema_name() -> String {
+        "LuaRuntime".to_string()
+    }
+
+    fn json_schema(_gen: &mut SchemaGenerator) -> Schema {
+        let schema_obj = SchemaObject {
+            instance_type: Some(InstanceType::Object.into()),
+            metadata: Some(Box::new(Metadata {
+                description: Some("Lua runtime state (opaque to schema)".to_string()),
+                ..Default::default()
+            })),
+            ..Default::default()
+        };
+
+        Schema::Object(schema_obj)
+    }
+}
+
+impl Default for LuaRuntime {
+    fn default() -> Self {
+        LuaRuntime(Lua::new())
     }
 }

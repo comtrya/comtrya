@@ -2,71 +2,101 @@
 pub mod plugin;
 
 use std::{
-    collections::{HashMap, HashSet},
+    collections::BTreeMap,
     fmt::{Display, Formatter, Result as FmtResult},
-    fs::read_to_string,
-    hash::{Hash, Hasher},
-    sync::LazyLock,
+    hash::Hash,
+    sync::{Mutex, OnceLock},
 };
 
-use anyhow::{Context, Result};
-use dirs_next::data_local_dir;
-use tealr::mlu::mlua::{
-    Error as LuaError, FromLua, Function, Lua, Result as LuaResult, Value as LuaValue,
+use anyhow::{anyhow, Context, Result};
+use serde_with::serde_as;
+use tealr::{
+    mlu::mlua::{
+        Error as LuaError, FromLua, Function as TrueLuaFunction, Lua, Table as LuaTable,
+        Value as LuaValue,
+    },
+    ToTypename,
 };
-use tracing::error;
-use walkdir::WalkDir;
 
+use crate::{
+    atoms::plugin::PluginRuntimeSpec,
+    utilities::lua::{LuaFunction, LuaRuntime},
+};
 pub use plugin::Plugin;
+use plugin::{RepoOrDir, Source};
 
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug, ToTypename, Default, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct PluginSpecActions {
+    pub plan: Option<LuaFunction>,
+    pub exec: LuaFunction,
+    pub is_privileged: bool,
+}
+
+#[serde_as]
+#[derive(Clone, Debug, ToTypename, Default, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct PluginSpec {
     pub name: String,
-    pub version: String,
     pub summary: Option<String>,
-    pub is_privileged: bool,
-    pub plan: Option<Function>,
-    pub func: Function,
-    pub lua: Lua,
+    pub actions: BTreeMap<String, PluginSpecActions>,
 }
 
 impl FromLua for PluginSpec {
-    fn from_lua(value: LuaValue, lua: &Lua) -> LuaResult<Self> {
-        let table = value
-            .as_table()
-            .ok_or_else(|| LuaError::external("Cannot read plugin"))?;
-
-        let name = table
-            .get::<String>("name")
-            .or_else(|_| table.get::<String>(1))
-            .map_err(|_| LuaError::external("Missing name defined in plugin"))?;
-
-        let func = table.get::<Function>("func").or_else(|_| {
-            table
-                .sequence_values()
-                .filter_map(Result::ok)
-                .find_map(|v| match v {
-                    Some(LuaValue::Function(f)) => Some(f),
-                    _ => None,
+    fn from_lua(value: LuaValue, _lua: &Lua) -> Result<Self, LuaError> {
+        let table = match value {
+            LuaValue::Table(t) => t,
+            _ => {
+                return Err(LuaError::FromLuaConversionError {
+                    from: value.type_name(),
+                    to: String::from("PluginSpec"),
+                    message: Some("expected table".to_string()),
                 })
-                .ok_or_else(|| LuaError::runtime("No function found in plugin"))
-        })?;
+            }
+        };
 
-        Ok(Self {
-            name,
-            version: table.get("version").context("Spec must contain version")?,
-            is_privileged: table.get("is_privileged").unwrap_or(false),
+        let mut actions = BTreeMap::new();
+
+        for pair in table
+            .get::<LuaTable>("actions")?
+            .pairs::<String, LuaTable>()
+        {
+            let (key, action) = pair?;
+
+            actions.insert(
+                key,
+                PluginSpecActions {
+                    plan: action.get::<TrueLuaFunction>("plan").ok().map(LuaFunction),
+                    exec: LuaFunction(action.get::<TrueLuaFunction>("exec")?),
+                    is_privileged: action.get("is_privileged").unwrap_or(false),
+                },
+            );
+        }
+
+        Ok(PluginSpec {
+            name: table.get("name")?,
             summary: table.get("summary").ok(),
-            func,
-            plan: table.get("plan").ok(),
-            lua: lua.clone(),
+            actions,
         })
     }
 }
 
 impl PluginSpec {
-    pub fn call(&self, args: LuaValue) -> Result<LuaValue> {
-        self.func.call(args).context("Failed to call plugin")
+    pub fn get_impl(&self, name: &str) -> Option<&PluginSpecActions> {
+        self.actions.get(name)
+    }
+
+    pub fn call(&self, name: &str, args: LuaValue) -> Result<LuaValue, LuaError> {
+        match self.get_impl(name) {
+            Some(impls) => impls.exec.call(args),
+            None => Err(LuaError::external("Missing plugin arg")),
+        }
+    }
+
+    pub fn plan(&self, name: &str, args: LuaValue) -> Option<Result<LuaValue, LuaError>> {
+        match self.get_impl(name) {
+            Some(impls) => impls.plan.as_ref(),
+            None => None,
+        }
+        .map(|plan| plan.call(args))
     }
 }
 
@@ -76,74 +106,34 @@ impl Display for PluginSpec {
     }
 }
 
-impl PartialEq for PluginSpec {
-    fn eq(&self, other: &Self) -> bool {
-        self.name == other.name && other.is_privileged == self.is_privileged
+fn get_plugin(source: RepoOrDir) -> Result<PluginRuntimeSpec> {
+    let Ok(mut plugins) = get_plugins().lock() else {
+        return Err(anyhow!("Failed to get plugins"));
+    };
+
+    if let Some(spec) = plugins.get(&source) {
+        return Ok(spec.clone());
     }
+
+    let content = source.source()?;
+    let lua = unsafe { Lua::unsafe_new() };
+
+    let spec = lua
+        .load(content)
+        .eval::<PluginSpec>()
+        .context("Failed deserialize plugin")?;
+
+    let runtime_spec = PluginRuntimeSpec {
+        lua: LuaRuntime(lua),
+        spec,
+    };
+    plugins.insert(source, runtime_spec.clone());
+
+    Ok(runtime_spec)
 }
 
-impl Eq for PluginSpec {}
-impl Hash for PluginSpec {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        self.name.hash(state);
-        self.is_privileged.hash(state);
-    }
+fn get_plugins() -> &'static Mutex<BTreeMap<RepoOrDir, PluginRuntimeSpec>> {
+    PLUGINS.get_or_init(|| Mutex::new(BTreeMap::new()))
 }
 
-fn load_plugins() -> Result<HashMap<String, PluginSpec>> {
-    let entry_points = ["main.lua", "plugin.lua"]
-        .into_iter()
-        .collect::<HashSet<&str>>();
-
-    let dir = data_local_dir()
-        .context("Cannot access local data directory")?
-        .join("comtrya")
-        .join("plugins");
-
-    println!("Dir: {dir:?}");
-
-    let specs = WalkDir::new(dir)
-        .max_depth(2)
-        .into_iter()
-        .filter_map(Result::ok)
-        .filter(|entry| {
-            println!("Entry: {}", entry.file_name().to_str().unwrap_or_default());
-            entry_points.contains(entry.file_name().to_str().unwrap_or_default())
-        })
-        .filter_map(|entry| {
-            let path = entry.path();
-            println!("Found: {}", path.to_str().unwrap_or_default());
-            let Ok(content) = read_to_string(path).inspect_err(|e| error!("Failed to read {e}"))
-            else {
-                return None;
-            };
-            let lua = unsafe { Lua::unsafe_new() };
-
-            lua.load(content)
-                .eval::<PluginSpec>()
-                .map(|spec| (spec.name.clone(), spec))
-                .inspect_err(|e| error!("Failed to eval lua in {path:?}: {e}",))
-                .ok()
-        })
-        .collect::<HashMap<String, PluginSpec>>();
-
-    Ok(specs)
-}
-
-static PLUGINS: LazyLock<HashMap<String, PluginSpec>> =
-    LazyLock::new(|| load_plugins().unwrap_or_default());
-
-// impl FromLuaMulti for PluginSpec {
-//     fn from_lua_multi(values: mlua::MultiValue, lua: &mlua::Lua) -> mlua::Result<Self> {
-//         if let Some(Value::Table(table)) = values.iter().next() {
-//             Ok(Self {
-//                 name: table.get(0)?,
-//                 is_privileged: table.get("is_privileged")?,
-//                 func: table.get(2)?,
-//                 lua,
-//             })
-//         } else {
-//             Err(mlua::Error::RuntimeError("Expected table".to_string()))
-//         }
-//     }
-// }
+static PLUGINS: OnceLock<Mutex<BTreeMap<RepoOrDir, PluginRuntimeSpec>>> = OnceLock::new();
