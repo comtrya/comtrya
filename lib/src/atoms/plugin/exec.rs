@@ -68,7 +68,7 @@ impl Atom for PluginExec {
     }
 
     fn execute(&mut self) -> Result<()> {
-        self.runtime.call(
+        self.runtime.exec_action(
             &self.plugin_impl,
             json_to_lua_value(&self.spec.clone(), &self.runtime.lua)?,
         )?;

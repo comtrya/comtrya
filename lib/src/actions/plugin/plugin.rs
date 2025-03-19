@@ -1,80 +1,52 @@
 use std::{
-    fmt::{self, Display},
-    fs::read_to_string,
+    fmt::{self, Display, Formatter},
+    fs,
     hash::{Hash, Hasher},
     ops::Deref,
     path::PathBuf,
 };
 
 use anyhow::{anyhow, Context, Result};
-use camino::Utf8PathBuf;
 use dirs_next::data_local_dir;
 use gix::{
     bstr::ByteSlice, diff::object::tree::EntryKind, interrupt::IS_INTERRUPTED, open,
     prepare_clone_bare, progress::Discard,
 };
-use schemars::{gen::SchemaGenerator, schema::Schema, JsonSchema};
-use serde::{Deserialize, Deserializer, Serialize};
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
-#[allow(unused_imports)]
-use serde_with::{formats::PreferOne, serde_as, KeyValueMap, OneOrMany};
+use serde_with::{serde_as, KeyValueMap};
 
 use super::{get_plugin, PluginRuntimeSpec};
 use crate::{
     actions::Action, atoms::plugin::PluginExec, contexts::Contexts, manifests::Manifest,
-    steps::Step, utilities::lua::json_to_lua_value,
+    steps::Step, utilities::lua::json_to_lua_value, utilities::CustomPathBuf,
 };
 
-#[derive(Eq, PartialEq, Debug, Clone, Default, Serialize, Deserialize, PartialOrd, Ord)]
-pub(crate) struct CustomPathBuf(Utf8PathBuf);
-
-impl JsonSchema for CustomPathBuf {
-    fn schema_name() -> String {
-        String::from("CustomPathBuf")
-    }
-
-    fn json_schema(gen: &mut SchemaGenerator) -> Schema {
-        gen.subschema_for::<PathBuf>()
-    }
+#[derive(
+    JsonSchema, Serialize, Deserialize, Debug, Clone, Default, PartialEq, Eq, PartialOrd, Ord,
+)]
+pub struct RepoUri {
+    pub username: String,
+    pub repo: String,
 }
 
-impl Deref for CustomPathBuf {
-    type Target = Utf8PathBuf;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
+impl Display for RepoUri {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "{}/{}", self.username, self.repo)
     }
 }
 
-#[derive(JsonSchema, Debug, Serialize, Clone, Default, PartialEq, Eq, PartialOrd, Ord)]
-struct RepoInfo {
-    username: String,
-    repo: String,
-}
-
-impl<'de> Deserialize<'de> for RepoInfo {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let original = String::deserialize(deserializer)?;
-
-        let Some((username, repo)) = original.split_once('/') else {
-            return Err(serde::de::Error::custom(
-                "repo must be in format 'username/repo'",
-            ));
-        };
-
-        Ok(Self {
-            username: username.to_string(),
-            repo: repo.to_string(),
-        })
-    }
-}
-
-impl RepoInfo {
-    pub fn uri(&self) -> String {
-        format!("{}/{}", &self.username, self.repo)
+impl TryFrom<String> for RepoUri {
+    type Error = anyhow::Error;
+    fn try_from(s: String) -> Result<Self> {
+        match s.split_once('/') {
+            Some((username, repo)) => Ok(Self {
+                username: username.to_string(),
+                repo: repo.to_string(),
+            }),
+            _ => Err(anyhow!("repo must be in format 'username/repo'")),
+        }
     }
 }
 
@@ -82,13 +54,34 @@ pub trait Source {
     fn source(&self) -> Result<String>;
 }
 
+#[derive(
+    JsonSchema, Default, Serialize, Deserialize, Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash,
+)]
+#[serde(untagged)]
+pub enum Version {
+    #[default]
+    Stable,
+    Latest,
+    Tagged(String),
+}
+
+impl From<String> for Version {
+    fn from(s: String) -> Self {
+        match s.as_str() {
+            "" | "stable" => Self::Stable,
+            "*" | "latest" => Self::Latest,
+            _ => Self::Tagged(s),
+        }
+    }
+}
+
 #[derive(JsonSchema, Serialize, Deserialize, Debug, Clone, Default, Eq, PartialOrd, Ord)]
 pub struct Repo {
     #[serde(alias = "repository")]
-    repo: RepoInfo,
+    repo: RepoUri,
 
     #[serde(alias = "tag", default)]
-    version: String,
+    version: Version,
 }
 
 impl PartialEq for Repo {
@@ -102,7 +95,7 @@ impl Hash for Repo {
         if let Ok(path) = self.path() {
             path.hash(state);
         } else {
-            self.repo.uri().hash(state);
+            self.repo.to_string().hash(state);
             self.version.hash(state);
         }
     }
@@ -110,13 +103,13 @@ impl Hash for Repo {
 
 impl Repo {
     fn path(&self) -> Result<PathBuf> {
-        data_local_dir()
-            .unwrap()
-            .join("comtrya")
+        let path = data_local_dir().context("Failed to locate local data directory")?;
+
+        path.join("comtrya")
             .join("plugins")
-            .join(self.repo.uri())
+            .join(self.repo.to_string())
             .canonicalize()
-            .context("Unable to canonicalize path")
+            .map_err(anyhow::Error::from)
     }
 }
 
@@ -124,19 +117,20 @@ impl Source for Repo {
     fn source(&self) -> Result<String> {
         let path = self.path()?;
 
-        let repo = if path.exists() {
-            open(&path)?
-        } else {
-            let url = format!("https://github.com/{}", &self.repo.uri());
+        let repo = if !path.exists() {
+            let url = format!("https://github.com/{}", self.repo);
             let (mut checkout_result, _) = prepare_clone_bare(url, &path)?
                 .with_remote_name("main")?
                 .fetch_then_checkout(Discard, &IS_INTERRUPTED)?;
             checkout_result.main_worktree(Discard, &IS_INTERRUPTED)?.0
+        } else {
+            open(&path)?
         };
 
-        let tree = match self.version.as_str() {
-            "*" | "" => repo.head_tree()?,
-            version => repo
+        let tree = match self.version {
+            Version::Stable => repo.find_reference("tags/latest")?.peel_to_tree()?,
+            Version::Latest => repo.head_tree()?,
+            Version::Tagged(ref version) => repo
                 .find_reference(&format!("tags/{}", version))?
                 .peel_to_tree()?,
         };
@@ -156,30 +150,33 @@ pub struct Dir {
     dir: CustomPathBuf,
 }
 
-impl Dir {
-    fn to_path(&self) -> Result<PathBuf, std::io::Error> {
-        self.dir.canonicalize()
+impl Deref for Dir {
+    type Target = CustomPathBuf;
+
+    fn deref(&self) -> &Self::Target {
+        &self.dir
     }
 }
 
 impl PartialEq for Dir {
     fn eq(&self, other: &Self) -> bool {
-        self.to_path().ok() == other.to_path().ok()
+        self.canonicalize().ok() == other.canonicalize().ok()
     }
 }
 
 impl Hash for Dir {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        match self.to_path() {
-            Ok(path) => path.hash(state),
-            Err(_) => self.dir.hash(state),
+        if let Ok(path) = self.canonicalize() {
+            path.hash(state)
+        } else {
+            self.dir.hash(state)
         };
     }
 }
 
 impl Source for Dir {
     fn source(&self) -> Result<String> {
-        read_to_string(self.to_path()?).context("Failed to read file")
+        fs::read_to_string(self.canonicalize()?).context("Failed to read file")
     }
 }
 
@@ -208,6 +205,7 @@ impl Source for RepoOrDir {
 pub struct TaggedTable {
     #[serde(rename = "$key$")]
     pub tag: String,
+
     #[serde(flatten)]
     pub table: JsonValue,
 }
@@ -225,6 +223,7 @@ impl Deref for TaggedTable {
 pub struct Plugin {
     #[serde(flatten)]
     pub source: RepoOrDir,
+
     #[serde(alias = "options", alias = "spec")]
     #[serde_as(as = "KeyValueMap<_>")]
     pub opts: Vec<TaggedTable>,
@@ -232,7 +231,7 @@ pub struct Plugin {
 
 impl Plugin {
     fn runtime(&self) -> Result<PluginRuntimeSpec> {
-        get_plugin(self.source.clone())
+        get_plugin(self.source.clone()).map_err(anyhow::Error::from)
     }
 }
 
@@ -254,7 +253,7 @@ impl Action for Plugin {
         let planned = self.opts.iter().filter_map(|opt| {
             json_to_lua_value(&opt.table, &runtime.lua)
                 .ok()
-                .and_then(|v| runtime.plan(&opt.tag, v).and_then(Result::ok))
+                .and_then(|v| runtime.plan_action(&opt.tag, v).and_then(Result::ok))
                 .map(|_| opt)
         });
 
