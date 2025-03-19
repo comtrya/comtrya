@@ -58,10 +58,6 @@ pub enum Commands {
     ///  - fish: ```comtrya gen-completions fish | source```
     #[command(long_about, verbatim_doc_comment)]
     GenCompletions(commands::GenCompletions),
-
-    /// Add, remove, or update plugins
-    #[command(visible_alias = "plug")]
-    Plugin(commands::PluginCommands),
 }
 
 impl Default for Commands {

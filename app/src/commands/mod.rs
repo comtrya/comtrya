@@ -10,9 +10,6 @@ pub(crate) use contexts::Contexts;
 mod gen_completions;
 pub(crate) use gen_completions::GenCompletions;
 
-mod plugin;
-pub(crate) use plugin::PluginCommands;
-
 use crate::Runtime;
 
 pub trait ComtryaCommand {
