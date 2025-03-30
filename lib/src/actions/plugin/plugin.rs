@@ -3,19 +3,26 @@ use std::{
     fs,
     hash::{Hash, Hasher},
     ops::Deref,
-    path::PathBuf,
+    path::{Path, PathBuf},
+    str::FromStr,
 };
 
 use anyhow::{anyhow, Context, Result};
 use dirs_next::data_local_dir;
 use gix::{
-    bstr::ByteSlice, diff::object::tree::EntryKind, interrupt::IS_INTERRUPTED, open,
-    prepare_clone_bare, progress::Discard,
+    bstr::ByteSlice,
+    diff::object::tree::EntryKind,
+    interrupt::IS_INTERRUPTED,
+    open, prepare_clone_bare,
+    progress::Discard,
+    remote::{ref_map, Direction::Fetch},
+    Repository,
 };
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
-use serde_with::{serde_as, KeyValueMap};
+use serde_with::{serde_as, DisplayFromStr, KeyValueMap};
+use tracing::{debug, info};
 
 use super::{get_plugin, PluginRuntimeSpec};
 use crate::{
@@ -37,9 +44,11 @@ impl Display for RepoUri {
     }
 }
 
-impl TryFrom<String> for RepoUri {
-    type Error = anyhow::Error;
-    fn try_from(s: String) -> Result<Self> {
+impl FromStr for RepoUri {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self> {
+        debug!("Trying to parse repo uri: {}", s);
         match s.split_once('/') {
             Some((username, repo)) => Ok(Self {
                 username: username.to_string(),
@@ -55,33 +64,38 @@ pub trait Source {
 }
 
 #[derive(
-    JsonSchema, Default, Serialize, Deserialize, Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash,
+    JsonSchema, Serialize, Deserialize, Default, Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash,
 )]
-#[serde(untagged)]
+#[serde(untagged, rename_all = "lowercase")]
 pub enum Version {
     #[default]
     Stable,
+
+    #[serde(alias = "*")]
     Latest,
+
+    #[serde(untagged)]
     Tagged(String),
 }
 
-impl From<String> for Version {
-    fn from(s: String) -> Self {
-        match s.as_str() {
-            "" | "stable" => Self::Stable,
-            "*" | "latest" => Self::Latest,
-            _ => Self::Tagged(s),
-        }
-    }
-}
-
-#[derive(JsonSchema, Serialize, Deserialize, Debug, Clone, Default, Eq, PartialOrd, Ord)]
+#[serde_as]
+#[derive(JsonSchema, Serialize, Deserialize, Debug, Clone, Eq, PartialOrd, Ord)]
 pub struct Repo {
     #[serde(alias = "repository")]
+    #[serde_as(as = "DisplayFromStr")]
     repo: RepoUri,
 
-    #[serde(alias = "tag", default)]
+    #[serde(alias = "tag")]
     version: Version,
+}
+
+impl Default for Repo {
+    fn default() -> Self {
+        Self {
+            repo: RepoUri::default(),
+            version: Version::Stable,
+        }
+    }
 }
 
 impl PartialEq for Repo {
@@ -105,30 +119,50 @@ impl Repo {
     fn path(&self) -> Result<PathBuf> {
         let path = data_local_dir().context("Failed to locate local data directory")?;
 
-        path.join("comtrya")
+        let plugins_path = path
+            .join("comtrya")
             .join("plugins")
-            .join(self.repo.to_string())
-            .canonicalize()
-            .map_err(anyhow::Error::from)
+            .join(self.repo.to_string());
+
+        if !plugins_path.exists() {
+            fs::create_dir_all(&plugins_path)?;
+        }
+
+        plugins_path.canonicalize().map_err(anyhow::Error::from)
     }
+}
+
+fn checkout(uri: &RepoUri, path: &Path) -> Result<Repository> {
+    info!("Checking out plugin");
+    let (checkout_result, _) = prepare_clone_bare(format!("https://github.com/{}", &uri), path)?
+        .with_remote_name("main")?
+        .fetch_then_checkout(Discard, &IS_INTERRUPTED)?;
+
+    Ok(checkout_result.persist())
 }
 
 impl Source for Repo {
     fn source(&self) -> Result<String> {
         let path = self.path()?;
 
-        let repo = if !path.exists() {
-            let url = format!("https://github.com/{}", self.repo);
-            let (mut checkout_result, _) = prepare_clone_bare(url, &path)?
-                .with_remote_name("main")?
-                .fetch_then_checkout(Discard, &IS_INTERRUPTED)?;
-            checkout_result.main_worktree(Discard, &IS_INTERRUPTED)?.0
-        } else {
-            open(&path)?
+        let repo = match open(&path) {
+            Ok(r) => r,
+            Err(_) => checkout(&self.repo, &path)?,
         };
 
+        if repo.is_dirty()? {
+            let remote = repo.find_remote("main")?;
+            let fetch = remote
+                .connect(Fetch)?
+                .prepare_fetch(Discard, ref_map::Options::default())?;
+            fetch.receive(Discard, &IS_INTERRUPTED)?;
+        }
+
         let tree = match self.version {
-            Version::Stable => repo.find_reference("tags/latest")?.peel_to_tree()?,
+            Version::Stable => match repo.find_reference("tags/latest") {
+                Ok(mut reference) => reference.peel_to_tree()?,
+                Err(_) => repo.head_tree()?,
+            },
             Version::Latest => repo.head_tree()?,
             Version::Tagged(ref version) => repo
                 .find_reference(&format!("tags/{}", version))?
@@ -166,10 +200,9 @@ impl PartialEq for Dir {
 
 impl Hash for Dir {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        if let Ok(path) = self.canonicalize() {
-            path.hash(state)
-        } else {
-            self.dir.hash(state)
+        match self.canonicalize() {
+            Ok(path) => path.hash(state),
+            _ => self.dir.hash(state),
         };
     }
 }
@@ -221,7 +254,7 @@ impl Deref for TaggedTable {
 #[serde_as]
 #[derive(JsonSchema, Clone, Debug, Default, Serialize, Deserialize)]
 pub struct Plugin {
-    #[serde(flatten)]
+    #[serde(flatten, default)]
     pub source: RepoOrDir,
 
     #[serde(alias = "options", alias = "spec")]
@@ -250,6 +283,7 @@ impl Action for Plugin {
 
     fn plan(&self, _manifest: &Manifest, _context: &Contexts) -> Result<Vec<Step>> {
         let runtime = self.runtime()?;
+        info!("Planning plugin");
         let planned = self.opts.iter().filter_map(|opt| {
             json_to_lua_value(&opt.table, &runtime.lua)
                 .ok()
