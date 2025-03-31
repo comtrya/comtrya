@@ -5,7 +5,7 @@ mod plugin_spec;
 use std::{collections::BTreeMap, sync::OnceLock};
 
 use parking_lot::Mutex;
-use tealr::mlu::mlua::{Lua, Result};
+use tealr::mlu::mlua::{Lua, Result, StdLib};
 
 use crate::{atoms::plugin::PluginRuntimeSpec, utilities::lua::LuaRuntime};
 use plugin::{RepoOrDir, Source};
@@ -20,8 +20,12 @@ fn get_plugin(source: RepoOrDir) -> Result<PluginRuntimeSpec> {
         return Ok(spec);
     }
 
-    let lua = unsafe { Lua::unsafe_new() };
+    let lua = unsafe {
+        let lua_init = Lua::unsafe_new();
+        lua_init.load_std_libs(StdLib::ALL)?;
 
+        lua_init
+    };
     let runtime_spec = PluginRuntimeSpec {
         spec: lua.load(source.source()?).eval()?,
         lua: LuaRuntime(lua),
