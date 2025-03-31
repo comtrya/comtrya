@@ -25,7 +25,7 @@ pub fn get_privilege_provider(contexts: &Contexts) -> Option<String> {
 }
 
 #[derive(Eq, PartialEq, Debug, Clone, Default, Serialize, Deserialize, PartialOrd, Ord)]
-pub struct CustomPathBuf(Utf8PathBuf);
+pub struct CustomPathBuf(pub Utf8PathBuf);
 
 impl JsonSchema for CustomPathBuf {
     fn schema_name() -> String {

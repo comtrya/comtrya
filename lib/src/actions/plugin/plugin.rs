@@ -78,6 +78,18 @@ pub enum Version {
     Tagged(String),
 }
 
+impl Display for Version {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        let version = match self {
+            Version::Stable => "stable",
+            Version::Latest => "latest",
+            Version::Tagged(tag) => tag.as_str(),
+        };
+
+        write!(f, "{}", version)
+    }
+}
+
 #[serde_as]
 #[derive(JsonSchema, Serialize, Deserialize, Debug, Clone, Eq, PartialOrd, Ord)]
 pub struct Repo {
@@ -89,6 +101,11 @@ pub struct Repo {
     version: Version,
 }
 
+impl Display for Repo {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "{}:{}", self.repo, self.version)
+    }
+}
 impl Default for Repo {
     fn default() -> Self {
         Self {
@@ -184,6 +201,11 @@ pub struct Dir {
     dir: CustomPathBuf,
 }
 
+impl Display for Dir {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.as_str())
+    }
+}
 impl Deref for Dir {
     type Target = CustomPathBuf;
 
@@ -224,6 +246,16 @@ pub enum RepoOrDir {
     Invalid,
 }
 
+impl Display for RepoOrDir {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            RepoOrDir::Repo(repo) => write!(f, "{}", repo),
+            RepoOrDir::Dir(dir) => write!(f, "{}", dir),
+            RepoOrDir::Invalid => write!(f, "Invalid Repo or Directory"),
+        }
+    }
+}
+
 impl Source for RepoOrDir {
     fn source(&self) -> Result<String> {
         match self {
@@ -237,7 +269,7 @@ impl Source for RepoOrDir {
 #[derive(JsonSchema, Clone, Debug, Default, Serialize, Deserialize)]
 pub struct TaggedTable {
     #[serde(rename = "$key$")]
-    pub tag: String,
+    pub action_name: String,
 
     #[serde(flatten)]
     pub table: JsonValue,
@@ -263,8 +295,8 @@ pub struct Plugin {
 }
 
 impl Plugin {
-    fn runtime(&self) -> Result<PluginRuntimeSpec> {
-        get_plugin(self.source.clone()).map_err(anyhow::Error::from)
+    fn runtime(&self, contexts: Option<Contexts>) -> Result<PluginRuntimeSpec> {
+        get_plugin(&self.source, contexts).map_err(anyhow::Error::from)
     }
 }
 
@@ -276,25 +308,29 @@ impl Display for Plugin {
 
 impl Action for Plugin {
     fn summarize(&self) -> String {
-        self.runtime()
+        self.runtime(None)
             .and_then(|p| p.spec.summary.clone().context(""))
             .unwrap_or("Ran plugin".to_string())
     }
 
-    fn plan(&self, _manifest: &Manifest, _context: &Contexts) -> Result<Vec<Step>> {
-        let runtime = self.runtime()?;
-        info!("Planning plugin");
+    fn plan(&self, _manifest: &Manifest, context: &Contexts) -> Result<Vec<Step>> {
+        let runtime = self.runtime(Some(context.to_owned()))?;
         let planned = self.opts.iter().filter_map(|opt| {
             json_to_lua_value(&opt.table, &runtime.lua)
                 .ok()
-                .and_then(|v| runtime.plan_action(&opt.tag, v).and_then(Result::ok))
+                .and_then(|v| {
+                    runtime
+                        .plan_action(&opt.action_name, v)
+                        .and_then(Result::ok)
+                })
                 .map(|_| opt)
         });
 
         Ok(planned
+            .cloned()
             .map(|opt| Step {
                 atom: Box::new(PluginExec {
-                    plugin_impl: opt.tag.clone(),
+                    exec_name: opt.action_name,
                     runtime: runtime.clone(),
                     spec: opt.table.clone(),
                 }),
@@ -302,5 +338,72 @@ impl Action for Plugin {
                 finalizers: vec![],
             })
             .collect::<Vec<_>>())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::Config;
+    use crate::contexts::build_contexts;
+    use crate::manifests::Manifest;
+    use serde_json::json;
+    use std::fs::File;
+    use std::io::Write;
+    use tempfile::tempdir;
+
+    #[test]
+    fn plugin_can_plan() -> Result<()> {
+        // Create a temporary directory
+        let temp_dir = tempdir().expect("Failed to create temp dir");
+
+        // Create a plugin.lua file inside the temporary directory
+        let lua_file_path = temp_dir.path().join("plugin.lua");
+        let mut lua_file = File::create(&lua_file_path).expect("Failed to create lua file");
+        lua_file
+            .write_all(
+                r#"
+return {
+    name = "echo",
+    summary = "Echoes text",
+    actions = {
+        echo = {
+            plan = function() end,
+            exec = function(output, wait)
+                print(tostring(output.output))
+            end,
+        },
+    },
+}
+                "#
+                .as_bytes(),
+            )
+            .expect("Failed to write to lua file");
+
+        let manifest = Manifest::deserialize(json!({
+            "actions": [{
+                "action": "plugin",
+                "dir": lua_file_path,
+                "opts": {
+                    "echo": { "output": "foo" }
+                }
+            }]
+        }))?;
+
+        let mut steps = manifest.actions.first().unwrap().plan(
+            &manifest,
+            &build_contexts(&Config {
+                ..Default::default()
+            }),
+        )?;
+
+        assert_eq!(steps.len(), 1);
+
+        steps.first_mut().unwrap().atom.execute()?;
+
+        // Clean up the temporary directory
+        temp_dir.close().expect("Failed to close temp dir");
+
+        Ok(())
     }
 }

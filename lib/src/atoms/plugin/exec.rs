@@ -48,15 +48,9 @@ impl Ord for PluginRuntimeSpec {
 
 #[derive(Debug)]
 pub struct PluginExec {
-    pub plugin_impl: String,
+    pub exec_name: String,
     pub runtime: PluginRuntimeSpec,
     pub spec: serde_json::Value,
-}
-
-impl PluginExec {
-    pub fn run_function() {
-        todo!()
-    }
 }
 
 impl Atom for PluginExec {
@@ -69,8 +63,8 @@ impl Atom for PluginExec {
 
     fn execute(&mut self) -> Result<()> {
         self.runtime.exec_action(
-            &self.plugin_impl,
-            json_to_lua_value(&self.spec.clone(), &self.runtime.lua)?,
+            &self.exec_name,
+            json_to_lua_value(&self.spec, &self.runtime.lua)?,
         )?;
         Ok(())
     }
@@ -85,7 +79,6 @@ impl Atom for PluginExec {
 }
 impl Display for PluginExec {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        // NOTE: This should come from the plugin spec right?
-        write!(f, "Plugin: {:?}", self)
+        write!(f, "{}", self.runtime.name)
     }
 }
