@@ -289,9 +289,9 @@ pub struct Plugin {
     #[serde(flatten, default)]
     pub source: RepoOrDir,
 
-    #[serde(alias = "options", alias = "spec")]
+    #[serde(alias = "acts")]
     #[serde_as(as = "KeyValueMap<_>")]
-    pub opts: Vec<TaggedTable>,
+    pub actions: Vec<TaggedTable>,
 }
 
 impl Plugin {
@@ -315,7 +315,7 @@ impl Action for Plugin {
 
     fn plan(&self, _manifest: &Manifest, context: &Contexts) -> Result<Vec<Step>> {
         let runtime = self.runtime(Some(context.to_owned()))?;
-        let planned = self.opts.iter().filter_map(|opt| {
+        let planned = self.actions.iter().filter_map(|opt| {
             json_to_lua(&opt.table, &runtime.lua)
                 .ok()
                 .and_then(|v| {
