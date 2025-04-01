@@ -27,7 +27,7 @@ use tracing::{debug, info};
 use super::{get_plugin, PluginRuntimeSpec};
 use crate::{
     actions::Action, atoms::plugin::PluginExec, contexts::Contexts, manifests::Manifest,
-    steps::Step, utilities::lua::json_to_lua_value, utilities::CustomPathBuf,
+    steps::Step, utilities::lua::json_to_lua, utilities::CustomPathBuf,
 };
 
 #[derive(
@@ -316,7 +316,7 @@ impl Action for Plugin {
     fn plan(&self, _manifest: &Manifest, context: &Contexts) -> Result<Vec<Step>> {
         let runtime = self.runtime(Some(context.to_owned()))?;
         let planned = self.opts.iter().filter_map(|opt| {
-            json_to_lua_value(&opt.table, &runtime.lua)
+            json_to_lua(&opt.table, &runtime.lua)
                 .ok()
                 .and_then(|v| {
                     runtime

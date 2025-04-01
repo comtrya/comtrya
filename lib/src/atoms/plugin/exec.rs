@@ -10,7 +10,7 @@ use tracing::{debug, error, trace};
 use crate::{
     actions::PluginSpec,
     atoms::{Atom, Outcome},
-    utilities::lua::{json_to_lua_value, LuaRuntime},
+    utilities::lua::{json_to_lua, LuaRuntime},
 };
 
 #[derive(Clone, Debug, Default)]
@@ -62,10 +62,8 @@ impl Atom for PluginExec {
     }
 
     fn execute(&mut self) -> Result<()> {
-        self.runtime.exec_action(
-            &self.exec_name,
-            json_to_lua_value(&self.spec, &self.runtime.lua)?,
-        )?;
+        self.runtime
+            .exec_action(&self.exec_name, json_to_lua(&self.spec, &self.runtime.lua)?)?;
         Ok(())
     }
 

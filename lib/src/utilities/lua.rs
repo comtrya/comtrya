@@ -57,7 +57,7 @@ pub fn lua_value_to_json(value: LuaValue) -> JsonValue {
     }
 }
 
-pub fn json_to_lua_value(json: &JsonValue, lua: &Lua) -> Result<LuaValue, LuaError> {
+pub fn json_to_lua(json: &JsonValue, lua: &Lua) -> Result<LuaValue, LuaError> {
     match json {
         JsonValue::Null => Ok(LuaValue::Nil),
         JsonValue::Bool(b) => Ok(LuaValue::Boolean(*b)),
@@ -69,7 +69,7 @@ pub fn json_to_lua_value(json: &JsonValue, lua: &Lua) -> Result<LuaValue, LuaErr
         JsonValue::String(s) => Ok(LuaValue::String(lua.create_string(s)?)),
         JsonValue::Array(arr) => lua.create_table().map(|table| {
             arr.iter()
-                .filter_map(|value| json_to_lua_value(value, lua).ok())
+                .filter_map(|value| json_to_lua(value, lua).ok())
                 .enumerate()
                 .for_each(|(i, v)| {
                     if let Err(e) = table.set(i + 1, v) {
@@ -81,7 +81,7 @@ pub fn json_to_lua_value(json: &JsonValue, lua: &Lua) -> Result<LuaValue, LuaErr
         JsonValue::Object(map) => {
             let table = lua.create_table()?;
             for (k, v) in map {
-                table.set(k.clone(), json_to_lua_value(v, lua)?)?;
+                table.set(k.clone(), json_to_lua(v, lua)?)?;
             }
             Ok(LuaValue::Table(table))
         }
