@@ -1,21 +1,19 @@
-mod globals;
 #[allow(clippy::module_inception)]
 mod plugin;
-mod plugin_spec;
 
 use std::{collections::BTreeMap, sync::OnceLock};
 
 use parking_lot::Mutex;
 use tealr::mlu::mlua::{Lua, Result, StdLib};
 
-use crate::{atoms::plugin::PluginRuntimeSpec, contexts::Contexts, utilities::lua::LuaRuntime};
-use globals::setup_globals;
+use crate::{
+    atoms::plugin::{setup_globals, PluginSpec},
+    contexts::Contexts,
+};
+pub use plugin::Plugin;
 use plugin::{RepoOrDir, Source};
 
-pub use plugin::Plugin;
-pub use plugin_spec::PluginSpec;
-
-fn get_plugin(source: &RepoOrDir, contexts: Option<Contexts>) -> Result<PluginRuntimeSpec> {
+fn get_plugin(source: &RepoOrDir, contexts: Option<Contexts>) -> Result<PluginSpec> {
     let mut plugins = PLUGINS.get_or_init(|| Mutex::new(BTreeMap::new())).lock();
 
     if let Some(spec) = plugins.get(source).cloned() {
@@ -33,14 +31,11 @@ fn get_plugin(source: &RepoOrDir, contexts: Option<Contexts>) -> Result<PluginRu
         setup_globals(&lua, contexts)?;
     }
 
-    let runtime_spec = PluginRuntimeSpec {
-        spec: lua.load(source.source()?).eval()?,
-        lua: LuaRuntime(lua),
-    };
+    let plugin_spec: PluginSpec = lua.load(source.source()?).eval()?;
 
-    plugins.insert(source.to_owned(), runtime_spec.clone());
+    plugins.insert(source.to_owned(), plugin_spec.clone());
 
-    Ok(runtime_spec)
+    Ok(plugin_spec)
 }
 
-static PLUGINS: OnceLock<Mutex<BTreeMap<RepoOrDir, PluginRuntimeSpec>>> = OnceLock::new();
+static PLUGINS: OnceLock<Mutex<BTreeMap<RepoOrDir, PluginSpec>>> = OnceLock::new();

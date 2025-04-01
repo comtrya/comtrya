@@ -3,7 +3,7 @@ use std::{
     fs,
     hash::{Hash, Hasher},
     ops::Deref,
-    path::{Path, PathBuf},
+    path::PathBuf,
     str::FromStr,
 };
 
@@ -22,12 +22,16 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
 use serde_with::{serde_as, DisplayFromStr, KeyValueMap};
-use tracing::{debug, info};
+use tracing::{debug, error, info, instrument};
 
-use super::{get_plugin, PluginRuntimeSpec};
+use super::get_plugin;
 use crate::{
-    actions::Action, atoms::plugin::PluginExec, contexts::Contexts, manifests::Manifest,
-    steps::Step, utilities::lua::json_to_lua, utilities::CustomPathBuf,
+    actions::Action,
+    atoms::plugin::{PluginExec, PluginSpec},
+    contexts::Contexts,
+    manifests::Manifest,
+    steps::Step,
+    utilities::{lua::json_to_lua, CustomPathBuf},
 };
 
 #[derive(
@@ -91,7 +95,9 @@ impl Display for Version {
 }
 
 #[serde_as]
-#[derive(JsonSchema, Serialize, Deserialize, Debug, Clone, Eq, PartialOrd, Ord)]
+#[derive(
+    JsonSchema, Serialize, Deserialize, Debug, Clone, Eq, PartialOrd, Default, Ord, PartialEq,
+)]
 pub struct Repo {
     #[serde(alias = "repository")]
     #[serde_as(as = "DisplayFromStr")]
@@ -106,37 +112,23 @@ impl Display for Repo {
         write!(f, "{}:{}", self.repo, self.version)
     }
 }
-impl Default for Repo {
-    fn default() -> Self {
-        Self {
-            repo: RepoUri::default(),
-            version: Version::Stable,
-        }
-    }
-}
-
-impl PartialEq for Repo {
-    fn eq(&self, other: &Self) -> bool {
-        self.path().ok() == other.path().ok()
-    }
-}
 
 impl Hash for Repo {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        if let Ok(path) = self.path() {
-            path.hash(state);
-        } else {
-            self.repo.to_string().hash(state);
-            self.version.hash(state);
+        match self.path() {
+            Ok(path) => path.hash(state),
+            _ => {
+                self.repo.to_string().hash(state);
+                self.version.hash(state);
+            }
         }
     }
 }
 
 impl Repo {
     fn path(&self) -> Result<PathBuf> {
-        let path = data_local_dir().context("Failed to locate local data directory")?;
-
-        let plugins_path = path
+        let plugins_path = data_local_dir()
+            .context("Failed to locate local data directory")?
             .join("comtrya")
             .join("plugins")
             .join(self.repo.to_string());
@@ -147,15 +139,16 @@ impl Repo {
 
         plugins_path.canonicalize().map_err(anyhow::Error::from)
     }
-}
 
-fn checkout(uri: &RepoUri, path: &Path) -> Result<Repository> {
-    info!("Checking out plugin");
-    let (checkout_result, _) = prepare_clone_bare(format!("https://github.com/{}", &uri), path)?
-        .with_remote_name("main")?
-        .fetch_then_checkout(Discard, &IS_INTERRUPTED)?;
+    fn checkout(&self) -> Result<Repository> {
+        info!("Checking out plugin");
+        let (checkout_result, _) =
+            prepare_clone_bare(format!("https://github.com/{}", &self.repo), self.path()?)?
+                .with_remote_name("main")?
+                .fetch_then_checkout(Discard, &IS_INTERRUPTED)?;
 
-    Ok(checkout_result.persist())
+        Ok(checkout_result.persist())
+    }
 }
 
 impl Source for Repo {
@@ -164,15 +157,14 @@ impl Source for Repo {
 
         let repo = match open(&path) {
             Ok(r) => r,
-            Err(_) => checkout(&self.repo, &path)?,
+            Err(_) => self.checkout()?,
         };
 
         if repo.is_dirty()? {
-            let remote = repo.find_remote("main")?;
-            let fetch = remote
+            repo.find_remote("main")?
                 .connect(Fetch)?
-                .prepare_fetch(Discard, ref_map::Options::default())?;
-            fetch.receive(Discard, &IS_INTERRUPTED)?;
+                .prepare_fetch(Discard, ref_map::Options::default())?
+                .receive(Discard, &IS_INTERRUPTED)?;
         }
 
         let tree = match self.version {
@@ -190,7 +182,8 @@ impl Source for Repo {
             Some(entry) if entry.inner.mode.kind() == EntryKind::Blob => {
                 Ok(entry.object()?.data.to_str_lossy().to_string())
             }
-            _ => Err(anyhow!("No plugin.lua found")),
+            Some(entry) => Err(anyhow!("plugin.lua is a {:?}", entry.inner.mode.kind())),
+            None => Err(anyhow!("No plugin.lua found")),
         }
     }
 }
@@ -241,7 +234,9 @@ impl Source for Dir {
 #[serde(untagged)]
 pub enum RepoOrDir {
     Repo(Repo),
+
     Dir(Dir),
+
     #[default]
     Invalid,
 }
@@ -295,7 +290,7 @@ pub struct Plugin {
 }
 
 impl Plugin {
-    fn runtime(&self, contexts: Option<Contexts>) -> Result<PluginRuntimeSpec> {
+    fn runtime(&self, contexts: Option<Contexts>) -> Result<PluginSpec> {
         get_plugin(&self.source, contexts).map_err(anyhow::Error::from)
     }
 }
@@ -309,35 +304,55 @@ impl Display for Plugin {
 impl Action for Plugin {
     fn summarize(&self) -> String {
         self.runtime(None)
-            .map(|p| p.spec.summary())
+            .as_ref()
+            .map(PluginSpec::summary)
             .unwrap_or("Ran plugin".to_string())
     }
 
+    #[instrument(skip_all)]
     fn plan(&self, _manifest: &Manifest, context: &Contexts) -> Result<Vec<Step>> {
         let runtime = self.runtime(Some(context.to_owned()))?;
-        let planned = self.actions.iter().filter_map(|opt| {
-            json_to_lua(&opt.table, &runtime.lua)
-                .ok()
-                .and_then(|v| {
-                    runtime
-                        .plan_action(&opt.action_name, v)
-                        .and_then(Result::ok)
-                })
-                .map(|_| opt)
-        });
+        let mut actions = Vec::new();
 
-        Ok(planned
-            .cloned()
-            .map(|opt| Step {
-                atom: Box::new(PluginExec {
-                    exec_name: opt.action_name,
-                    runtime: runtime.clone(),
-                    spec: opt.table.clone(),
-                }),
+        for action in self.actions.clone() {
+            let table = action.table;
+            let name = action.action_name;
+            let Some(plugin_action) = runtime.get_action(&name) else {
+                error!("Action {} not found", &name);
+                continue;
+            };
+
+            let v = match json_to_lua(&table, &runtime.lua) {
+                Ok(value) => value,
+                Err(e) => {
+                    error!("Failed to convert arguments for {} to Lua: {}", &name, e);
+                    continue;
+                }
+            };
+
+            match plugin_action.plan.as_ref() {
+                Some(plan) => match plan.call::<Option<String>>(v)? {
+                    Some(plan_result) => info!(plan_result),
+                    None => info!("Plan for {} completed", &name),
+                },
+                None => {
+                    error!("Plan for {} failed", &name);
+                    continue;
+                }
+            }
+            actions.push(Step {
+                atom: Box::new(PluginExec::new(
+                    name,
+                    plugin_action.exec.0.clone(),
+                    json_to_lua(&table, &runtime.lua)?,
+                )),
+                // INFO: May want to add initializers and finalizers to plugin specs in the future
                 initializers: vec![],
                 finalizers: vec![],
             })
-            .collect::<Vec<_>>())
+        }
+
+        Ok(actions)
     }
 }
 

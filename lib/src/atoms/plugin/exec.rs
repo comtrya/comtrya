@@ -4,13 +4,13 @@ use std::{
 };
 
 use anyhow::Result;
+use tealr::mlu::mlua::{Function, Value as LuaValue};
 #[allow(unused_imports)]
 use tracing::{debug, error, trace};
 
 use crate::{
-    actions::PluginSpec,
-    atoms::{Atom, Outcome},
-    utilities::lua::{json_to_lua, LuaRuntime},
+    atoms::{plugin::PluginSpec, Atom, Outcome},
+    utilities::lua::LuaRuntime,
 };
 
 #[derive(Clone, Debug, Default)]
@@ -49,8 +49,20 @@ impl Ord for PluginRuntimeSpec {
 #[derive(Debug)]
 pub struct PluginExec {
     pub exec_name: String,
-    pub runtime: PluginRuntimeSpec,
-    pub spec: serde_json::Value,
+    pub func: Function,
+    pub spec: LuaValue,
+    output: Option<String>,
+}
+
+impl PluginExec {
+    pub fn new(exec_name: String, func: Function, spec: LuaValue) -> Self {
+        Self {
+            exec_name,
+            func,
+            spec,
+            output: None,
+        }
+    }
 }
 
 impl Atom for PluginExec {
@@ -62,21 +74,18 @@ impl Atom for PluginExec {
     }
 
     fn execute(&mut self) -> Result<()> {
-        self.runtime
-            .exec_action(&self.exec_name, json_to_lua(&self.spec, &self.runtime.lua)?)?;
+        // TODO: Should this accept a LuaUserError? I don't see a need for this to accept a string
+        // when the plugin can just print what it needs anyway.
+        self.output = self.func.call::<Option<String>>(&self.spec)?;
         Ok(())
     }
 
     fn output_string(&self) -> String {
-        self.spec
-            .get("action")
-            .and_then(|action| action.as_str())
-            .map(|s| s.to_string())
-            .unwrap_or(String::from("unknown"))
+        self.output.as_deref().unwrap_or_default().to_string()
     }
 }
 impl Display for PluginExec {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.runtime.name())
+        write!(f, "{}", self.exec_name)
     }
 }

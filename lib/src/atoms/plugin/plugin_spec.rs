@@ -15,7 +15,7 @@ use tealr::{
 use crate::utilities::lua::LuaFunction;
 
 #[derive(Debug, Clone, Default)]
-struct ComparableLua(Lua);
+pub struct ComparableLua(Lua);
 
 impl Deref for ComparableLua {
     type Target = Lua;
@@ -109,7 +109,7 @@ pub struct PluginSpec {
     summary: Option<StringOrFunction>,
     pub actions: BTreeMap<String, PluginAction>,
     #[tealr(skip)]
-    runtime: ComparableLua,
+    pub lua: ComparableLua,
 }
 
 impl PluginSpec {
@@ -196,7 +196,7 @@ impl FromLua for PluginSpec {
             name,
             summary,
             actions,
-            runtime: ComparableLua(lua.to_owned()),
+            lua: ComparableLua(lua.to_owned()),
         })
     }
 }

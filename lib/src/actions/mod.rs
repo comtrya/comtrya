@@ -24,7 +24,7 @@ use file::unarchive::FileUnarchive;
 use git::GitClone;
 use group::add::GroupAdd;
 use package::{PackageInstall, PackageRepository};
-pub use plugin::{Plugin, PluginSpec};
+use plugin::Plugin;
 use rhai::Engine;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
