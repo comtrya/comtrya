@@ -309,7 +309,7 @@ impl Display for Plugin {
 impl Action for Plugin {
     fn summarize(&self) -> String {
         self.runtime(None)
-            .and_then(|p| p.spec.summary.clone().context(""))
+            .map(|p| p.spec.summary())
             .unwrap_or("Ran plugin".to_string())
     }
 

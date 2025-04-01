@@ -77,6 +77,6 @@ impl Atom for PluginExec {
 }
 impl Display for PluginExec {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.runtime.name)
+        write!(f, "{}", self.runtime.name())
     }
 }
