@@ -1,6 +1,6 @@
 # Plugins
 
-Plugins are created by the community to extend the functionality of comtrya. They allow users to customize and enhance their experience by adding new features or modifying existing ones.
+Plugins are created by the community to extend the functionality of Comtrya. They allow users to customize and enhance their experience by adding new features or modifying existing ones.
 
 Plugins can be used to automate tasks, integrate with other tools, or provide additional configuration options.
 
@@ -17,24 +17,24 @@ actions:
     repo: username/repo
     version: *
     opts:
-      action:
+      - action-name:
         key1: value1
         key2: value2
 ```
 
 ## Fields
 
-- **Repository**: To use a repository, set the `repo` field to the GitHub repository in the format `username/repo`.
-  - **repo**: The GitHub repository in the format `username/repo`. (other providers will be supported in the future)
-  - **version**: The version of the plugin.
-    - *Stable:*  Ommitting the version or explicitely statting as `"stable"` will use the most recent release.
-    - *latest:* Set the version to `"*"` or explicitely state `"latest"` to use the most recent commit.
-    - *Tagged:* Set the version to a specific tag, such as `"v1.2.3"` and that manifest will use the commit associated with that tag.
+[!NOTE] Plugins can be loaded from a remote repository or locally. Only one location can be used per action. (i.e `dir` and `repo` are exclusive (i.e cannot be used together)
 
-- **options**: A list of options for the plugin. (Aliases: `opts` and `spec`)
-  - **tag**: A unique identifier for the plugin execution.
-  - **Plugin specific!**: Additional configuration options specific to the plugin.
-    - Refer to the plugin's documentation for available specifications.
+- **dir**: The path to the plugin directory. (Aliases: `directory`, `path`)
+- **repository**: The repository in the format `username/repo`. (Alias: `repo`)
+  - **version**: The version of the plugin. (Optional)
+    - *`stable`:* Use the most recent release. (Default)
+    - *`latest`:* Use the most recent commit. (Aliases: `*`)
+    - *`version`:* Use a release tag from the repository.
+      - Plugin actions can use different versions of the same plugin, but only one version per action.
+- **actions**: A list of options for the plugin. (Alias: `acts`)
+  - **Plugin specific!**: Refer to the plugin's documentation for available actions and options.
 
 ## Examples
 
@@ -43,10 +43,10 @@ actions:
 ```yaml
 plugins:
   - source:
-      repo: example_user/example_plugin
-      version: stable # stable or omit for latest release
-    options:
-      - tag: configure
+    repo: example_user/example_plugin
+    version: stable # stable or omit for latest release
+    actions:
+      - configure:
         setting: default
 ```
 
@@ -58,7 +58,7 @@ plugins:
       repo: another_user/another_plugin
       version: latest # latest or *
     options:
-      - tag: initialize
+      - initialize:
         mode: fast
 ```
 
@@ -70,12 +70,10 @@ plugins:
       repo: some_user/some_plugin
       version: v1.2.3 # must match tag or may not work
     options:
-      - tag: deploy
+      - deploy:
         environment: production
 ```
 
 ## Additional Notes
 
-- Ensure that the repository is accessible and the specified version exists.
-- The `options` field allows you to customize the behavior of the plugin. Refer to the plugin's documentation for available options.
 
