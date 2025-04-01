@@ -1,0 +1,10 @@
+actions:
+  # FIXME: Please add "plugin" to yaml schema
+  - action: plugin
+    # FIXME: Please host this repo using comtrya org
+    # so it's not referencing my outside repo
+    repo: JustinBacher/comtrya-example-plugin
+    version:
+    opts:
+      echo:
+        output: hello world

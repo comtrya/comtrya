@@ -6,11 +6,11 @@ mod git;
 mod group;
 mod macos;
 mod package;
+mod plugin;
 mod user;
 
-use crate::contexts::Contexts;
-use crate::manifests::Manifest;
-use crate::steps::Step;
+use crate::actions::macos::MacOSDefault;
+use crate::{contexts::Contexts, manifests::Manifest, steps::Step};
 use anyhow::anyhow;
 use binary::BinaryGitHub;
 use command::run::RunCommand;
@@ -23,19 +23,19 @@ use file::remove::FileRemove;
 use file::unarchive::FileUnarchive;
 use git::GitClone;
 use group::add::GroupAdd;
-use macos::MacOSDefault;
 use package::{PackageInstall, PackageRepository};
+use plugin::Plugin;
 use rhai::Engine;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
+use std::ops::Deref;
 use tracing::{error, warn};
 use user::add::UserAdd;
 
 use self::user::add_group::UserAddGroup;
 
 #[derive(JsonSchema, Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Default)]
-#[serde(deny_unknown_fields)]
 pub struct ConditionalVariantAction<T> {
     #[serde(flatten)]
     pub action: T,
@@ -54,6 +54,12 @@ pub struct Variant<T> {
 
     #[serde(rename = "where")]
     pub condition: Option<String>,
+}
+
+impl<T> Variant<T> {
+    pub fn new(action: T, condition: Option<String>) -> Self {
+        Self { action, condition }
+    }
 }
 
 impl<T> Action for ConditionalVariantAction<T>
@@ -104,7 +110,7 @@ where
 }
 
 #[derive(JsonSchema, Clone, Debug, Serialize, Deserialize)]
-#[serde(deny_unknown_fields, tag = "action")]
+#[serde(tag = "action")]
 pub enum Actions {
     #[serde(rename = "command.run", alias = "cmd.run")]
     CommandRun(ConditionalVariantAction<RunCommand>),
@@ -164,6 +170,9 @@ pub enum Actions {
 
     #[serde(rename = "user.group")]
     UserAddGroup(ConditionalVariantAction<UserAddGroup>),
+
+    #[serde(rename = "plugin")]
+    Plugin(ConditionalVariantAction<Plugin>),
 }
 
 impl Actions {
@@ -187,6 +196,34 @@ impl Actions {
             Actions::UserAddGroup(a) => a,
             Actions::FileRemove(a) => a,
             Actions::DirectoryRemove(a) => a,
+            Actions::Plugin(a) => a,
+        }
+    }
+}
+
+impl Deref for Actions {
+    type Target = dyn Action;
+    fn deref(&self) -> &Self::Target {
+        match self {
+            Actions::BinaryGitHub(a) => a,
+            Actions::CommandRun(a) => a,
+            Actions::DirectoryCopy(a) => a,
+            Actions::DirectoryCreate(a) => a,
+            Actions::FileCopy(a) => a,
+            Actions::FileChown(a) => a,
+            Actions::FileDownload(a) => a,
+            Actions::FileLink(a) => a,
+            Actions::FileUnarchive(a) => a,
+            Actions::GitClone(a) => a,
+            Actions::GroupAdd(a) => a,
+            Actions::MacOSDefault(a) => a,
+            Actions::PackageInstall(a) => a,
+            Actions::PackageRepository(a) => a,
+            Actions::UserAdd(a) => a,
+            Actions::UserAddGroup(a) => a,
+            Actions::FileRemove(a) => a,
+            Actions::DirectoryRemove(a) => a,
+            Actions::Plugin(a) => a,
         }
     }
 }
@@ -212,6 +249,7 @@ impl Display for Actions {
             Actions::PackageRepository(_) => "package.repository",
             Actions::UserAdd(_) => "user.add",
             Actions::UserAddGroup(_) => "user.group",
+            Actions::Plugin(_) => "plugin",
         };
 
         write!(f, "{}", name)

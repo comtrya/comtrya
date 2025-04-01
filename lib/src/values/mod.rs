@@ -5,6 +5,8 @@ use std::{
     path::PathBuf,
 };
 
+use serde_json::Value as JsonValue;
+
 use serde::{
     de::{Error as SError, SeqAccess, Visitor},
     Deserialize, Deserializer, Serialize,
@@ -305,6 +307,38 @@ impl From<OsString> for Value {
     }
 }
 
+impl From<i64> for Value {
+    fn from(value: i64) -> Self {
+        Self::Number(Number {
+            inner: NumberVariant::Signed(value),
+        })
+    }
+}
+
+impl From<u64> for Value {
+    fn from(value: u64) -> Self {
+        Self::Number(Number {
+            inner: NumberVariant::Unsigned(value),
+        })
+    }
+}
+
+impl From<f64> for Value {
+    fn from(value: f64) -> Self {
+        Self::Number(Number {
+            inner: NumberVariant::Float(value),
+        })
+    }
+}
+
+impl From<bool> for Value {
+    fn from(value: bool) -> Self {
+        Self::Number(Number {
+            inner: NumberVariant::Unsigned(value as u64),
+        })
+    }
+}
+
 impl From<PathBuf> for Value {
     fn from(from: PathBuf) -> Self {
         Value::String(from.display().to_string())
@@ -317,18 +351,82 @@ impl<T: Into<Value>> From<Vec<T>> for Value {
     }
 }
 
-impl ToString for Value {
-    fn to_string(&self) -> String {
-        match self {
-            Value::Null => "null".to_string(),
-            Value::String(string) => string.to_owned(),
-            Value::Number(number) => number.to_string(),
-            Value::List(list) => list
-                .iter()
-                .map(|value| value.to_string())
-                .collect::<Vec<String>>()
-                .join(","),
-        }
+impl TryFrom<JsonValue> for Value {
+    type Error = anyhow::Error;
+
+    fn try_from(from: JsonValue) -> Result<Self, Self::Error> {
+        let value = match from {
+            JsonValue::Null => Self::Null,
+            JsonValue::Bool(b) => b.into(),
+            JsonValue::Number(number) => {
+                if number.is_u64() {
+                    match number.as_u64() {
+                        Some(n) => n.into(),
+                        None => {
+                            return Err(anyhow::anyhow!(
+                                "Failed converting number {:?} to json.",
+                                number
+                            ))
+                        }
+                    }
+                } else if number.is_i64() {
+                    match number.as_i64() {
+                        Some(n) => n.into(),
+                        None => {
+                            return Err(anyhow::anyhow!(
+                                "Failed converting number {:?} to json.",
+                                number
+                            ))
+                        }
+                    }
+                } else {
+                    match number.as_f64() {
+                        Some(n) => n.into(),
+                        None => {
+                            return Err(anyhow::anyhow!(
+                                "Failed converting number {:?} to json.",
+                                number
+                            ))
+                        }
+                    }
+                }
+            }
+            JsonValue::String(s) => Self::String(s),
+            JsonValue::Array(a) => Self::List(
+                a.into_iter()
+                    .map(TryInto::try_into)
+                    .filter_map(Result::ok)
+                    .collect(),
+            ),
+            JsonValue::Object(o) => Self::List(
+                o.values()
+                    .cloned()
+                    .map(TryInto::try_into)
+                    .filter_map(Result::ok)
+                    .collect(),
+            ),
+        };
+
+        Ok(value)
+    }
+}
+
+impl Display for Value {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                Value::Null => "null".to_string(),
+                Value::String(string) => string.to_owned(),
+                Value::Number(number) => number.to_string(),
+                Value::List(list) => list
+                    .iter()
+                    .map(|value| value.to_string())
+                    .collect::<Vec<String>>()
+                    .join(","),
+            }
+        )
     }
 }
 
