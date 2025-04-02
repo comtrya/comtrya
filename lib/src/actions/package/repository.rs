@@ -1,8 +1,10 @@
 use super::providers::PackageProviders;
-use crate::actions::Action;
+use super::PACKAGE_LOCK;
+use crate::actions::{Action, Actions};
 use crate::contexts::Contexts;
 use crate::manifests::Manifest;
 use crate::steps::Step;
+use crate::utilities::password_manager::PasswordManager;
 use anyhow::anyhow;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -28,6 +30,7 @@ pub struct RepositoryKey {
     pub fingerprint: Option<String>,
 }
 
+#[async_trait::async_trait]
 impl Action for PackageRepository {
     fn summarize(&self) -> String {
         format!("Adding repository {}", self.name)
@@ -48,23 +51,38 @@ impl Action for PackageRepository {
 
         // If the provider isn't available, see if we can bootstrap it
         if !provider.available() {
-            if provider.bootstrap(&context).is_empty() {
+            let mut bootstrap = provider.bootstrap(context);
+
+            if bootstrap.is_empty() {
                 return Err(anyhow!(
                     "Package Provider, {}, isn't available. Skipping action",
                     provider.name()
                 ));
             }
 
-            atoms.append(&mut provider.bootstrap(&context));
+            atoms.append(&mut bootstrap);
         }
 
         if !provider.has_repository(self) {
-            atoms.append(&mut provider.add_repository(self, &context)?);
+            atoms.append(&mut provider.add_repository(self, context)?);
         }
 
         span.exit();
 
         Ok(atoms)
+    }
+
+    async fn execute(
+        &self,
+        dry_run: bool,
+        action: &Actions,
+        manifest: &Manifest,
+        contexts: &Contexts,
+        password_manager: Option<PasswordManager>,
+    ) -> anyhow::Result<()> {
+        // Limit concurrent package repository execs to run exclusively of each-other
+        let _permit = PACKAGE_LOCK.acquire().await?;
+        Action::execute(self, dry_run, action, manifest, contexts, password_manager).await
     }
 }
 

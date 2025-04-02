@@ -23,6 +23,7 @@ update-informer = "1.1"
 dirs-next = "2.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_yml = "0"
+tokio = { version = "1.43.0", features = ["full"] }
 
 [dev-dependencies]
 assert_cmd = "2.0"

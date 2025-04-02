@@ -7,6 +7,7 @@ use crate::steps::Step;
 use crate::utilities;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
+use std::iter::once;
 use std::process::Command;
 use tracing::warn;
 use tracing::{debug, trace};
@@ -21,18 +22,14 @@ impl PackageProvider for Paru {
     }
 
     fn available(&self) -> bool {
-        match which("paru") {
-            Ok(_) => true,
-            Err(_) => {
-                warn!(message = "paru not available");
-                false
-            }
-        }
+        which("paru")
+            .inspect_err(|_| warn!(message = "paru not available"))
+            .is_ok()
     }
 
     fn bootstrap(&self, contexts: &Contexts) -> Vec<Step> {
         let privilege_provider =
-            utilities::get_privilege_provider(&contexts).unwrap_or_else(|| String::from("sudo"));
+            utilities::get_privilege_provider(contexts).unwrap_or(String::from("sudo"));
 
         vec![
             Step {
@@ -46,7 +43,7 @@ impl PackageProvider for Paru {
                         String::from("git"),
                     ],
                     privileged: true,
-                    privilege_provider: privilege_provider.clone(),
+                    privilege_provider,
                     ..Default::default()
                 }),
                 initializers: vec![],
@@ -93,11 +90,7 @@ impl PackageProvider for Paru {
     fn query(&self, package: &PackageVariant) -> anyhow::Result<Vec<String>> {
         let requested_already_installed: HashSet<String> = String::from_utf8(
             Command::new("pacman")
-                .args(
-                    vec![String::from("-Qq")]
-                        .into_iter()
-                        .chain(package.packages().into_iter()),
-                )
+                .args(once(String::from("-Qq")).chain(package.packages()))
                 .output()?
                 .stdout,
         )?
@@ -132,12 +125,13 @@ impl PackageProvider for Paru {
                 arguments: [
                     vec![
                         String::from("-Sq"),
+                        String::from("--sudoflags"),
+                        String::from("-S"),
                         String::from("--batchinstall"),
                         String::from("--needed"),
                         String::from("--noconfirm"),
                         String::from("--noprogressbar"),
                         String::from("--skipreview"),
-                        String::from("--sudoloop"),
                         String::from("--useask"),
                     ],
                     package.extra_args.clone(),

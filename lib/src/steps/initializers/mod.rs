@@ -9,8 +9,8 @@ pub use file_exists::FileExists;
 
 #[allow(dead_code)]
 pub enum FlowControl {
-    Ensure(Box<dyn Initializer>),
-    SkipIf(Box<dyn Initializer>),
+    Ensure(Box<dyn Initializer + Send + Sync>),
+    SkipIf(Box<dyn Initializer + Send + Sync>),
 }
 
 /// Initializers allow us to modify or skip the execution of an atom

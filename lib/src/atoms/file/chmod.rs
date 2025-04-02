@@ -1,4 +1,5 @@
 use crate::atoms::Outcome;
+use crate::utilities::password_manager::PasswordManager;
 
 use super::super::Atom;
 use super::FileAtom;
@@ -30,6 +31,7 @@ impl std::fmt::Display for Chmod {
 use {std::os::unix::prelude::PermissionsExt, tracing::error};
 
 #[cfg(unix)]
+#[async_trait::async_trait]
 impl Atom for Chmod {
     fn plan(&self) -> anyhow::Result<Outcome> {
         // If the file doesn't exist, assume it's because
@@ -67,7 +69,7 @@ impl Atom for Chmod {
         })
     }
 
-    fn execute(&mut self) -> anyhow::Result<()> {
+    async fn execute(&mut self, _: Option<PasswordManager>) -> anyhow::Result<()> {
         std::fs::set_permissions(
             self.path.as_path(),
             std::fs::Permissions::from_mode(self.mode),
@@ -78,6 +80,7 @@ impl Atom for Chmod {
 }
 
 #[cfg(not(unix))]
+#[async_trait]
 impl Atom for Chmod {
     fn plan(&self) -> anyhow::Result<Outcome> {
         // Never run
@@ -140,8 +143,8 @@ mod tests {
         assert_eq!(true, file_chmod.plan().unwrap().should_run);
     }
 
-    #[test]
-    fn it_can_execute() {
+    #[tokio::test]
+    async fn it_can_execute() {
         let temp_dir = match tempfile::tempdir() {
             std::result::Result::Ok(dir) => dir,
             std::result::Result::Err(_) => {
@@ -180,7 +183,7 @@ mod tests {
         };
 
         assert_eq!(true, file_chmod.plan().unwrap().should_run);
-        assert_eq!(true, file_chmod.execute().is_ok());
+        assert_eq!(true, file_chmod.execute(None).await.is_ok());
         assert_eq!(false, file_chmod.plan().unwrap().should_run);
     }
 }

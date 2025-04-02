@@ -8,13 +8,13 @@ pub use output_contains::OutputContains;
 
 #[allow(dead_code)]
 pub enum FlowControl {
-    Ensure(Box<dyn Finalizer>),
-    StopIf(Box<dyn Finalizer>),
+    Ensure(Box<dyn Finalizer + Send + Sync>),
+    StopIf(Box<dyn Finalizer + Send + Sync>),
 }
 
 /// Finalizers allow us to store data within the manifests KV store,
 /// or to end the execution of atoms for the action
-pub trait Finalizer {
+pub trait Finalizer: Send + Sync {
     fn finalize(&self, atom: &dyn Atom) -> anyhow::Result<bool>;
 }
 

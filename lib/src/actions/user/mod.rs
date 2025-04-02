@@ -55,39 +55,23 @@ pub struct UserVariant {
 
 impl From<&User> for UserVariant {
     fn from(user: &User) -> Self {
-        let os = os_info::get();
-
-        // Check for variant configuration for this OS
-        let variant = user.variants.get(&os.os_type());
-
-        // No variant overlays
-        if variant.is_none() {
-            return UserVariant {
-                provider: user.provider.clone(),
-                username: user.username.clone(),
-                home_dir: user.home_dir.clone(),
-                fullname: user.fullname.clone(),
-                shell: user.shell.clone(),
-                group: user.group.clone(),
-            };
+        let user = user.clone();
+        let mut user_variant = UserVariant {
+            provider: user.provider,
+            username: user.username,
+            home_dir: user.home_dir,
+            fullname: user.fullname,
+            shell: user.shell,
+            group: user.group,
         };
 
-        // .unwrap() is safe here because we checked for None above
-        let variant = variant.unwrap();
+        let Some(variant) = user.variants.get(&os_info::get().os_type()) else {
+            return user_variant;
+        };
 
         debug!(message = "Built Variant", variant = ?variant);
 
-        let mut user = UserVariant {
-            provider: user.provider.clone(),
-            username: user.username.clone(),
-            home_dir: user.home_dir.clone(),
-            fullname: user.fullname.clone(),
-            shell: user.shell.clone(),
-            group: user.group.clone(),
-        };
-
-        user.provider = variant.provider.clone();
-
-        user
+        user_variant.provider = variant.provider.clone();
+        user_variant
     }
 }

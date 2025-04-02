@@ -32,7 +32,7 @@ impl PackageProvider for Yay {
 
     fn bootstrap(&self, contexts: &Contexts) -> Vec<Step> {
         let privilege_provider =
-            utilities::get_privilege_provider(&contexts).unwrap_or_else(|| "sudo".to_string());
+            utilities::get_privilege_provider(contexts).unwrap_or_else(|| "sudo".to_string());
 
         vec![
             Step {

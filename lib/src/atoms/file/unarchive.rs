@@ -4,6 +4,7 @@ use flate2::read::GzDecoder;
 use tar::Archive;
 
 use crate::atoms::{Atom, Outcome};
+use crate::utilities::password_manager::PasswordManager;
 
 use super::FileAtom;
 
@@ -19,6 +20,7 @@ impl FileAtom for Unarchive {
     }
 }
 
+#[async_trait::async_trait]
 impl Atom for Unarchive {
     // Determine if this atom needs to run
     fn plan(&self) -> anyhow::Result<Outcome> {
@@ -42,7 +44,7 @@ impl Atom for Unarchive {
     }
 
     // Apply new to old
-    fn execute(&mut self) -> anyhow::Result<()> {
+    async fn execute(&mut self, _: Option<PasswordManager>) -> anyhow::Result<()> {
         let tar_gz = File::open(&self.origin)?;
         let tar = GzDecoder::new(tar_gz);
         let mut archive = Archive::new(tar);

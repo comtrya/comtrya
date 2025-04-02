@@ -2,6 +2,7 @@ use crate::atoms::Outcome;
 
 use super::super::Atom;
 use super::FileAtom;
+use crate::utilities::password_manager::PasswordManager;
 use std::path::PathBuf;
 
 pub struct Create {
@@ -20,6 +21,7 @@ impl std::fmt::Display for Create {
     }
 }
 
+#[async_trait::async_trait]
 impl Atom for Create {
     fn plan(&self) -> anyhow::Result<Outcome> {
         Ok(Outcome {
@@ -28,7 +30,7 @@ impl Atom for Create {
         })
     }
 
-    fn execute(&mut self) -> anyhow::Result<()> {
+    async fn execute(&mut self, _: Option<PasswordManager>) -> anyhow::Result<()> {
         std::fs::File::create(&self.path)?;
 
         Ok(())
@@ -63,8 +65,8 @@ mod tests {
         assert_eq!(false, file_create.plan().unwrap().should_run);
     }
 
-    #[test]
-    fn it_can_execute() {
+    #[tokio::test]
+    async fn it_can_execute() {
         let temp_dir = match tempfile::tempdir() {
             std::result::Result::Ok(dir) => dir,
             std::result::Result::Err(_) => {
@@ -77,7 +79,7 @@ mod tests {
             path: temp_dir.path().join("create-me"),
         };
 
-        assert_eq!(true, file_create.execute().is_ok());
+        assert_eq!(true, file_create.execute(None).await.is_ok());
         assert_eq!(false, file_create.plan().unwrap().should_run);
     }
 }

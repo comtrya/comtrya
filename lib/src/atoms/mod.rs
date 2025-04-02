@@ -4,6 +4,8 @@ pub mod file;
 pub mod git;
 pub mod http;
 
+use crate::utilities::password_manager::PasswordManager;
+
 pub enum SideEffect {}
 
 pub struct Outcome {
@@ -11,16 +13,12 @@ pub struct Outcome {
     pub should_run: bool,
 }
 
-pub trait Atom: std::fmt::Display {
-    // Determine if this atom needs to run
+#[async_trait::async_trait]
+pub trait Atom: std::fmt::Display + Send + Sync {
     fn plan(&self) -> anyhow::Result<Outcome>;
 
-    // Apply new to old
-    fn execute(&mut self) -> anyhow::Result<()>;
+    async fn execute(&mut self, _: Option<PasswordManager>) -> anyhow::Result<()>;
 
-    // These methods allow for finalizers to query the outcome of the Atom.
-    // We'll provide default implementations to allow Atoms to opt in to
-    // the queries that make sense for them
     fn output_string(&self) -> String {
         String::from("")
     }
@@ -36,6 +34,7 @@ pub trait Atom: std::fmt::Display {
 
 pub struct Echo(pub &'static str);
 
+#[async_trait::async_trait]
 impl Atom for Echo {
     fn plan(&self) -> anyhow::Result<Outcome> {
         Ok(Outcome {
@@ -44,7 +43,7 @@ impl Atom for Echo {
         })
     }
 
-    fn execute(&mut self) -> anyhow::Result<()> {
+    async fn execute(&mut self, _: Option<PasswordManager>) -> anyhow::Result<()> {
         Ok(())
     }
 
