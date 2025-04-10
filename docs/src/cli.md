@@ -9,10 +9,10 @@ Comtrya works by running a manifest or set of manifests. Following are examples 
 comtrya apply
 
 # Run all manifests within your current directory and a specified configuration file
-comtrya -c /path/to/Comtrya/yaml
+comtrya -d ./ -c /path/to/Comtrya/yaml
 
 # --manifests, or -m, will run a subset of your manifests
-comtrya apply -m one,two,three
+comtrya -d ./ apply -m one,two,three
 
 # Run all manifests within a specified directory
 comtrya -d ./manifests apply
