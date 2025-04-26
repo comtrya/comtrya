@@ -58,6 +58,7 @@ impl Action for BinaryGitHub {
         let releases = repos.releases();
 
         let result = match &self.version {
+            Some(version) if version == "latest" => async_runtime.block_on(releases.get_latest()),
             Some(version) => async_runtime.block_on(releases.get_by_tag(version.as_str())),
             None => async_runtime.block_on(releases.get_latest()),
         };
