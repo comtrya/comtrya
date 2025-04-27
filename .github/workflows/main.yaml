@@ -7,7 +7,7 @@ on:
       - "main"
 
 env:
-  MIN_SUPPORTED_RUST_VERSION: "1.81.0"
+  MIN_SUPPORTED_RUST_VERSION: "1.86.0"
   CICD_INTERMEDIATES_DIR: "_cicd-intermediates"
   CARGO_TERM_COLOR: always
   #Fix these up soon
@@ -100,7 +100,7 @@ jobs:
             cargo_command: cargo
             skip_tests: false
           - os_name: macOS-aarch64
-            os: macos-14
+            os: macos-15
             target: aarch64-apple-darwin
             bin: comtrya
             name: comtrya-aarch64-apple-darwin
