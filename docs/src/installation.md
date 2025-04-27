@@ -29,7 +29,7 @@ curl -fsSL https://get.comtrya.dev | sh
 Or, optionally, you can get a specific version of comtrya using the following one-liner:
 
 ```shell
-curl -fsSL https://get.comtrya.dev | VERSION=v0.9.1  sh
+curl -fsSL https://get.comtrya.dev | VERSION=v0.9.2  sh
 ```
 
 ## Precompiled-binaries
