@@ -24,7 +24,7 @@ pub fn load(manifest_path: PathBuf, contexts: &Contexts) -> HashMap<String, Mani
         // Arbitrary for now, 9 "should" be enough?
         .max_depth(Some(9))
         .filter_entry(|entry| {
-            !(entry.file_type().map_or(false, |ft| ft.is_dir())
+            !(entry.file_type().is_some_and(|ft| ft.is_dir())
             && entry.file_name() == OsStr::new("files"))
         })
         .build()

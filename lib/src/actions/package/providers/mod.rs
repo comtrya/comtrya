@@ -90,13 +90,15 @@ impl Default for PackageProviders {
     fn default() -> Self {
         let info = os_info::get();
 
+        println!("Info: {:?}", info);
+
         match info.os_type() {
             // Arch Variants
-            os_info::Type::Arch => PackageProviders::Yay,
-            |os_info::Type::Artix => PackageProviders::Yay,
-            |os_info::Type::CachyOS => PackageProviders::Yay,
-            |os_info::Type::EndeavourOS => PackageProviders::Yay,
-            |os_info::Type::Manjaro=> PackageProviders::Yay,
+            os_info::Type::Arch=> PackageProviders::Yay,
+            os_info::Type::Artix => PackageProviders::Yay,
+            os_info::Type::CachyOS => PackageProviders::Yay,
+            os_info::Type::EndeavourOS => PackageProviders::Yay,
+            os_info::Type::Manjaro=> PackageProviders::Yay,
             // BSD operating systems
             os_info::Type::DragonFly=> PackageProviders::BsdPkg,
             os_info::Type::FreeBSD=> PackageProviders::BsdPkg,
