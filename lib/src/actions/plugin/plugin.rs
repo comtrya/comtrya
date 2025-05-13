@@ -399,8 +399,10 @@ return {
             "actions": [{
                 "action": "plugin",
                 "dir": lua_file_path,
-                "opts": {
-                    "echo": { "output": "foo" }
+                "actions": {
+                    "echo": {
+                        "output": "foo"
+                    }
                 }
             }]
         }))?;
