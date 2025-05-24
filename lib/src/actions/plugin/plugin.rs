@@ -403,6 +403,8 @@ return {
                     "echo": {
                         "output": "foo"
                     }
+                "opts": {
+                    "echo": { "output": "foo" }
                 }
             }]
         }))?;
