@@ -12,9 +12,9 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: agenthunt/conventional-commit-checker-action@v2.0.0
+      - uses: agenthunt/conventional-commit-checker-action@v2.0.1
         continue-on-error: true
         with:
           pr-body-regex: ".*"
@@ -68,7 +68,7 @@ jobs:
           - { os: macos-14, target: aarch64-apple-darwin }
           - { os: windows-2022, target: x86_64-pc-windows-msvc }
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - shell: bash
         run: |
