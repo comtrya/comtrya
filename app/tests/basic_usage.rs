@@ -13,7 +13,7 @@ fn prints_help() {
 #[test]
 fn dry_run_doesnt_error() {
     let t = TempDir::new().expect("could not create tempdir");
-    let path = t.into_path();
+    let path = t.keep();
     dir(
         "directory",
         vec![dir(

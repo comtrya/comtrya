@@ -43,10 +43,7 @@ pub fn resolve(uri: &String) -> Option<PathBuf> {
                 return path;
             }
 
-            match provider.resolve(uri.as_str()) {
-                Ok(path) => Some(path),
-                Err(_) => None,
-            }
+            provider.resolve(uri.as_str()).ok()
         });
 
     let manifest_directory = match manifest_directory {

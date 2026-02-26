@@ -3,7 +3,7 @@ use crate::atoms::Outcome;
 use super::super::Atom;
 use super::FileAtom;
 use age::armor::ArmoredReader;
-use age::secrecy::Secret;
+use age::secrecy::SecretString;
 use std::io::Read;
 use std::path::PathBuf;
 use tracing::error;
@@ -72,14 +72,15 @@ impl Atom for Decrypt {
 }
 
 fn decrypt(passphrase: &str, encrypted_content: &[u8]) -> anyhow::Result<Vec<u8>> {
-    let decryptor = match age::Decryptor::new(ArmoredReader::new(encrypted_content))? {
-        age::Decryptor::Passphrase(d) => Ok(d),
-        _ => Err(anyhow::anyhow!("Cannot create passphrase decryptor!")),
-    }?;
+    let decryptor = age::Decryptor::new(ArmoredReader::new(encrypted_content))?;
+    if !decryptor.is_scrypt() {
+        return Err(anyhow::anyhow!("Cannot create passphrase decryptor!"));
+    }
 
     let mut decrypted = vec![];
-    let secret = Secret::new(passphrase.to_owned());
-    let mut reader = decryptor.decrypt(&secret, None)?;
+    let secret = SecretString::from(passphrase.to_owned());
+    let identity = age::scrypt::Identity::new(secret);
+    let mut reader = decryptor.decrypt(std::iter::once(&identity as &dyn age::Identity))?;
     reader.read_to_end(&mut decrypted)?;
 
     Ok(decrypted)
@@ -153,7 +154,7 @@ mod tests {
     }
 
     fn encrypt(passphrase: String, content: Vec<u8>) -> anyhow::Result<Vec<u8>> {
-        let secret = Secret::new(passphrase);
+        let secret = SecretString::from(passphrase);
         let encryptor = age::Encryptor::with_user_passphrase(secret);
 
         let mut encrypted = vec![];

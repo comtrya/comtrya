@@ -1,4 +1,5 @@
 use std::{
+    borrow::Cow,
     hash::{Hash, Hasher},
     ops::{Deref, DerefMut},
 };
@@ -14,11 +15,7 @@ use tealr::{
 };
 use tracing::error;
 
-use schemars::{
-    gen::SchemaGenerator,
-    schema::{InstanceType, Metadata, Schema, SchemaObject},
-    JsonSchema,
-};
+use schemars::{json_schema, JsonSchema, Schema, SchemaGenerator};
 
 #[allow(dead_code)]
 pub fn lua_value_to_json(value: LuaValue) -> JsonValue {
@@ -61,11 +58,12 @@ pub fn json_to_lua(json: &JsonValue, lua: &Lua) -> Result<LuaValue, LuaError> {
     match json {
         JsonValue::Null => Ok(LuaValue::Nil),
         JsonValue::Bool(b) => Ok(LuaValue::Boolean(*b)),
-        JsonValue::Number(n) => n
-            .is_i64()
-            .then(|| n.as_i64().map(LuaValue::Integer))
-            .unwrap_or_else(|| n.as_f64().map(LuaValue::Number))
-            .ok_or_else(|| LuaError::external("Failed to convert number")),
+        JsonValue::Number(n) => if n.is_i64() {
+            n.as_i64().map(LuaValue::Integer)
+        } else {
+            n.as_f64().map(LuaValue::Number)
+        }
+        .ok_or_else(|| LuaError::external("Failed to convert number")),
         JsonValue::String(s) => Ok(LuaValue::String(lua.create_string(s)?)),
         JsonValue::Array(arr) => lua.create_table().map(|table| {
             arr.iter()
@@ -95,7 +93,7 @@ impl Eq for LuaFunction {}
 
 impl PartialOrd for LuaFunction {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        Some(self.0.dump(false).cmp(&other.0.dump(false)))
+        Some(self.cmp(other))
     }
 }
 
@@ -126,21 +124,15 @@ impl DerefMut for LuaFunction {
 }
 
 impl JsonSchema for LuaFunction {
-    fn schema_name() -> String {
-        "LuaFunction".to_string()
+    fn schema_name() -> Cow<'static, str> {
+        Cow::Borrowed("LuaFunction")
     }
 
     fn json_schema(_gen: &mut SchemaGenerator) -> Schema {
-        let schema_obj = SchemaObject {
-            instance_type: Some(InstanceType::Object.into()),
-            metadata: Some(Box::new(Metadata {
-                description: Some("Lua function reference (opaque to schema)".to_string()),
-                ..Default::default()
-            })),
-            ..Default::default()
-        };
-
-        Schema::Object(schema_obj)
+        json_schema!({
+            "type": "object",
+            "description": "Lua function reference (opaque to schema)"
+        })
     }
 }
 
@@ -172,21 +164,15 @@ impl DerefMut for LuaRuntime {
 }
 
 impl JsonSchema for LuaRuntime {
-    fn schema_name() -> String {
-        "LuaRuntime".to_string()
+    fn schema_name() -> Cow<'static, str> {
+        Cow::Borrowed("LuaRuntime")
     }
 
     fn json_schema(_gen: &mut SchemaGenerator) -> Schema {
-        let schema_obj = SchemaObject {
-            instance_type: Some(InstanceType::Object.into()),
-            metadata: Some(Box::new(Metadata {
-                description: Some("Lua runtime state (opaque to schema)".to_string()),
-                ..Default::default()
-            })),
-            ..Default::default()
-        };
-
-        Schema::Object(schema_obj)
+        json_schema!({
+            "type": "object",
+            "description": "Lua runtime state (opaque to schema)"
+        })
     }
 }
 

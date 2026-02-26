@@ -1,10 +1,10 @@
 pub mod lua;
-use std::{ops::Deref, path::PathBuf};
+use std::{borrow::Cow, ops::Deref, path::PathBuf};
 
 use crate::contexts::Contexts;
 
 use camino::Utf8PathBuf;
-use schemars::{gen::SchemaGenerator, schema::Schema, JsonSchema};
+use schemars::{JsonSchema, Schema, SchemaGenerator};
 use serde::{Deserialize, Serialize};
 use which::which;
 
@@ -28,8 +28,8 @@ pub fn get_privilege_provider(contexts: &Contexts) -> Option<String> {
 pub struct CustomPathBuf(pub Utf8PathBuf);
 
 impl JsonSchema for CustomPathBuf {
-    fn schema_name() -> String {
-        String::from("CustomPathBuf")
+    fn schema_name() -> Cow<'static, str> {
+        Cow::Borrowed("CustomPathBuf")
     }
 
     fn json_schema(gen: &mut SchemaGenerator) -> Schema {

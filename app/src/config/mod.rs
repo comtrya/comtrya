@@ -81,7 +81,7 @@ where
 }
 
 pub(crate) fn load_config(args: &GlobalArgs) -> Result<Config> {
-    match lib_config(&args) {
+    match lib_config(args) {
         Ok(config) => match args.manifest_directory.clone() {
             Some(manifest_path) => Ok(Config {
                 manifest_paths: vec![manifest_path],
@@ -106,14 +106,14 @@ pub(crate) fn load_config(args: &GlobalArgs) -> Result<Config> {
 /// `Result<Config>`
 /// - `Ok(Config)` - valid `Comtrya.yaml` file is found and deserialized successfully
 /// - `Err` - Error occurs during reading/deserialization OR a user provided an invalid
-///     path for the config file
+///   path for the config file
 ///
 /// # Errors
 ///
 /// Exits if the user specified an invalid config file path
 /// returns errors if file read fails or yaml content is not successfully deserialized
 pub fn lib_config(args: &GlobalArgs) -> anyhow::Result<Config> {
-    let mut config = match find_configs(&args) {
+    let mut config = match find_configs(args) {
         Some(config_path) => {
             let yaml = std::fs::read_to_string(&config_path)
                 .with_context(|| "Found Comtrya.yaml, but was unable to read the contents.")?;
@@ -153,8 +153,8 @@ pub fn lib_config(args: &GlobalArgs) -> anyhow::Result<Config> {
         }
     };
 
-    let mut defines_iterator = args.defines.iter();
-    while let Some(pair) = defines_iterator.next() {
+    let defines_iterator = args.defines.iter();
+    for pair in defines_iterator {
         config.variables.insert(pair.0.clone(), pair.1.clone());
     }
 
@@ -167,7 +167,7 @@ pub fn lib_config(args: &GlobalArgs) -> anyhow::Result<Config> {
 /// # Arguments
 ///
 /// * `args` - A reference to a `GlobalArgs` struct containing user-supplied arguments, including
-///           an optional `config_path` field that may specify a configuration file location.
+///   an optional `config_path` field that may specify a configuration file location.
 ///
 /// # Returns
 ///
@@ -265,6 +265,6 @@ mod tests {
         };
 
         let result = lib_config(&args);
-        assert!(!result.is_err());
+        assert!(result.is_ok());
     }
 }

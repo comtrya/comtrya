@@ -30,7 +30,7 @@ impl Action for UserAdd {
         #[cfg(unix)]
         match uzers::get_user_by_name(&variant.username) {
             Some(_user) => debug!(message = "User already exists", username = ?variant.username),
-            None => atoms.append(&mut provider.add_user(&variant, &context)?),
+            None => atoms.append(&mut provider.add_user(&variant, context)?),
         }
 
         #[cfg(not(unix))]

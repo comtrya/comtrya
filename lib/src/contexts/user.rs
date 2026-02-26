@@ -10,10 +10,13 @@ impl ContextProvider for UserContextProvider {
     }
 
     fn get_contexts(&self) -> Result<Vec<super::Context>> {
+        let name = whoami::realname().unwrap_or_else(|_| String::from("unknown"));
+        let username = whoami::username().unwrap_or_else(|_| String::from("unknown"));
+
         Ok(vec![
             Context::KeyValueContext(String::from("id"), self.get_uid().to_string().into()),
-            Context::KeyValueContext(String::from("name"), whoami::realname().into()),
-            Context::KeyValueContext(String::from("username"), whoami::username().into()),
+            Context::KeyValueContext(String::from("name"), name.into()),
+            Context::KeyValueContext(String::from("username"), username.into()),
             Context::KeyValueContext(
                 String::from("home_dir"),
                 home_dir()

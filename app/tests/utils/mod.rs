@@ -16,7 +16,7 @@ pub(crate) struct Dir {
 
 impl Dir {
     pub fn run(self, cli: &'static str) -> Assert {
-        let mut comtrya = Command::cargo_bin("comtrya").unwrap();
+        let mut comtrya = Command::new(assert_cmd::cargo::cargo_bin!("comtrya"));
 
         comtrya.current_dir(self.cwd);
 

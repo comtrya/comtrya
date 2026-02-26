@@ -38,7 +38,7 @@ impl PackageProvider for Aptitude {
 
     fn bootstrap(&self, contexts: &Contexts) -> Vec<Step> {
         let privilege_provider =
-            utilities::get_privilege_provider(&contexts).unwrap_or_else(|| "sudo".to_string());
+            utilities::get_privilege_provider(contexts).unwrap_or_else(|| "sudo".to_string());
 
         vec![Step {
             atom: Box::new(Exec {
@@ -74,7 +74,7 @@ impl PackageProvider for Aptitude {
         let mut signed_by = String::from("");
 
         let privilege_provider =
-            utilities::get_privilege_provider(&contexts).unwrap_or_else(|| "sudo".to_string());
+            utilities::get_privilege_provider(contexts).unwrap_or_else(|| "sudo".to_string());
 
         if repository.key.is_some() {
             // .unwrap() is safe here because we checked for key.is_some() above
@@ -143,7 +143,7 @@ impl PackageProvider for Aptitude {
 
     fn install(&self, package: &PackageVariant, contexts: &Contexts) -> anyhow::Result<Vec<Step>> {
         let privilege_provider =
-            utilities::get_privilege_provider(&contexts).unwrap_or_else(|| "sudo".to_string());
+            utilities::get_privilege_provider(contexts).unwrap_or_else(|| "sudo".to_string());
 
         Ok(vec![Step {
             atom: Box::new(Exec {
@@ -246,16 +246,13 @@ mod test {
             &contexts,
         );
 
-        let steps = match steps {
-            Ok(s) => s,
-            Err(_) => vec![],
-        };
+        let steps = steps.unwrap_or_default();
 
         if let Some(step) = steps.first() {
             let exec = step.atom.to_string();
             assert!(exec.contains(" /usr/share/keyrings/"));
         } else {
-            assert!(false);
+            panic!("expected at least one step");
         }
     }
 }

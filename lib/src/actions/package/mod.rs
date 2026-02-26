@@ -77,7 +77,7 @@ impl From<&Package> for PackageVariant {
                 list: package.list.clone(),
                 provider: package.provider.clone(),
                 extra_args: package.extra_args.clone(),
-                file: package.file.clone(),
+                file: package.file,
             };
         };
 
@@ -91,7 +91,7 @@ impl From<&Package> for PackageVariant {
             list: package.list.clone(),
             provider: variant.provider.clone(),
             extra_args: variant.extra_args.clone(),
-            file: package.file.clone(),
+            file: package.file,
         };
 
         if variant.name.is_some() {

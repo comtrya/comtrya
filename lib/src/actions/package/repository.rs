@@ -48,18 +48,18 @@ impl Action for PackageRepository {
 
         // If the provider isn't available, see if we can bootstrap it
         if !provider.available() {
-            if provider.bootstrap(&context).is_empty() {
+            if provider.bootstrap(context).is_empty() {
                 return Err(anyhow!(
                     "Package Provider, {}, isn't available. Skipping action",
                     provider.name()
                 ));
             }
 
-            atoms.append(&mut provider.bootstrap(&context));
+            atoms.append(&mut provider.bootstrap(context));
         }
 
         if !provider.has_repository(self) {
-            atoms.append(&mut provider.add_repository(self, &context)?);
+            atoms.append(&mut provider.add_repository(self, context)?);
         }
 
         span.exit();

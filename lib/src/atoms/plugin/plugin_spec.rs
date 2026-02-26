@@ -40,7 +40,7 @@ impl Eq for ComparableLua {}
 
 impl PartialOrd for ComparableLua {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(addr_of!(self).cmp(&addr_of!(other)))
+        Some(self.cmp(other))
     }
 }
 
@@ -78,7 +78,7 @@ impl Eq for ComparableFunction {}
 
 impl PartialOrd for ComparableFunction {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.to_pointer().cmp(&other.to_pointer()))
+        Some(self.cmp(other))
     }
 }
 

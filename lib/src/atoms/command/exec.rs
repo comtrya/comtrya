@@ -37,8 +37,9 @@ impl Exec {
         // we can determine if we need to prepend sudo to the command
 
         let privilege_provider = self.privilege_provider.clone();
+        let username = whoami::username().unwrap_or_else(|_| String::from("unknown"));
 
-        match (self.privileged, whoami::username().as_str()) {
+        match (self.privileged, username.as_str()) {
             // Hasn't requested priviledged, so never try to elevate
             (false, _) => (self.command.clone(), self.arguments.clone()),
 
@@ -114,7 +115,7 @@ impl Atom for Exec {
         let (command, arguments) = self.elevate_if_required();
 
         let command = utilities::get_binary_path(&command)
-            .or_else(|_| Err(anyhow!("Command `{}` not found in path", command)))?;
+            .map_err(|_| anyhow!("Command `{}` not found in path", command))?;
 
         // If we require root, we need to use sudo with inherited IO
         // to ensure the user can respond if prompted for a password
@@ -130,7 +131,7 @@ impl Atom for Exec {
         match std::process::Command::new(&command)
             .envs(self.environment.clone())
             .args(&arguments)
-            .current_dir(&self.working_dir.clone().unwrap_or_else(|| {
+            .current_dir(self.working_dir.clone().unwrap_or_else(|| {
                 std::env::current_dir()
                     .map(|current_dir| current_dir.display().to_string())
                     .expect("Failed to get current directory")

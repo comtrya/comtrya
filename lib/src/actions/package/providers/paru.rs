@@ -32,7 +32,7 @@ impl PackageProvider for Paru {
 
     fn bootstrap(&self, contexts: &Contexts) -> Vec<Step> {
         let privilege_provider =
-            utilities::get_privilege_provider(&contexts).unwrap_or_else(|| String::from("sudo"));
+            utilities::get_privilege_provider(contexts).unwrap_or_else(|| String::from("sudo"));
 
         vec![
             Step {

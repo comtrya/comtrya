@@ -60,7 +60,7 @@ impl Apply {
     #[instrument(skip(self, runtime))]
     pub fn status(&self, runtime: &Runtime) -> anyhow::Result<()> {
         let contexts = &runtime.contexts;
-        let manifest_path = self.manifest_path(&runtime)?;
+        let manifest_path = self.manifest_path(runtime)?;
 
         println!("Load manifests from path: {:#?}", manifest_path);
 
@@ -74,7 +74,7 @@ impl Apply {
 
         for (name, manifest) in manifests.iter() {
             table.add_row(vec![
-                Cell::new(format!("{name}")),
+                Cell::new(name.to_string()),
                 Cell::new(format!("{}", manifest.actions.len())),
             ]);
         }
@@ -87,7 +87,7 @@ impl ComtryaCommand for Apply {
     #[instrument(skip(self, runtime))]
     fn execute(&self, runtime: &Runtime) -> anyhow::Result<()> {
         let contexts = &runtime.contexts;
-        let manifest_path = self.manifest_path(&runtime)?;
+        let manifest_path = self.manifest_path(runtime)?;
         let manifests = load(manifest_path, contexts);
 
         // Build DAG

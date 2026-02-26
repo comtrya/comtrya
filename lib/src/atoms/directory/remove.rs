@@ -70,7 +70,7 @@ mod tests {
 
     #[test]
     fn it_can_plan() {
-        let temp = tempdir().unwrap().into_path();
+        let temp = tempdir().unwrap().keep();
         let atom = Remove {
             target: temp.clone(),
         };

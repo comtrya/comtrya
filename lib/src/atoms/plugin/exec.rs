@@ -37,7 +37,7 @@ impl Eq for PluginRuntimeSpec {}
 
 impl PartialOrd for PluginRuntimeSpec {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        Some(self.spec.cmp(&other.spec))
+        Some(self.cmp(other))
     }
 }
 impl Ord for PluginRuntimeSpec {

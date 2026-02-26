@@ -240,18 +240,17 @@ mod tests {
         let source_dir = match tempfile::tempdir() {
             Ok(dir) => dir,
             Err(_) => {
-                assert_eq!(false, true);
-                return;
+                panic!("could not create tempdir");
             }
         }
-        .into_path();
+        .keep();
 
         // We'll expect 2 extra Atoms
-        use rand::Rng;
+        use rand::RngExt;
         use std::io::Write;
 
-        let mut rng = rand::thread_rng();
-        let number_of_files: usize = rng.gen_range(3..9);
+        let mut rng = rand::rng();
+        let number_of_files: usize = rng.random_range(3..9);
 
         for i in 0..number_of_files {
             let path = source_dir.clone().join(format!("{}.txt", i));

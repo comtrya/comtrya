@@ -99,7 +99,7 @@ pub fn to_tera(contexts: &Contexts) -> tera::Context {
     context
 }
 
-pub fn to_rhai(context: &Contexts) -> rhai::Scope {
+pub fn to_rhai(context: &Contexts) -> rhai::Scope<'_> {
     let mut scope = Scope::new();
 
     context.iter().for_each(|(m, v)| {
