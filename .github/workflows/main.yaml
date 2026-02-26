@@ -15,7 +15,7 @@ env:
 
 jobs:
   lint-test-release:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     steps:
       - name: Clone Repository
         uses: actions/checkout@v4
@@ -68,7 +68,7 @@ jobs:
       matrix:
         platform:
           - os_name: Linux-x86_64-gnu
-            os: ubuntu-24.04
+            os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
             bin: comtrya
             name: comtrya-x86_64-unknown-linux-gnu
@@ -76,7 +76,7 @@ jobs:
             cargo_command: cargo
             skip_tests: false
           - os_name: Linux-aarch64-gnu
-            os: ubuntu-24.04
+            os: ubuntu-latest
             target: aarch64-unknown-linux-gnu
             bin: comtrya
             name: comtrya-aarch64-unknown-linux-gnu
@@ -84,7 +84,7 @@ jobs:
             cargo_command: ./cross
             skip_tests: false
           - os_name: Windows-x86_64
-            os: windows-2022
+            os: windows-latest
             target: x86_64-pc-windows-msvc
             bin: comtrya.exe
             name: comtrya-x86_64-pc-windows-msvc
@@ -92,7 +92,7 @@ jobs:
             cargo_command: cargo
             skip_tests: false
           - os_name: macOS-x86_64
-            os: macos-13
+            os: macos-15-intel
             target: x86_64-apple-darwin
             bin: comtrya
             name: comtrya-x86_64-apple-darwin
@@ -100,7 +100,7 @@ jobs:
             cargo_command: cargo
             skip_tests: false
           - os_name: macOS-aarch64
-            os: macos-15
+            os: macos-latest
             target: aarch64-apple-darwin
             bin: comtrya
             name: comtrya-aarch64-apple-darwin
