@@ -1,8 +1,9 @@
-use crate::{actions::Action, steps::Step};
+use crate::actions::Action;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use super::FileAction;
+#[cfg(unix)]
 use crate::atoms::file::Chown;
 
 #[derive(JsonSchema, Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -37,7 +38,7 @@ impl Action for FileChown {
         _: &crate::manifests::Manifest,
         _: &crate::contexts::Contexts,
     ) -> anyhow::Result<Vec<crate::steps::Step>> {
-        let steps = vec![Step {
+        let steps = vec![crate::steps::Step {
             atom: Box::new(Chown {
                 path: self.path.clone().parse()?,
                 owner: self.user.clone().unwrap_or("".to_string()),

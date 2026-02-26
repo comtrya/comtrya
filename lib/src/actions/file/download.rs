@@ -1,5 +1,6 @@
 use super::FileAction;
 use super::{default_chmod, from_octal};
+#[cfg(unix)]
 use crate::atoms::file::Chown;
 use crate::manifests::Manifest;
 use crate::steps::Step;
@@ -48,7 +49,7 @@ impl Action for FileDownload {
         let path = PathBuf::from(&self.to);
         let parent = path.clone();
 
-        let mut steps = vec![
+        let steps = vec![
             Step {
                 atom: Box::new(DirCreate {
                     path: parent
@@ -83,21 +84,29 @@ impl Action for FileDownload {
         ];
 
         #[cfg(unix)]
-        if let Some(user) = self.owner_user.clone() {
-            if let Some(group) = self.owner_group.clone() {
-                steps.push(Step {
-                    atom: Box::new(Chown {
-                        path: path.clone(),
-                        owner: user.clone(),
-                        group: group.clone(),
-                    }),
-                    initializers: vec![],
-                    finalizers: vec![],
-                })
+        {
+            let mut steps = steps;
+            if let Some(user) = self.owner_user.clone() {
+                if let Some(group) = self.owner_group.clone() {
+                    steps.push(Step {
+                        atom: Box::new(Chown {
+                            path: path.clone(),
+                            owner: user.clone(),
+                            group: group.clone(),
+                        }),
+                        initializers: vec![],
+                        finalizers: vec![],
+                    })
+                }
             }
+
+            Ok(steps)
         }
 
-        Ok(steps)
+        #[cfg(not(unix))]
+        {
+            Ok(steps)
+        }
     }
 }
 

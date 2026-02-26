@@ -1,6 +1,8 @@
 use super::FileAction;
 use super::{default_chmod, from_octal};
-use crate::atoms::file::{Chown, Decrypt};
+#[cfg(unix)]
+use crate::atoms::file::Chown;
+use crate::atoms::file::Decrypt;
 use crate::manifests::Manifest;
 use crate::steps::Step;
 use crate::tera_functions::register_functions;
@@ -132,7 +134,8 @@ impl Action for FileCopy {
             },
         ];
 
-        let path_clone = path.clone();
+        #[cfg(unix)]
+        let path_for_chown = path.clone();
         if let Some(passphrase) = self.passphrase.to_owned() {
             steps.push(Step {
                 atom: Box::new(Decrypt {
@@ -156,7 +159,7 @@ impl Action for FileCopy {
             if let Some(group) = self.owner_group.clone() {
                 steps.push(Step {
                     atom: Box::new(Chown {
-                        path: path_clone,
+                        path: path_for_chown,
                         owner: user.clone(),
                         group: group.clone(),
                     }),
