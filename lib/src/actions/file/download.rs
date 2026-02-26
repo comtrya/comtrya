@@ -112,8 +112,11 @@ impl Action for FileDownload {
 
 #[cfg(test)]
 mod tests {
+    #[cfg(unix)]
     use crate::actions::file::download::FileDownload;
-    use crate::actions::{Action, Actions};
+    #[cfg(unix)]
+    use crate::actions::Action;
+    use crate::actions::Actions;
 
     #[test]
     fn it_can_be_deserialized() {
