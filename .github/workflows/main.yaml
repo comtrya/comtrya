@@ -18,28 +18,28 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Clone Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6.0.2
 
       - name: Install Rust Toolchain (v${{ env.MIN_SUPPORTED_RUST_VERSION }})
-        uses: actions-rs/toolchain@v1
+        uses: actions-rs/toolchain@v1.0.7
         with:
           toolchain: ${{ env.MIN_SUPPORTED_RUST_VERSION }}
           default: true
           profile: minimal
           components: clippy
 
-      - uses: actions-rs/clippy-check@v1
+      - uses: actions-rs/clippy-check@v1.0.7
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           args: --all-features --all-targets
 
       - name: Run Tests
-        uses: actions-rs/cargo@v1
+        uses: actions-rs/cargo@v1.0.3
         with:
           command: test
 
       - name: Upload to codecov.io
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v5.5.2
 
       - name: Check for Release
         id: is-release
@@ -109,10 +109,10 @@ jobs:
             skip_tests: false
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6.0.2
 
       - name: Build binary
-        uses: houseabsolute/actions-rust-cross@v1
+        uses: houseabsolute/actions-rust-cross@v1.0.5
         with:
           command: "build"
           target: ${{ matrix.platform.target }}
@@ -133,7 +133,7 @@ jobs:
 
       - name: Upload Artifact
         if: matrix.platform.target != 'x86_64-pc-windows-msvc'
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v2.5.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           draft: true
@@ -146,7 +146,7 @@ jobs:
 
       - name: Upload Artifact.exe
         if: matrix.platform.target == 'x86_64-pc-windows-msvc'
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v2.5.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           draft: true
@@ -162,7 +162,7 @@ jobs:
     container: clux/muslrust:stable
     steps:
       - name: Clone Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6.0.2
 
       - name: Link to muscl Toolchain
         run: |
@@ -170,12 +170,12 @@ jobs:
           ln -s /root/.rustup $HOME/.rustup
 
       - name: Handle Rust Dependencies Caching
-        uses: Swatinem/rust-cache@v2
+        uses: Swatinem/rust-cache@v2.8.2
         with:
           key: v1-linux-musl
 
       - name: Build Release Binary
-        uses: actions-rs/cargo@v1
+        uses: actions-rs/cargo@v1.0.3
         with:
           command: build
           args: --release
@@ -186,7 +186,7 @@ jobs:
           mv target/x86_64-unknown-linux-musl/release/comtrya target/x86_64-unknown-linux-musl/release/comtrya-x86_64-unknown-linux-musl
 
       - name: Upload release archive
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v2.5.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           draft: true

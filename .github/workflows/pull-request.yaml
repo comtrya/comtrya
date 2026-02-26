@@ -12,32 +12,32 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6.0.2
 
-      - uses: agenthunt/conventional-commit-checker-action@v2.0.0
+      - uses: agenthunt/conventional-commit-checker-action@v2.0.1
         continue-on-error: true
         with:
           pr-body-regex: ".*"
 
-      - uses: actions-rs/toolchain@v1
+      - uses: actions-rs/toolchain@v1.0.7
         with:
           toolchain: ${{ env.MIN_SUPPORTED_RUST_VERSION }}
           profile: minimal
           components: clippy,rustfmt
           override: true
 
-      - uses: actions-rs/cargo@v1
+      - uses: actions-rs/cargo@v1.0.3
         with:
           command: fmt
           args: --all -- --check
 
-      - uses: giraffate/clippy-action@v1
+      - uses: giraffate/clippy-action@v1.0.1
         with:
           reporter: "github-pr-review"
           github_token: ${{ secrets.GITHUB_TOKEN }}
           clippy_flags: --all-features --all-targets
 
-      - uses: codecov/codecov-action@v5
+      - uses: codecov/codecov-action@v5.5.2
 
   test:
     name: ${{ matrix.job.os }} (${{ matrix.job.target }})
@@ -68,7 +68,7 @@ jobs:
           - { os: macos-latest, target: aarch64-apple-darwin }
           - { os: windows-latest, target: x86_64-pc-windows-msvc }
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6.0.2
 
       - shell: bash
         run: |
@@ -83,14 +83,14 @@ jobs:
           echo "PROJECT_MAINTAINER=$(sed -n 's/^authors = \["\(.*\)"\]/\1/p' Cargo.toml)" >> $GITHUB_ENV
           echo "PROJECT_HOMEPAGE=$(sed -n 's/^homepage = "\(.*\)"/\1/p' Cargo.toml)" >> $GITHUB_ENV
 
-      - uses: actions-rs/toolchain@v1
+      - uses: actions-rs/toolchain@v1.0.7
         with:
           toolchain: stable
           target: ${{ matrix.job.target }}
           override: true
           profile: minimal
 
-      - uses: actions-rs/cargo@v1
+      - uses: actions-rs/cargo@v1.0.3
         with:
           use-cross: ${{ matrix.job.use-cross }}
           command: test
