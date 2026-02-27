@@ -24,12 +24,12 @@ pub trait FileAction: Action {
             .map_err(|e| {
                 anyhow!(
                     "Resolution of {} failed in manifest {} because {}",
-                    path.to_string(),
+                    path,
                     manifest
                         .name
                         .as_ref()
                         .unwrap_or(&"cannot extract manifest name".to_string()),
-                    e.to_string()
+                    e
                 )
             })?
             .as_path()
@@ -50,7 +50,7 @@ pub trait FileAction: Action {
                 "Failed because {} was not found",
                 file_path.to_string_lossy()
             ),
-            _ => anyhow!("Failed because {}", e.to_string()),
+            _ => anyhow!("Failed because {}", e),
         })
     }
 }

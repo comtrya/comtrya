@@ -89,7 +89,7 @@ impl Action for FileCopy {
             Err(err) => {
                 return Err(anyhow!(
                     "Failed to get contents for FileCopy action: {}",
-                    err.to_string()
+                    err
                 ));
             }
         };

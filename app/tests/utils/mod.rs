@@ -39,7 +39,7 @@ pub(crate) fn run(cli: &'static str) -> Assert {
 
 pub(crate) fn cd(path: PathBuf) -> Dir {
     if !path.exists() {
-        panic!("could not 'cd' into non-existing file: {:?}", path);
+        panic!("could not 'cd' into non-existing file: {path:?}");
     }
 
     Dir {

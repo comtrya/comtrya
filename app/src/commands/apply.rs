@@ -122,7 +122,7 @@ impl ComtryaCommand for Apply {
                 let (local_dependency_prefix, _) = name.rsplit_once('.').unwrap_or((name, ""));
 
                 let resolved_dependency_name =
-                    dependency.replace("./", format!("{}.", local_dependency_prefix).as_str());
+                    dependency.replace("./", format!("{local_dependency_prefix}.").as_str());
 
                 let m1 = match manifests.get(&resolved_dependency_name) {
                     Some(manifest) => manifest,
