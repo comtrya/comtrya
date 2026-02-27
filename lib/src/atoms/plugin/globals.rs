@@ -56,8 +56,8 @@ fn add_context(lua: &Lua, contexts: Contexts, globals: &Table) -> Result<()> {
                 .map(|json| json_to_lua(&json, lua).map_err(Error::from))
             {
                 Ok(Ok(lua_val)) => inner_table.set(k, lua_val)?,
-                Ok(Err(e)) => Err(anyhow!("Converting {}: {} to Lua {}", &key, k, e))?,
-                Err(e) => Err(anyhow!("Converting {} to Lua {}", k, e))?,
+                Ok(Err(e)) => Err(anyhow!("Converting {key}: {k} to Lua {e}"))?,
+                Err(e) => Err(anyhow!("Converting {k} to Lua {e}"))?,
             }
         }
 

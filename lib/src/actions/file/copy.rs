@@ -68,14 +68,12 @@ impl Action for FileCopy {
                         Err(err) => match err.source() {
                             Some(source) => {
                                 return Err(anyhow!(
-                                    "Failed to render contents for FileCopy action: {}",
-                                    source
+                                    "Failed to render contents for FileCopy action: {source}"
                                 ));
                             }
                             None => {
                                 return Err(anyhow!(
-                                    "Failed to render contents for FileCopy action: {}",
-                                    err
+                                    "Failed to render contents for FileCopy action: {err}"
                                 ));
                             }
                         },
@@ -87,10 +85,7 @@ impl Action for FileCopy {
                 }
             }
             Err(err) => {
-                return Err(anyhow!(
-                    "Failed to get contents for FileCopy action: {}",
-                    err
-                ));
+                return Err(anyhow!("Failed to get contents for FileCopy action: {err}"));
             }
         };
 

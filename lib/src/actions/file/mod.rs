@@ -50,7 +50,7 @@ pub trait FileAction: Action {
                 "Failed because {} was not found",
                 file_path.to_string_lossy()
             ),
-            _ => anyhow!("Failed because {}", e),
+            _ => anyhow!("Failed because {e}"),
         })
     }
 }

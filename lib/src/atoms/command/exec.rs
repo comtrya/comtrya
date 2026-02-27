@@ -78,8 +78,7 @@ impl Exec {
             )),
 
             Err(err) => Err(anyhow!(
-                "Command requires privilege escalation, but couldn't elevate privileges: {}",
-                err
+                "Command requires privilege escalation, but couldn't elevate privileges: {err}"
             )),
         }
     }
@@ -115,7 +114,7 @@ impl Atom for Exec {
         let (command, arguments) = self.elevate_if_required();
 
         let command = utilities::get_binary_path(&command)
-            .map_err(|_| anyhow!("Command `{}` not found in path", command))?;
+            .map_err(|_| anyhow!("Command `{command}` not found in path"))?;
 
         // If we require root, we need to use sudo with inherited IO
         // to ensure the user can respond if prompted for a password

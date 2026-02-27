@@ -364,8 +364,7 @@ impl TryFrom<JsonValue> for Value {
                         Some(n) => n.into(),
                         None => {
                             return Err(anyhow::anyhow!(
-                                "Failed converting number {:?} to json.",
-                                number
+                                "Failed converting number {number:?} to json."
                             ))
                         }
                     }
@@ -374,8 +373,7 @@ impl TryFrom<JsonValue> for Value {
                         Some(n) => n.into(),
                         None => {
                             return Err(anyhow::anyhow!(
-                                "Failed converting number {:?} to json.",
-                                number
+                                "Failed converting number {number:?} to json."
                             ))
                         }
                     }
@@ -384,8 +382,7 @@ impl TryFrom<JsonValue> for Value {
                         Some(n) => n.into(),
                         None => {
                             return Err(anyhow::anyhow!(
-                                "Failed converting number {:?} to json.",
-                                number
+                                "Failed converting number {number:?} to json."
                             ))
                         }
                     }

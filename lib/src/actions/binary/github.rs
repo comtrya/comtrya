@@ -41,7 +41,7 @@ impl Action for BinaryGitHub {
         let async_runtime = match Runtime::new() {
             Ok(runtime) => runtime,
             Err(e) => {
-                return Err(anyhow!("Failed to create async runtime: {}", e));
+                return Err(anyhow!("Failed to create async runtime: {e}"));
             }
         };
 
@@ -66,7 +66,7 @@ impl Action for BinaryGitHub {
         let release = match result {
             Ok(release) => release,
             Err(e) => {
-                return Err(anyhow!("Failed to find a release: {}", e));
+                return Err(anyhow!("Failed to find a release: {e}"));
             }
         };
 

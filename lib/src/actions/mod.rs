@@ -104,7 +104,7 @@ where
         match engine.eval_with_scope::<bool>(&mut scope, condition.as_str()) {
             Ok(true) => self.action.plan(manifest, context),
             Ok(false) => Ok(vec![]),
-            Err(error) => Err(anyhow!("Failed execution condition for action: {}", error)),
+            Err(error) => Err(anyhow!("Failed execution condition for action: {error}")),
         }
     }
 }
