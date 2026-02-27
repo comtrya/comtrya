@@ -84,7 +84,7 @@ pub fn load(manifest_path: PathBuf, contexts: &Contexts) -> HashMap<String, Mani
                     .and_then(OsStr::to_str)
                 {
                     Some("yaml") | Some("yml") => {
-                        serde_yml::from_str::<Manifest>(template.deref()).map_err(anyhow::Error::from)
+                        serde_yaml_ng::from_str::<Manifest>(template.deref()).map_err(anyhow::Error::from)
                     }
                     Some("toml") => toml::from_str::<Manifest>(template.deref()).map_err(anyhow::Error::from),
                     _ => {

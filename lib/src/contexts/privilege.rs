@@ -22,7 +22,7 @@ impl Display for Privilege {
             Privilege::Doas => "doas".to_string(),
             Privilege::Run0 => "run0".to_string(),
         };
-        write!(f, "{}", str)
+        write!(f, "{str}")
     }
 }
 

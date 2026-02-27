@@ -58,8 +58,7 @@ impl std::fmt::Display for Unarchive {
 
         write!(
             f,
-            "The archive {} to be decompressed to {}",
-            origin_path, dest_path
+            "The archive {origin_path} to be decompressed to {dest_path}"
         )
     }
 }

@@ -2,5 +2,5 @@
 set -euo pipefail
 
 cargo fmt
-cargo clippy --tests
+cargo clippy --all-features --all-targets
 cargo test 

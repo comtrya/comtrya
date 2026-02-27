@@ -106,7 +106,7 @@ pub fn to_rhai(context: &Contexts) -> rhai::Scope<'_> {
         let dynamic = match rhai::serde::to_dynamic(v) {
             Ok(dynamic) => dynamic,
             Err(error) => {
-                panic!("Failed to convert context value to dynamic: {}", error);
+                panic!("Failed to convert context value to dynamic: {error}");
             }
         };
 

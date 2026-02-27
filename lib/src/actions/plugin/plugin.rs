@@ -90,7 +90,7 @@ impl Display for Version {
             Version::Tagged(tag) => tag.as_str(),
         };
 
-        write!(f, "{}", version)
+        write!(f, "{version}")
     }
 }
 
@@ -174,7 +174,7 @@ impl Source for Repo {
             },
             Version::Latest => repo.head_tree()?,
             Version::Tagged(ref version) => repo
-                .find_reference(&format!("tags/{}", version))?
+                .find_reference(&format!("tags/{version}"))?
                 .peel_to_tree()?,
         };
 
@@ -244,8 +244,8 @@ pub enum RepoOrDir {
 impl Display for RepoOrDir {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            RepoOrDir::Repo(repo) => write!(f, "{}", repo),
-            RepoOrDir::Dir(dir) => write!(f, "{}", dir),
+            RepoOrDir::Repo(repo) => write!(f, "{repo}"),
+            RepoOrDir::Dir(dir) => write!(f, "{dir}"),
             RepoOrDir::Invalid => write!(f, "Invalid Repo or Directory"),
         }
     }
@@ -297,7 +297,7 @@ impl Plugin {
 
 impl Display for Plugin {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Plugin: {:?}", self)
+        write!(f, "Plugin: {self:?}")
     }
 }
 

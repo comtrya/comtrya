@@ -45,7 +45,7 @@ mod tests {
     #[test]
     fn it_can_be_deserialized() {
         let example_yaml = std::fs::File::open(get_manifest_dir().join("create.yaml")).unwrap();
-        let mut manifest: Manifest = serde_yml::from_reader(example_yaml).unwrap();
+        let mut manifest: Manifest = serde_yaml_ng::from_reader(example_yaml).unwrap();
 
         match manifest.actions.pop() {
             Some(Actions::DirectoryCreate(action)) => {

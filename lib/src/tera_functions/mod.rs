@@ -12,8 +12,7 @@ impl Function for ReadFileContents {
                 },
 
                 None => Err(format!(
-                    "Path: '{}'. Error: Cannot convert argument 'path' to str",
-                    value
+                    "Path: '{value}'. Error: Cannot convert argument 'path' to str"
                 )
                 .into()),
             },
@@ -47,7 +46,7 @@ SXOE
 
 "#;
 
-        write!(file.as_file_mut(), "{}", file_content)?;
+        write!(file.as_file_mut(), "{file_content}")?;
 
         let template = format!(
             "{{{{ read_file_contents(path=\"{}\") }}}}",

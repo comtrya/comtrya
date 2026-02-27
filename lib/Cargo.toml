@@ -27,7 +27,7 @@ rhai = { version = "1.24", features = ["serde"] }
 schemars = "1.2"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-serde_yml = "0"
+serde_yaml_ng = "0.10"
 sha256 = "1.6"
 tokio = "1.49"
 toml = "1.0"

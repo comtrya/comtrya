@@ -161,7 +161,7 @@ mod tests {
   target: b
 "#;
 
-        let mut actions: Vec<Actions> = serde_yml::from_str(yaml).unwrap();
+        let mut actions: Vec<Actions> = serde_yaml_ng::from_str(yaml).unwrap();
 
         match actions.pop() {
             Some(Actions::FileLink(action)) => {
@@ -180,7 +180,7 @@ mod tests {
   to: b
 "#;
 
-        let mut actions: Vec<Actions> = serde_yml::from_str(yaml).unwrap();
+        let mut actions: Vec<Actions> = serde_yaml_ng::from_str(yaml).unwrap();
 
         match actions.pop() {
             Some(Actions::FileLink(action)) => {
@@ -253,9 +253,9 @@ mod tests {
         let number_of_files: usize = rng.random_range(3..9);
 
         for i in 0..number_of_files {
-            let path = source_dir.clone().join(format!("{}.txt", i));
+            let path = source_dir.clone().join(format!("{i}.txt"));
             let mut file = std::fs::File::create(path).unwrap();
-            writeln!(file, "Random {}", i).unwrap();
+            writeln!(file, "Random {i}").unwrap();
         }
 
         let manifest: Manifest = Manifest {

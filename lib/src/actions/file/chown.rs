@@ -64,7 +64,7 @@ mod tests {
   user: test
 "#;
 
-        let mut actions: Vec<Actions> = serde_yml::from_str(yaml).unwrap();
+        let mut actions: Vec<Actions> = serde_yaml_ng::from_str(yaml).unwrap();
         match actions.pop() {
             Some(Actions::FileChown(action)) => {
                 assert_eq!("/home/test/one", action.action.path);
@@ -85,7 +85,7 @@ mod tests {
   group: test
 "#;
 
-        let mut actions: Vec<Actions> = serde_yml::from_str(yaml).unwrap();
+        let mut actions: Vec<Actions> = serde_yaml_ng::from_str(yaml).unwrap();
         match actions.pop() {
             Some(Actions::FileChown(action)) => {
                 assert_eq!("/home/test/one", action.action.path);

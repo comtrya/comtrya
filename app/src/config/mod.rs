@@ -123,7 +123,7 @@ pub fn lib_config(args: &GlobalArgs) -> anyhow::Result<Config> {
                     ..Default::default()
                 },
 
-                false => serde_yml::from_str(yaml.as_str())
+                false => serde_yaml_ng::from_str(yaml.as_str())
                     .with_context(|| "Found Comtrya.yaml, but couldn't deserialize the YAML.")?,
             };
 
