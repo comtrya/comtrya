@@ -63,10 +63,12 @@ Some package manager providers can implement a `bootstrap` method that will auto
   provider: pkgin
 
 # Install a package specifying a repository
-- action: package.install
-  name: blox
+- action: package.repository
   provider: homebrew
-  repository: cueblox/tap
+  name: foo-repository/formulae
+- action: package.install
+  name: foo
+  provider: homebrew
 ```
 
 ### Local package install support
