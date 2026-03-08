@@ -62,8 +62,10 @@ impl PackageProvider for Winget {
 
                 match output {
                     Ok(output) => {
-                        // Winget returns 0 if found, non-zero if not found or error
-                        if output.status.success() {
+                        let stdout = String::from_utf8_lossy(&output.stdout);
+                        // Winget returns 0 even if nothing is found, so we must parse the output.
+                        // If it contains the package ID, it's installed. Otherwise, it prints "No installed package found"
+                        if stdout.to_lowercase().contains(&p.to_lowercase()) {
                             trace!("{}: already installed", p);
                             false // installed, so filter it out
                         } else {
