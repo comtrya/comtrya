@@ -4,7 +4,8 @@ use crate::contexts::Contexts;
 use crate::steps::Step;
 use crate::{actions::package::PackageVariant, atoms::command::Exec};
 use serde::{Deserialize, Serialize};
-use tracing::warn;
+use std::process::Command;
+use tracing::{debug, trace, warn};
 use which::which;
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -42,15 +43,54 @@ impl PackageProvider for Winget {
     }
 
     fn query(&self, package: &PackageVariant) -> anyhow::Result<Vec<String>> {
-        // Install all packages, make this smarter soon
-        Ok(package.packages())
+        // Find all packages that aren't already installed
+        Ok(package
+            .packages()
+            .into_iter()
+            .filter(|p| {
+                // We use `winget list -e --id <package_name>`
+                // `--accept-source-agreements` prevents it from blocking on first run
+                let output = Command::new("winget")
+                    .args([
+                        "list",
+                        "-e",
+                        "--id",
+                        p.as_str(),
+                        "--accept-source-agreements",
+                    ])
+                    .output();
+
+                match output {
+                    Ok(output) => {
+                        let stdout = String::from_utf8_lossy(&output.stdout);
+                        // Winget returns 0 even if nothing is found, so we must parse the output.
+                        // If it contains the package ID, it's installed. Otherwise, it prints "No installed package found"
+                        if stdout.to_lowercase().contains(&p.to_lowercase()) {
+                            trace!("{}: already installed", p);
+                            false // installed, so filter it out
+                        } else {
+                            debug!("{}: doesn't appear to be installed", p);
+                            true // not installed, keep it
+                        }
+                    }
+                    Err(e) => {
+                        warn!("Failed to query winget for package {}: {}", p, e);
+                        true // assume not installed on error to attempt install
+                    }
+                }
+            })
+            .collect())
     }
 
     fn install(&self, package: &PackageVariant, _contexts: &Contexts) -> anyhow::Result<Vec<Step>> {
         // does not require privilege escalation
 
-        Ok(package
-            .packages()
+        let need_installed = self.query(package)?;
+        if need_installed.is_empty() {
+            return Ok(vec![]);
+        }
+
+        Ok(need_installed
             .iter()
             .map::<Step, _>(|p| Step {
                 atom: Box::new(Exec {
