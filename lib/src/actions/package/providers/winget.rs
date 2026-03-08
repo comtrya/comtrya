@@ -59,7 +59,7 @@ impl PackageProvider for Winget {
                         "--accept-source-agreements",
                     ])
                     .output();
-                
+
                 match output {
                     Ok(output) => {
                         // Winget returns 0 if found, non-zero if not found or error
