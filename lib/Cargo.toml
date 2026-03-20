@@ -37,7 +37,7 @@ hickory-resolver = "0.25.2"
 walkdir = "2.5"
 which = "8.0"
 whoami = "2.1"
-tar = "0.4.44"
+tar = "0.4.45"
 flate2 = "1.1.9"
 file-owner = "0.1.2"
 gix = { version = "0.80.0", features = [
