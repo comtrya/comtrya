@@ -32,7 +32,7 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           clippy_flags: --all-features --all-targets
 
-      - uses: codecov/codecov-action@v5.5.2
+      - uses: codecov/codecov-action@v6.0.0
 
   test:
     name: ${{ matrix.job.os }} (${{ matrix.job.target }})
