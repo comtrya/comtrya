@@ -1,5 +1,6 @@
 > [!IMPORTANT]
-> **We're looking for new maintainer(s)!** If you have the time and passion to breathe new life into Comtrya, check out [this issue](https://github.com/comtrya/comtrya/issues/598) for details.
+> We couldn't find any new maintainer(s) in the last 2 months and therefore I'll archive comtrya. Feel free to fork it and continue :)
+> Thanks @rawkode and all other maintainers over time for the awesome work!
 
 # Comtrya
 
