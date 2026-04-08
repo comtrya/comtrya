@@ -29,26 +29,26 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_yaml_ng = "0.10"
 sha256 = "1.6"
-tokio = "1.49"
-toml = "1.0"
+tokio = "1.50"
+toml = "1.1"
 tera = "1.20"
 tracing = "0.1"
 hickory-resolver = "0.25.2"
 walkdir = "2.5"
 which = "8.0"
 whoami = "2.1"
-tar = "0.4.44"
+tar = "0.4.45"
 flate2 = "1.1.9"
 file-owner = "0.1.2"
-gix = { version = "0.80.0", features = [
+gix = { version = "0.81.0", features = [
     "status",
     "tracing",
     "tracing-detail",
     "blocking-http-transport-reqwest-rust-tls",
     "blocking-network-client",
 ] }
-gix-protocol = "0.58.0"
-tealr = { version = "0.10.0", features = [
+gix-protocol = "0.59.0"
+tealr = { version = "0.11.0", features = [
     "mlua_lua54",
     "mlua_anyhow",
     "mlua_async",
@@ -62,12 +62,12 @@ tealr = { version = "0.10.0", features = [
     "mlua_vendored",
 ] }
 camino = { version = "1.2.2", features = ["serde1"] }
-serde_with = { version = "3.17.0", features = ["schemars_1", "json"] }
+serde_with = { version = "3.18.0", features = ["schemars_1", "json"] }
 parking_lot = "0.12.5"
 
 [target.'cfg(unix)'.dependencies]
 uzers = "0.12"
 
 [dev-dependencies]
-tempfile = "3.26"
+tempfile = "3.27"
 pretty_assertions = "1.4"
