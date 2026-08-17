@@ -12,7 +12,7 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@v7.0.1
 
       - uses: agenthunt/conventional-commit-checker-action@v2.0.1
         continue-on-error: true
@@ -32,7 +32,7 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           clippy_flags: --all-features --all-targets
 
-      - uses: codecov/codecov-action@v5.5.2
+      - uses: codecov/codecov-action@v7.0.0
 
   test:
     name: ${{ matrix.job.os }} (${{ matrix.job.target }})
@@ -63,7 +63,7 @@ jobs:
           - { os: macos-latest, target: aarch64-apple-darwin }
           - { os: windows-latest, target: x86_64-pc-windows-msvc }
     steps:
-      - uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@v7.0.1
 
       - shell: bash
         run: |
