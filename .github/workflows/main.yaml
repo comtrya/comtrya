@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Clone Repository
-        uses: actions/checkout@v6.0.2
+        uses: actions/checkout@v7.0.1
 
       - name: Install Rust Toolchain (v${{ env.MIN_SUPPORTED_RUST_VERSION }})
         uses: actions-rust-lang/setup-rust-toolchain@v1
@@ -33,7 +33,7 @@ jobs:
         run: cargo test
 
       - name: Upload to codecov.io
-        uses: codecov/codecov-action@v5.5.2
+        uses: codecov/codecov-action@v7.0.0
 
       - name: Check for Release
         id: is-release
@@ -106,10 +106,10 @@ jobs:
             skip_tests: false
     steps:
       - name: Checkout
-        uses: actions/checkout@v6.0.2
+        uses: actions/checkout@v7.0.1
 
       - name: Build binary
-        uses: houseabsolute/actions-rust-cross@v1.0.5
+        uses: houseabsolute/actions-rust-cross@v1.0.8
         with:
           command: "build"
           target: ${{ matrix.platform.target }}
@@ -130,7 +130,7 @@ jobs:
 
       - name: Upload Artifact
         if: matrix.platform.target != 'x86_64-pc-windows-msvc'
-        uses: softprops/action-gh-release@v2.5.0
+        uses: softprops/action-gh-release@v3.0.2
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           draft: true
@@ -143,7 +143,7 @@ jobs:
 
       - name: Upload Artifact.exe
         if: matrix.platform.target == 'x86_64-pc-windows-msvc'
-        uses: softprops/action-gh-release@v2.5.0
+        uses: softprops/action-gh-release@v3.0.2
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           draft: true
@@ -159,7 +159,7 @@ jobs:
     container: clux/muslrust:stable
     steps:
       - name: Clone Repository
-        uses: actions/checkout@v6.0.2
+        uses: actions/checkout@v7.0.1
 
       - name: Link to muscl Toolchain
         run: |
@@ -167,7 +167,7 @@ jobs:
           ln -s /root/.rustup $HOME/.rustup
 
       - name: Handle Rust Dependencies Caching
-        uses: Swatinem/rust-cache@v2.8.2
+        uses: Swatinem/rust-cache@v2.9.2
         with:
           key: v1-linux-musl
 
@@ -180,7 +180,7 @@ jobs:
           mv target/x86_64-unknown-linux-musl/release/comtrya target/x86_64-unknown-linux-musl/release/comtrya-x86_64-unknown-linux-musl
 
       - name: Upload release archive
-        uses: softprops/action-gh-release@v2.5.0
+        uses: softprops/action-gh-release@v3.0.2
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           draft: true
