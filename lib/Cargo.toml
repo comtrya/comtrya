@@ -8,13 +8,13 @@ description = "Contains the interfaces for comtrya plugins"
 
 [dependencies]
 anyhow = "1.0"
-age = { version = "0.11", features = ["armor"] }
+age = { version = "0.12", features = ["armor"] }
 dirs-next = "2.0"
 file_diff = "1.0"
 gethostname = "1.1"
 ignore = "0.4"
 normpath = "1.5"
-octocrab = "0.49"
+octocrab = "0.54"
 os_info = { version = "3.14", features = ["schemars"] }
 petgraph = "0.8"
 rand = "0.10"
@@ -31,9 +31,9 @@ serde_yaml_ng = "0.10"
 sha256 = "1.6"
 tokio = "1.49"
 toml = "1.0"
-tera = "1.20"
+tera = "2.3"
 tracing = "0.1"
-hickory-resolver = "0.25.2"
+hickory-resolver = "0.26.1"
 walkdir = "2.5"
 which = "8.0"
 whoami = "2.1"
@@ -48,7 +48,7 @@ gix = { version = "0.80.0", features = [
     "blocking-network-client",
 ] }
 gix-protocol = "0.58.0"
-tealr = { version = "0.10.0", features = [
+tealr = { version = "0.11.0", features = [
     "mlua_lua54",
     "mlua_anyhow",
     "mlua_async",
