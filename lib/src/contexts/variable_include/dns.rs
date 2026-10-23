@@ -1,18 +1,19 @@
 use std::collections::HashMap;
 
 use anyhow::Result;
-use hickory_resolver::config::ResolverConfig;
-use hickory_resolver::name_server::TokioConnectionProvider;
+use hickory_resolver::config::{ResolverConfig, GOOGLE};
+use hickory_resolver::net::runtime::TokioRuntimeProvider;
+use hickory_resolver::proto::rr::RData;
 use hickory_resolver::Resolver;
 use reqwest::Url;
 use tokio::runtime::Runtime;
 
 pub fn txt_record_values(url: &Url, contexts: &mut HashMap<String, String>) -> Result<()> {
     let resolver = Resolver::builder_with_config(
-        ResolverConfig::default(),
-        TokioConnectionProvider::default(),
+        ResolverConfig::udp_and_tcp(&GOOGLE),
+        TokioRuntimeProvider::default(),
     )
-    .build();
+    .build()?;
 
     let host = url
         .host_str()
@@ -21,8 +22,12 @@ pub fn txt_record_values(url: &Url, contexts: &mut HashMap<String, String>) -> R
     let rt = Runtime::new()?;
     let records = rt.block_on(resolver.txt_lookup(host))?;
 
-    for record in records {
-        if let Some((key, value)) = record.to_string().split_once('=') {
+    for record in records.answers() {
+        let RData::TXT(txt) = &record.data else {
+            continue;
+        };
+
+        if let Some((key, value)) = txt.to_string().split_once('=') {
             contexts.insert(key.to_string(), value.to_string());
         }
     }
