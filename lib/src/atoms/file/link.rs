@@ -128,6 +128,7 @@ mod tests {
             target: from_dir.path().join("symlink"),
             source: to_file.path().to_path_buf(),
         };
+        assert_eq!(true, atom.plan().unwrap().should_run);
         match atom.execute() {
             Ok(_) => {
                 assert_eq!(false, atom.plan().unwrap().should_run);
