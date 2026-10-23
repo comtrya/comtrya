@@ -20,7 +20,7 @@ impl ComtryaCommand for Contexts {
 
             let mut table = Table::new();
             table
-                .load_preset(NOTHING)
+                .load_style(NOTHING)
                 .set_content_arrangement(ContentArrangement::Dynamic);
 
             if context.is_empty() {
