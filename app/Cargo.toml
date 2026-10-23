@@ -33,7 +33,7 @@ tealr = { version = "0.10.0", features = [
     "mlua_vendored",
 ] }
 walkdir = "2.5.0"
-gix = { version = "0.80.0", features = ["blocking-network-client", "blocking-http-transport-reqwest-rust-tls", "status"] }
+gix = { version = "0.90.0", features = ["blocking-network-client", "blocking-http-transport-reqwest-rust-tls", "status"] }
 
 [dev-dependencies]
 assert_cmd = "2.1"

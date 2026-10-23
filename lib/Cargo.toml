@@ -42,14 +42,14 @@ whoami = "2.1"
 tar = "0.4.44"
 flate2 = "1.1.9"
 file-owner = "0.1.2"
-gix = { version = "0.80.0", features = [
+gix = { version = "0.90.0", features = [
     "status",
     "tracing",
     "tracing-detail",
     "blocking-http-transport-reqwest-rust-tls",
     "blocking-network-client",
 ] }
-gix-protocol = "0.58.0"
+gix-protocol = "0.68.0"
 tealr = { version = "0.10.0", features = [
     "mlua_lua54",
     "mlua_anyhow",
