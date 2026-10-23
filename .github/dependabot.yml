@@ -8,6 +8,10 @@ updates:
       all-dependencies-cargo:
         patterns:
           - "*"
+    ignore:
+      # Tera 2 breaks user manifest templates, see the comment in lib/Cargo.toml
+      - dependency-name: "tera"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:

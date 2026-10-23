@@ -61,7 +61,7 @@ impl GitManifestProvider {
             return Err(ManifestProviderError::NoResolution);
         }
 
-        let url = gix::url::parse(config.repository.clone().as_str().into());
+        let url = gix::url::parse(config.repository.as_str());
 
         if url.is_err() {
             return Err(ManifestProviderError::NoResolution);

@@ -1,22 +1,16 @@
-> [!IMPORTANT]
-> **We're looking for new maintainer(s)!** If you have the time and passion to breathe new life into Comtrya, check out [this issue](https://github.com/comtrya/comtrya/issues/598) for details.
-
 # Comtrya
+
+[![Latest GitHub Release](https://img.shields.io/github/v/release/comtrya/comtrya?label=Latest&style=for-the-badge)](https://github.com/comtrya/comtrya/releases/latest)
+[![GitHub Actions Status](https://img.shields.io/github/actions/workflow/status/comtrya/comtrya/main.yaml?branch=main&style=for-the-badge)](https://github.com/comtrya/comtrya/actions/workflows/main.yaml)
+[![Codecov](https://img.shields.io/codecov/c/github/comtrya/comtrya?style=for-the-badge)](https://codecov.io/gh/comtrya/comtrya)
+[![License](https://img.shields.io/github/license/comtrya/comtrya?style=for-the-badge)](./LICENSE)
+[![Matrix](https://img.shields.io/matrix/comtrya:matrix.org?style=for-the-badge)](https://matrix.to/#/#comtrya:matrix.org)
+
+_Comtrya is a tool to help provision a fresh OS with the packages and configuration (dotfiles) you need to become productive again._
 
 ![Comtrya](/Comtrya.gif "Hello")
 
 > This is better, yes?
-
----
-
-[![License](https://img.shields.io/github/license/comtrya/comtrya?style=for-the-badge)](https://github.com/comtrya/comtrya/blob/main/LICENSE)
-
-[![Latest GitHub Release](https://img.shields.io/github/v/release/comtrya/comtrya?label=Latest&style=for-the-badge)](https://github.com/comtrya/comtrya/releases/latest)
-[![GitHub Actions Status](https://img.shields.io/github/actions/workflow/status/comtrya/comtrya/main.yaml?branch=main&style=for-the-badge)](https://github.com/comtrya/comtrya/actions/workflows/main.yml)
-
-[![Codecov](https://img.shields.io/codecov/c/github/comtrya/comtrya?style=for-the-badge)](https://codecov.io/gh/comtrya/comtrya)
-
-[![Discord](https://img.shields.io/discord/730728064031653999?label=Discord&style=for-the-badge)](https://rawkode.chat)
 
 [![Packaging status](https://repology.org/badge/vertical-allrepos/comtrya.svg)](https://repology.org/metapackage/comtrya)
 
@@ -32,11 +26,11 @@ Comtrya now also has documentation in the repository located in the `docs/` fold
 
 ## About
 
-Comtrya is a tool to help provision a fresh OS with the packages and configuration (dotfiles) you need to become productive again.
+Comtrya was started by [@rawkode](https://github.com/rawkode), who explains why:
 
-I'm a serial OS installer, I wipe the OS on my machines every, approx, 30 days. I've primarily relied on SaltStack to automate this, but I've grown frustrated with the mismatch between configuration management and personal provisioning.
-
-I've also tried Ansible, Chef, Puppet, mgmt, and probably anything else you're about to suggest; they all have a flaw that makes it too cumbersome to adopt for the trivial use-case.
+> I'm a serial OS installer, I wipe the OS on my machines every, approx, 30 days. I've primarily relied on SaltStack to automate this, but I've grown frustrated with the mismatch between configuration management and personal provisioning.
+>
+> I've also tried Ansible, Chef, Puppet, mgmt, and probably anything else you're about to suggest; they all have a flaw that makes it too cumbersome to adopt for the trivial use-case.
 
 ## Installing
 
@@ -54,6 +48,12 @@ or specify `VERSION=vx.x.x` to pin to a release version
 curl -fsSL https://get.comtrya.dev | VERSION=v0.9.2 sh
 ```
 
+With a Rust toolchain installed, you can also build it from [crates.io](https://crates.io/crates/comtrya):
+
+```shell
+cargo install comtrya
+```
+
 If this doesn't work for your OS and architecture, please open an issue and we'll do our best to support it.
 
 ## Usage
@@ -69,33 +69,12 @@ comtrya apply -m one,two,three
 comtrya -d ./manifests apply
 ```
 
-## What's Next?
+## 🏛️ License
 
-You should take a look at the issues page to see what's available to contribute. Below is a short list of the major features that are upcoming.
+Licensed under the [MIT license](./LICENSE).
 
-### Better Output
+## 🧩 Contribution
 
-Providing a `--quiet` or `--summary` option that restricts the output to the run time
+Comtrya is a free and open project and lives from contributions of the community.
 
-```shell
-Comtrya finished in 12.3s
-
-Installed Packages: 12
-Provisioned Files: 34
-```
-
-### Async DAG
-
-We're using [petgraph](https://github.com/petgraph/petgraph) to build out the graph, but we're not traversing it in a way that will allow us to concurrently execute manifests at the same depth. This is something I wish to sort out pretty soon.
-
-### Package Provider Enhancements
-
-Currently, we execute arbitrary `packager install` commands. The provider spec should be enriched to support:
-
--   List refresh
--   Upgrades
--   Version pinning
-
-### Integration tests
-
-We are a bit light on tests at the moment, but we have started introducing some helpful plumbing in [tests](comtrya/app/tests).
+See our [Contribution Guide](CONTRIBUTING.md)
