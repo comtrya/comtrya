@@ -1,35 +1,70 @@
-# How to contribute
+# Welcome to Comtrya
 
-Thanks for reading this document!
+This is a FOSS (free and open-source software) and lives from contributions of the community.
 
-## Prerequisites
-- Rust (e.g. via `rustup install stable`)
-- Cargo (with `fmt`, `clippy` and `nextest`):
-  - `rustup component add rustfmt`
-  - `rustup component add clippy`
-  - `cargo install cargo-nextest`
+There are many ways to contribute
 
-## Code style
-Before you create a PR, just run `check.sh`:
-- This will format your code via `fmt`
-- Runs the linter `clippy`
-- Runs all tests via `nextest`
+ * 📣 Spread the word about Comtrya
+ * ✍️ Write tutorials, blog posts or share your manifests
+ * 📝 Create or improve the [documentation](./docs)
+ * 🐛 Submit [bug reports](https://github.com/comtrya/comtrya/issues/new?template=bug_report.md)
+ * 💡 Share ideas and feature requests in [Discussions](https://github.com/comtrya/comtrya/discussions)
+ * 🖥️ Test Comtrya on your OS and package manager (especially Windows and the BSDs)
+ * 🏷️ Help triage issues: reproduce bugs, ask for missing details, find duplicates
+ * 🧑‍💻 Contribute code or review pull requests
 
-## Good first issues
-If you want to contribute, but don't feel ready for the big tasks, feel free to choose from one of our [good first issues](https://github.com/comtrya/comtrya/issues?q=is%3Aissue+is%3Aopen+label%3AMeta%3A%3AGoodFirstIssue)
 
-### Guides
-If you're lost or not know how to start, you can contact:
-- @rawkode
-- @icepuma
-- @martintc
+## 📜 Ground Rules
 
-at the [Rawkode Academy Discord](https://rawkode.chat/) in the `#comtrya` channel.
+A community like this should be **open**, **considerate** and **respectful**. Please read our [Code of Conduct](./CODE_OF_CONDUCT.md).
 
-## Pull requests
-We provide a [pull request template](https://github.com/comtrya/comtrya/blob/main/.github/pull_request_template.md) to guide you through the progress.
+Behaviours that reinforce these values contribute to a positive environment, and include:
 
-## Help
-If you want to get in touch with us, join the [Rawkode Academy Discord](https://rawkode.chat/) server and jump into the `#comtrya` channel.
+ * **Being open**. Members of the community are open to collaboration.
+ * **Acknowledging time and effort**. We're respectful and thoughtful when addressing the efforts of others, keeping in mind that often the work was done simply for the good of the community.
+ * **Being respectful of differing viewpoints and experiences**. We're receptive to constructive comments and criticism, as the experiences and skill sets of other members contribute to the whole of our efforts.
+ * **Gracefully accepting constructive criticism**. When we disagree, we are courteous in raising our issues.
+ * **Using welcoming and inclusive language**. Anyone can participate and everyone can make a difference.
+
+
+## 🧑‍💻 Code Contribution
+
+You don't need any permissions to contribute code. Fork the repository, make your changes on a **new branch** in ***your*** fork and open a pull request.
+
+1. Fork it (https://github.com/comtrya/comtrya/fork)
+2. Create a new branch (`git checkout -b feat/foo-bar`)
+3. Commit your changes (`git commit -am 'feat: add foo bar'`)
+4. Push to the branch (`git push origin feat/foo-bar`)
+5. Create a new pull request, our [pull request template](./.github/pull_request_template.md) guides you through it
+
+Small, atomic commits make reviews easier and help track down regressions. We use [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`, `docs:`, `chore:`, …) for commit messages and PR titles.
+
+### Prerequisites
+
+- Rust via [rustup](https://rustup.rs/), with `rustfmt` and `clippy`:
+  - `rustup component add rustfmt clippy`
+- The minimum supported Rust version is **1.88**, which is also what CI tests against.
+
+### Before opening a pull request
+
+Run `./check.sh` (or `check.ps1` on Windows). It
+- formats your code with `cargo fmt`
+- runs the linter `cargo clippy`
+- runs all tests with `cargo test`
+
+### Documentation
+
+The documentation at [comtrya.dev](https://comtrya.dev) is built from the [`docs/`](./docs) folder with [mdBook](https://github.com/rust-lang/mdBook). To preview it locally:
+
+```shell
+cargo install mdbook
+cd docs
+mdbook serve
+```
+
+
+## 💬 Help
+
+If you're stuck or have questions, join our [Matrix room](https://matrix.to/#/#comtrya:matrix.org) or open a [Discussion](https://github.com/comtrya/comtrya/discussions).
 
 > See You Space Cowboy...
