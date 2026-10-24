@@ -2,6 +2,7 @@ use super::ComtryaCommand;
 use crate::Runtime;
 use colored::Colorize;
 use comfy_table::{presets::NOTHING, Attribute, Cell, ContentArrangement, Table};
+use comtrya_lib::manifests::git_cache_dir;
 
 use clap::Parser;
 
@@ -63,6 +64,13 @@ impl ComtryaCommand for Contexts {
 
             println!("{table}");
 
+            println!();
+        }
+
+        // Not a context, but useful for troubleshooting or clearing manifests fetched with git
+        if let Some(cache_dir) = git_cache_dir() {
+            println!("{}", "git manifest cache".underline().bold());
+            println!(" {}", cache_dir.display());
             println!();
         }
 

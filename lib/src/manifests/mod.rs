@@ -3,6 +3,7 @@ pub use load::load;
 mod providers;
 use crate::actions::Actions;
 use petgraph::prelude::*;
+pub use providers::git_cache_dir;
 pub use providers::register_providers;
 pub use providers::ManifestProvider;
 use schemars::JsonSchema;

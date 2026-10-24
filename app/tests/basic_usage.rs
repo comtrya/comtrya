@@ -86,3 +86,14 @@ actions:
         .assert()
         .success();
 }
+
+#[test]
+fn contexts_shows_git_manifest_cache() {
+    let t = TempDir::new().expect("could not create tempdir");
+
+    cd(t.path().to_path_buf())
+        .run("--no-color contexts")
+        .success()
+        .stdout(predicates::str::contains("git manifest cache"))
+        .stdout(predicates::str::contains("manifests"));
+}
