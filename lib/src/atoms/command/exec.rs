@@ -154,10 +154,18 @@ impl Atom for Exec {
                 debug!("stdout: {}", &self.status.stdout);
                 debug!("stderr: {}", &self.status.stderr);
 
-                Err(anyhow!(
-                    "Command failed with exit code: {}",
-                    output.status.code().unwrap_or(1)
-                ))
+                let stderr = self.status.stderr.trim();
+                if stderr.is_empty() {
+                    Err(anyhow!(
+                        "Command failed with exit code: {}",
+                        output.status.code().unwrap_or(1)
+                    ))
+                } else {
+                    Err(anyhow!(
+                        "Command failed with exit code: {}: {stderr}",
+                        output.status.code().unwrap_or(1)
+                    ))
+                }
             }
 
             Err(err) => Err(anyhow!(err)),

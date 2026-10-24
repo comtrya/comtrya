@@ -266,7 +266,7 @@ impl ComtryaCommand for Apply {
                     let plan = match action.plan(m1, contexts) {
                         Ok(steps) => steps,
                         Err(err) => {
-                            info!("Action failed to get plan: {:?}", err);
+                            error!("Action failed to get plan: {err:#}");
                             successful = false;
                             if dry_run {
                                 continue;
@@ -280,7 +280,10 @@ impl ComtryaCommand for Apply {
                         .filter(|step| step.do_initializers_allow_us_to_run())
                         .filter(|step| match step.atom.plan() {
                             Ok(outcome) => outcome.should_run,
-                            Err(_) => false,
+                            Err(err) => {
+                                warn!("Skipping {}: {err:#}", step.atom);
+                                false
+                            }
                         })
                         .peekable();
 
@@ -298,14 +301,14 @@ impl ComtryaCommand for Apply {
                         match step.atom.execute() {
                             Ok(_) => (),
                             Err(err) => {
-                                debug!("Atom failed to execute: {:?}", err);
+                                error!("{} failed: {err:#}", step.atom);
                                 successful = false;
                                 break;
                             }
                         }
 
                         if !step.do_finalizers_allow_us_to_continue() {
-                            debug!("Finalizers won't allow us to continue with this action");
+                            error!("Finalizers won't allow us to continue with this action");
                             successful = false;
                             break;
                         }

@@ -62,7 +62,6 @@ impl Fixture {
     }
 
     /// Like `run`, but a manifest is expected to fail, so comtrya must exit with an error
-    #[cfg(unix)]
     fn run_failing(&self, args: &[&str]) -> Assert {
         self.command(args).assert().failure()
     }
@@ -257,6 +256,29 @@ fn user_directories_work_in_double_quoted_strings() {
     assert!(f.created("ran"));
 }
 
+/// Without a `files` directory, the error names the missing file instead of panicking (#246)
+#[test]
+fn a_missing_source_file_is_reported() {
+    let f = Fixture::new();
+    f.manifest(
+        "zsh.yaml",
+        &format!(
+            "actions:\n  - action: file.copy\n    from: zshrc\n    to: '{}'\n",
+            f.out("zshrc").display()
+        ),
+    );
+
+    let output = f.run_failing(&["apply"]).get_output().clone();
+    let stdout = String::from_utf8_lossy(&output.stdout);
+
+    let error = stdout
+        .lines()
+        .find(|line| line.contains("zshrc was not found"))
+        .unwrap_or_else(|| panic!("missing file not named in:\n{stdout}"));
+    assert!(error.contains("ERROR"), "{error}");
+    assert!(!String::from_utf8_lossy(&output.stderr).contains("panicked"));
+}
+
 #[test]
 fn file_copy_renders_templates() {
     let f = Fixture::new();
@@ -406,6 +428,25 @@ mod order {
 
     fn fail() -> &'static str {
         "  - action: command.run\n    command: 'false'\n"
+    }
+
+    #[test]
+    fn a_failing_command_reports_why() {
+        let f = Fixture::new();
+        f.manifest(
+            "broken.yaml",
+            "actions:\n  - action: command.run\n    command: sh\n    args:\n      - -c\n      - echo something broke >&2; exit 3\n",
+        );
+
+        let output = f.run_failing(&["apply"]).get_output().clone();
+        let stdout = String::from_utf8_lossy(&output.stdout);
+
+        let error = stdout
+            .lines()
+            .find(|line| line.contains("ERROR") && line.contains("exit code"))
+            .unwrap_or_else(|| panic!("no error with the exit code in:\n{stdout}"));
+        assert!(error.contains("exit code: 3"), "{error}");
+        assert!(error.contains("something broke"), "{error}");
     }
 
     #[test]
