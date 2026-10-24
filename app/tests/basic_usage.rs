@@ -60,3 +60,29 @@ actions:
 
     assert.success();
 }
+
+#[test]
+fn apply_without_config_uses_current_directory() {
+    let t = TempDir::new().expect("could not create tempdir");
+    f(
+        "hello.yaml",
+        r#"
+actions:
+  - action: command.run
+    command: echo
+    args:
+      - hello
+"#,
+    )
+    .create_in(t.path())
+    .expect("should have created manifest");
+
+    // Point the platform config dir at the empty tempdir, so no Comtrya.yaml is found
+    assert_cmd::Command::new(assert_cmd::cargo::cargo_bin!("comtrya"))
+        .current_dir(t.path())
+        .env("HOME", t.path())
+        .env("XDG_CONFIG_HOME", t.path())
+        .args(["--no-color", "apply", "--dry-run"])
+        .assert()
+        .success();
+}
