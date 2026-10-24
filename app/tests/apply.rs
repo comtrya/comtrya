@@ -239,6 +239,33 @@ fn broken_manifests_dont_stop_the_others() {
     assert!(!f.created("never"));
 }
 
+/// YAML and TOML files in `files` directories are files for actions, never manifests (#575)
+#[test]
+fn files_directories_are_not_loaded_as_manifests() {
+    let f = Fixture::new();
+    let leak = format!("actions:\n{}", f.create("leaked"));
+    let leak_toml = format!(
+        "[[actions]]\naction = \"directory.create\"\npath = '{}'\n",
+        f.out("leaked-toml").display()
+    );
+    f.manifest("app/main.yaml", &format!("actions:\n{}", f.create("app")))
+        .manifest("app/files/config.yaml", &leak)
+        .manifest("app/files/nested/deep.yml", &leak)
+        .manifest("app/files/settings.toml", &leak_toml)
+        .manifest("files/top-level.yaml", &leak);
+
+    f.run(&["apply"]);
+
+    assert!(f.created("app"));
+    assert!(!f.created("leaked"));
+    assert!(!f.created("leaked-toml"));
+
+    let output = f.run(&["status"]).get_output().stdout.clone();
+    let status = String::from_utf8_lossy(&output);
+    assert!(status.contains("| app "), "{status}");
+    assert!(!status.contains("files"), "{status}");
+}
+
 #[test]
 fn user_directories_work_in_double_quoted_strings() {
     // On Windows, `C:\Users\...` in a double-quoted YAML string is an invalid escape
