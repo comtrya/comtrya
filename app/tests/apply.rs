@@ -241,6 +241,23 @@ fn broken_manifests_dont_stop_the_others() {
 }
 
 #[test]
+fn user_directories_work_in_double_quoted_strings() {
+    // On Windows, `C:\Users\...` in a double-quoted YAML string is an invalid escape
+    let f = Fixture::new();
+    f.manifest(
+        "dirs.yaml",
+        &format!(
+            "actions:\n  - action: directory.create\n    path: \"{{{{ user.home_dir }}}}\"\n{}",
+            f.create("ran")
+        ),
+    );
+
+    f.run(&["apply"]);
+
+    assert!(f.created("ran"));
+}
+
+#[test]
 fn file_copy_renders_templates() {
     let f = Fixture::new();
     f.manifest(
@@ -451,16 +468,7 @@ mod order {
     }
 }
 
-/// Examples that fail to load on this platform.
-// FIXME: templates are rendered before the YAML is parsed, so Windows paths like
-// `C:\Users\...` from `{{ user.home_dir }}` become invalid escapes in double-quoted strings
-#[cfg(windows)]
-const KNOWN_FAILURES: [&str; 3] = [
-    "command\\run.yaml",
-    "directory\\remove.yaml",
-    "file\\filecopy.yaml",
-];
-#[cfg(not(windows))]
+/// Examples that fail to load, e.g. only on one platform
 const KNOWN_FAILURES: [&str; 0] = [];
 
 /// Every example in the repository must load. Catches breaking changes to the manifest format.
