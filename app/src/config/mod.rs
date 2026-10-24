@@ -146,7 +146,7 @@ pub fn lib_config(args: &GlobalArgs) -> anyhow::Result<Config> {
             }
 
             Config {
-                manifest_paths: vec![String::from(",")],
+                manifest_paths: vec![String::from(".")],
                 ..Default::default()
             }
         }
