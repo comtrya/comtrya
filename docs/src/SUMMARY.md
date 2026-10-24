@@ -15,6 +15,7 @@
 	- [macOS](./macos.md)
 	- [Packages](./packages.md)
 	- [User](./user.md)
+  - [Templating](./templating.md)
   - [Privilege Escalation](./privileged.md)
   - [Dependencies](./dependencies.md)
   - [Variants](./variants.md)
