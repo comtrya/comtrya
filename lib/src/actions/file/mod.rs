@@ -9,6 +9,7 @@ use crate::actions::Action;
 use crate::manifests::Manifest;
 use anyhow::{anyhow, Result};
 use normpath::PathExt;
+use schemars::JsonSchema;
 use serde::{de::Error, Deserialize, Deserializer};
 use std::path::PathBuf;
 
@@ -55,11 +56,24 @@ pub trait FileAction: Action {
     }
 }
 
+/// File permissions in octal notation, written as a number (`644`) or a string (`"0644"`)
+#[derive(JsonSchema, Deserialize)]
+#[serde(untagged)]
+pub(crate) enum OctalMode {
+    Number(u32),
+    Text(String),
+}
+
 fn from_octal<'de, D>(deserializer: D) -> Result<u32, D::Error>
 where
     D: Deserializer<'de>,
 {
-    let chmod = String::deserialize(deserializer)?;
+    // The digits of a number are read as octal as well, so `644` means `0o644`
+    let chmod = match OctalMode::deserialize(deserializer)? {
+        OctalMode::Number(number) => number.to_string(),
+        OctalMode::Text(text) => text,
+    };
+
     u32::from_str_radix(&chmod, 8).map_err(D::Error::custom)
 }
 

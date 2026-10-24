@@ -32,7 +32,8 @@ Action used to copy a file from one location to another.
 | to             | string  | no       | destination file                      |
 | template       | boolean | yes      | renders files using context providers |
 |                |         |          | default: `false`                      |
-| chmod          | integer | yes      | octal permissions                     |
+| chmod          | integer | yes      | octal permissions, e.g. `644` or `"0644"` |
+|                |         |          | default: `644`                        |
 | owned_by_user  | string  | yes      | user for chown                        |
 | owned_by_group | string  | yes      | group for chown                       |
 
@@ -101,6 +102,7 @@ This action will download a file.
 | action         | string | no       | `file.download`  |
 | from|source    | string | no       | source location  |
 | to|target      | string | no       | destination file |
+| chmod          | integer | yes     | octal permissions, e.g. `644` or `"0644"`, default: `644` |
 | owned_by_user  | string | yes      | user for chown   |
 | owned_by_group | string | yes      | group for chown  |
 

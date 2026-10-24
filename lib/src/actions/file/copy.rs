@@ -1,5 +1,5 @@
 use super::FileAction;
-use super::{default_chmod, from_octal};
+use super::{default_chmod, from_octal, OctalMode};
 #[cfg(unix)]
 use crate::atoms::file::Chown;
 use crate::atoms::file::Decrypt;
@@ -23,6 +23,7 @@ pub struct FileCopy {
     pub to: String,
 
     #[serde(default = "default_chmod", deserialize_with = "from_octal")]
+    #[schemars(with = "OctalMode")]
     pub chmod: u32,
 
     #[serde(default = "default_template")]
@@ -220,5 +221,42 @@ mod tests {
                 panic!("FileCopy didn't deserialize to the correct type");
             }
         };
+    }
+
+    fn chmod_of(yaml_value: &str) -> Result<u32, serde_yaml_ng::Error> {
+        let yaml = format!("- action: file.copy\n  from: a\n  to: b\n  chmod: {yaml_value}\n");
+        let mut actions: Vec<Actions> = serde_yaml_ng::from_str(&yaml)?;
+
+        match actions.pop() {
+            Some(Actions::FileCopy(action)) => Ok(action.action.chmod),
+            _ => panic!("FileCopy didn't deserialize to the correct type"),
+        }
+    }
+
+    #[test]
+    fn chmod_accepts_numbers_and_strings_as_octal() {
+        // As documented: a plain number is read as octal digits
+        assert_eq!(0o644, chmod_of("644").unwrap());
+        assert_eq!(0o755, chmod_of("755").unwrap());
+        assert_eq!(0o644, chmod_of("0644").unwrap());
+        assert_eq!(0o600, chmod_of("\"0600\"").unwrap());
+        assert_eq!(0o600, chmod_of("\"600\"").unwrap());
+    }
+
+    #[test]
+    fn chmod_defaults_to_644() {
+        let mut actions: Vec<Actions> =
+            serde_yaml_ng::from_str("- action: file.copy\n  from: a\n  to: b\n").unwrap();
+
+        match actions.pop() {
+            Some(Actions::FileCopy(action)) => assert_eq!(0o644, action.action.chmod),
+            _ => panic!("FileCopy didn't deserialize to the correct type"),
+        }
+    }
+
+    #[test]
+    fn chmod_rejects_non_octal_digits() {
+        assert!(chmod_of("\"0999\"").is_err());
+        assert!(chmod_of("rwx").is_err());
     }
 }

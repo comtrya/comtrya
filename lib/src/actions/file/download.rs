@@ -1,5 +1,5 @@
 use super::FileAction;
-use super::{default_chmod, from_octal};
+use super::{default_chmod, from_octal, OctalMode};
 #[cfg(unix)]
 use crate::atoms::file::Chown;
 use crate::manifests::Manifest;
@@ -16,6 +16,7 @@ pub struct FileDownload {
     pub to: String,
 
     #[serde(default = "default_chmod", deserialize_with = "from_octal")]
+    #[schemars(with = "OctalMode")]
     pub chmod: u32,
 
     #[serde(default = "default_template")]
