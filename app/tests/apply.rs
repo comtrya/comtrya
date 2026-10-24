@@ -1,0 +1,459 @@
+//! Black-box tests for `comtrya apply` and `comtrya status`: real manifests in a tempdir, run
+//! through the binary. They pin behaviour users rely on, independent of how it's implemented.
+
+use assert_cmd::{assert::Assert, Command};
+use std::path::{Path, PathBuf};
+use tempfile::TempDir;
+
+struct Fixture {
+    dir: TempDir,
+}
+
+impl Fixture {
+    fn new() -> Self {
+        Fixture {
+            dir: TempDir::new().expect("could not create tempdir"),
+        }
+    }
+
+    fn path(&self) -> &Path {
+        self.dir.path()
+    }
+
+    /// Writes a manifest below `manifests/`
+    fn manifest(&self, name: &str, contents: &str) -> &Self {
+        let path = self.path().join("manifests").join(name);
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(path, contents).unwrap();
+        self
+    }
+
+    /// A `directory.create` action for `<tempdir>/out/<name>`, to observe that a manifest ran
+    fn create(&self, name: &str) -> String {
+        format!(
+            "  - action: directory.create\n    path: '{}'\n",
+            self.out(name).display()
+        )
+    }
+
+    fn out(&self, name: &str) -> PathBuf {
+        self.path().join("out").join(name)
+    }
+
+    fn created(&self, name: &str) -> bool {
+        self.out(name).is_dir()
+    }
+
+    /// Runs comtrya isolated from the user's own Comtrya.yaml and config directory
+    fn run(&self, args: &[&str]) -> Assert {
+        let manifests = self.path().join("manifests");
+        let mut cmd = Command::new(assert_cmd::cargo::cargo_bin!("comtrya"));
+        cmd.current_dir(self.path())
+            .env("HOME", self.path())
+            .env("XDG_CONFIG_HOME", self.path())
+            .args(["--no-color", "-d"])
+            .arg(manifests)
+            .args(args);
+
+        cmd.assert().success()
+    }
+}
+
+#[test]
+fn applies_all_manifests() {
+    let f = Fixture::new();
+    f.manifest("one.yaml", &format!("actions:\n{}", f.create("one")))
+        .manifest("nested/two.yaml", &format!("actions:\n{}", f.create("two")));
+
+    f.run(&["apply"]);
+
+    assert!(f.created("one"));
+    assert!(f.created("two"));
+}
+
+#[test]
+fn toml_manifests_are_applied() {
+    let f = Fixture::new();
+    f.manifest(
+        "one.toml",
+        &format!(
+            "[[actions]]\naction = \"directory.create\"\npath = '{}'\n",
+            f.out("one").display()
+        ),
+    );
+
+    f.run(&["apply"]);
+
+    assert!(f.created("one"));
+}
+
+#[test]
+fn dry_run_changes_nothing() {
+    let f = Fixture::new();
+    f.manifest("one.yaml", &format!("actions:\n{}", f.create("one")));
+
+    f.run(&["apply", "--dry-run"]);
+
+    assert!(!f.created("one"));
+}
+
+#[test]
+fn selected_manifests_run_with_their_dependencies_only() {
+    let f = Fixture::new();
+    f.manifest(
+        "app.yaml",
+        &format!("depends:\n  - lib\nactions:\n{}", f.create("app")),
+    )
+    .manifest("lib.yaml", &format!("actions:\n{}", f.create("lib")))
+    .manifest("other.yaml", &format!("actions:\n{}", f.create("other")));
+
+    f.run(&["apply", "-m", "app"]);
+
+    assert!(f.created("app"));
+    assert!(f.created("lib"));
+    assert!(!f.created("other"));
+}
+
+#[test]
+fn nested_manifests_are_selected_by_dotted_name() {
+    let f = Fixture::new();
+    f.manifest(
+        "dev/tools.yaml",
+        &format!("actions:\n{}", f.create("tools")),
+    )
+    .manifest("dev/main.yaml", &format!("actions:\n{}", f.create("dev")))
+    .manifest("other.yaml", &format!("actions:\n{}", f.create("other")));
+
+    // `dev/main.yaml` is called `dev`, `dev/tools.yaml` is `dev.tools`
+    f.run(&["apply", "-m", "dev.tools,dev"]);
+
+    assert!(f.created("tools"));
+    assert!(f.created("dev"));
+    assert!(!f.created("other"));
+}
+
+#[test]
+fn where_condition_skips_manifest() {
+    let f = Fixture::new();
+    f.manifest(
+        "skipped.yaml",
+        &format!(
+            "where: os.name == \"no-such-os\"\nactions:\n{}",
+            f.create("skipped")
+        ),
+    )
+    .manifest(
+        "applied.yaml",
+        &format!(
+            "where: os.name != \"no-such-os\"\nactions:\n{}",
+            f.create("applied")
+        ),
+    );
+
+    f.run(&["apply"]);
+
+    assert!(!f.created("skipped"));
+    assert!(f.created("applied"));
+}
+
+#[test]
+fn where_condition_sees_defined_variables() {
+    let f = Fixture::new();
+    f.manifest(
+        "work.yaml",
+        &format!(
+            "where: variables.profile == \"work\"\nactions:\n{}",
+            f.create("work")
+        ),
+    );
+
+    f.run(&["apply"]);
+    assert!(!f.created("work"));
+
+    f.run(&["-D", "profile=work", "apply"]);
+    assert!(f.created("work"));
+}
+
+#[test]
+fn templates_are_rendered_with_variables() {
+    let f = Fixture::new();
+    f.manifest(
+        "one.yaml",
+        "actions:\n  - action: directory.create\n    path: '{{ variables.base }}/{{ variables.name }}'\n",
+    );
+
+    let base = f.path().join("out").display().to_string();
+    let base = format!("base={base}");
+    f.run(&["-D", &base, "-D", "name=rendered", "apply"]);
+
+    assert!(f.created("rendered"));
+}
+
+#[test]
+fn label_selects_manifests() {
+    let f = Fixture::new();
+    f.manifest(
+        "desktop.yaml",
+        &format!("labels:\n  - desktop\nactions:\n{}", f.create("desktop")),
+    )
+    .manifest(
+        "server.yaml",
+        &format!("labels:\n  - server\nactions:\n{}", f.create("server")),
+    )
+    .manifest(
+        "unlabeled.yaml",
+        &format!("actions:\n{}", f.create("unlabeled")),
+    );
+
+    f.run(&["apply", "-l", "desktop"]);
+
+    assert!(f.created("desktop"));
+    assert!(!f.created("server"));
+    assert!(!f.created("unlabeled"));
+}
+
+#[test]
+fn broken_manifests_dont_stop_the_others() {
+    let f = Fixture::new();
+    f.manifest("invalid.yaml", "actions:\n  - action: no.such.action\n")
+        .manifest(
+            "unknown-variable.yaml",
+            &format!(
+                "actions:\n  - action: directory.create\n    path: '{{{{ variables.missing }}}}'\n{}",
+                f.create("never")
+            ),
+        )
+        .manifest("valid.yaml", &format!("actions:\n{}", f.create("valid")));
+
+    f.run(&["apply"]);
+
+    assert!(f.created("valid"));
+    assert!(!f.created("never"));
+}
+
+#[test]
+fn file_copy_renders_templates() {
+    let f = Fixture::new();
+    f.manifest(
+        "dotfiles/main.yaml",
+        &format!(
+            "actions:\n  - action: file.copy\n    from: gitconfig\n    to: '{}'\n    template: true\n",
+            f.out("gitconfig").display()
+        ),
+    )
+    .manifest("dotfiles/files/gitconfig", "name = {{ variables.name }}\n");
+    std::fs::create_dir_all(f.path().join("out")).unwrap();
+
+    f.run(&["-D", "name=Comtrya", "apply"]);
+
+    assert_eq!(
+        "name = Comtrya\n",
+        std::fs::read_to_string(f.out("gitconfig")).unwrap()
+    );
+}
+
+#[cfg(unix)]
+#[test]
+fn file_link_links_into_files_directory() {
+    let f = Fixture::new();
+    f.manifest(
+        "dotfiles/main.yaml",
+        &format!(
+            "actions:\n  - action: file.link\n    from: vimrc\n    to: '{}'\n",
+            f.out("vimrc").display()
+        ),
+    )
+    .manifest("dotfiles/files/vimrc", "set number\n");
+    std::fs::create_dir_all(f.path().join("out")).unwrap();
+
+    f.run(&["apply"]);
+
+    let target = std::fs::read_link(f.out("vimrc")).unwrap();
+    assert!(target.ends_with("dotfiles/files/vimrc"), "{target:?}");
+    assert_eq!(
+        "set number\n",
+        std::fs::read_to_string(f.out("vimrc")).unwrap()
+    );
+}
+
+#[test]
+fn contexts_lists_builtin_contexts() {
+    let f = Fixture::new();
+    std::fs::create_dir_all(f.path().join("manifests")).unwrap();
+
+    let output = f.run(&["contexts"]).get_output().stdout.clone();
+    let output = String::from_utf8_lossy(&output);
+
+    for context in ["env", "os", "user", "variables"] {
+        assert!(
+            output.lines().any(|line| line.trim() == context),
+            "{context} missing"
+        );
+    }
+}
+
+#[cfg(unix)]
+mod order {
+    use super::*;
+
+    /// A `command.run` action appending `name` to `<tempdir>/log`
+    fn log(f: &Fixture, name: &str) -> String {
+        format!(
+            "  - action: command.run\n    command: sh\n    args:\n      - -c\n      - echo {name} >> '{}'\n",
+            f.path().join("log").display()
+        )
+    }
+
+    fn logged(f: &Fixture) -> Vec<String> {
+        std::fs::read_to_string(f.path().join("log"))
+            .unwrap_or_default()
+            .lines()
+            .map(String::from)
+            .collect()
+    }
+
+    #[test]
+    fn dependencies_run_first() {
+        let f = Fixture::new();
+        f.manifest(
+            "app.yaml",
+            &format!("depends:\n  - lib\nactions:\n{}", log(&f, "app")),
+        )
+        .manifest(
+            "lib.yaml",
+            &format!("depends:\n  - base\nactions:\n{}", log(&f, "lib")),
+        )
+        .manifest("base.yaml", &format!("actions:\n{}", log(&f, "base")));
+
+        f.run(&["apply", "-m", "app"]);
+
+        assert_eq!(vec!["base", "lib", "app"], logged(&f));
+    }
+
+    #[test]
+    fn relative_dependencies_resolve_in_the_same_directory() {
+        let f = Fixture::new();
+        f.manifest(
+            "dev/app.yaml",
+            &format!("depends:\n  - ./lib\nactions:\n{}", log(&f, "app")),
+        )
+        .manifest("dev/lib.yaml", &format!("actions:\n{}", log(&f, "dev.lib")))
+        .manifest("lib.yaml", &format!("actions:\n{}", log(&f, "lib")));
+
+        f.run(&["apply", "-m", "dev.app"]);
+
+        assert_eq!(vec!["dev.lib", "app"], logged(&f));
+    }
+
+    #[test]
+    fn actions_run_in_order() {
+        let f = Fixture::new();
+        f.manifest(
+            "one.yaml",
+            &format!("actions:\n{}{}{}", log(&f, "1"), log(&f, "2"), log(&f, "3")),
+        );
+
+        f.run(&["apply"]);
+
+        assert_eq!(vec!["1", "2", "3"], logged(&f));
+    }
+
+    #[test]
+    fn dependents_dont_run_when_a_dependency_fails() {
+        let f = Fixture::new();
+        f.manifest(
+            "app.yaml",
+            &format!("depends:\n  - lib\nactions:\n{}", log(&f, "app")),
+        )
+        .manifest(
+            "lib.yaml",
+            &format!(
+                "actions:\n{}  - action: command.run\n    command: 'false'\n",
+                log(&f, "lib")
+            ),
+        );
+
+        f.run(&["apply", "-m", "app"]);
+
+        assert_eq!(vec!["lib"], logged(&f));
+    }
+}
+
+/// Examples that fail to load on this platform.
+// FIXME: templates are rendered before the YAML is parsed, so Windows paths like
+// `C:\Users\...` from `{{ user.home_dir }}` become invalid escapes in double-quoted strings
+#[cfg(windows)]
+const KNOWN_FAILURES: [&str; 3] = [
+    "command\\run.yaml",
+    "directory\\remove.yaml",
+    "file\\filecopy.yaml",
+];
+#[cfg(not(windows))]
+const KNOWN_FAILURES: [&str; 0] = [];
+
+/// Every example in the repository must load. Catches breaking changes to the manifest format.
+#[test]
+fn all_examples_load() {
+    let repo = Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap();
+    let home = TempDir::new().unwrap();
+
+    // Offline replacement for examples/Comtrya.yaml, whose include_variables needs DNS
+    let config = home.path().join("Comtrya.yaml");
+    std::fs::write(
+        &config,
+        "variables:\n  fkbr: sxoe\n  kuci: xhpv\n  hello: hello\n  foo: foo\n",
+    )
+    .unwrap();
+
+    let output = Command::new(assert_cmd::cargo::cargo_bin!("comtrya"))
+        // Some examples read files relative to the repository root
+        .current_dir(repo)
+        .env("HOME", home.path())
+        .env("XDG_CONFIG_HOME", home.path())
+        .env("AGE_PASSPHRASE", "not-a-secret")
+        .args(["--no-color", "-c"])
+        .arg(&config)
+        .args(["-d", "examples", "status"])
+        .output()
+        .unwrap();
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(output.status.success(), "{stderr}");
+
+    let errors: Vec<&str> = stdout.lines().filter(|l| l.contains("ERROR")).collect();
+    let failing = errors.len();
+    for known in KNOWN_FAILURES {
+        assert!(
+            errors.iter().any(|error| error.contains(known)),
+            "{known} loads now, remove it from KNOWN_FAILURES"
+        );
+    }
+    assert_eq!(KNOWN_FAILURES.len(), failing, "{stdout}");
+
+    // One table row per manifest file. Long names wrap, so only count rows with an action count
+    let manifest_files = walkdir::WalkDir::new(repo.join("examples"))
+        .into_iter()
+        .filter_map(Result::ok)
+        .filter(|e| {
+            let path = e.path();
+            path.extension()
+                .is_some_and(|ext| ext == "yaml" || ext == "yml" || ext == "toml")
+                && path.file_name().is_some_and(|name| name != "Comtrya.yaml")
+                && !path.components().any(|c| c.as_os_str() == "files")
+        })
+        .count();
+    let rows = stdout
+        .lines()
+        .filter(|line| {
+            let cells: Vec<&str> = line.split('|').collect();
+            cells.len() > 2
+                && cells[2].trim().parse::<usize>().is_ok()
+                // FIXME: the Comtrya.yaml config is loaded as a manifest as well
+                && cells[1].trim() != "Comtrya"
+        })
+        .count();
+
+    assert!(manifest_files > 20, "only {manifest_files} examples found");
+    assert_eq!(manifest_files - failing, rows, "{stdout}");
+}
