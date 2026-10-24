@@ -7,7 +7,7 @@ pub struct RemoveEnvVars(pub HashMap<String, String>);
 
 impl Finalizer for RemoveEnvVars {
     fn finalize(&self, _atom: &dyn Atom) -> anyhow::Result<bool> {
-        for (key, _value) in self.0.iter() {
+        for key in self.0.keys() {
             std::env::remove_var(key);
         }
 

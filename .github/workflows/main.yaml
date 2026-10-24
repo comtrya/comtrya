@@ -10,8 +10,6 @@ env:
   MIN_SUPPORTED_RUST_VERSION: "1.88.0"
   CICD_INTERMEDIATES_DIR: "_cicd-intermediates"
   CARGO_TERM_COLOR: always
-  #Fix these up soon
-  #RUSTFLAGS: "-D warnings"
 
 jobs:
   lint-test-release:
@@ -27,13 +25,10 @@ jobs:
           components: clippy
 
       - name: Run Clippy
-        run: cargo clippy --all-features --all-targets
+        run: cargo clippy --all-features --all-targets -- -D warnings
 
       - name: Run Tests
         run: cargo test
-
-      - name: Upload to codecov.io
-        uses: codecov/codecov-action@v7.1.1
 
       - name: Check for Release
         id: is-release

@@ -161,7 +161,7 @@ mod tests {
                         return;
                     }
                 }
-                panic!("Execute failed: {}", e);
+                panic!("Execute failed: {e}");
             }
         }
     }

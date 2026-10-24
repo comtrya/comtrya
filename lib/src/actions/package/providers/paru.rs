@@ -96,7 +96,7 @@ impl PackageProvider for Paru {
                 .args(
                     vec![String::from("-Qq")]
                         .into_iter()
-                        .chain(package.packages().into_iter()),
+                        .chain(package.packages()),
                 )
                 .output()?
                 .stdout,

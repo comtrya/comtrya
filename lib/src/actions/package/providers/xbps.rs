@@ -63,7 +63,7 @@ impl PackageProvider for Xbps {
                 .args(
                     vec![String::from("-s")]
                         .into_iter()
-                        .chain(package.packages().into_iter()),
+                        .chain(package.packages()),
                 )
                 .output()?
                 .stdout,
