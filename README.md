@@ -2,7 +2,6 @@
 
 [![Latest GitHub Release](https://img.shields.io/github/v/release/comtrya/comtrya?label=Latest&style=for-the-badge)](https://github.com/comtrya/comtrya/releases/latest)
 [![GitHub Actions Status](https://img.shields.io/github/actions/workflow/status/comtrya/comtrya/main.yaml?branch=main&style=for-the-badge)](https://github.com/comtrya/comtrya/actions/workflows/main.yaml)
-[![Codecov](https://img.shields.io/codecov/c/github/comtrya/comtrya?style=for-the-badge)](https://codecov.io/gh/comtrya/comtrya)
 [![License](https://img.shields.io/github/license/comtrya/comtrya?style=for-the-badge)](./LICENSE)
 [![Matrix](https://img.shields.io/matrix/comtrya:matrix.org?style=for-the-badge)](https://matrix.to/#/#comtrya:matrix.org)
 

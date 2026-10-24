@@ -143,7 +143,7 @@ impl Repo {
     fn checkout(&self) -> Result<Repository> {
         info!("Checking out plugin");
         let (checkout_result, _) =
-            prepare_clone_bare(format!("https://github.com/{}", &self.repo), self.path()?)?
+            prepare_clone_bare(format!("https://github.com/{}", self.repo), self.path()?)?
                 .with_remote_name("main")?
                 .fetch_then_checkout(Discard, &IS_INTERRUPTED)?;
 

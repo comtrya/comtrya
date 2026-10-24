@@ -43,13 +43,13 @@ Small, atomic commits make reviews easier and help track down regressions. We us
 
 - Rust via [rustup](https://rustup.rs/), with `rustfmt` and `clippy`:
   - `rustup component add rustfmt clippy`
-- The minimum supported Rust version is **1.88**, which is also what CI tests against.
+- The minimum supported Rust version is **1.88**. CI lints with it, so the code must build on it; tests run on stable.
 
 ### Before opening a pull request
 
 Run `./check.sh` (or `check.ps1` on Windows). It
 - formats your code with `cargo fmt`
-- runs the linter `cargo clippy`
+- runs the linter `cargo clippy`, which fails on any warning, like CI
 - runs all tests with `cargo test`
 
 ### Documentation

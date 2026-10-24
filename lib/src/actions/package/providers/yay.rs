@@ -95,7 +95,7 @@ impl PackageProvider for Yay {
                 .args(
                     vec![String::from("-Q"), String::from("-q")]
                         .into_iter()
-                        .chain(package.packages().into_iter()),
+                        .chain(package.packages()),
                 )
                 .output()?
                 .stdout,
