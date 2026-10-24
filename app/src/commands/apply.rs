@@ -8,7 +8,10 @@ use core::panic;
 use petgraph::{visit::DfsPostOrder, Graph};
 use rhai::Engine;
 use std::path::PathBuf;
-use std::{collections::HashMap, ops::Deref};
+use std::{
+    collections::{HashMap, HashSet},
+    ops::Deref,
+};
 use tracing::{debug, error, info, instrument, span, trace, warn};
 
 #[derive(Parser, Debug)]
@@ -168,6 +171,9 @@ impl ComtryaCommand for Apply {
         let engine = Engine::new();
         let mut scope = to_rhai(contexts);
 
+        // Manifests that failed, or depend on one that did
+        let mut failed = HashSet::new();
+
         run_manifests.iter().for_each(|manifest| {
             let start = if manifest.eq(&String::from("")) {
                 root_index
@@ -205,6 +211,16 @@ impl ComtryaCommand for Apply {
                     manifest = m1.name.as_deref().unwrap_or("Cannot extract name"),
                 )
                 .entered();
+
+                if dag
+                    .neighbors(visited)
+                    .any(|dependency| failed.contains(&dependency))
+                {
+                    warn!("Skipping manifest, because a dependency failed");
+                    failed.insert(visited);
+                    span_manifest.exit();
+                    continue;
+                }
 
                 let mut successful = true;
 
@@ -252,7 +268,10 @@ impl ComtryaCommand for Apply {
                         Err(err) => {
                             info!("Action failed to get plan: {:?}", err);
                             successful = false;
-                            continue;
+                            if dry_run {
+                                continue;
+                            }
+                            break;
                         }
                     };
 
@@ -293,6 +312,11 @@ impl ComtryaCommand for Apply {
                     }
                     info!("{}", action.summarize());
                     span_action.exit();
+
+                    // Later actions usually build on earlier ones, so stop this manifest
+                    if !successful {
+                        break;
+                    }
                 }
 
                 if dry_run {
@@ -302,14 +326,22 @@ impl ComtryaCommand for Apply {
 
                 if !successful {
                     error!("Failed");
+                    failed.insert(visited);
                     span_manifest.exit();
-                    break;
+                    continue;
                 }
 
                 info!("Completed");
                 span_manifest.exit();
             }
         });
+
+        if !failed.is_empty() {
+            return Err(anyhow::anyhow!(
+                "{} manifest(s) failed or were skipped because a dependency failed",
+                failed.len()
+            ));
+        }
 
         Ok(())
     }
