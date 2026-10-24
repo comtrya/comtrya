@@ -95,15 +95,30 @@ If you would like to have this feature supported on another package provider, pl
 |----------|---------------|----------|-------------------------------------------------|
 | name     | string        | no       | Alias of url                                    |
 | key      | RepositoryKey | yes      | See table below                                 |
-| provider | string        | yes      | Defaukt value provided, specify package manager |
+| provider | string        | yes      | Default value provided, specify package manager |
 
 ### RepositoryKey
 
-| Key         | Type   | Optional | Description |
-|-------------|--------|----------|-------------|
-| url         | string | no       |             |
-| name        | string | yes      |             |
-| key         | string | yes      |             |
-| fingerprint | string | yes      |             |
+| Key         | Type   | Optional | Description                                               |
+|-------------|--------|----------|-----------------------------------------------------------|
+| url         | string | no       | URL of the signing key                                    |
+| name        | string | yes      | File name of the key, defaults to a hash of the URL      |
+| key         | string | yes      |                                                           |
+| fingerprint | string | yes      |                                                           |
 
-*More documentation to come*
+### apt (Debian, Ubuntu)
+
+For apt, `name` is the repository in the one-line format `<uri> <suite> [<component>...]`. Comtrya writes it as a [deb822](https://manpages.debian.org/stable/apt/sources.list.5.en.html) file to `/etc/apt/sources.list.d/comtrya-<uri>.sources` and runs `apt update`. If a `key` is given, it's downloaded to `/usr/share/keyrings/<name>.asc` and used as `Signed-By`.
+
+```yaml
+- action: package.repository
+  name: "https://download.docker.com/linux/debian {{ os.codename }} stable"
+  key:
+    name: docker
+    url: https://download.docker.com/linux/debian/gpg
+
+- action: package.install
+  name: docker-ce
+```
+
+On Ubuntu, `name` can also be a PPA such as `ppa:neovim-ppa/stable`, which is added with `add-apt-repository`.
