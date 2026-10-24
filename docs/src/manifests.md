@@ -22,3 +22,30 @@ action = "command.run"
 command = "echo"
 args = [ "hi" ]
 ```
+
+## Editor support
+
+A JSON schema for manifests is published at `https://comtrya.dev/schema.json`. Editors with a YAML or TOML language server can use it for completion and validation.
+
+For YAML ([yaml-language-server](https://github.com/redhat-developer/yaml-language-server), e.g. the VS Code YAML extension), add this comment at the top of a manifest:
+
+```yaml
+# yaml-language-server: $schema=https://comtrya.dev/schema.json
+actions:
+  - action: command.run
+    command: echo
+    args:
+      - hi
+```
+
+For TOML ([Taplo](https://taplo.tamasfe.dev/), e.g. the VS Code Even Better TOML extension):
+
+```toml
+#:schema https://comtrya.dev/schema.json
+[[actions]]
+action = "command.run"
+command = "echo"
+args = [ "hi" ]
+```
+
+To generate the schema for your installed version locally, run `cargo run -p jsonschemagen > schema.json` in a checkout of the repository.

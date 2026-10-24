@@ -41,6 +41,9 @@ jobs:
       - name: Setup Pages
         id: pages
         uses: actions/configure-pages@v6.0.0
+      - name: Generate JSON schema
+        # Copied into the book by mdBook and served as https://comtrya.dev/schema.json
+        run: cargo run --locked -p jsonschemagen > docs/src/schema.json
       - name: Build with mdBook
         run: mdbook build ./docs/
       - name: Upload artifact

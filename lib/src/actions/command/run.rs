@@ -17,7 +17,9 @@ pub struct RunCommand {
     #[serde(default = "get_false", alias = "sudo")]
     pub privileged: bool,
 
+    /// Working directory of the command, defaults to the directory comtrya is run from
     #[serde(default = "get_cwd")]
+    #[schemars(transform = remove_default)]
     pub dir: String,
 
     #[serde(default)]
@@ -26,6 +28,11 @@ pub struct RunCommand {
 
 fn get_false() -> bool {
     false
+}
+
+/// The default depends on where comtrya runs, so it must not end up in the generated JSON schema
+fn remove_default(schema: &mut schemars::Schema) {
+    schema.remove("default");
 }
 
 fn get_cwd() -> String {

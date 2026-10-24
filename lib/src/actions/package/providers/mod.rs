@@ -90,7 +90,7 @@ impl Default for PackageProviders {
     fn default() -> Self {
         let info = os_info::get();
 
-        println!("Info: {info:?}");
+        tracing::trace!("Detected OS for the default package provider: {info:?}");
 
         match info.os_type() {
             // Arch Variants
