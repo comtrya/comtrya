@@ -5,6 +5,6 @@ actions:
     # so it's not referencing my outside repo
     repo: JustinBacher/comtrya-example-plugin
     version:
-    opts:
+    actions:
       echo:
         output: hello world
