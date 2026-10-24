@@ -116,6 +116,8 @@ You can also view the values that these contexts have by passing in a `show-valu
 comtrya contexts --show-values
 ```
 
+At the end, `comtrya contexts` also prints the directory where manifests fetched from git repositories are cached, e.g. `~/.cache/comtrya/manifests/git` on Linux. Delete a repository's folder there to fetch it again.
+
 ## Status
 
 The **status** command provides an overview of manifests.
