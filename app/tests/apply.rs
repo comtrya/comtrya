@@ -62,6 +62,7 @@ impl Fixture {
     }
 
     /// Like `run`, but a manifest is expected to fail, so comtrya must exit with an error
+    #[cfg(unix)]
     fn run_failing(&self, args: &[&str]) -> Assert {
         self.command(args).assert().failure()
     }
