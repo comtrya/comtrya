@@ -27,3 +27,9 @@ actions:
 ```
 
 As shown, at the top of the `users.yaml` file, `depends` takes a lists of manifests that this manifest depends on.
+
+## When something fails
+
+If an action fails, comtrya skips the remaining actions of that manifest and every manifest that depends on it, directly or indirectly. All other manifests still run, so one run shows every problem at once. At the end, comtrya exits with a non-zero status, so scripts and CI notice the failure.
+
+In the example above, if creating the group fails, `users.yaml` is skipped, while unrelated manifests are applied as usual.

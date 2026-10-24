@@ -45,7 +45,7 @@ impl Fixture {
     }
 
     /// Runs comtrya isolated from the user's own Comtrya.yaml and config directory
-    fn run(&self, args: &[&str]) -> Assert {
+    fn command(&self, args: &[&str]) -> Command {
         let manifests = self.path().join("manifests");
         let mut cmd = Command::new(assert_cmd::cargo::cargo_bin!("comtrya"));
         cmd.current_dir(self.path())
@@ -54,8 +54,17 @@ impl Fixture {
             .args(["--no-color", "-d"])
             .arg(manifests)
             .args(args);
+        cmd
+    }
 
-        cmd.assert().success()
+    fn run(&self, args: &[&str]) -> Assert {
+        self.command(args).assert().success()
+    }
+
+    /// Like `run`, but a manifest is expected to fail, so comtrya must exit with an error
+    #[cfg(unix)]
+    fn run_failing(&self, args: &[&str]) -> Assert {
+        self.command(args).assert().failure()
     }
 }
 
@@ -373,9 +382,72 @@ mod order {
             ),
         );
 
-        f.run(&["apply", "-m", "app"]);
+        f.run_failing(&["apply", "-m", "app"]);
 
         assert_eq!(vec!["lib"], logged(&f));
+    }
+
+    fn fail() -> &'static str {
+        "  - action: command.run\n    command: 'false'\n"
+    }
+
+    #[test]
+    fn remaining_actions_of_a_failing_manifest_are_skipped() {
+        let f = Fixture::new();
+        f.manifest(
+            "one.yaml",
+            &format!("actions:\n{}{}{}", log(&f, "1"), fail(), log(&f, "2")),
+        );
+
+        f.run_failing(&["apply"]);
+
+        assert_eq!(vec!["1"], logged(&f));
+    }
+
+    #[test]
+    fn unrelated_manifests_run_when_one_fails() {
+        let f = Fixture::new();
+        f.manifest("broken.yaml", &format!("actions:\n{}", fail()));
+        // Manifests run in no particular order, so use several to make it unlikely that all of
+        // them happen to run before the failing one
+        let others: Vec<String> = (0..9).map(|i| format!("other{i}")).collect();
+        for other in &others {
+            f.manifest(
+                &format!("{other}.yaml"),
+                &format!("actions:\n{}", log(&f, other)),
+            );
+        }
+
+        f.run_failing(&["apply"]);
+
+        let mut ran = logged(&f);
+        ran.sort();
+        assert_eq!(others, ran);
+    }
+
+    #[test]
+    fn dependents_are_skipped_transitively() {
+        let f = Fixture::new();
+        f.manifest(
+            "app.yaml",
+            &format!("depends:\n  - lib\nactions:\n{}", log(&f, "app")),
+        )
+        .manifest(
+            "lib.yaml",
+            &format!("depends:\n  - base\nactions:\n{}", log(&f, "lib")),
+        )
+        .manifest("base.yaml", &format!("actions:\n{}", fail()))
+        .manifest(
+            "tool.yaml",
+            &format!("depends:\n  - shared\nactions:\n{}", log(&f, "tool")),
+        )
+        .manifest("shared.yaml", &format!("actions:\n{}", log(&f, "shared")));
+
+        f.run_failing(&["apply"]);
+
+        let mut ran = logged(&f);
+        ran.sort();
+        assert_eq!(vec!["shared", "tool"], ran);
     }
 }
 
