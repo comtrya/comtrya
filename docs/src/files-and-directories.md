@@ -6,6 +6,10 @@
 - file.remove
 - file.unarchive
 - directory.copy
+- directory.create
+- directory.remove
+
+All `directory.*` actions can also be written as `dir.*`, e.g. `dir.create`.
 
 ## Note
 The following commands expect the `from`/`source` to point to files/directories which are themselves under a "files" directory.
@@ -210,4 +214,36 @@ Copies a directory on the filesystem to another location.
 - action: directory.copy
   from: managed_directory
   to: /root/location
+```
+
+## directory.create
+
+Creates a directory, including all missing parent directories. Does nothing if the directory already exists.
+
+| Key    | Type   | Optional | Description         |
+|:-------|:-------|:---------|:--------------------|
+| action | string | no       | `directory.create`  |
+| path   | string | no       | directory to create |
+
+### Example
+
+```yaml
+- action: directory.create
+  path: "{{ user.home_dir }}/.config/nvim"
+```
+
+## directory.remove
+
+Removes a directory. Only **empty** directories are removed: if the directory isn't empty or doesn't exist, comtrya logs an error and skips the action.
+
+| Key    | Type   | Optional | Description         |
+|:-------|:-------|:---------|:--------------------|
+| action | string | no       | `directory.remove`  |
+| target | string | no       | directory to remove |
+
+### Example
+
+```yaml
+- action: directory.remove
+  target: /tmp/old-directory
 ```
