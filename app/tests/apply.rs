@@ -182,6 +182,36 @@ fn where_condition_sees_defined_variables() {
     assert!(f.created("work"));
 }
 
+/// Templates of a manifest that `where` skips may fail, e.g. on a Windows-only env var (#283)
+#[test]
+fn where_condition_skips_manifest_before_rendering_templates() {
+    let f = Fixture::new();
+    let windows_only = |condition: &str| {
+        format!(
+            "where: {condition}\nactions:\n  - action: directory.create\n    path: '{{{{ get_env(name=\"COMTRYA_UNSET_VARIABLE\") }}}}'\n"
+        )
+    };
+    f.manifest("skipped.yaml", &windows_only("os.name == \"no-such-os\""))
+        .manifest(
+            "applied.yaml",
+            &format!("actions:\n{}", f.create("applied")),
+        );
+
+    let output = f.run(&["apply"]).get_output().clone();
+    let log = String::from_utf8_lossy(&output.stdout) + String::from_utf8_lossy(&output.stderr);
+
+    assert!(f.created("applied"));
+    assert!(!log.contains("ERROR"), "{log}");
+
+    // Where the manifest applies, the broken template is still reported
+    f.manifest("skipped.yaml", &windows_only("os.name != \"no-such-os\""));
+
+    let output = f.run(&["apply"]).get_output().clone();
+    let log = String::from_utf8_lossy(&output.stdout) + String::from_utf8_lossy(&output.stderr);
+
+    assert!(log.contains("COMTRYA_UNSET_VARIABLE"), "{log}");
+}
+
 #[test]
 fn templates_are_rendered_with_variables() {
     let f = Fixture::new();

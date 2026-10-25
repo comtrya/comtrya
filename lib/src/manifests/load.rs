@@ -1,15 +1,28 @@
 use super::Manifest;
 use crate::{
-    contexts::{to_tera, Contexts},
+    contexts::{to_rhai, to_tera, Contexts},
     manifests::get_manifest_name,
     tera_functions::register_functions,
 };
 use ignore::WalkBuilder;
+use rhai::Engine;
+use serde::{de::DeserializeOwned, Deserialize};
 use std::{
-    collections::HashMap, error::Error, ffi::OsStr, fs::canonicalize, ops::Deref, path::PathBuf,
+    collections::HashMap,
+    error::Error,
+    ffi::OsStr,
+    fs::canonicalize,
+    path::{Path, PathBuf},
 };
 use tera::Tera;
-use tracing::{error, span};
+use tracing::{debug, error, span};
+
+/// The part of a manifest that is readable before its templates are rendered
+#[derive(Deserialize)]
+struct Unrendered {
+    #[serde(default)]
+    r#where: Option<String>,
+}
 
 pub fn load(manifest_path: PathBuf, contexts: &Contexts) -> HashMap<String, Manifest> {
     let mut manifests: HashMap<String, Manifest> = HashMap::new();
@@ -65,34 +78,29 @@ pub fn load(manifest_path: PathBuf, contexts: &Contexts) -> HashMap<String, Mani
                 let mut tera = Tera::default();
                 register_functions(&mut tera);
 
-                let template = match tera.render_str(template, &to_tera(contexts)) {
-                    Ok(template) => template,
-                    Err(err) => {
-                        match err.source() {
-                            Some(err) => error!(message = err.source()),
-                            None => error!(message = err.to_string().as_str()),
+                let manifest = match tera.render_str(template, &to_tera(contexts)) {
+                    Ok(rendered) => parse::<Manifest>(&rendered, &entry),
+                    // A template that only works where the manifest applies, like an env var
+                    // that only exists on Windows, is fine when `where` skips it anyway (#283)
+                    Err(err) => match false_where(template, &entry, contexts) {
+                        Some(condition) => {
+                            debug!("Not rendering templates, because the 'where' condition is false");
+                            Ok(Manifest {
+                                r#where: Some(condition),
+                                ..Default::default()
+                            })
                         }
+                        None => {
+                            match err.source() {
+                                Some(err) => error!(message = err.source()),
+                                None => error!(message = err.to_string().as_str()),
+                            }
 
-                        span.exit();
+                            span.exit();
 
-                        return;
-                    }
-                };
-
-                let manifest: anyhow::Result<Manifest> = match entry
-                    .extension()
-                    .and_then(OsStr::to_str)
-                {
-                    Some("yaml") | Some("yml") => {
-                        serde_yaml_ng::from_str::<Manifest>(template.deref()).map_err(anyhow::Error::from)
-                    }
-                    Some("toml") => toml::from_str::<Manifest>(template.deref()).map_err(anyhow::Error::from),
-                    _ => {
-                        error!("Unrecognized file extension for manifest");
-                        span.exit();
-
-                        return;
-                    }
+                            return;
+                        }
+                    },
                 };
 
                 match manifest {
@@ -119,4 +127,22 @@ pub fn load(manifest_path: PathBuf, contexts: &Contexts) -> HashMap<String, Mani
         });
 
     manifests
+}
+
+fn parse<T: DeserializeOwned>(contents: &str, path: &Path) -> anyhow::Result<T> {
+    match path.extension().and_then(OsStr::to_str) {
+        Some("yaml") | Some("yml") => Ok(serde_yaml_ng::from_str(contents)?),
+        Some("toml") => Ok(toml::from_str(contents)?),
+        _ => Err(anyhow::anyhow!("Unrecognized file extension for manifest")),
+    }
+}
+
+/// The manifest's `where` condition if it is false, read without rendering templates
+fn false_where(contents: &str, path: &Path, contexts: &Contexts) -> Option<String> {
+    let condition = parse::<Unrendered>(contents, path).ok()?.r#where?;
+
+    Engine::new()
+        .eval_with_scope::<bool>(&mut to_rhai(contexts), &condition)
+        .is_ok_and(|result| !result)
+        .then_some(condition)
 }
