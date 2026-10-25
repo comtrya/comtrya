@@ -23,6 +23,19 @@ command = "echo"
 args = [ "hi" ]
 ```
 
+## Manifest version
+
+A manifest can state the format it is written for with a top-level `version` key. Only version `1` exists so far, and leaving the key out means the same. Comtrya skips manifests with a newer version than it supports and reports an error, instead of misreading them.
+
+```yaml
+version: 1
+actions:
+  - action: command.run
+    command: echo
+    args:
+      - hi
+```
+
 ## Editor support
 
 A JSON schema for manifests is published at `https://comtrya.dev/schema.json`. Editors with a YAML or TOML language server can use it for completion and validation.

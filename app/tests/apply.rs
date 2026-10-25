@@ -212,6 +212,27 @@ fn where_condition_skips_manifest_before_rendering_templates() {
     assert!(log.contains("COMTRYA_UNSET_VARIABLE"), "{log}");
 }
 
+/// A manifest for a newer format is refused instead of misread
+#[test]
+fn manifests_with_a_newer_version_are_skipped() {
+    let f = Fixture::new();
+    f.manifest(
+        "newer.yaml",
+        &format!("version: 2\nactions:\n{}", f.create("newer")),
+    )
+    .manifest(
+        "current.yaml",
+        &format!("version: 1\nactions:\n{}", f.create("current")),
+    );
+
+    let output = f.run(&["apply"]).get_output().clone();
+    let log = String::from_utf8_lossy(&output.stdout) + String::from_utf8_lossy(&output.stderr);
+
+    assert!(f.created("current"));
+    assert!(!f.created("newer"));
+    assert!(log.contains("manifest version 2"), "{log}");
+}
+
 #[test]
 fn templates_are_rendered_with_variables() {
     let f = Fixture::new();

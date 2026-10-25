@@ -13,6 +13,11 @@ use tracing::error;
 
 #[derive(JsonSchema, Clone, Debug, Default, Serialize, Deserialize)]
 pub struct Manifest {
+    /// The manifest format. Only `1` exists so far; comtrya refuses manifests written for a
+    /// newer format instead of misreading them
+    #[serde(default)]
+    pub version: Option<u32>,
+
     #[serde(default)]
     pub r#where: Option<String>,
 
@@ -34,6 +39,9 @@ pub struct Manifest {
     #[serde(skip)]
     pub dag_index: Option<NodeIndex<u32>>,
 }
+
+/// The newest manifest format this version of comtrya understands
+pub const MANIFEST_VERSION: u32 = 1;
 
 pub fn resolve(uri: &String) -> Option<PathBuf> {
     let manifest_directory = register_providers()
