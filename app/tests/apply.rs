@@ -323,6 +323,11 @@ fn file_copy_decrypts_with_gpg() {
         .prefix("gpg")
         .tempdir_in("/tmp")
         .unwrap();
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(gnupg_home.path(), std::fs::Permissions::from_mode(0o700))
+            .unwrap();
+    }
     let gpg = |args: &[&str]| {
         let status = Process::new("gpg")
             .env("GNUPGHOME", gnupg_home.path())
