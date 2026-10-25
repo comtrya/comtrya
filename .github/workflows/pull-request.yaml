@@ -74,3 +74,31 @@ jobs:
           target: ${{ matrix.job.target }}
 
       - run: cargo test --target=${{ matrix.job.target }}
+
+  install-scripts:
+    name: install scripts (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - if: runner.os == 'Linux'
+        run: shellcheck docs/src/install.sh
+
+      # dash is /bin/sh on Ubuntu, so this also catches bash-only syntax
+      - if: runner.os != 'Windows'
+        run: |
+          INSTALL_DIR="$RUNNER_TEMP/bin" sh docs/src/install.sh
+          "$RUNNER_TEMP/bin/comtrya" --version
+
+      - if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $env:INSTALL_DIR = "$env:RUNNER_TEMP\bin"
+          ./docs/src/install.ps1
+          & "$env:RUNNER_TEMP\bin\comtrya.exe" --version
