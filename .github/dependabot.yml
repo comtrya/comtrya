@@ -4,6 +4,10 @@ updates:
     directory: "/"
     schedule:
       interval: "monthly"
+    commit-message:
+      # Keeps PR titles in Conventional Commits form ("chore(deps): ..."), see pr-title.yaml
+      prefix: "chore"
+      include: "scope"
     groups:
       all-dependencies-cargo:
         patterns:
@@ -16,6 +20,10 @@ updates:
     directory: "/"
     schedule:
       interval: "monthly"
+    commit-message:
+      # Keeps PR titles in Conventional Commits form ("chore(deps): ..."), see pr-title.yaml
+      prefix: "chore"
+      include: "scope"
     groups:
       all-dependencies-actions:
         patterns:

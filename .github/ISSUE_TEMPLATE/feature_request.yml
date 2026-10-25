@@ -1,0 +1,22 @@
+name: Feature request
+description: Suggest a new action, option or behaviour
+title: "Feature: "
+labels: ["Type::Enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What do you want to do?
+      description: Describe the use case. What can't you do today, or what is cumbersome?
+    validations:
+      required: true
+  - type: textarea
+    id: manifest
+    attributes:
+      label: Manifest example
+      description: If this changes manifests or adds an action, show how it could look.
+      render: yaml
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional information

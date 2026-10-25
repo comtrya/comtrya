@@ -1,0 +1,50 @@
+name: Bug report
+description: Something doesn't work as documented
+title: "Bug: "
+labels: ["Type::Defect"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: What did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: manifest
+    attributes:
+      label: Example manifest
+      description: The smallest manifest that shows the problem.
+      render: yaml
+    validations:
+      required: true
+  - type: textarea
+    id: output
+    attributes:
+      label: Output
+      description: Run `comtrya -vvv apply ...` and paste the output. Remove any secrets first.
+      render: text
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Output of `comtrya --version`
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - Linux
+        - macOS
+        - Windows
+        - BSD
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: os-details
+    attributes:
+      label: OS version / distribution
+      placeholder: e.g. Debian 13, macOS 15.4, Windows 11
