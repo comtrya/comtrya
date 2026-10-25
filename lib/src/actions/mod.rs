@@ -235,7 +235,7 @@ impl Display for Actions {
             Actions::FileRemove(_) => "file.remove",
             Actions::FileUnarchive(_) => "file.unarchive",
             Actions::DirectoryRemove(_) => "directory.remove",
-            Actions::BinaryGitHub(_) => "github.binary",
+            Actions::BinaryGitHub(_) => "binary.github",
             Actions::GitClone(_) => "git.clone",
             Actions::GroupAdd(_) => "group.add",
             Actions::MacOSDefault(_) => "macos.default",
@@ -321,5 +321,22 @@ actions:
         let variant = &ext.variants[0];
         assert_eq!(variant.condition, Some(String::from("Debian")));
         assert_eq!(variant.action.command, "halt");
+    }
+
+    #[test]
+    fn display_shows_the_action_name() {
+        let content = r#"
+actions:
+- action: bin.gh
+  name: comtrya
+  directory: /tmp
+  repository: comtrya/comtrya
+"#;
+        let m: Manifest = serde_yaml_ng::from_str(content).unwrap();
+        let action = &m.actions[0];
+
+        let serialized = serde_json::to_value(action).unwrap();
+        assert_eq!(serialized["action"], action.to_string());
+        assert_eq!("binary.github", action.to_string());
     }
 }
