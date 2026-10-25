@@ -280,6 +280,105 @@ fn file_copy_renders_templates() {
 
 #[cfg(unix)]
 #[test]
+fn file_copy_processes_contents_with_a_command() {
+    let f = Fixture::new();
+    f.manifest(
+        "dotfiles/main.yaml",
+        &format!(
+            "actions:\n  - action: file.copy\n    from: greeting\n    to: '{}'\n    process_with: [tr, h, H]\n    template: true\n",
+            f.out("greeting").display()
+        ),
+    )
+    .manifest("dotfiles/files/greeting", "hello {{ variables.name }}\n");
+    std::fs::create_dir_all(f.path().join("out")).unwrap();
+
+    f.run(&["-D", "name=Comtrya", "apply"]);
+
+    // The command runs first, so the template is rendered from its output
+    assert_eq!(
+        "Hello Comtrya\n",
+        std::fs::read_to_string(f.out("greeting")).unwrap()
+    );
+}
+
+/// Decrypts a file with the throwaway key in `tests/fixtures/gpg`, in its own keyring.
+/// Skipped when gpg isn't installed, except in CI, where it must run.
+#[cfg(unix)]
+#[test]
+fn file_copy_decrypts_with_gpg() {
+    use std::process::Command as Process;
+
+    if Process::new("gpg").arg("--version").output().is_err() {
+        assert!(
+            std::env::var_os("CI").is_none(),
+            "gpg must be installed in CI"
+        );
+        eprintln!("gpg not found, skipping");
+        return;
+    }
+
+    let fixtures = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/gpg");
+    // gpg-agent's socket lives in GNUPGHOME, and socket paths must stay short
+    let gnupg_home = tempfile::Builder::new()
+        .prefix("gpg")
+        .tempdir_in("/tmp")
+        .unwrap();
+    let gpg = |args: &[&str]| {
+        let status = Process::new("gpg")
+            .env("GNUPGHOME", gnupg_home.path())
+            .args(args)
+            .status()
+            .unwrap();
+        assert!(status.success(), "gpg {args:?} failed");
+    };
+    gpg(&[
+        "--batch",
+        "--quiet",
+        "--import",
+        fixtures.join("secret-key.asc").to_str().unwrap(),
+    ]);
+
+    let f = Fixture::new();
+    f.manifest(
+        "dotfiles/main.yaml",
+        &format!(
+            "actions:\n  - action: file.copy\n    from: credentials.fish.asc\n    to: '{}'\n    chmod: 600\n    process_with: [gpg, --batch, --quiet, --decrypt]\n",
+            f.out("credentials.fish").display()
+        ),
+    );
+    let files = f.path().join("manifests/dotfiles/files");
+    std::fs::create_dir_all(&files).unwrap();
+    std::fs::copy(
+        fixtures.join("credentials.fish.asc"),
+        files.join("credentials.fish.asc"),
+    )
+    .unwrap();
+    std::fs::create_dir_all(f.path().join("out")).unwrap();
+
+    let result = f
+        .command(&["apply"])
+        .env("GNUPGHOME", gnupg_home.path())
+        .assert();
+    let _ = Process::new("gpgconf")
+        .env("GNUPGHOME", gnupg_home.path())
+        .args(["--kill", "gpg-agent"])
+        .status();
+    result.success();
+
+    let target = f.out("credentials.fish");
+    assert_eq!(
+        "set -gx API_TOKEN not-a-real-token\n",
+        std::fs::read_to_string(&target).unwrap()
+    );
+    use std::os::unix::fs::PermissionsExt;
+    assert_eq!(
+        0o600,
+        std::fs::metadata(&target).unwrap().permissions().mode() & 0o777
+    );
+}
+
+#[cfg(unix)]
+#[test]
 fn file_link_links_into_files_directory() {
     let f = Fixture::new();
     f.manifest(

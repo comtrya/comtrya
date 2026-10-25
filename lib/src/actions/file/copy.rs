@@ -31,6 +31,10 @@ pub struct FileCopy {
 
     pub passphrase: Option<String>,
 
+    /// A command (program and arguments) that gets the source file on stdin. Its stdout is
+    /// written to `to` instead, e.g. `[gpg, --decrypt]`
+    pub process_with: Option<Vec<String>>,
+
     #[serde(rename = "owned_by_user")]
     pub owner_user: Option<String>,
 
@@ -56,8 +60,19 @@ impl Action for FileCopy {
         manifest: &Manifest,
         context: &crate::contexts::Contexts,
     ) -> anyhow::Result<Vec<Step>> {
+        if self.passphrase.is_some() && self.process_with.is_some() {
+            return Err(anyhow!(
+                "FileCopy can use either passphrase or process_with, not both"
+            ));
+        }
+
         let contents = match self.load(manifest, &self.from) {
             Ok(contents) => {
+                let contents = match &self.process_with {
+                    Some(command) => process(command, contents)?,
+                    None => contents,
+                };
+
                 if self.template {
                     let mut tera = Tera::default();
                     register_functions(&mut tera);
@@ -169,6 +184,45 @@ impl Action for FileCopy {
     }
 }
 
+/// Runs `command` with `input` on stdin and returns its stdout
+fn process(command: &[String], input: Vec<u8>) -> anyhow::Result<Vec<u8>> {
+    use std::io::Write;
+    use std::process::{Command, Stdio};
+
+    let (program, args) = command
+        .split_first()
+        .ok_or_else(|| anyhow!("process_with needs at least a program to run"))?;
+
+    let mut child = Command::new(program)
+        .args(args)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .map_err(|err| anyhow!("process_with could not run `{program}`: {err}"))?;
+
+    // Write from a separate thread, so a command that writes before it has read
+    // all of its input can't block on a full pipe
+    let mut stdin = child.stdin.take().expect("stdin is piped");
+    let writer = std::thread::spawn(move || stdin.write_all(&input));
+
+    let output = child.wait_with_output()?;
+    // A command may exit without reading all of its input, which is fine
+    let _ = writer.join();
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(anyhow!(
+            "process_with `{}` failed with {}: {}",
+            command.join(" "),
+            output.status,
+            stderr.trim()
+        ));
+    }
+
+    Ok(output.stdout)
+}
+
 #[cfg(test)]
 mod tests {
     use crate::actions::Actions;
@@ -258,5 +312,78 @@ mod tests {
     fn chmod_rejects_non_octal_digits() {
         assert!(chmod_of("\"0999\"").is_err());
         assert!(chmod_of("rwx").is_err());
+    }
+
+    #[test]
+    fn process_with_can_be_deserialized() {
+        let yaml =
+            "- action: file.copy\n  from: a.asc\n  to: b\n  process_with: [gpg, --decrypt]\n";
+        let mut actions: Vec<Actions> = serde_yaml_ng::from_str(yaml).unwrap();
+
+        match actions.pop() {
+            Some(Actions::FileCopy(action)) => assert_eq!(
+                Some(vec![String::from("gpg"), String::from("--decrypt")]),
+                action.action.process_with
+            ),
+            _ => panic!("FileCopy didn't deserialize to the correct type"),
+        }
+    }
+
+    #[test]
+    fn process_with_and_passphrase_are_exclusive() {
+        use crate::actions::Action;
+
+        let copy = super::FileCopy {
+            from: String::from("a"),
+            to: String::from("b"),
+            passphrase: Some(String::from("secret")),
+            process_with: Some(vec![String::from("cat")]),
+            ..Default::default()
+        };
+
+        let err = copy
+            .plan(&Default::default(), &Default::default())
+            .err()
+            .expect("plan must fail");
+        assert!(err.to_string().contains("not both"), "{err}");
+    }
+
+    #[test]
+    fn process_with_needs_a_program() {
+        assert!(super::process(&[], vec![]).is_err());
+    }
+
+    #[test]
+    fn process_with_reports_a_missing_program() {
+        let err = super::process(&[String::from("comtrya-does-not-exist")], vec![]).unwrap_err();
+        assert!(err.to_string().contains("comtrya-does-not-exist"), "{err}");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn process_with_pipes_contents_through_the_command() {
+        let command = [String::from("tr"), String::from("a-z"), String::from("A-Z")];
+        let output = super::process(&command, b"hello".to_vec()).unwrap();
+        assert_eq!(b"HELLO".to_vec(), output);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn process_with_handles_output_larger_than_a_pipe_buffer() {
+        let input = vec![b'x'; 1024 * 1024];
+        let output = super::process(&[String::from("cat")], input.clone()).unwrap();
+        assert_eq!(input, output);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn process_with_reports_stderr_when_the_command_fails() {
+        let command = [
+            String::from("sh"),
+            String::from("-c"),
+            String::from("echo bad key >&2; exit 2"),
+        ];
+        let err = super::process(&command, vec![]).unwrap_err().to_string();
+        assert!(err.contains("bad key"), "{err}");
     }
 }
