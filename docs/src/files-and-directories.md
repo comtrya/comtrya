@@ -72,6 +72,31 @@ Action used to copy a file from one location to another.
 *Note: utilizing chown functionality will require running comtrya as root. Also, both a user and a group need to
 be specified.*
 
+### Seeing what changes
+
+`comtrya apply --dry-run` shows what `file.copy` would change, without changing anything:
+
+```text
+ INFO execute:{manifest="git"}:{action=file.copy}: Contents of /home/me/.gitconfig change:
+--- current
++++ new
+@@ -1,3 +1,3 @@
+ [user]
+-  name = Old Name
++  name = New Name
+   email = me@example.com
+```
+
+- For a file that doesn't exist yet or is empty, comtrya only says that it is created or written,
+  without its contents.
+- Permission changes from `chmod` get their own line.
+- Binary files aren't diffed, comtrya only says that they change.
+- Files written with `process_with` or `passphrase` are never shown, as they usually hold
+  decrypted secrets. Rendered templates are shown, so a template that includes secrets from
+  variables shows them too.
+
+During a normal `apply`, the same diff is logged with `-v`.
+
 ### Processing files with a command
 
 `process_with` runs a command, sends the source file to its stdin and writes its stdout to `to`.
@@ -83,6 +108,7 @@ your repository, and no encrypted copy is left behind next to the decrypted one.
 - The command runs while comtrya plans the action, also with `--dry-run`, so it must not change
   the system. It runs as your user, without `privileged`.
 - If the output equals the current file, nothing is written.
+- Its output is never shown in a diff, see [Seeing what changes](#seeing-what-changes).
 - With `template: true`, the output is rendered as a template afterwards.
 - If the command fails, the action fails and its stderr is shown.
 - `passphrase` and `process_with` can't be combined.

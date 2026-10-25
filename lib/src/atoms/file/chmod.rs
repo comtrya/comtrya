@@ -75,6 +75,17 @@ impl Atom for Chmod {
 
         Ok(())
     }
+
+    fn describe_change(&self) -> Option<String> {
+        // A new file is described by the atom that creates it
+        let current = std::fs::metadata(&self.path).ok()?.permissions().mode() & 0o7777;
+
+        Some(format!(
+            "Permissions of {} change from {current:o} to {:o}",
+            self.path.display(),
+            self.mode
+        ))
+    }
 }
 
 #[cfg(not(unix))]
@@ -182,5 +193,21 @@ mod tests {
         assert_eq!(true, file_chmod.plan().unwrap().should_run);
         assert_eq!(true, file_chmod.execute().is_ok());
         assert_eq!(false, file_chmod.plan().unwrap().should_run);
+    }
+
+    #[test]
+    fn describes_a_permission_change() {
+        let file = tempfile::NamedTempFile::new().unwrap();
+        std::fs::set_permissions(file.path(), std::fs::Permissions::from_mode(0o644)).unwrap();
+
+        let chmod = Chmod {
+            path: file.path().to_path_buf(),
+            mode: 0o600,
+        };
+
+        assert!(chmod
+            .describe_change()
+            .unwrap()
+            .ends_with("change from 644 to 600"));
     }
 }

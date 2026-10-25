@@ -380,6 +380,57 @@ fn file_copy_processes_contents_with_a_command() {
     );
 }
 
+/// `--dry-run` shows what `file.copy` would change in an existing file (#593)
+#[test]
+fn file_copy_dry_run_shows_a_diff() {
+    let f = Fixture::new();
+    let to = f.out("config");
+    f.manifest(
+        "dotfiles/main.yaml",
+        &format!(
+            "actions:\n  - action: file.copy\n    from: config\n    to: '{}'\n",
+            to.display()
+        ),
+    )
+    .manifest("dotfiles/files/config", "one\nnew line\nthree\n");
+    std::fs::create_dir_all(f.path().join("out")).unwrap();
+    std::fs::write(&to, "one\nold line\nthree\n").unwrap();
+
+    let output = f.run(&["apply", "--dry-run"]).get_output().stdout.clone();
+    let log = String::from_utf8_lossy(&output);
+
+    assert!(log.contains("-old line"), "{log}");
+    assert!(log.contains("+new line"), "{log}");
+    assert_eq!(
+        "one\nold line\nthree\n",
+        std::fs::read_to_string(&to).unwrap()
+    );
+}
+
+/// Contents produced by `process_with`, e.g. decrypted secrets, never show up in a diff
+#[cfg(unix)]
+#[test]
+fn file_copy_dry_run_does_not_show_processed_contents() {
+    let f = Fixture::new();
+    let to = f.out("secret");
+    f.manifest(
+        "dotfiles/main.yaml",
+        &format!(
+            "actions:\n  - action: file.copy\n    from: secret\n    to: '{}'\n    process_with: [tr, a-z, A-Z]\n",
+            to.display()
+        ),
+    )
+    .manifest("dotfiles/files/secret", "new-password\n");
+    std::fs::create_dir_all(f.path().join("out")).unwrap();
+    std::fs::write(&to, "OLD-PASSWORD\n").unwrap();
+
+    let output = f.run(&["apply", "--dry-run"]).get_output().stdout.clone();
+    let log = String::from_utf8_lossy(&output);
+
+    assert!(log.contains("not shown"), "{log}");
+    assert!(!log.contains("PASSWORD"), "{log}");
+}
+
 /// Decrypts a file with the throwaway key in `tests/fixtures/gpg`, in its own keyring.
 /// Skipped when gpg isn't installed, except in CI, where it must run.
 #[cfg(unix)]

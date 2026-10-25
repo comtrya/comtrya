@@ -159,7 +159,11 @@ impl Action for FileCopy {
             });
         } else {
             steps.push(Step {
-                atom: Box::new(SetContents { path, contents }),
+                atom: Box::new(SetContents {
+                    path,
+                    contents,
+                    redact: self.process_with.is_some(),
+                }),
                 initializers: vec![],
                 finalizers: vec![],
             });
