@@ -6,6 +6,7 @@ use crate::{actions::Action, manifests::Manifest, steps, utilities};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::path::{Path, PathBuf};
 
 #[derive(JsonSchema, Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RunCommand {
@@ -24,6 +25,10 @@ pub struct RunCommand {
 
     #[serde(default)]
     pub env: HashMap<String, String>,
+
+    /// File to write the command's output to, instead of logging it. Relative to `dir`
+    #[serde(default)]
+    pub stdout: Option<String>,
 }
 
 fn get_false() -> bool {
@@ -39,6 +44,14 @@ fn get_cwd() -> String {
     std::env::current_dir()
         .map(|current_dir| current_dir.display().to_string())
         .expect("Failed to get current directory")
+}
+
+impl RunCommand {
+    fn stdout_file(&self) -> Option<PathBuf> {
+        self.stdout
+            .as_ref()
+            .map(|stdout| Path::new(&self.dir).join(stdout))
+    }
 }
 
 impl Action for RunCommand {
@@ -59,6 +72,7 @@ impl Action for RunCommand {
                 privileged: self.privileged,
                 working_dir: Some(self.dir.clone()),
                 privilege_provider: privilege_provider.clone(),
+                stdout_file: self.stdout_file(),
                 ..Default::default()
             }),
             initializers: vec![steps::initializers::FlowControl::Ensure(Box::new(
@@ -123,5 +137,35 @@ mod tests {
                 panic!("FileCopy didn't deserialize to the correct type");
             }
         };
+    }
+
+    #[test]
+    fn stdout_is_relative_to_dir() {
+        let yaml = r#"
+  - action: command.run
+    command: echo
+    dir: /tmp/work
+    stdout: completions/echo
+"#;
+
+        let mut actions: Vec<Actions> = serde_yaml_ng::from_str(yaml).unwrap();
+
+        let Some(Actions::CommandRun(action)) = actions.pop() else {
+            panic!("command.run didn't deserialize to the correct type");
+        };
+        assert_eq!(
+            Some(std::path::Path::new("/tmp/work").join("completions/echo")),
+            action.action.stdout_file()
+        );
+
+        let absolute = super::RunCommand {
+            dir: String::from("/tmp/work"),
+            stdout: Some(String::from("/etc/out")),
+            ..Default::default()
+        };
+        assert_eq!(
+            Some(std::path::Path::new("/etc/out").to_path_buf()),
+            absolute.stdout_file()
+        );
     }
 }

@@ -2,7 +2,8 @@ use crate::atoms::Outcome;
 
 use super::super::Atom;
 use crate::utilities;
-use anyhow::anyhow;
+use anyhow::{anyhow, Context};
+use std::path::PathBuf;
 use tracing::debug;
 
 #[derive(Default)]
@@ -13,6 +14,8 @@ pub struct Exec {
     pub environment: Vec<(String, String)>,
     pub privileged: bool,
     pub privilege_provider: String,
+    /// Writes stdout to this file instead of logging it
+    pub stdout_file: Option<PathBuf>,
     pub(crate) status: ExecStatus,
 }
 
@@ -138,8 +141,22 @@ impl Atom for Exec {
             .output()
         {
             Ok(output) if output.status.success() => {
-                self.status.stdout = String::from_utf8(output.stdout)?;
                 self.status.stderr = String::from_utf8(output.stderr)?;
+
+                if let Some(stdout_file) = &self.stdout_file {
+                    if let Some(parent) = stdout_file.parent() {
+                        std::fs::create_dir_all(parent)?;
+                    }
+                    std::fs::write(stdout_file, output.stdout).with_context(|| {
+                        format!("Failed to write stdout to {}", stdout_file.display())
+                    })?;
+
+                    debug!("stdout written to {}", stdout_file.display());
+
+                    return Ok(());
+                }
+
+                self.status.stdout = String::from_utf8(output.stdout)?;
 
                 debug!("stdout: {}", &self.status.stdout);
 
@@ -271,6 +288,36 @@ mod tests {
             vec![String::from("echo"), String::from("Hello, world!")],
             args
         );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn stdout_is_written_to_a_file() {
+        let dir = tempfile::tempdir().unwrap();
+        let stdout_file = dir.path().join("nested").join("out.txt");
+
+        let mut command_run = new_run_command(String::from("echo"));
+        command_run.arguments = vec![String::from("hello")];
+        command_run.stdout_file = Some(stdout_file.clone());
+        command_run.execute().unwrap();
+
+        assert_eq!("hello\n", std::fs::read_to_string(stdout_file).unwrap());
+        assert_eq!("", command_run.output_string());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn stdout_file_is_left_alone_when_the_command_fails() {
+        let dir = tempfile::tempdir().unwrap();
+        let stdout_file = dir.path().join("out.txt");
+        std::fs::write(&stdout_file, "before").unwrap();
+
+        let mut command_run = new_run_command(String::from("sh"));
+        command_run.arguments = vec![String::from("-c"), String::from("echo after; exit 1")];
+        command_run.stdout_file = Some(stdout_file.clone());
+        command_run.execute().expect_err("Command should fail");
+
+        assert_eq!("before", std::fs::read_to_string(stdout_file).unwrap());
     }
 
     #[test]
