@@ -125,7 +125,10 @@ impl PackageProvider for Paru {
             .collect())
     }
 
-    fn install(&self, package: &PackageVariant, _contexts: &Contexts) -> anyhow::Result<Vec<Step>> {
+    fn install(&self, package: &PackageVariant, contexts: &Contexts) -> anyhow::Result<Vec<Step>> {
+        // paru runs as the user and calls sudo itself
+        super::refuse_root("paru", contexts)?;
+
         Ok(vec![Step {
             atom: Box::new(Exec {
                 command: String::from("paru"),

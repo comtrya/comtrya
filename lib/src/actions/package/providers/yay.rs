@@ -124,8 +124,9 @@ impl PackageProvider for Yay {
             .collect())
     }
 
-    fn install(&self, package: &PackageVariant, _contexts: &Contexts) -> anyhow::Result<Vec<Step>> {
-        // Does not require privilege escalation?
+    fn install(&self, package: &PackageVariant, contexts: &Contexts) -> anyhow::Result<Vec<Step>> {
+        // yay runs as the user and calls sudo itself
+        super::refuse_root("yay", contexts)?;
 
         let need_installed = self.query(package)?;
         if need_installed.is_empty() {
