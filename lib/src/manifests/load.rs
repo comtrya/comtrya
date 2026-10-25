@@ -1,4 +1,4 @@
-use super::Manifest;
+use super::{Manifest, MANIFEST_VERSION};
 use crate::{
     contexts::{to_rhai, to_tera, Contexts},
     manifests::get_manifest_name,
@@ -20,6 +20,9 @@ use tracing::{debug, error, span};
 /// The part of a manifest that is readable before its templates are rendered
 #[derive(Deserialize)]
 struct Unrendered {
+    #[serde(default)]
+    version: Option<u32>,
+
     #[serde(default)]
     r#where: Option<String>,
 }
@@ -75,6 +78,16 @@ pub fn load(manifest_path: PathBuf, contexts: &Contexts) -> HashMap<String, Mani
                     std::fs::read_to_string(entry.clone()).unwrap_or_else(|_| String::from(""));
                 let template = contents.as_str();
 
+                // Checked before rendering, a newer format may use templates differently
+                let version = parse::<Unrendered>(template, &entry)
+                    .ok()
+                    .and_then(|unrendered| unrendered.version);
+                if let Err(err) = check_version(version) {
+                    error!("Manifest in file with path '{}' is skipped. Reason: {err}", &entry.display());
+                    span.exit();
+                    return;
+                }
+
                 let mut tera = Tera::default();
                 register_functions(&mut tera);
 
@@ -103,7 +116,7 @@ pub fn load(manifest_path: PathBuf, contexts: &Contexts) -> HashMap<String, Mani
                     },
                 };
 
-                match manifest {
+                match manifest.and_then(|manifest| check_version(manifest.version).map(|_| manifest)) {
                     Ok(mut manifest) => {
                         let name = get_manifest_name(&manifest_path, &entry)
                             .expect("Failed to get manifest name");
@@ -134,6 +147,15 @@ fn parse<T: DeserializeOwned>(contents: &str, path: &Path) -> anyhow::Result<T> 
         Some("yaml") | Some("yml") => Ok(serde_yaml_ng::from_str(contents)?),
         Some("toml") => Ok(toml::from_str(contents)?),
         _ => Err(anyhow::anyhow!("Unrecognized file extension for manifest")),
+    }
+}
+
+fn check_version(version: Option<u32>) -> anyhow::Result<()> {
+    match version {
+        Some(version) if version > MANIFEST_VERSION => Err(anyhow::anyhow!(
+            "it uses manifest version {version}, but this comtrya only supports version {MANIFEST_VERSION}. Update comtrya"
+        )),
+        _ => Ok(()),
     }
 }
 
