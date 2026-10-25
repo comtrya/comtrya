@@ -6,7 +6,7 @@ edition = "2021"
 # Keep in sync with MIN_SUPPORTED_RUST_VERSION in .github/workflows
 rust-version = "1.88"
 license = "MIT"
-description = "Contains the interfaces for comtrya plugins"
+description = "The library behind comtrya: manifests, actions, contexts and package providers"
 
 [dependencies]
 anyhow = "1.0"
@@ -52,22 +52,6 @@ gix = { version = "0.90.0", features = [
     "blocking-network-client",
 ] }
 gix-protocol = "0.68.0"
-tealr = { version = "0.11.0", features = [
-    "mlua_lua54",
-    "mlua_anyhow",
-    "mlua_async",
-    "mlua_userdata-wrappers",
-    "tealr_derive",
-    "mlua_send",
-    "mlua_serialize",
-    "mlua",
-    "mlua_error-send",
-    "mlua_macros",
-    "mlua_vendored",
-] }
-camino = { version = "1.2.2", features = ["serde1"] }
-serde_with = { version = "3.17.0", features = ["schemars_1", "json"] }
-parking_lot = "0.12.5"
 
 [target.'cfg(unix)'.dependencies]
 uzers = "0.12"
