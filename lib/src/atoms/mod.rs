@@ -18,6 +18,12 @@ pub trait Atom: std::fmt::Display {
     // Apply new to old
     fn execute(&mut self) -> anyhow::Result<()>;
 
+    // What `execute` would change, e.g. a diff of a file's contents. Only asked for
+    // atoms that need to run
+    fn describe_change(&self) -> Option<String> {
+        None
+    }
+
     // These methods allow for finalizers to query the outcome of the Atom.
     // We'll provide default implementations to allow Atoms to opt in to
     // the queries that make sense for them

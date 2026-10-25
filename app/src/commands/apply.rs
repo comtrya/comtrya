@@ -294,6 +294,14 @@ impl ComtryaCommand for Apply {
                     }
 
                     for mut step in steps {
+                        if let Some(change) = step.atom.describe_change() {
+                            if dry_run {
+                                info!("{change}");
+                            } else {
+                                debug!("{change}");
+                            }
+                        }
+
                         if dry_run {
                             continue;
                         }

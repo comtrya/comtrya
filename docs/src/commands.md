@@ -58,6 +58,15 @@ Alternatively a combination of the two is possible as well:
 comtrya -d ./manifests/ apply -m one
 ```
 
+### Dry run
+
+`--dry-run` plans every action without changing the system. For `file.copy`, it shows a diff of what
+would change in each file; see [Files and Directories](./files-and-directories.md#seeing-what-changes).
+
+```shell
+comtrya -d ./manifests apply --dry-run
+```
+
 ## Contexts
 
 The **contexts** command is useful to see what comtrya knows about your system. This can be environment variables, included variables, information about the OS, user information and other variables. Below is an exmaple of the output.
