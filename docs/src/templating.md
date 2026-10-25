@@ -72,6 +72,8 @@ See [Variants](./variants.md) for more examples.
 
 If a template can't be rendered, for example because it uses an unknown variable, Comtrya logs an error and skips the whole manifest.
 
+That error is left out when the manifest's own `where` condition is false. A Windows-only manifest can use `get_env(name="LOCALAPPDATA")` without breaking on Linux or macOS. For this, the manifest must still be valid YAML or TOML before rendering, so quote values that contain `{{`.
+
 To use a literal `{{` in a manifest, wrap it in Tera's `{% raw %}` block:
 
 ```yaml
