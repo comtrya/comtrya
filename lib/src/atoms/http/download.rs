@@ -1,12 +1,16 @@
 use crate::atoms::Outcome;
 
 use super::super::Atom;
+use anyhow::anyhow;
+use sha256::digest;
 use std::io::Write;
 use std::{fs::File, path::PathBuf};
 
 pub struct Download {
     pub url: String,
     pub to: PathBuf,
+    /// Expected SHA-256 of the file as lowercase hex. Without it, an existing file is kept
+    pub sha256: Option<String>,
 }
 
 impl std::fmt::Display for Download {
@@ -17,22 +21,35 @@ impl std::fmt::Display for Download {
 
 impl Atom for Download {
     fn plan(&self) -> anyhow::Result<Outcome> {
-        // Initial implementation will return false if the local file
-        // doesn't exist. I'd like to include a SHA to verify the
-        // correct version exists; or perhaps a TTL when omitted?
+        let should_run = match (&self.sha256, std::fs::read(&self.to)) {
+            (_, Err(_)) => true,
+            // Download again if the file doesn't match, e.g. after the URL and hash were updated
+            (Some(expected), Ok(existing)) => digest(existing.as_slice()) != *expected,
+            (None, Ok(_)) => false,
+        };
 
         Ok(Outcome {
             side_effects: vec![],
-            should_run: !PathBuf::from(&self.to).exists(),
+            should_run,
         })
     }
 
     fn execute(&mut self) -> anyhow::Result<()> {
-        let response = reqwest::blocking::get(&self.url)?;
+        let response = reqwest::blocking::get(&self.url)?.error_for_status()?;
+        let content = response.bytes()?;
+
+        // Check before writing, so a bad download never replaces the existing file
+        if let Some(expected) = &self.sha256 {
+            let actual = digest(content.as_ref());
+            if actual != *expected {
+                return Err(anyhow!(
+                    "SHA-256 of {} doesn't match: expected {expected}, got {actual}",
+                    self.url
+                ));
+            }
+        }
 
         let mut file = File::create(&self.to)?;
-
-        let content = response.bytes()?;
         file.write_all(&content)?;
 
         Ok(())
@@ -45,6 +62,103 @@ mod tests {
     use pretty_assertions::assert_eq;
     use tempfile::tempdir;
 
+    /// Serves `body` with `status` on localhost for every request, returns the URL
+    fn serve(status: u16, body: &'static [u8]) -> String {
+        use std::io::Read;
+        use std::net::TcpListener;
+
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let url = format!("http://{}/file", listener.local_addr().unwrap());
+        std::thread::spawn(move || {
+            for stream in listener.incoming() {
+                let mut stream = stream.unwrap();
+                let mut request = [0; 1024];
+                let _ = stream.read(&mut request);
+                let header = format!(
+                    "HTTP/1.1 {status} X\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+                    body.len()
+                );
+                let _ = stream.write_all(header.as_bytes());
+                let _ = stream.write_all(body);
+            }
+        });
+        url
+    }
+
+    const BODY: &[u8] = b"hello comtrya\n";
+
+    fn atom(url: String, to: PathBuf, sha256: Option<&str>) -> Download {
+        Download {
+            url,
+            to,
+            sha256: sha256.map(String::from),
+        }
+    }
+
+    #[test]
+    fn writes_the_file_when_the_checksum_matches() {
+        let dir = tempdir().unwrap();
+        let to = dir.path().join("file");
+        let mut atom = atom(serve(200, BODY), to.clone(), Some(&digest(BODY)));
+
+        assert!(atom.plan().unwrap().should_run);
+        atom.execute().unwrap();
+
+        assert_eq!(BODY, std::fs::read(&to).unwrap().as_slice());
+        assert!(!atom.plan().unwrap().should_run);
+    }
+
+    #[test]
+    fn a_mismatching_checksum_fails_and_keeps_the_existing_file() {
+        let dir = tempdir().unwrap();
+        let to = dir.path().join("file");
+        std::fs::write(&to, "old").unwrap();
+        let expected = digest("something else");
+        let mut atom = atom(serve(200, BODY), to.clone(), Some(&expected));
+
+        let err = atom.execute().unwrap_err().to_string();
+
+        assert!(
+            err.contains(&expected) && err.contains(&digest(BODY)),
+            "{err}"
+        );
+        assert_eq!("old", std::fs::read_to_string(&to).unwrap());
+    }
+
+    #[test]
+    fn an_existing_file_with_another_checksum_is_downloaded_again() {
+        let dir = tempdir().unwrap();
+        let to = dir.path().join("file");
+        std::fs::write(&to, "outdated").unwrap();
+        let mut atom = atom(serve(200, BODY), to.clone(), Some(&digest(BODY)));
+
+        assert!(atom.plan().unwrap().should_run);
+        atom.execute().unwrap();
+
+        assert_eq!(BODY, std::fs::read(&to).unwrap().as_slice());
+    }
+
+    #[test]
+    fn without_checksum_an_existing_file_is_kept() {
+        let dir = tempdir().unwrap();
+        let to = dir.path().join("file");
+        std::fs::write(&to, "anything").unwrap();
+
+        assert!(!atom(serve(200, BODY), to, None).plan().unwrap().should_run);
+    }
+
+    #[test]
+    fn http_errors_fail_instead_of_saving_the_error_page() {
+        let dir = tempdir().unwrap();
+        let to = dir.path().join("file");
+        let mut atom = atom(serve(404, b"not found"), to.clone(), None);
+
+        let err = atom.execute().unwrap_err().to_string();
+
+        assert!(err.contains("404"), "{err}");
+        assert!(!to.exists());
+    }
+
     #[test]
     fn it_can() {
         let tmpdir = tempdir().unwrap();
@@ -53,6 +167,7 @@ mod tests {
         let mut atom = Download {
             url: String::from("https://www.google.com/images/branding/googlelogo/2x/googlelogo_color_272x92dp.png"),
             to: to_file,
+            sha256: None,
         };
 
         assert_eq!(true, atom.plan().unwrap().should_run);

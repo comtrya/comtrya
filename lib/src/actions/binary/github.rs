@@ -138,6 +138,7 @@ impl Action for BinaryGitHub {
                 atom: Box::new(Download {
                     url: asset.url,
                     to: PathBuf::from(format!("{}/{}", self.directory, self.name)),
+                    sha256: None,
                 }),
                 initializers: vec![],
                 finalizers: vec![],

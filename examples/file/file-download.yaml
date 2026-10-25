@@ -3,3 +3,9 @@ actions:
   - action: file.download
     from: https://google.com/robots.txt
     to: /tmp/google-robots.txt
+
+  # Fails if the checksum doesn't match, downloads again when it changes
+  - action: file.download
+    from: https://github.com/jtroo/kanata/releases/download/v1.12.0/kanata.kbd
+    to: /tmp/kanata.kbd
+    sha256: b3da365661a86f5a1a3c38897038983ba335c99a62ae8f25745be22489ac8362
