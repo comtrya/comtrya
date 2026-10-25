@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Question or idea to discuss
+    url: https://github.com/comtrya/comtrya/discussions
+    about: Ask questions and discuss ideas before opening an issue.
+  - name: Documentation
+    url: https://comtrya.dev
+    about: Read the docs for actions, contexts and templating.

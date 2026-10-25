@@ -14,11 +14,6 @@ jobs:
     steps:
       - uses: actions/checkout@v7.0.1
 
-      - uses: agenthunt/conventional-commit-checker-action@v2.0.1
-        continue-on-error: true
-        with:
-          pr-body-regex: ".*"
-
       - uses: actions-rust-lang/setup-rust-toolchain@v2
         with:
           toolchain: ${{ env.MIN_SUPPORTED_RUST_VERSION }}
