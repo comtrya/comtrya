@@ -36,6 +36,8 @@ Action used to copy a file from one location to another.
 |                |         |          | default: `644`                        |
 | owned_by_user  | string  | yes      | user for chown                        |
 | owned_by_group | string  | yes      | group for chown                       |
+| passphrase     | string  | yes      | decrypts an [age](https://age-encryption.org) file encrypted with a passphrase |
+| process_with   | list    | yes      | command that gets the file on stdin; its output is written instead, see below |
 
 
 ### Examples
@@ -69,6 +71,55 @@ Action used to copy a file from one location to another.
 
 *Note: utilizing chown functionality will require running comtrya as root. Also, both a user and a group need to
 be specified.*
+
+### Processing files with a command
+
+`process_with` runs a command, sends the source file to its stdin and writes its stdout to `to`.
+Use it to decrypt secrets with the tool you already use: the encrypted file is the only copy in
+your repository, and no encrypted copy is left behind next to the decrypted one.
+
+- The first entry is the program, the rest are its arguments. No shell is involved, so `~` and
+  `$VAR` are not expanded: use contexts like `{{ user.home_dir }}`, or `[sh, -c, "..."]`.
+- The command runs while comtrya plans the action, also with `--dry-run`, so it must not change
+  the system. It runs as your user, without `privileged`.
+- If the output equals the current file, nothing is written.
+- With `template: true`, the output is rendered as a template afterwards.
+- If the command fails, the action fails and its stderr is shown.
+- `passphrase` and `process_with` can't be combined.
+
+```yaml
+# GnuPG: uses your keyring and gpg-agent, so smartcards and YubiKeys work too
+- action: file.copy
+  from: credentials.fish.asc
+  to: "{{ user.config_dir }}/fish/conf.d/credentials.fish"
+  chmod: 600
+  process_with: [gpg, --quiet, --decrypt]
+
+# age with a key file (age1... or post-quantum age1pq1... keys)
+- action: file.copy
+  from: credentials.toml.age
+  to: "{{ user.home_dir }}/.cargo/credentials.toml"
+  chmod: 600
+  process_with: [age, --decrypt, --identity, "{{ user.home_dir }}/.config/age/key.txt"]
+
+# 1Password: the file contains secret references like {{ op://Private/GitHub/token }}.
+# With more than one account signed in, pick one with --account
+- action: file.copy
+  from: gh-hosts.yml.tpl
+  to: "{{ user.config_dir }}/gh/hosts.yml"
+  chmod: 600
+  process_with: [op, inject, --account, my.1password.com]
+
+# sops
+- action: file.copy
+  from: secrets.yaml
+  to: "{{ user.config_dir }}/app/secrets.yaml"
+  chmod: 600
+  process_with: [sops, --decrypt, --input-type, yaml, --output-type, yaml, /dev/stdin]
+```
+
+When gpg or age need a passphrase, they ask for it themselves: gpg through its pinentry, age on
+the terminal.
 
 ## file.chown
 
