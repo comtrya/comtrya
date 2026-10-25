@@ -471,6 +471,27 @@ fn contexts_lists_builtin_contexts() {
     }
 }
 
+/// `stdout` writes the command's output to a file, relative to `dir` (#117)
+#[cfg(unix)]
+#[test]
+fn command_run_writes_stdout_to_a_file() {
+    let f = Fixture::new();
+    f.manifest(
+        "completions.yaml",
+        &format!(
+            "actions:\n  - action: command.run\n    command: echo\n    args:\n      - complete -c comtrya\n    dir: '{}'\n    stdout: out/completions/comtrya\n",
+            f.path().display()
+        ),
+    );
+
+    f.run(&["apply"]);
+
+    assert_eq!(
+        "complete -c comtrya\n",
+        std::fs::read_to_string(f.out("completions").join("comtrya")).unwrap()
+    );
+}
+
 #[cfg(unix)]
 mod order {
     use super::*;

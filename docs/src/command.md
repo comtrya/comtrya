@@ -14,10 +14,29 @@ This is the most basic, but yet powerful action as it can be used to run anythin
 | dir        | string                  | yes      | actual working directory                        |
 | privileged | bool                    | yes      | elevate privileges when executing               |
 | env        | HashMap<string, string> | yes      | key and values for scoped environment variables |
+| stdout     | string                  | yes      | file to write the command's output to           |
 
 ### Scoped environment variables
 
 Sometimes, environment variables are needed to run a command or set of commands. As of v0.9.1, Comtrya will has the ability to inject environment variables for the scope of a single `command.run` action. An initializer will run prior to the action to inject the environment variables, then after the command run finished, a finalizer will remove those from the environment. In the manifest, the environment is implemented as a hash map of keys and values. Multiple environment variables are supported.
+
+### Writing the output to a file
+
+With `stdout`, the command's output is written to a file instead of the log, like `>` in a shell. This is handy for shell completions:
+
+```yaml
+- action: command.run
+  command: just
+  args:
+    - --completions
+    - bash
+  stdout: "{{ user.home_dir }}/.local/share/bash-completion/completions/just"
+```
+
+- A relative path is relative to `dir`.
+- Missing parent directories are created, and an existing file is overwritten.
+- If the command fails, the file is left untouched.
+- The file is written by comtrya itself, so with `privileged: true` it still belongs to the user running comtrya and its directory must be writable by them.
 
 ### Example
 
