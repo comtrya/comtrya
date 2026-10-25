@@ -84,7 +84,7 @@ mod test {
                 name: Some(String::from("")),
                 list: vec![],
                 extra_args: vec![],
-                provider: PackageProviders::Zypper,
+                provider: Some(PackageProviders::Zypper),
                 file: false,
             },
             &contexts,

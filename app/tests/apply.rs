@@ -654,6 +654,62 @@ mod one_password {
     }
 }
 
+/// `package_provider` in Comtrya.yaml replaces the OS default; `provider` on an action wins (#456).
+/// zypper and xbps have no bootstrap, so planning fails before anything is installed, with a
+/// predictable message on CI runners
+#[test]
+fn package_provider_can_be_configured() {
+    let f = Fixture::new();
+    std::fs::write(
+        f.path().join("Comtrya.yaml"),
+        "disable_update_check: true\npackage_provider: zypper\n",
+    )
+    .unwrap();
+    f.manifest(
+        "configured.yaml",
+        "actions:\n  - action: package.install\n    name: curl\n",
+    );
+
+    let output = f.run_failing(&["apply"]).get_output().clone();
+    let log = String::from_utf8_lossy(&output.stdout) + String::from_utf8_lossy(&output.stderr);
+    assert!(log.contains("Zypper, isn't available"), "{log}");
+
+    f.manifest(
+        "configured.yaml",
+        "actions:\n  - action: package.install\n    name: curl\n    provider: xbps\n",
+    );
+
+    let output = f.run_failing(&["apply"]).get_output().clone();
+    let log = String::from_utf8_lossy(&output.stdout) + String::from_utf8_lossy(&output.stderr);
+    assert!(log.contains("Xbps, isn't available"), "{log}");
+    assert!(!log.contains("Zypper"), "{log}");
+
+    // `package` is reserved in Rhai, so the context is `packages`
+    std::fs::remove_file(f.path().join("manifests/configured.yaml")).unwrap();
+    f.manifest(
+        "where.yaml",
+        &format!(
+            "where: packages.provider == \"zypper\"\nactions:\n{}",
+            f.create("{{ packages.provider }}")
+        ),
+    );
+
+    f.run(&["apply"]);
+    assert!(f.created("zypper"));
+}
+
+/// An unknown provider name in Comtrya.yaml is an error that names the valid ones
+#[test]
+fn an_unknown_package_provider_is_reported() {
+    let f = Fixture::new();
+    std::fs::write(f.path().join("Comtrya.yaml"), "package_provider: nope\n").unwrap();
+    std::fs::create_dir_all(f.path().join("manifests")).unwrap();
+
+    let output = f.run_failing(&["apply"]).get_output().clone();
+    let log = String::from_utf8_lossy(&output.stdout) + String::from_utf8_lossy(&output.stderr);
+    assert!(log.contains("unknown variant `nope`"), "{log}");
+}
+
 #[cfg(unix)]
 mod order {
     use super::*;

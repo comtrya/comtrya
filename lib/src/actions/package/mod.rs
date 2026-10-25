@@ -3,7 +3,7 @@ mod providers;
 mod repository;
 
 pub(crate) use install::PackageInstall;
-use providers::PackageProviders;
+pub use providers::PackageProviders;
 pub(crate) use repository::PackageRepository;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -19,7 +19,7 @@ pub struct Package {
     list: Vec<String>,
 
     #[serde(default)]
-    provider: PackageProviders,
+    provider: Option<PackageProviders>,
 
     #[serde(default)]
     repository: Option<String>,
@@ -45,7 +45,7 @@ pub struct PackageVariant {
     list: Vec<String>,
 
     #[serde(default)]
-    provider: PackageProviders,
+    provider: Option<PackageProviders>,
 
     #[serde(default)]
     extra_args: Vec<String>,

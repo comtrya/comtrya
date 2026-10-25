@@ -28,6 +28,29 @@ Not all package managers are supported. This is a list of currently supported pa
 
 If you would like support to be added for a package provider, feel free to contribute the support or request support in the [repository](https://github.com/comtrya/comtrya) issue tracker.
 
+### Default package provider
+
+Without `provider`, `package.install` and `package.repository` use the usual package manager of the OS, e.g. `apt` on Debian. To use another one for all of them, set `package_provider` in `Comtrya.yaml`:
+
+```yaml
+# Use pkgin instead of apt, unless an action sets its own provider
+package_provider: pkgin
+```
+
+The order is:
+
+1. `provider` on the action, or on its variant for this OS
+2. `package_provider` in `Comtrya.yaml`
+3. the default for this OS
+
+The names and aliases are the same as for `provider`. An unknown name stops comtrya with an error listing the valid ones. The provider in use is available as `packages.provider` in templates and `where` conditions:
+
+```yaml
+where: packages.provider == "pkgin"
+```
+
+On an OS without a default, like Alpine, actions without a provider fail with an error until `provider` or `package_provider` is set.
+
 ### Important note on homebrew and macOS
 
 Some package manager providers can implement a `bootstrap` method that will automatically configure the package manager on the system if it is not part of the default installation. This is the case with macOS. Comtrya can automatically install `homebrew` to a macOS system and will do so if a manifest specifies a `package.install` action and does not overridfe the macOS default of homebrew.

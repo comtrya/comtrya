@@ -66,8 +66,8 @@ fn main() -> anyhow::Result<()> {
     let config = match config::load_config(&args) {
         Ok(config) => config,
         Err(error) => {
-            error!("{}", error.to_string());
-            panic!();
+            error!("{error:#}");
+            std::process::exit(1);
         }
     };
 
