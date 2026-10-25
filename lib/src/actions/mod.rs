@@ -6,6 +6,7 @@ mod git;
 mod group;
 mod macos;
 mod package;
+pub use package::PackageProviders;
 mod user;
 
 use crate::actions::macos::MacOSDefault;

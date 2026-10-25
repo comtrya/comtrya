@@ -1,3 +1,4 @@
+use crate::actions::PackageProviders;
 use crate::contexts::privilege::Privilege;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
@@ -18,4 +19,8 @@ pub struct Config {
 
     #[serde(default)]
     pub privilege: Privilege,
+
+    /// Used by `package.*` actions without a `provider`, instead of the default for the OS
+    #[serde(default)]
+    pub package_provider: Option<PackageProviders>,
 }

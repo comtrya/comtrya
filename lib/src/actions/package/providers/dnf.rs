@@ -160,7 +160,7 @@ mod test {
         let steps = dnf.add_repository(
             &PackageRepository {
                 name: String::from("test"),
-                provider: PackageProviders::Dnf,
+                provider: Some(PackageProviders::Dnf),
                 ..Default::default()
             },
             &contexts,
@@ -180,7 +180,7 @@ mod test {
                     url: String::from("abc"),
                     ..Default::default()
                 }),
-                provider: PackageProviders::Dnf,
+                provider: Some(PackageProviders::Dnf),
             },
             &contexts,
         );

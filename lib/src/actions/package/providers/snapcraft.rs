@@ -100,7 +100,7 @@ mod test {
                 name: Some(String::from("")),
                 list: vec![],
                 extra_args: vec![],
-                provider: PackageProviders::Snapcraft,
+                provider: Some(PackageProviders::Snapcraft),
                 file: false,
             },
             &contexts,

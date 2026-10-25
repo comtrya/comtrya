@@ -17,7 +17,7 @@ pub struct PackageRepository {
     pub key: Option<RepositoryKey>,
 
     #[serde(default)]
-    pub provider: PackageProviders,
+    pub provider: Option<PackageProviders>,
 }
 
 #[derive(JsonSchema, Clone, Debug, Default, Serialize, Deserialize)]
@@ -34,7 +34,8 @@ impl Action for PackageRepository {
     }
 
     fn plan(&self, _manifest: &Manifest, context: &Contexts) -> anyhow::Result<Vec<Step>> {
-        let box_provider = self.provider.clone().get_provider();
+        let box_provider =
+            PackageProviders::resolve(self.provider.as_ref(), context)?.get_provider();
         let provider = box_provider.deref();
 
         let span = span!(

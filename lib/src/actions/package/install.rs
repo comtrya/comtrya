@@ -19,7 +19,8 @@ impl Action for PackageInstall {
 
     fn plan(&self, _manifest: &Manifest, context: &Contexts) -> anyhow::Result<Vec<Step>> {
         let variant: PackageVariant = self.into();
-        let box_provider = variant.provider.clone().get_provider();
+        let provider_type = PackageProviders::resolve(variant.provider.as_ref(), context)?;
+        let box_provider = provider_type.clone().get_provider();
         let provider = box_provider.deref();
 
         let span = span!(
@@ -41,7 +42,7 @@ impl Action for PackageInstall {
             }
 
             if variant.file {
-                match variant.provider {
+                match provider_type {
                     PackageProviders::BsdPkg => debug!("Will attempt to install from local file."),
                     PackageProviders::Aptitude => {
                         debug!("Will attempt to install from local file.")
