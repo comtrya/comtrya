@@ -573,6 +573,87 @@ fn command_run_writes_stdout_to_a_file() {
     );
 }
 
+/// `op://` in include_variables, with a fake 1Password CLI on PATH instead of a real vault (#306)
+#[cfg(unix)]
+mod one_password {
+    use super::*;
+    use std::os::unix::fs::PermissionsExt;
+
+    /// Installs a fake `op` running `script`, and a Comtrya.yaml including `include`
+    fn setup(f: &Fixture, script: &str, include: &str) -> (String, PathBuf) {
+        let bin = f.path().join("bin");
+        std::fs::create_dir_all(&bin).unwrap();
+        let op = bin.join("op");
+        std::fs::write(&op, format!("#!/bin/sh\n{script}\n")).unwrap();
+        std::fs::set_permissions(&op, std::fs::Permissions::from_mode(0o755)).unwrap();
+
+        let config = f.path().join("Comtrya.yaml");
+        std::fs::write(&config, format!("include_variables:\n  - '{include}'\n")).unwrap();
+
+        let path = format!("{}:{}", bin.display(), std::env::var("PATH").unwrap());
+        (path, config)
+    }
+
+    fn log(output: &std::process::Output) -> String {
+        String::from_utf8_lossy(&output.stdout).to_string()
+            + &String::from_utf8_lossy(&output.stderr)
+    }
+
+    #[test]
+    fn item_fields_become_variables() {
+        let f = Fixture::new();
+        let script = format!(
+            "echo \"$@\" > '{}'\necho '{{\"fields\": [{{\"label\": \"folder\", \"value\": \"from-op\"}}]}}'",
+            f.path().join("args").display()
+        );
+        let (path, config) = setup(&f, &script, "op://My Vault/Laptop?account=my.1password.com");
+        f.manifest(
+            "secret.yaml",
+            &format!(
+                "actions:\n  - action: directory.create\n    path: '{}/{{{{ include_variables.folder }}}}'\n",
+                f.path().join("out").display()
+            ),
+        );
+
+        let mut cmd = f.command(&["-c", config.to_str().unwrap(), "apply"]);
+        let output = cmd.env("PATH", &path).output().unwrap();
+
+        assert!(output.status.success(), "{}", log(&output));
+        assert!(f.created("from-op"), "{}", log(&output));
+
+        // `comtrya contexts` lists the key, but keeps the value to itself
+        let mut cmd = f.command(&["-c", config.to_str().unwrap(), "contexts"]);
+        let output = cmd.env("PATH", &path).output().unwrap();
+        let contexts = log(&output);
+        assert!(contexts.contains("folder"), "{contexts}");
+        assert!(!contexts.contains("from-op"), "value shown: {contexts}");
+
+        let args = std::fs::read_to_string(f.path().join("args")).unwrap();
+        assert_eq!(
+            args.trim(),
+            "item get Laptop --vault My Vault --format json --account my.1password.com"
+        );
+    }
+
+    #[test]
+    fn op_errors_are_reported() {
+        let f = Fixture::new();
+        let (path, config) = setup(
+            &f,
+            "echo '[ERROR] You are not currently signed in.' >&2\nexit 1",
+            "op://Private/GitHub",
+        );
+        std::fs::create_dir_all(f.path().join("manifests")).unwrap();
+
+        let mut cmd = f.command(&["-c", config.to_str().unwrap(), "contexts"]);
+        let output = cmd.env("PATH", path).output().unwrap();
+
+        let log = log(&output);
+        assert!(log.contains("You are not currently signed in"), "{log}");
+        assert!(log.contains("op signin"), "{log}");
+    }
+}
+
 #[cfg(unix)]
 mod order {
     use super::*;
