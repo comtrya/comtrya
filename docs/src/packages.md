@@ -13,8 +13,9 @@ Not all package managers are supported. This is a list of currently supported pa
 
 | Provider   | OS                |
 |:-----------|:------------------|
-| pacman/yay | Arch              |
+| yay        | Arch (default, see below) |
 | paru       | Arch              |
+| pacman     | Arch              |
 | apt        | Debian/Ubuntu     |
 | pkg        | FreeBSD           |
 | pkgin      | NetBSD (Multiple) |
@@ -50,6 +51,28 @@ where: packages.provider == "pkgin"
 ```
 
 On an OS without a default, like Alpine, actions without a provider fail with an error until `provider` or `package_provider` is set.
+
+### Arch Linux: pacman, yay and paru
+
+On Arch and its derivatives, the default provider depends on how comtrya runs:
+
+1. As root: `pacman`, because AUR helpers refuse to run as root. Packages from the AUR fail with pacman's "target not found".
+2. Otherwise, `paru` if it is installed.
+3. Otherwise `yay`. If yay isn't installed, comtrya installs `base-devel` and `git` with pacman and builds yay from the AUR.
+
+paru and yay install packages from the official repositories and the AUR. They run as your user and ask for sudo themselves, so run comtrya as a normal user to install AUR packages. With `provider: yay` or `provider: paru` as root, `package.install` fails with an error saying so.
+
+`pacman` installs packages from the official repositories only, with `pacman -S --needed`, and works as root too:
+
+```yaml
+- action: package.install
+  provider: pacman
+  list:
+    - git
+    - ripgrep
+```
+
+Before 0.10.0, `pacman` was another name for `yay`. Manifests that use `provider: pacman` for AUR packages need `provider: yay` now.
 
 ### Important note on homebrew and macOS
 

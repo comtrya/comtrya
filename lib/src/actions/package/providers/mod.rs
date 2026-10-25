@@ -9,6 +9,8 @@ mod homebrew;
 use self::homebrew::Homebrew;
 mod macports;
 use self::macports::Macports;
+mod pacman;
+use self::pacman::Pacman;
 mod paru;
 use self::paru::Paru;
 mod pkgin;
@@ -52,7 +54,10 @@ pub enum PackageProviders {
     #[serde(rename = "snapcraft", alias = "snap")]
     Snapcraft,
 
-    #[serde(rename = "yay", alias = "pacman")]
+    #[serde(rename = "pacman")]
+    Pacman,
+
+    #[serde(rename = "yay")]
     Yay,
 
     #[serde(rename = "paru")]
@@ -77,6 +82,7 @@ impl PackageProviders {
             PackageProviders::Homebrew => Box::new(Homebrew {}),
             PackageProviders::Macports => Box::new(Macports {}),
             PackageProviders::Pkgin => Box::new(Pkgin {}),
+            PackageProviders::Pacman => Box::new(Pacman {}),
             PackageProviders::Yay => Box::new(Yay {}),
             PackageProviders::Paru => Box::new(Paru {}),
             PackageProviders::Winget => Box::new(Winget {}),
@@ -96,6 +102,7 @@ impl PackageProviders {
             PackageProviders::Macports => "macports",
             PackageProviders::Pkgin => "pkgin",
             PackageProviders::Snapcraft => "snapcraft",
+            PackageProviders::Pacman => "pacman",
             PackageProviders::Yay => "yay",
             PackageProviders::Paru => "paru",
             PackageProviders::Winget => "winget",
@@ -140,11 +147,13 @@ impl PackageProviders {
 
         let provider = match info.os_type() {
             // Arch Variants
-            os_info::Type::Arch => PackageProviders::Yay,
-            os_info::Type::Artix => PackageProviders::Yay,
-            os_info::Type::CachyOS => PackageProviders::Yay,
-            os_info::Type::EndeavourOS => PackageProviders::Yay,
-            os_info::Type::Manjaro => PackageProviders::Yay,
+            os_info::Type::Arch
+            | os_info::Type::Artix
+            | os_info::Type::CachyOS
+            | os_info::Type::EndeavourOS
+            | os_info::Type::Manjaro => {
+                Self::for_arch(|command| which::which(command).is_ok(), running_as_root())
+            }
             // BSD operating systems
             os_info::Type::DragonFly => PackageProviders::BsdPkg,
             os_info::Type::FreeBSD => PackageProviders::BsdPkg,
@@ -174,6 +183,44 @@ impl PackageProviders {
 
         Some(provider)
     }
+
+    /// pacman as root, because AUR helpers refuse to run as root. Otherwise the AUR helper that is
+    /// installed, else yay, which is bootstrapped
+    fn for_arch(installed: impl Fn(&str) -> bool, root: bool) -> Self {
+        if root {
+            PackageProviders::Pacman
+        } else if installed("paru") {
+            PackageProviders::Paru
+        } else {
+            PackageProviders::Yay
+        }
+    }
+}
+
+#[cfg(unix)]
+fn running_as_root() -> bool {
+    uzers::get_current_uid() == 0
+}
+
+#[cfg(not(unix))]
+fn running_as_root() -> bool {
+    false
+}
+
+/// AUR helpers (`makepkg`) refuse to run as root, with an error that doesn't say what to do
+fn refuse_root(provider: &str, contexts: &Contexts) -> anyhow::Result<()> {
+    let root = contexts
+        .get("user")
+        .and_then(|user| user.get("id"))
+        .is_some_and(|id| id.to_string() == "0");
+
+    if root {
+        return Err(anyhow!(
+            "{provider} can't run as root. Run comtrya as a normal user, it asks for sudo where needed, or use `provider: pacman` for packages from the official repositories"
+        ));
+    }
+
+    Ok(())
 }
 
 pub trait PackageProvider {
@@ -242,6 +289,7 @@ mod tests {
             PackageProviders::Macports,
             PackageProviders::Pkgin,
             PackageProviders::Snapcraft,
+            PackageProviders::Pacman,
             PackageProviders::Yay,
             PackageProviders::Paru,
             PackageProviders::Winget,
@@ -261,5 +309,83 @@ mod tests {
 
         assert_eq!(config.package_provider, Some(PackageProviders::Homebrew));
         assert!(serde_yaml_ng::from_str::<Config>("package_provider: nope").is_err());
+    }
+
+    /// `pacman` used to be an alias of yay, now it's its own provider for the official repositories
+    #[test]
+    fn pacman_is_not_yay() {
+        let parsed: PackageProviders = serde_yaml_ng::from_str("pacman").unwrap();
+
+        assert_eq!(parsed, PackageProviders::Pacman);
+    }
+
+    fn user_contexts(id: &str) -> Contexts {
+        let mut contexts = Contexts::default();
+        contexts.insert(
+            String::from("user"),
+            [(String::from("id"), id.into())].into_iter().collect(),
+        );
+        contexts
+    }
+
+    #[test]
+    fn aur_helpers_refuse_to_run_as_root() {
+        let package = PackageVariant {
+            name: Some(String::from("yay-only-package")),
+            list: vec![],
+            extra_args: vec![],
+            provider: None,
+            file: false,
+        };
+
+        for provider in [PackageProviders::Yay, PackageProviders::Paru] {
+            let provider = provider.get_provider();
+
+            let err = match provider.install(&package, &user_contexts("0")) {
+                Ok(_) => panic!("{} installed as root", provider.name()),
+                Err(err) => err.to_string(),
+            };
+            assert!(err.contains("can't run as root"), "{err}");
+            assert!(err.contains("provider: pacman"), "{err}");
+        }
+    }
+
+    #[test]
+    fn root_is_detected_by_uid() {
+        assert!(refuse_root("yay", &user_contexts("0")).is_err());
+        assert!(refuse_root("yay", &user_contexts("1000")).is_ok());
+        assert!(refuse_root("yay", &Contexts::default()).is_ok());
+    }
+
+    #[test]
+    fn arch_uses_pacman_as_root() {
+        assert_eq!(
+            PackageProviders::for_arch(|_| true, true),
+            PackageProviders::Pacman
+        );
+        assert_eq!(
+            PackageProviders::for_arch(|_| false, true),
+            PackageProviders::Pacman
+        );
+    }
+
+    #[test]
+    fn arch_prefers_an_installed_paru_over_yay() {
+        assert_eq!(
+            PackageProviders::for_arch(|c| c == "paru", false),
+            PackageProviders::Paru
+        );
+        assert_eq!(
+            PackageProviders::for_arch(|_| true, false),
+            PackageProviders::Paru
+        );
+        assert_eq!(
+            PackageProviders::for_arch(|c| c == "yay", false),
+            PackageProviders::Yay
+        );
+        assert_eq!(
+            PackageProviders::for_arch(|_| false, false),
+            PackageProviders::Yay
+        );
     }
 }
