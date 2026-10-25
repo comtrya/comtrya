@@ -111,10 +111,12 @@ fn check_for_updates(no_color: bool) {
             format!("https://github.com/{pkg_name}/{pkg_name}/releases/tag/{new_version}").blue();
         let changelog = format!("Changelog: {release_url}",);
 
-        let cmd = format!(
-            "Run to update: {cmd}",
-            cmd = "curl -fsSL https://get.comtrya.dev | sh".green()
-        );
+        let update = if cfg!(windows) {
+            "irm https://comtrya.dev/install.ps1 | iex"
+        } else {
+            "curl -fsSL https://comtrya.dev/install.sh | sh"
+        };
+        let cmd = format!("Run to update: {cmd}", cmd = update.green());
 
         println!("\n{msg}\n{changelog}\n{cmd}");
     }

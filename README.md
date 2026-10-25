@@ -35,16 +35,22 @@ Comtrya was started by [@rawkode](https://github.com/rawkode), who explains why:
 
 You'll find binaries over on the [releases page](https://github.com/comtrya/comtrya/releases/latest).
 
-If you're not feeling risk-averse, you can use this one-liner:
+Or use the install script on Linux and macOS:
 
 ```shell
-curl -fsSL https://get.comtrya.dev | sh
+curl -fsSL https://comtrya.dev/install.sh | sh
 ```
 
 or specify `VERSION=vx.x.x` to pin to a release version
 
 ```shell
-curl -fsSL https://get.comtrya.dev | VERSION=v0.9.2 sh
+curl -fsSL https://comtrya.dev/install.sh | VERSION=v0.9.2 sh
+```
+
+On Windows (PowerShell):
+
+```powershell
+irm https://comtrya.dev/install.ps1 | iex
 ```
 
 With a Rust toolchain installed, you can also build it from [crates.io](https://crates.io/crates/comtrya):

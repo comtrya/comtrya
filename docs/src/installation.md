@@ -20,17 +20,29 @@ cargo install comtrya
 
 ## Shell Script
 
-A shell script is provided to fetch a pre-compiled comtrya binary and install it onto your system (if your operating system is supported by the script). To do this, in your terminal or command prompt, run the following line:
+A script downloads a pre-compiled comtrya binary from the [releases](https://github.com/comtrya/comtrya/releases/) and installs it. It verifies the binary's SHA-256 checksum where the release has one (releases since mid-2025).
+
+On Linux (x86_64, aarch64) and macOS:
 
 ```shell
-curl -fsSL https://get.comtrya.dev | sh
+curl -fsSL https://comtrya.dev/install.sh | sh
 ```
 
-Or, optionally, you can get a specific version of comtrya using the following one-liner:
+It installs to `/usr/local/bin` and asks for `sudo` if that isn't writable. To pin a version or install somewhere else:
 
 ```shell
-curl -fsSL https://get.comtrya.dev | VERSION=v0.9.2  sh
+curl -fsSL https://comtrya.dev/install.sh | VERSION=v0.9.2 INSTALL_DIR="$HOME/.local/bin" sh
 ```
+
+On Windows, in PowerShell:
+
+```powershell
+irm https://comtrya.dev/install.ps1 | iex
+```
+
+It installs `comtrya.exe` to `%USERPROFILE%\.comtrya` and adds that folder to your user `PATH`. `$env:VERSION` and `$env:INSTALL_DIR` work as above.
+
+The scripts live in the repository as [`docs/src/install.sh`](https://github.com/comtrya/comtrya/blob/main/docs/src/install.sh) and [`docs/src/install.ps1`](https://github.com/comtrya/comtrya/blob/main/docs/src/install.ps1), so you can read them before running them.
 
 ## Precompiled-binaries
 
