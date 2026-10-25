@@ -156,6 +156,17 @@ This action will download a file.
 | chmod          | integer | yes     | octal permissions, e.g. `644` or `"0644"`, default: `644` |
 | owned_by_user  | string | yes      | user for chown   |
 | owned_by_group | string | yes      | group for chown  |
+| sha256         | string | yes      | expected SHA-256 checksum of the file, as hex |
+
+Without `sha256`, the file is downloaded once and kept as long as it exists. With `sha256`:
+
+- the download fails if its checksum doesn't match, and an existing file is left untouched
+- an existing file with a different checksum is downloaded again, so updating `from` and `sha256`
+  together updates the file
+
+GitHub shows the checksum of every release file on the release page, and many projects publish a
+`SHA256SUMS` file. Otherwise, download the file once and run `shasum -a 256 <file>` (or
+`Get-FileHash <file>` in PowerShell).
 
 An alias also exists such that `source` can be used in lieu of `from` and `target` can be used in lieu of `to`.
 
@@ -174,6 +185,12 @@ actions:
     to: /tmp/google-robots.txt
     owned_by_user: nobody
     owned_by_group: nobody
+
+  # Verified download, replaced when the checksum changes
+  - action: file.download
+    from: https://github.com/jtroo/kanata/releases/download/v1.12.0/linux-binaries-x64.zip
+    to: "{{ user.cache_dir }}/kanata/linux-binaries-x64.zip"
+    sha256: 0bedd91567c5d7c54679061baadc37e4f83fb71750003999bc1d11f2c9754f36
 ```
 
 *Note: utilizing chown functionality will require running comtrya as root. Also, both a user and a group need to

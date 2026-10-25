@@ -27,13 +27,32 @@ pub struct FileDownload {
 
     #[serde(rename = "owned_by_group")]
     pub owner_group: Option<String>,
+
+    /// Expected SHA-256 of the file in hex. The download fails if it doesn't match, and an
+    /// existing file that doesn't match is downloaded again
+    pub sha256: Option<String>,
 }
 
 fn default_template() -> bool {
     false
 }
 
-impl FileDownload {}
+impl FileDownload {
+    fn sha256(&self) -> anyhow::Result<Option<String>> {
+        let Some(sha256) = &self.sha256 else {
+            return Ok(None);
+        };
+
+        let sha256 = sha256.trim().to_lowercase();
+        if sha256.len() != 64 || !sha256.chars().all(|c| c.is_ascii_hexdigit()) {
+            return Err(anyhow::anyhow!(
+                "sha256 must be 64 hex characters, got '{sha256}'"
+            ));
+        }
+
+        Ok(Some(sha256))
+    }
+}
 
 impl FileAction for FileDownload {}
 
@@ -47,6 +66,7 @@ impl Action for FileDownload {
         use crate::atoms::file::Chmod;
         use crate::atoms::http::Download;
 
+        let sha256 = self.sha256()?;
         let path = PathBuf::from(&self.to);
         let parent = path.clone();
 
@@ -70,6 +90,7 @@ impl Action for FileDownload {
                 atom: Box::new(Download {
                     url: self.from.clone(),
                     to: path.clone(),
+                    sha256,
                 }),
                 initializers: vec![],
                 finalizers: vec![],
@@ -166,6 +187,45 @@ mod tests {
         };
     }
 
+    fn with_sha256(sha256: &str) -> crate::actions::file::download::FileDownload {
+        crate::actions::file::download::FileDownload {
+            from: String::from("https://example.com/file"),
+            to: String::from("file"),
+            sha256: Some(sha256.to_string()),
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn sha256_can_be_deserialized() {
+        let yaml = "- action: file.download\n  from: a\n  to: b\n  sha256: ABC\n";
+        let mut actions: Vec<Actions> = serde_yaml_ng::from_str(yaml).unwrap();
+
+        match actions.pop() {
+            Some(Actions::FileDownload(action)) => {
+                assert_eq!(Some("ABC"), action.action.sha256.as_deref())
+            }
+            _ => panic!("FileDownload didn't deserialize to the correct type"),
+        }
+    }
+
+    #[test]
+    fn sha256_is_normalized_to_lowercase() {
+        let upper = "A".repeat(64);
+        assert_eq!(Some("a".repeat(64)), with_sha256(&upper).sha256().unwrap());
+        assert_eq!(
+            Some("a".repeat(64)),
+            with_sha256(&format!(" {upper}\n")).sha256().unwrap()
+        );
+    }
+
+    #[test]
+    fn sha256_must_be_64_hex_characters() {
+        assert!(with_sha256("abc").sha256().is_err());
+        assert!(with_sha256(&"g".repeat(64)).sha256().is_err());
+        assert!(with_sha256(&"a".repeat(65)).sha256().is_err());
+    }
+
     #[test]
     #[cfg(unix)]
     fn contains_chown_step() {
@@ -176,6 +236,7 @@ mod tests {
             template: false,
             owner_user: Some("test".to_string()),
             owner_group: Some("test".to_string()),
+            sha256: None,
         };
 
         let steps = file_download.plan(&Default::default(), &Default::default());
