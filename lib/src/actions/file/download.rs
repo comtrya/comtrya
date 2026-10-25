@@ -12,7 +12,10 @@ use std::path::PathBuf;
 #[derive(JsonSchema, Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename = "file.download")]
 pub struct FileDownload {
+    #[serde(alias = "source")]
     pub from: String,
+
+    #[serde(alias = "target")]
     pub to: String,
 
     #[serde(default = "default_chmod", deserialize_with = "from_octal")]
@@ -159,6 +162,20 @@ mod tests {
                 panic!("FileDownload didn't deserialize to the correct type");
             }
         };
+    }
+
+    #[test]
+    fn source_and_target_are_aliases_for_from_and_to() {
+        let yaml = "- action: file.download\n  source: a\n  target: b\n";
+        let mut actions: Vec<Actions> = serde_yaml_ng::from_str(yaml).unwrap();
+
+        match actions.pop() {
+            Some(Actions::FileDownload(action)) => {
+                assert_eq!("a", action.action.from);
+                assert_eq!("b", action.action.to);
+            }
+            _ => panic!("FileDownload didn't deserialize to the correct type"),
+        }
     }
 
     #[test]
