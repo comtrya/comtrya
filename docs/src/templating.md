@@ -28,6 +28,24 @@ The values available in templates come from contexts. Run `comtrya contexts` to 
 | `include_variables` | Variables loaded from the files listed under `include_variables` in `Comtrya.yaml`              |
 | `privilege`         | `privilege`: the configured privilege escalation tool (`sudo`, `doas` or `run0`)                 |
 
+### Including variables
+
+`include_variables` in `Comtrya.yaml` loads more variables into the `include_variables` context:
+
+```yaml
+include_variables:
+  - "file+yaml:///home/me/dotfiles/variables.yaml"
+  - "file+toml:///home/me/dotfiles/variables.toml"
+  - "dns+txt://example.com"   # TXT records of the form key=value
+  - "op://Private/Dotfiles"   # fields of a 1Password item
+```
+
+`op://<vault>/<item>` reads a 1Password item with the [1Password CLI](https://developer.1password.com/docs/cli/get-started/), which must be installed and signed in (`op signin`, or the 1Password app integration). Every field with a value becomes a variable named after the field's label, e.g. `{{ include_variables.username }}`. Vault and item names may contain spaces. With several 1Password accounts, pick one with `?account=`, e.g. `op://Private/Dotfiles?account=my.1password.com`.
+
+The values become plain template variables: Comtrya logs what an action does, so a secret used in a path or command can show up in its output. `comtrya contexts` lists their names, and prints the values only with `--show-values`. To put secrets into files without that, see `process_with` in [file.copy](./files-and-directories.md#filecopy).
+
+If one of the includes fails, for example because `op` isn't signed in, Comtrya logs a warning and the `include_variables` context stays empty.
+
 On Windows, the `user` directories use forward slashes, e.g. `C:/Users/me`. Windows accepts them, and they are safe inside double-quoted YAML strings. Other values, like `env.USERPROFILE`, still contain backslashes: put those in single quotes, e.g. `'{{ env.USERPROFILE }}'`, because YAML reads `\U` in double quotes as an escape.
 
 ## Filters and functions

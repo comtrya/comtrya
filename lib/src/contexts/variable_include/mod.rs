@@ -7,6 +7,7 @@ use crate::{config::Config, contexts::Context, contexts::ContextProvider};
 
 pub mod dns;
 pub mod file;
+pub mod op;
 
 pub struct VariableIncludeContextProvider<'a> {
     pub config: &'a Config,
@@ -22,6 +23,12 @@ impl<'a> ContextProvider for VariableIncludeContextProvider<'a> {
 
         if let Some(variable_includes) = &self.config.include_variables {
             for variable_include in variable_includes {
+                // Vault and item names may contain spaces, which a URL can't
+                if variable_include.starts_with("op://") {
+                    op::item_values(variable_include, &mut contexts)?;
+                    continue;
+                }
+
                 let url = Url::parse(variable_include)?;
 
                 if url.scheme() == "dns+txt" {
