@@ -6,7 +6,6 @@ mod git;
 mod group;
 mod macos;
 mod package;
-mod plugin;
 mod user;
 
 use crate::actions::macos::MacOSDefault;
@@ -24,7 +23,6 @@ use file::unarchive::FileUnarchive;
 use git::GitClone;
 use group::add::GroupAdd;
 use package::{PackageInstall, PackageRepository};
-use plugin::Plugin;
 use rhai::Engine;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -170,9 +168,6 @@ pub enum Actions {
 
     #[serde(rename = "user.group")]
     UserAddGroup(ConditionalVariantAction<UserAddGroup>),
-
-    #[serde(rename = "plugin")]
-    Plugin(ConditionalVariantAction<Plugin>),
 }
 
 impl Actions {
@@ -196,7 +191,6 @@ impl Actions {
             Actions::UserAddGroup(a) => a,
             Actions::FileRemove(a) => a,
             Actions::DirectoryRemove(a) => a,
-            Actions::Plugin(a) => a,
         }
     }
 }
@@ -223,7 +217,6 @@ impl Deref for Actions {
             Actions::UserAddGroup(a) => a,
             Actions::FileRemove(a) => a,
             Actions::DirectoryRemove(a) => a,
-            Actions::Plugin(a) => a,
         }
     }
 }
@@ -249,7 +242,6 @@ impl Display for Actions {
             Actions::PackageRepository(_) => "package.repository",
             Actions::UserAdd(_) => "user.add",
             Actions::UserAddGroup(_) => "user.group",
-            Actions::Plugin(_) => "plugin",
         };
 
         write!(f, "{name}")

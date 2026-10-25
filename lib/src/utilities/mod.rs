@@ -1,11 +1,5 @@
-pub mod lua;
-use std::{borrow::Cow, ops::Deref, path::PathBuf};
-
 use crate::contexts::Contexts;
 
-use camino::Utf8PathBuf;
-use schemars::{JsonSchema, Schema, SchemaGenerator};
-use serde::{Deserialize, Serialize};
 use which::which;
 
 pub fn get_binary_path(binary: &str) -> Result<String, anyhow::Error> {
@@ -22,25 +16,4 @@ pub fn get_privilege_provider(contexts: &Contexts) -> Option<String> {
     }
 
     None
-}
-
-#[derive(Eq, PartialEq, Debug, Clone, Default, Serialize, Deserialize, PartialOrd, Ord)]
-pub struct CustomPathBuf(pub Utf8PathBuf);
-
-impl JsonSchema for CustomPathBuf {
-    fn schema_name() -> Cow<'static, str> {
-        Cow::Borrowed("CustomPathBuf")
-    }
-
-    fn json_schema(gen: &mut SchemaGenerator) -> Schema {
-        gen.subschema_for::<PathBuf>()
-    }
-}
-
-impl Deref for CustomPathBuf {
-    type Target = Utf8PathBuf;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
 }
