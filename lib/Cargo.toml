@@ -13,15 +13,13 @@ homepage = "https://comtrya.dev"
 [dependencies]
 anyhow = "1.0"
 age = { version = "0.12", features = ["armor"] }
-dirs-next = "2.0"
-file_diff = "1.0"
+dirs = "6.0"
 gethostname = "1.1"
 ignore = "0.4"
 normpath = "1.5"
 octocrab = "0.54"
 os_info = { version = "3.14", features = ["schemars"] }
 petgraph = "0.8"
-rand = "0.10"
 regex = "1.12"
 reqwest = { version = "0.13", default-features = false, features = [
     "blocking",
@@ -32,7 +30,7 @@ schemars = "1.2"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_yaml_ng = "0.10"
-sha256 = "1.6"
+sha2 = "0.10"
 similar = "3.2"
 tokio = "1.49"
 toml = "1.0"
@@ -41,12 +39,10 @@ toml = "1.0"
 tera = "1.20"
 tracing = "0.1"
 hickory-resolver = "0.26.2"
-walkdir = "2.5"
 which = "8.0"
 whoami = "2.1"
 tar = "0.4.44"
 flate2 = "1.1.9"
-file-owner = "0.1.2"
 gix = { version = "0.90.0", features = [
     "status",
     "tracing",

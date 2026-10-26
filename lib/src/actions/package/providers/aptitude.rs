@@ -9,7 +9,6 @@ use crate::steps::Step;
 use crate::utilities;
 use anyhow::anyhow;
 use serde::{Deserialize, Serialize};
-use sha256::digest;
 use tracing::warn;
 use which::which;
 
@@ -57,7 +56,10 @@ impl Aptitude {
     }
 
     fn key_path(key: &RepositoryKey) -> String {
-        let key_name = key.name.clone().unwrap_or_else(|| digest(&*key.url));
+        let key_name = key
+            .name
+            .clone()
+            .unwrap_or_else(|| utilities::sha256(&key.url));
         format!("/usr/share/keyrings/{key_name}.asc")
     }
 }

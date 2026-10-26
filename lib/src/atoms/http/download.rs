@@ -1,8 +1,8 @@
 use crate::atoms::Outcome;
 
 use super::super::Atom;
+use crate::utilities::sha256 as digest;
 use anyhow::anyhow;
-use sha256::digest;
 use std::io::Write;
 use std::{fs::File, path::PathBuf};
 

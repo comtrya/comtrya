@@ -2,7 +2,6 @@ use crate::atoms::Outcome;
 
 use super::super::Atom;
 use super::FileAtom;
-use file_diff::diff;
 use std::path::PathBuf;
 use tracing::error;
 
@@ -41,10 +40,7 @@ impl Atom for Copy {
 
         Ok(Outcome {
             side_effects: vec![],
-            should_run: !diff(
-                &self.from.display().to_string(),
-                &self.to.display().to_string(),
-            ),
+            should_run: !same_contents(&self.from, &self.to),
         })
     }
 
@@ -53,6 +49,11 @@ impl Atom for Copy {
 
         Ok(())
     }
+}
+
+/// Whether both files can be read and have the same bytes
+fn same_contents(a: &std::path::Path, b: &std::path::Path) -> bool {
+    matches!((std::fs::read(a), std::fs::read(b)), (Ok(a), Ok(b)) if a == b)
 }
 
 #[cfg(test)]

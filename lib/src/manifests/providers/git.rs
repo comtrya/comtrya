@@ -4,8 +4,6 @@ use gix;
 use gix::interrupt;
 use gix::progress::Discard;
 
-use dirs_next;
-
 use tracing::info;
 
 #[derive(Debug)]
@@ -14,7 +12,7 @@ pub struct GitManifestProvider;
 /// Directory where manifests fetched from git repositories are cloned to,
 /// one subdirectory per repository
 pub fn git_cache_dir() -> Option<std::path::PathBuf> {
-    dirs_next::cache_dir().map(|dir| dir.join("comtrya").join("manifests").join("git"))
+    dirs::cache_dir().map(|dir| dir.join("comtrya").join("manifests").join("git"))
 }
 
 #[derive(Debug, PartialEq)]
@@ -159,7 +157,7 @@ mod tests {
     fn cache_dir_is_inside_the_platform_cache_dir() {
         let cache_dir = git_cache_dir().unwrap();
 
-        assert!(cache_dir.starts_with(dirs_next::cache_dir().unwrap()));
+        assert!(cache_dir.starts_with(dirs::cache_dir().unwrap()));
         assert!(cache_dir.ends_with(
             std::path::Path::new("comtrya")
                 .join("manifests")
