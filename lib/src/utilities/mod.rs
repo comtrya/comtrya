@@ -1,4 +1,4 @@
-use crate::contexts::Contexts;
+use crate::contexts::{privilege::Privilege, Contexts};
 
 use which::which;
 
@@ -8,12 +8,34 @@ pub fn get_binary_path(binary: &str) -> Result<String, anyhow::Error> {
     Ok(binary)
 }
 
-pub fn get_privilege_provider(contexts: &Contexts) -> Option<String> {
-    let privilege_provider = contexts.get("privilege").and_then(|s| s.first_key_value());
+/// The command that elevates privileges: the `privilege` context set from `Comtrya.yaml`,
+/// or `sudo` without one
+pub fn get_privilege_provider(contexts: &Contexts) -> String {
+    contexts
+        .get("privilege")
+        .and_then(|privilege| privilege.first_key_value())
+        .map(|(_, provider)| provider.to_string())
+        .unwrap_or_else(|| Privilege::Sudo.to_string())
+}
 
-    if let Some(privilege_provider) = privilege_provider {
-        return Some(privilege_provider.1.to_string());
+#[cfg(test)]
+mod test {
+    use super::*;
+    use std::collections::BTreeMap;
+
+    #[test]
+    fn the_configured_privilege_provider_is_used() {
+        let mut contexts = Contexts::new();
+        contexts.insert(
+            String::from("privilege"),
+            BTreeMap::from([(String::from("privilege"), String::from("doas").into())]),
+        );
+
+        assert_eq!("doas", get_privilege_provider(&contexts));
     }
 
-    None
+    #[test]
+    fn sudo_is_the_default_privilege_provider() {
+        assert_eq!("sudo", get_privilege_provider(&Contexts::new()));
+    }
 }

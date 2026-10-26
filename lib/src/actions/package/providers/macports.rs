@@ -57,8 +57,7 @@ impl PackageProvider for Macports {
             }
         };
 
-        let privilege_provider =
-            utilities::get_privilege_provider(contexts).unwrap_or_else(|| "sudo".to_string());
+        let privilege_provider = utilities::get_privilege_provider(contexts);
 
         Ok(vec![Step {
             atom: Box::new(Exec {

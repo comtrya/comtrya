@@ -33,8 +33,7 @@ impl GroupProvider for MacOsGroupProvider {
             group_creation_string.to_owned(),
         ];
 
-        let privilege_provider =
-            utilities::get_privilege_provider(contexts).unwrap_or_else(|| "sudo".to_string());
+        let privilege_provider = utilities::get_privilege_provider(contexts);
 
         vec![Step {
             atom: Box::new(Exec {

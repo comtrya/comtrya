@@ -60,8 +60,7 @@ impl Action for RunCommand {
     fn plan(&self, _: &Manifest, contexts: &Contexts) -> anyhow::Result<Vec<Step>> {
         use crate::atoms::command::Exec;
 
-        let privilege_provider =
-            utilities::get_privilege_provider(contexts).unwrap_or_else(|| "sudo".to_string());
+        let privilege_provider = utilities::get_privilege_provider(contexts);
 
         Ok(vec![Step {
             atom: Box::new(Exec {
