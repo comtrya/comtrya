@@ -669,7 +669,7 @@ dependencies = [
  "clap_complete",
  "colored",
  "comfy-table",
- "comtrya-lib",
+ "comtrya-lib 0.10.0",
  "dirs-next",
  "petgraph",
  "predicates",
@@ -683,6 +683,16 @@ dependencies = [
  "tracing-subscriber",
  "update-informer",
  "walkdir",
+]
+
+[[package]]
+name = "comtrya-compat"
+version = "0.0.0"
+dependencies = [
+ "comtrya-lib 0.10.0",
+ "comtrya-lib 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "pretty_assertions",
+ "serde_json",
 ]
 
 [[package]]
@@ -717,6 +727,48 @@ dependencies = [
  "similar",
  "tar",
  "tempfile",
+ "tera",
+ "tokio",
+ "toml 1.1.8+spec-1.1.0",
+ "tracing",
+ "uzers",
+ "walkdir",
+ "which",
+ "whoami",
+]
+
+[[package]]
+name = "comtrya-lib"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a83f6c08b54c8bd41e6c19319e2e7d959b39c10d83189ff055b9a2da8fc8e2a7"
+dependencies = [
+ "age",
+ "anyhow",
+ "dirs-next",
+ "file-owner",
+ "file_diff",
+ "flate2",
+ "gethostname",
+ "gix",
+ "gix-protocol",
+ "hickory-resolver",
+ "ignore",
+ "normpath",
+ "octocrab",
+ "os_info",
+ "petgraph",
+ "rand 0.10.3",
+ "regex",
+ "reqwest 0.13.5",
+ "rhai",
+ "schemars",
+ "serde",
+ "serde_json",
+ "serde_yaml_ng",
+ "sha256",
+ "similar",
+ "tar",
  "tera",
  "tokio",
  "toml 1.1.8+spec-1.1.0",
@@ -3517,7 +3569,7 @@ dependencies = [
 name = "jsonschemagen"
 version = "0.1.0"
 dependencies = [
- "comtrya-lib",
+ "comtrya-lib 0.10.0",
  "jsonschema",
  "schemars",
  "serde_json",

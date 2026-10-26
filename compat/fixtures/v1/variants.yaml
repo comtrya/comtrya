@@ -1,0 +1,19 @@
+where: os.family == "unix"
+actions:
+  - action: command.run
+    command: echo
+    args: [default]
+    where: user.username != "root"
+    variants:
+      - where: os.name == "linux"
+        command: echo
+        args: [linux]
+      - where: os.name == "macos"
+        command: echo
+        args: [macos]
+  - action: package.install
+    list: [git]
+    variants:
+      - where: os.distribution == "Arch Linux"
+        provider: pacman
+        list: [git, base-devel]

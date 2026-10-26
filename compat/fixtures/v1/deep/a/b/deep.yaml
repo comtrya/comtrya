@@ -1,0 +1,6 @@
+actions:
+  - action: macos.default
+    domain: com.apple.dock
+    key: autohide
+    kind: bool
+    value: "true"

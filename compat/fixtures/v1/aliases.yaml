@@ -1,0 +1,36 @@
+# Old action and field names that existing manifests use
+actions:
+  - action: cmd.run
+    command: echo
+    args: [hi]
+    sudo: true
+  - action: dir.copy
+    from: one
+    to: /tmp/comtrya-compat/one
+  - action: dir.create
+    path: /tmp/comtrya-compat/created
+  - action: dir.remove
+    target: /tmp/comtrya-compat/removed
+  - action: file.copy
+    source: config
+    target: /tmp/comtrya-compat/config
+    chmod: 0644
+  - action: file.download
+    source: https://example.com/file
+    target: /tmp/comtrya-compat/file
+  - action: file.unarchive
+    source: /tmp/a.tar.gz
+    target: /tmp/comtrya-compat/a
+  - action: bin.gh
+    name: comtrya
+    directory: /tmp/comtrya-compat/bin
+    repository: comtrya/comtrya
+  - action: package.installed
+    provider: brew
+    list: [ripgrep]
+  - action: package.repo
+    url: ppa:neovim-ppa/stable
+    provider: apt
+  - action: package.install
+    provider: pacman
+    name: jq

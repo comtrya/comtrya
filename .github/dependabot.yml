@@ -16,6 +16,8 @@ updates:
       # Tera 2 breaks user manifest templates, see the comment in lib/Cargo.toml
       - dependency-name: "tera"
         update-types: ["version-update:semver-major"]
+      # The compat suite compares with an exact release, moved by hand after each release
+      - dependency-name: "comtrya-lib"
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:

@@ -1,0 +1,5 @@
+# 0.10.0 keeps .toml in the manifest name
+[[actions]]
+action = "command.run"
+command = "echo"
+args = ["toml"]
