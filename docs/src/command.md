@@ -18,7 +18,9 @@ This is the most basic, but yet powerful action as it can be used to run anythin
 
 ### Scoped environment variables
 
-Sometimes, environment variables are needed to run a command or set of commands. As of v0.9.1, Comtrya will has the ability to inject environment variables for the scope of a single `command.run` action. An initializer will run prior to the action to inject the environment variables, then after the command run finished, a finalizer will remove those from the environment. In the manifest, the environment is implemented as a hash map of keys and values. Multiple environment variables are supported.
+Sometimes, environment variables are needed to run a command or set of commands. `env` sets environment variables for the command of a single `command.run` action only; comtrya's own environment and later actions don't see them. A `PATH` in `env` is also where comtrya looks for the command. Multiple environment variables are supported.
+
+Commands with `privileged: true` run through `sudo` (or the configured privilege provider), which usually resets the environment, so `env` may not reach them.
 
 ### Writing the output to a file
 
@@ -55,7 +57,7 @@ With `stdout`, the command's output is written to a file instead of the log, lik
   env:
     GOBIN: /Users/test
 
-# we should see that GOBIN is no longer set, showing that the variable has been cleaned up
+# GOBIN isn't set here, env only applied to the command above
 - action: command.run
   command: go
   args:
