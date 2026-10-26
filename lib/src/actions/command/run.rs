@@ -1,8 +1,6 @@
 use crate::contexts::Contexts;
-use crate::steps::finalizers::RemoveEnvVars;
-use crate::steps::initializers::SetEnvVars;
 use crate::steps::Step;
-use crate::{actions::Action, manifests::Manifest, steps, utilities};
+use crate::{actions::Action, manifests::Manifest, utilities};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -73,14 +71,12 @@ impl Action for RunCommand {
                 working_dir: Some(self.dir.clone()),
                 privilege_provider: privilege_provider.clone(),
                 stdout_file: self.stdout_file(),
+                // Only for the command, comtrya's own environment stays as it is
+                environment: self.env.clone().into_iter().collect(),
                 ..Default::default()
             }),
-            initializers: vec![steps::initializers::FlowControl::Ensure(Box::new(
-                SetEnvVars(self.env.clone()),
-            ))],
-            finalizers: vec![steps::finalizers::FlowControl::Ensure(Box::new(
-                RemoveEnvVars(self.env.clone()),
-            ))],
+            initializers: vec![],
+            finalizers: vec![],
         }])
     }
 }

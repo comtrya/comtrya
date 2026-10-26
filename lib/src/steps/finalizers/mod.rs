@@ -1,8 +1,6 @@
 use crate::atoms::Atom;
 
-mod env_vars_remove;
 mod output_contains;
-pub use env_vars_remove::RemoveEnvVars;
 
 pub use output_contains::OutputContains;
 

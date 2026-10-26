@@ -57,6 +57,22 @@ impl Exec {
         }
     }
 
+    /// Looks the command up in the `PATH` set for it, if there is one
+    fn find_binary(&self, command: &str) -> anyhow::Result<String> {
+        match self.environment.iter().rev().find(|(key, _)| key == "PATH") {
+            Some((_, path)) => {
+                let cwd = match &self.working_dir {
+                    Some(dir) => PathBuf::from(dir),
+                    None => std::env::current_dir()?,
+                };
+                Ok(which::which_in(command, Some(path), cwd)?
+                    .to_string_lossy()
+                    .to_string())
+            }
+            None => utilities::get_binary_path(command),
+        }
+    }
+
     fn elevate(&mut self) -> anyhow::Result<()> {
         tracing::info!(
             "Privilege elevation required to run `{} {}`. Validating privileges ...",
@@ -116,7 +132,8 @@ impl Atom for Exec {
     fn execute(&mut self) -> anyhow::Result<()> {
         let (command, arguments) = self.elevate_if_required();
 
-        let command = utilities::get_binary_path(&command)
+        let command = self
+            .find_binary(&command)
             .map_err(|_| anyhow!("Command `{command}` not found in path"))?;
 
         // If we require root, we need to use sudo with inherited IO
@@ -324,5 +341,53 @@ mod tests {
     fn error_propagation() {
         let mut command_run = new_run_command(String::from("non-existant-command"));
         command_run.execute().expect_err("Command should fail");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn environment_is_only_set_for_the_command() {
+        let dir = tempfile::tempdir().unwrap();
+        let stdout_file = dir.path().join("out.txt");
+
+        let mut command_run = new_run_command(String::from("sh"));
+        command_run.arguments = vec![
+            String::from("-c"),
+            String::from("printf %s \"$COMTRYA_EXEC_TEST\""),
+        ];
+        command_run.environment = vec![(
+            String::from("COMTRYA_EXEC_TEST"),
+            String::from("only-for-the-child"),
+        )];
+        command_run.stdout_file = Some(stdout_file.clone());
+        command_run.execute().unwrap();
+
+        assert_eq!(
+            "only-for-the-child",
+            std::fs::read_to_string(stdout_file).unwrap()
+        );
+        assert!(std::env::var("COMTRYA_EXEC_TEST").is_err());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn the_command_is_found_in_its_own_path() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let bin = tempfile::tempdir().unwrap();
+        let script = bin.path().join("comtrya-exec-test");
+        std::fs::write(&script, "#!/bin/sh\nprintf found\n").unwrap();
+        std::fs::set_permissions(&script, std::fs::Permissions::from_mode(0o755)).unwrap();
+        let stdout_file = bin.path().join("out.txt");
+
+        let mut command_run = new_run_command(String::from("comtrya-exec-test"));
+        command_run.environment = vec![(
+            String::from("PATH"),
+            format!("{}:/usr/bin:/bin", bin.path().display()),
+        )];
+        command_run.stdout_file = Some(stdout_file.clone());
+        command_run.execute().unwrap();
+
+        assert_eq!("found", std::fs::read_to_string(stdout_file).unwrap());
+        assert!(std::env::var("PATH").is_ok());
     }
 }

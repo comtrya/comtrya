@@ -594,6 +594,25 @@ fn command_run_writes_stdout_to_a_file() {
     );
 }
 
+/// `env` only applies to its command. It used to be set on comtrya itself and removed
+/// afterwards, which left later commands without a PATH
+#[cfg(unix)]
+#[test]
+fn command_run_env_does_not_leak_into_later_actions() {
+    let f = Fixture::new();
+    f.manifest(
+        "env.yaml",
+        &format!(
+            "actions:\n  - action: command.run\n    command: sh\n    args: ['-c', 'test \"$GREETING\" = hi']\n    env:\n      GREETING: hi\n      PATH: /usr/bin:/bin\n  - action: command.run\n    command: sh\n    args: ['-c', 'test -z \"$GREETING\"']\n{}",
+            f.create("after")
+        ),
+    );
+
+    f.run(&["apply"]);
+
+    assert!(f.created("after"));
+}
+
 /// `op://` in include_variables, with a fake 1Password CLI on PATH instead of a real vault (#306)
 #[cfg(unix)]
 mod one_password {
