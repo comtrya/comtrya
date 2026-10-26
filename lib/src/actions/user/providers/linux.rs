@@ -47,8 +47,7 @@ impl UserProvider for LinuxUserProvider {
             args.push(user.fullname.clone());
         }
 
-        let privilege_provider =
-            utilities::get_privilege_provider(contexts).unwrap_or_else(|| "sudo".to_string());
+        let privilege_provider = utilities::get_privilege_provider(contexts);
 
         let mut steps: Vec<Step> = vec![Step {
             atom: Box::new(Exec {
@@ -95,8 +94,7 @@ impl UserProvider for LinuxUserProvider {
             return Ok(vec![]);
         }
 
-        let privilege_provider =
-            utilities::get_privilege_provider(contexts).unwrap_or_else(|| "sudo".to_string());
+        let privilege_provider = utilities::get_privilege_provider(contexts);
 
         let mut steps: Vec<Step> = vec![];
 

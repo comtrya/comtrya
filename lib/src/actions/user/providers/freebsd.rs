@@ -42,8 +42,7 @@ impl UserProvider for FreeBSDUserProvider {
         args.push(String::from("-w"));
         args.push(String::from("random"));
 
-        let privilege_provider =
-            utilities::get_privilege_provider(contexts).unwrap_or_else(|| "sudo".to_string());
+        let privilege_provider = utilities::get_privilege_provider(contexts);
 
         let mut steps: Vec<Step> = vec![Step {
             atom: Box::new(Exec {
@@ -87,8 +86,7 @@ impl UserProvider for FreeBSDUserProvider {
             return Ok(steps);
         }
 
-        let privilege_provider =
-            utilities::get_privilege_provider(contexts).unwrap_or_else(|| "sudo".to_string());
+        let privilege_provider = utilities::get_privilege_provider(contexts);
 
         for group in user.group.iter() {
             steps.push(Step {

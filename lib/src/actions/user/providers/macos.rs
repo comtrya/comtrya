@@ -45,8 +45,7 @@ impl UserProvider for MacOSUserProvider {
             args.push(String::from("\"{user.fullename}\""));
         }
 
-        let privilege_provider =
-            utilities::get_privilege_provider(contexts).unwrap_or_else(|| "sudo".to_string());
+        let privilege_provider = utilities::get_privilege_provider(contexts);
 
         let mut steps: Vec<Step> = vec![Step {
             atom: Box::new(Exec {
@@ -93,8 +92,7 @@ impl UserProvider for MacOSUserProvider {
             return Ok(vec![]);
         }
 
-        let privilege_provider =
-            utilities::get_privilege_provider(contexts).unwrap_or_else(|| "sudo".to_string());
+        let privilege_provider = utilities::get_privilege_provider(contexts);
 
         let mut steps: Vec<Step> = vec![];
 

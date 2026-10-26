@@ -25,8 +25,7 @@ impl Aptitude {
     }
 
     fn privileged_exec(&self, command: &str, arguments: Vec<String>, contexts: &Contexts) -> Step {
-        let privilege_provider =
-            utilities::get_privilege_provider(contexts).unwrap_or_else(|| "sudo".to_string());
+        let privilege_provider = utilities::get_privilege_provider(contexts);
 
         Step {
             atom: Box::new(Exec {
