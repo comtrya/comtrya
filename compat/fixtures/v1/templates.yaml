@@ -1,0 +1,14 @@
+actions:
+  - action: directory.create
+    path: "{{ user.home_dir }}/.config/{{ variables.app }}"
+  - action: command.run
+    command: echo
+    args:
+      - "{{ os.name }} {{ os.family }} {{ os.distribution }}"
+      - "{{ user.username }} {{ user.id }}"
+      - "{{ privilege.privilege }} {{ packages.provider | default(value='none') }}"
+  {% if os.name == "linux" %}
+  - action: command.run
+    command: echo
+    args: [only-on-linux]
+  {% endif %}

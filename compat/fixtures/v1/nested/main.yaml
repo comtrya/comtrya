@@ -1,0 +1,5 @@
+# main.yaml takes the name of its directory
+actions:
+  - action: file.link
+    source: dotfile
+    target: /tmp/comtrya-compat/.dotfile

@@ -1,0 +1,7 @@
+version: 1
+depends: [nested, ./aliases]
+labels: [compat]
+actions:
+  - action: command.run
+    command: echo
+    args: [versioned]

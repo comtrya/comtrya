@@ -52,6 +52,10 @@ Run `./check.sh` (or `check.ps1` on Windows). It
 - runs the linter `cargo clippy`, which fails on any warning, like CI
 - runs all tests with `cargo test`
 
+### Compatibility with existing manifests
+
+[`compat/`](./compat) loads manifests with your changes and with the last release of `comtrya-lib`, and fails if any manifest means something different, for example because an alias is gone or a field is read differently. If the difference is intended, record it in `known_differences` in `compat/tests/v1.rs` and mention it in the release notes. New manifest rules belong in `compat/fixtures/v1/`.
+
 ### Documentation
 
 The documentation at [comtrya.dev](https://comtrya.dev) is built from the [`docs/`](./docs) folder with [mdBook](https://github.com/rust-lang/mdBook). To preview it locally:

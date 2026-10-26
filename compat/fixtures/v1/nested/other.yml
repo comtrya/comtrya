@@ -1,0 +1,5 @@
+depends: [./main]
+actions:
+  - action: git.clone
+    repo_url: https://github.com/comtrya/comtrya
+    directory: /tmp/comtrya-compat/comtrya

@@ -1,0 +1,4 @@
+# Fails to render everywhere, so it's dropped
+actions:
+  - action: directory.create
+    path: '{{ variables.does_not_exist }}'

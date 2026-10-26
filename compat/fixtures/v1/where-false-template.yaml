@@ -1,0 +1,5 @@
+# The template only works where the manifest applies (#283, #654)
+where: os.name == "no-such-os"
+actions:
+  - action: directory.create
+    path: '{{ get_env(name="COMTRYA_COMPAT_UNSET") }}'
