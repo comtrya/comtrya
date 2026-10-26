@@ -245,17 +245,14 @@ mod tests {
         }
         .keep();
 
-        // We'll expect 2 extra Atoms
-        use rand::RngExt;
         use std::io::Write;
 
-        let mut rng = rand::rng();
-        let number_of_files: usize = rng.random_range(3..9);
+        let number_of_files: usize = 5;
 
         for i in 0..number_of_files {
             let path = source_dir.clone().join(format!("{i}.txt"));
             let mut file = std::fs::File::create(path).unwrap();
-            writeln!(file, "Random {i}").unwrap();
+            writeln!(file, "File {i}").unwrap();
         }
 
         let manifest: Manifest = Manifest {
@@ -282,6 +279,7 @@ mod tests {
         };
 
         let steps = file_link_action.plan(&manifest, &contexts).unwrap();
+        // One link per file, plus creating the target directory
         assert_eq!(steps.len(), number_of_files + 1);
     }
 }

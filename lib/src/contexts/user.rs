@@ -1,7 +1,7 @@
 use crate::contexts::{Context, ContextProvider};
 use crate::values::Value;
 use anyhow::Result;
-use dirs_next::{config_dir, data_dir, data_local_dir, document_dir, home_dir};
+use dirs::{config_dir, data_dir, data_local_dir, document_dir, home_dir};
 use std::path::PathBuf;
 
 pub struct UserContextProvider {}

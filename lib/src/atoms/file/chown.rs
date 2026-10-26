@@ -36,7 +36,7 @@ impl std::fmt::Display for Chown {
 use std::os::unix::prelude::MetadataExt;
 
 #[cfg(unix)]
-use file_owner::PathExt;
+use anyhow::anyhow;
 
 #[cfg(unix)]
 impl Atom for Chown {
@@ -123,13 +123,25 @@ impl Atom for Chown {
     }
 
     fn execute(&mut self) -> anyhow::Result<()> {
-        if !self.owner.is_empty() {
-            self.path.set_owner(self.owner.as_str())?;
-        }
+        let uid = match self.owner.as_str() {
+            "" => None,
+            owner => Some(
+                uzers::get_user_by_name(owner)
+                    .ok_or_else(|| anyhow!("user {owner} doesn't exist"))?
+                    .uid(),
+            ),
+        };
 
-        if !self.group.is_empty() {
-            self.path.set_group(self.group.as_str())?;
-        }
+        let gid = match self.group.as_str() {
+            "" => None,
+            group => Some(
+                uzers::get_group_by_name(group)
+                    .ok_or_else(|| anyhow!("group {group} doesn't exist"))?
+                    .gid(),
+            ),
+        };
+
+        std::os::unix::fs::chown(&self.path, uid, gid)?;
 
         Ok(())
     }
@@ -210,5 +222,38 @@ mod tests {
         };
 
         assert_eq!(true, file_chown.plan().unwrap().should_run);
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn it_changes_the_owner_to_the_current_user() {
+        let user = uzers::get_current_username()
+            .unwrap_or_else(|| std::ffi::OsString::from("root"))
+            .into_string()
+            .unwrap();
+        let group = uzers::get_current_groupname()
+            .unwrap_or_else(|| std::ffi::OsString::from("root"))
+            .into_string()
+            .unwrap();
+        let temp_file = tempfile::NamedTempFile::new().unwrap();
+
+        // Changing to the owner it already has needs no privileges
+        let mut file_chown = Chown {
+            path: temp_file.path().to_path_buf(),
+            owner: user,
+            group,
+        };
+        file_chown.execute().unwrap();
+
+        let mut file_chown = Chown {
+            path: temp_file.path().to_path_buf(),
+            owner: String::from("comtrya-no-such-user"),
+            group: String::new(),
+        };
+        let error = file_chown.execute().unwrap_err();
+        assert!(
+            error.to_string().contains("comtrya-no-such-user"),
+            "{error}"
+        );
     }
 }

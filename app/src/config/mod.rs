@@ -213,7 +213,7 @@ fn find_configs(args: &GlobalArgs) -> Option<PathBuf> {
     }
 
     // Check platform's config dir
-    if let Some(config_dir) = dirs_next::config_dir() {
+    if let Some(config_dir) = dirs::config_dir() {
         let local_config = config_dir.join("Comtrya.yaml");
 
         if local_config.is_file() {

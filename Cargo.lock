@@ -670,7 +670,7 @@ dependencies = [
  "colored",
  "comfy-table",
  "comtrya-lib 0.10.0",
- "dirs-next",
+ "dirs",
  "petgraph",
  "predicates",
  "rhai",
@@ -701,9 +701,7 @@ version = "0.10.0"
 dependencies = [
  "age",
  "anyhow",
- "dirs-next",
- "file-owner",
- "file_diff",
+ "dirs",
  "flate2",
  "gethostname",
  "gix",
@@ -715,7 +713,6 @@ dependencies = [
  "os_info",
  "petgraph",
  "pretty_assertions",
- "rand 0.10.3",
  "regex",
  "reqwest 0.13.5",
  "rhai",
@@ -723,7 +720,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_yaml_ng",
- "sha256",
+ "sha2",
  "similar",
  "tar",
  "tempfile",
@@ -732,7 +729,6 @@ dependencies = [
  "toml 1.1.8+spec-1.1.0",
  "tracing",
  "uzers",
- "walkdir",
  "which",
  "whoami",
 ]
@@ -1154,6 +1150,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "dirs"
+version = "6.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c3e8aa94d75141228480295a7d0e7feb620b1a5ad9f12bc40be62411e38cce4e"
+dependencies = [
+ "dirs-sys",
+]
+
+[[package]]
 name = "dirs-next"
 version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1164,13 +1169,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "dirs-sys"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e01a3366d27ee9890022452ee61b2b63a67e6f13f58900b651ff5665f0bb1fab"
+dependencies = [
+ "libc",
+ "option-ext",
+ "redox_users 0.5.3",
+ "windows-sys 0.61.2",
+]
+
+[[package]]
 name = "dirs-sys-next"
 version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4ebda144c4fe02d1f7ea1a7d9641b6fc6b580adcfa024ae48797ecdeb6825b4d"
 dependencies = [
  "libc",
- "redox_users",
+ "redox_users 0.4.6",
  "winapi",
 ]
 
@@ -4145,6 +4162,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7c87def4c32ab89d880effc9e097653c8da5d6ef28e6b539d313baaacfbafcbe"
 
 [[package]]
+name = "option-ext"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "04744f49eae99ab78e0d5c0b603ab218f515ea8cfe5a456d7629ad883a3b6e7d"
+
+[[package]]
 name = "os_info"
 version = "3.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4705,6 +4728,16 @@ dependencies = [
  "getrandom 0.2.17",
  "libredox",
  "thiserror 1.0.69",
+]
+
+[[package]]
+name = "redox_users"
+version = "0.5.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "60dc65c0ff1a7ae1294b0c67b9f14baf70b644404010370171787bfac1038fc0"
+dependencies = [
+ "libredox",
+ "thiserror 2.0.18",
 ]
 
 [[package]]
