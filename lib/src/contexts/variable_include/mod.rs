@@ -1,56 +1,42 @@
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 
 use anyhow::Result;
 use reqwest::Url;
 
-use crate::{config::Config, contexts::Context, contexts::ContextProvider};
+use crate::config::Config;
 
 pub mod dns;
 pub mod file;
 pub mod op;
 
-pub struct VariableIncludeContextProvider<'a> {
-    pub config: &'a Config,
-}
+/// Reads the variables of `include_variables` in `Comtrya.yaml`, the `include_variables` context
+pub fn gather(config: &Config) -> Result<BTreeMap<String, String>> {
+    let mut contexts = HashMap::<String, String>::new();
 
-impl<'a> ContextProvider for VariableIncludeContextProvider<'a> {
-    fn get_prefix(&self) -> String {
-        String::from("include_variables")
-    }
+    if let Some(variable_includes) = &config.include_variables {
+        for variable_include in variable_includes {
+            // Vault and item names may contain spaces, which a URL can't
+            if variable_include.starts_with("op://") {
+                op::item_values(variable_include, &mut contexts)?;
+                continue;
+            }
 
-    fn get_contexts(&self) -> Result<Vec<super::Context>> {
-        let mut contexts = HashMap::<String, String>::new();
+            let url = Url::parse(variable_include)?;
 
-        if let Some(variable_includes) = &self.config.include_variables {
-            for variable_include in variable_includes {
-                // Vault and item names may contain spaces, which a URL can't
-                if variable_include.starts_with("op://") {
-                    op::item_values(variable_include, &mut contexts)?;
-                    continue;
-                }
-
-                let url = Url::parse(variable_include)?;
-
-                if url.scheme() == "dns+txt" {
-                    dns::txt_record_values(&url, &mut contexts)?;
-                } else if url.scheme() == "file+toml" {
-                    file::toml_values(&url, &mut contexts)?;
-                } else if url.scheme() == "file+yaml" {
-                    file::yaml_values(&url, &mut contexts)?;
-                } else {
-                    return Err(anyhow::anyhow!(
-                        "Unknown variable include scheme: {}",
-                        url.scheme()
-                    ));
-                }
+            if url.scheme() == "dns+txt" {
+                dns::txt_record_values(&url, &mut contexts)?;
+            } else if url.scheme() == "file+toml" {
+                file::toml_values(&url, &mut contexts)?;
+            } else if url.scheme() == "file+yaml" {
+                file::yaml_values(&url, &mut contexts)?;
+            } else {
+                return Err(anyhow::anyhow!(
+                    "Unknown variable include scheme: {}",
+                    url.scheme()
+                ));
             }
         }
-
-        let contexts = contexts
-            .into_iter()
-            .map(|(key, value)| Context::KeyValueContext(key, value.into()))
-            .collect::<Vec<_>>();
-
-        Ok(contexts)
     }
+
+    Ok(contexts.into_iter().collect())
 }

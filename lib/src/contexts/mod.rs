@@ -1,99 +1,24 @@
-use anyhow::Result;
 use rhai::{Engine, Scope};
-use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::sync::LazyLock;
-use tracing::{instrument, trace, warn};
-use user::UserContextProvider;
+use tracing::trace;
 
-use crate::contexts::package::PackageContextProvider;
-use crate::contexts::privilege::PrivilegeContextProvider;
-use crate::{
-    config::Config,
-    contexts::{
-        env::EnvContextProvider, os::OSContextProvider,
-        variable_include::VariableIncludeContextProvider, variables::VariablesContextProvider,
-    },
-    values::Value,
-};
+use crate::{config::Config, values::Value};
 
-pub mod env;
+pub mod facts;
 pub mod os;
-pub mod package;
 pub mod privilege;
-/// User context provider: understands the user running the command
+/// The user running comtrya
 pub mod user;
 pub mod variable_include;
-pub mod variables;
 
-pub trait ContextProvider {
-    fn get_prefix(&self) -> String;
-    fn get_contexts(&self) -> Result<Vec<Context>>;
-}
+pub use facts::Facts;
 
 pub type Contexts = BTreeMap<String, BTreeMap<String, Value>>;
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub enum Context {
-    KeyValueContext(String, Value),
-    ListContext(String, Vec<Value>),
-}
-
-#[instrument(skip(config))]
+/// Gathers the [`Facts`] and returns them as contexts
 pub fn build_contexts(config: &Config) -> Contexts {
-    let mut contexts: Contexts = BTreeMap::new();
-
-    let context_providers: Vec<Box<dyn ContextProvider>> = vec![
-        Box::new(UserContextProvider {}),
-        Box::new(OSContextProvider {}),
-        Box::new(EnvContextProvider {}),
-        Box::new(VariablesContextProvider { config }),
-        Box::new(VariableIncludeContextProvider { config }),
-        Box::new(PrivilegeContextProvider { config }),
-        Box::new(PackageContextProvider { config }),
-    ];
-
-    context_providers.iter().for_each(|provider| {
-        let mut values: BTreeMap<String, Value> = BTreeMap::new();
-
-        provider
-            .get_contexts()
-            .map_err(|e| {
-                warn!(
-                    "Error getting contexts from provider: {} -> {}",
-                    provider.get_prefix(),
-                    e
-                );
-                e
-            })
-            .unwrap_or_default()
-            .iter()
-            .for_each(|context| match context {
-                Context::KeyValueContext(k, v) => {
-                    trace!(
-                        context = provider.get_prefix().as_str(),
-                        key = k.clone().as_str(),
-                        value = v.clone().to_string(),
-                        message = ""
-                    );
-                    values.insert(k.clone(), v.clone());
-                }
-                Context::ListContext(k, v) => {
-                    trace!(
-                        context = provider.get_prefix().as_str(),
-                        key = k.clone().as_str(),
-                        values = format!("{:?}", v), // debug of the vector values is good enough
-                        message = ""
-                    );
-
-                    values.insert(k.clone(), v.clone().into());
-                }
-            });
-
-        contexts.insert(provider.get_prefix(), values);
-    });
-
-    contexts
+    Facts::gather(config).to_contexts()
 }
 
 pub fn to_tera(contexts: &Contexts) -> tera::Context {
