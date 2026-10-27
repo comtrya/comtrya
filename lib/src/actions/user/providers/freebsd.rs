@@ -44,20 +44,16 @@ impl UserProvider for FreeBSDUserProvider {
 
         let privilege_provider = utilities::get_privilege_provider(contexts);
 
-        let mut steps: Vec<Step> = vec![Step {
-            atom: Box::new(Exec {
-                command: String::from("/usr/sbin/pw"),
-                arguments: vec![String::from("useradd")]
-                    .into_iter()
-                    .chain(args.clone())
-                    .collect(),
-                privileged: true,
-                privilege_provider: privilege_provider.clone(),
-                ..Default::default()
-            }),
-            initializers: vec![],
-            finalizers: vec![],
-        }];
+        let mut steps: Vec<Step> = vec![Step::new(Exec {
+            command: String::from("/usr/sbin/pw"),
+            arguments: vec![String::from("useradd")]
+                .into_iter()
+                .chain(args.clone())
+                .collect(),
+            privileged: true,
+            privilege_provider: privilege_provider.clone(),
+            ..Default::default()
+        })];
 
         if !user.group.is_empty() {
             let user_groups = UserAddGroup {
@@ -89,23 +85,19 @@ impl UserProvider for FreeBSDUserProvider {
         let privilege_provider = utilities::get_privilege_provider(contexts);
 
         for group in user.group.iter() {
-            steps.push(Step {
-                atom: Box::new(Exec {
-                    command: String::from("/usr/sbin/pw"),
-                    // arguments: vec![String::from("-a"), String::from("-G"), String::from(group)],
-                    arguments: vec![
-                        String::from("usermod"),
-                        user.username.clone(),
-                        String::from("-G"),
-                        String::from(group),
-                    ],
-                    privileged: true,
-                    privilege_provider: privilege_provider.clone(),
-                    ..Default::default()
-                }),
-                initializers: vec![],
-                finalizers: vec![],
-            });
+            steps.push(Step::new(Exec {
+                command: String::from("/usr/sbin/pw"),
+                // arguments: vec![String::from("-a"), String::from("-G"), String::from(group)],
+                arguments: vec![
+                    String::from("usermod"),
+                    user.username.clone(),
+                    String::from("-G"),
+                    String::from(group),
+                ],
+                privileged: true,
+                privilege_provider: privilege_provider.clone(),
+                ..Default::default()
+            }));
         }
 
         Ok(steps)

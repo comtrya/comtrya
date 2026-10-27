@@ -27,15 +27,11 @@ impl Action for FileUnarchive {
     }
 
     fn plan(&self, _manifest: &Manifest, _context: &Contexts) -> anyhow::Result<Vec<Step>> {
-        let steps = vec![Step {
-            atom: Box::new(Unarchive {
-                origin: self.from.clone().into(),
-                dest: self.to.clone().into(),
-                force: self.force.unwrap_or(true),
-            }),
-            initializers: vec![],
-            finalizers: vec![],
-        }];
+        let steps = vec![Step::new(Unarchive {
+            origin: self.from.clone().into(),
+            dest: self.to.clone().into(),
+            force: self.force.unwrap_or(true),
+        })];
 
         Ok(steps)
     }

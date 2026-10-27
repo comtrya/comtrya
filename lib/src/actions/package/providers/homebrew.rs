@@ -31,14 +31,14 @@ impl PackageProvider for Homebrew {
     }
 
     fn bootstrap(&self, _contexts: &Contexts) -> Vec<Step> {
-        vec![Step { atom: Box::new(Exec {
+        vec![Step::new(Exec {
             command: String::from("bash"),
             arguments: vec![
                 String::from("-c"),
                 String::from("$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)")
             ],
             ..Default::default()
-        }), initializers: vec![], finalizers: vec![] },]
+        }),]
     }
 
     fn has_repository(&self, _: &PackageRepository) -> bool {
@@ -53,15 +53,11 @@ impl PackageProvider for Homebrew {
         repository: &PackageRepository,
         _contexts: &Contexts,
     ) -> anyhow::Result<Vec<Step>> {
-        Ok(vec![Step {
-            atom: Box::new(Exec {
-                command: String::from("brew"),
-                arguments: vec![String::from("tap"), repository.name.clone()],
-                ..Default::default()
-            }),
-            initializers: vec![],
-            finalizers: vec![],
-        }])
+        Ok(vec![Step::new(Exec {
+            command: String::from("brew"),
+            arguments: vec![String::from("tap"), repository.name.clone()],
+            ..Default::default()
+        })])
     }
 
     fn query(&self, package: &PackageVariant) -> anyhow::Result<Vec<String>> {
@@ -102,20 +98,16 @@ impl PackageProvider for Homebrew {
             return Ok(vec![]);
         }
 
-        Ok(vec![Step {
-            atom: Box::new(Exec {
-                command: String::from("brew"),
-                arguments: [
-                    vec![String::from("install")],
-                    package.extra_args.clone(),
-                    need_installed,
-                ]
-                .concat(),
-                ..Default::default()
-            }),
-            initializers: vec![],
-            finalizers: vec![],
-        }])
+        Ok(vec![Step::new(Exec {
+            command: String::from("brew"),
+            arguments: [
+                vec![String::from("install")],
+                package.extra_args.clone(),
+                need_installed,
+            ]
+            .concat(),
+            ..Default::default()
+        })])
     }
 }
 

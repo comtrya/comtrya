@@ -37,18 +37,14 @@ impl PackageProvider for BsdPkg {
     fn bootstrap(&self, contexts: &Contexts) -> Vec<Step> {
         let privilege_provider = utilities::get_privilege_provider(contexts);
 
-        vec![Step {
-            atom: Box::new(Exec {
-                command: String::from("/usr/sbin/pkg"),
-                arguments: vec![String::from("bootstrap")],
-                environment: self.env(),
-                privileged: true,
-                privilege_provider: privilege_provider.clone(),
-                ..Default::default()
-            }),
-            initializers: vec![],
-            finalizers: vec![],
-        }]
+        vec![Step::new(Exec {
+            command: String::from("/usr/sbin/pkg"),
+            arguments: vec![String::from("bootstrap")],
+            environment: self.env(),
+            privileged: true,
+            privilege_provider: privilege_provider.clone(),
+            ..Default::default()
+        })]
     }
 
     fn has_repository(&self, _: &PackageRepository) -> bool {
@@ -73,54 +69,43 @@ impl PackageProvider for BsdPkg {
         let privilege_provider = utilities::get_privilege_provider(contexts);
 
         if package.file {
-            return Ok(vec![Step {
-                atom: Box::new(Exec {
-                    command: String::from("/usr/sbin/pkg"),
-                    arguments: vec![String::from("add")]
-                        .into_iter()
-                        .chain(package.extra_args.clone())
-                        .chain(package.packages())
-                        .collect(),
-                    privileged: true,
-                    privilege_provider: privilege_provider.clone(),
-                    ..Default::default()
-                }),
-                initializers: vec![],
-                finalizers: vec![],
-            }]);
+            return Ok(vec![Step::new(Exec {
+                command: String::from("/usr/sbin/pkg"),
+                arguments: vec![String::from("add")]
+                    .into_iter()
+                    .chain(package.extra_args.clone())
+                    .chain(package.packages())
+                    .collect(),
+                privileged: true,
+                privilege_provider: privilege_provider.clone(),
+                ..Default::default()
+            })]);
         }
 
         Ok(vec![
-            Step {
-                atom: Box::new(Exec {
-                    command: String::from("/usr/sbin/pkg"),
-                    arguments: vec![String::from("install"), String::from("-y")]
-                        .into_iter()
-                        .chain(package.extra_args.clone())
-                        .chain(package.packages())
-                        .collect(),
-                    privileged: true,
-                    privilege_provider: privilege_provider.clone(),
-                    ..Default::default()
-                }),
-                initializers: vec![],
-                finalizers: vec![StopIf(Box::new(OutputContains("removed")))],
-            },
-            Step {
-                atom: Box::new(Exec {
-                    command: String::from("/usr/sbin/pkg"),
-                    arguments: vec![String::from("install"), String::from("-y")]
-                        .into_iter()
-                        .chain(package.extra_args.clone())
-                        .chain(package.packages())
-                        .collect(),
-                    privileged: true,
-                    privilege_provider: privilege_provider.clone(),
-                    ..Default::default()
-                }),
-                initializers: vec![],
-                finalizers: vec![],
-            },
+            Step::new(Exec {
+                command: String::from("/usr/sbin/pkg"),
+                arguments: vec![String::from("install"), String::from("-y")]
+                    .into_iter()
+                    .chain(package.extra_args.clone())
+                    .chain(package.packages())
+                    .collect(),
+                privileged: true,
+                privilege_provider: privilege_provider.clone(),
+                ..Default::default()
+            })
+            .with_finalizer(StopIf(Box::new(OutputContains("removed")))),
+            Step::new(Exec {
+                command: String::from("/usr/sbin/pkg"),
+                arguments: vec![String::from("install"), String::from("-y")]
+                    .into_iter()
+                    .chain(package.extra_args.clone())
+                    .chain(package.packages())
+                    .collect(),
+                privileged: true,
+                privilege_provider: privilege_provider.clone(),
+                ..Default::default()
+            }),
         ])
     }
 }

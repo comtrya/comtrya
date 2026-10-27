@@ -74,38 +74,26 @@ impl Action for FileDownload {
         let parent = path.clone();
 
         let steps = vec![
-            Step {
-                atom: Box::new(DirCreate {
-                    path: parent
-                        .parent()
-                        .ok_or_else(|| {
-                            anyhow::anyhow!(
-                                "Failed to get parent directory of path: {}",
-                                path.display()
-                            )
-                        })?
-                        .into(),
-                }),
-                initializers: vec![],
-                finalizers: vec![],
-            },
-            Step {
-                atom: Box::new(Download {
-                    url: self.from.clone(),
-                    to: path.clone(),
-                    sha256,
-                }),
-                initializers: vec![],
-                finalizers: vec![],
-            },
-            Step {
-                atom: Box::new(Chmod {
-                    path: path.clone(),
-                    mode: self.chmod,
-                }),
-                initializers: vec![],
-                finalizers: vec![],
-            },
+            Step::new(DirCreate {
+                path: parent
+                    .parent()
+                    .ok_or_else(|| {
+                        anyhow::anyhow!(
+                            "Failed to get parent directory of path: {}",
+                            path.display()
+                        )
+                    })?
+                    .into(),
+            }),
+            Step::new(Download {
+                url: self.from.clone(),
+                to: path.clone(),
+                sha256,
+            }),
+            Step::new(Chmod {
+                path: path.clone(),
+                mode: self.chmod,
+            }),
         ];
 
         #[cfg(unix)]
@@ -113,15 +101,11 @@ impl Action for FileDownload {
             let mut steps = steps;
             if let Some(user) = self.owner_user.clone() {
                 if let Some(group) = self.owner_group.clone() {
-                    steps.push(Step {
-                        atom: Box::new(Chown {
-                            path: path.clone(),
-                            owner: user.clone(),
-                            group: group.clone(),
-                        }),
-                        initializers: vec![],
-                        finalizers: vec![],
-                    })
+                    steps.push(Step::new(Chown {
+                        path: path.clone(),
+                        owner: user.clone(),
+                        group: group.clone(),
+                    }))
                 }
             }
 

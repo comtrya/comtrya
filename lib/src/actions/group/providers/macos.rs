@@ -35,17 +35,13 @@ impl GroupProvider for MacOsGroupProvider {
 
         let privilege_provider = utilities::get_privilege_provider(contexts);
 
-        vec![Step {
-            atom: Box::new(Exec {
-                command: cli.display().to_string(),
-                arguments: args.into_iter().collect(),
-                privileged: true,
-                privilege_provider: privilege_provider.clone(),
-                ..Default::default()
-            }),
-            initializers: vec![],
-            finalizers: vec![],
-        }]
+        vec![Step::new(Exec {
+            command: cli.display().to_string(),
+            arguments: args.into_iter().collect(),
+            privileged: true,
+            privilege_provider: privilege_provider.clone(),
+            ..Default::default()
+        })]
     }
 }
 

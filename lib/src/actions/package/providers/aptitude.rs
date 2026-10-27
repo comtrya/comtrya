@@ -26,18 +26,14 @@ impl Aptitude {
     fn privileged_exec(&self, command: &str, arguments: Vec<String>, contexts: &Contexts) -> Step {
         let privilege_provider = utilities::get_privilege_provider(contexts);
 
-        Step {
-            atom: Box::new(Exec {
-                command: String::from(command),
-                arguments,
-                environment: self.env(),
-                privileged: true,
-                privilege_provider,
-                ..Default::default()
-            }),
-            initializers: vec![],
-            finalizers: vec![],
-        }
+        Step::new(Exec {
+            command: String::from(command),
+            arguments,
+            environment: self.env(),
+            privileged: true,
+            privilege_provider,
+            ..Default::default()
+        })
     }
 
     fn apt_install(&self, packages: &[&str], contexts: &Contexts) -> Step {

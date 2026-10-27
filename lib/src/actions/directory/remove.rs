@@ -29,11 +29,7 @@ impl Action for DirectoryRemove {
     ) -> anyhow::Result<Vec<crate::steps::Step>> {
         let path = PathBuf::from(&self.target);
 
-        let steps = vec![Step {
-            atom: Box::new(RemoveDirAtom { target: path }),
-            initializers: vec![],
-            finalizers: vec![],
-        }];
+        let steps = vec![Step::new(RemoveDirAtom { target: path })];
 
         Ok(steps)
     }

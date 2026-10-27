@@ -29,21 +29,17 @@ impl PackageProvider for Snapcraft {
     fn bootstrap(&self, contexts: &Contexts) -> Vec<Step> {
         let privilege_provider = utilities::get_privilege_provider(contexts);
 
-        vec![Step {
-            atom: Box::new(Exec {
-                command: String::from("apt"),
-                arguments: vec![
-                    String::from("install"),
-                    String::from("--yes"),
-                    String::from("snapd"),
-                ],
-                privileged: true,
-                privilege_provider: privilege_provider.clone(),
-                ..Default::default()
-            }),
-            initializers: vec![],
-            finalizers: vec![],
-        }]
+        vec![Step::new(Exec {
+            command: String::from("apt"),
+            arguments: vec![
+                String::from("install"),
+                String::from("--yes"),
+                String::from("snapd"),
+            ],
+            privileged: true,
+            privilege_provider: privilege_provider.clone(),
+            ..Default::default()
+        })]
     }
 
     fn has_repository(&self, _package: &PackageRepository) -> bool {
@@ -64,21 +60,17 @@ impl PackageProvider for Snapcraft {
 
     fn install(&self, package: &PackageVariant, contexts: &Contexts) -> anyhow::Result<Vec<Step>> {
         let privilege_provider = utilities::get_privilege_provider(contexts);
-        Ok(vec![Step {
-            atom: Box::new(Exec {
-                command: String::from("snap"),
-                arguments: vec![String::from("install"), String::from("--yes")]
-                    .into_iter()
-                    .chain(package.extra_args.clone())
-                    .chain(package.packages())
-                    .collect(),
-                privileged: true,
-                privilege_provider: privilege_provider.clone(),
-                ..Default::default()
-            }),
-            initializers: vec![],
-            finalizers: vec![],
-        }])
+        Ok(vec![Step::new(Exec {
+            command: String::from("snap"),
+            arguments: vec![String::from("install"), String::from("--yes")]
+                .into_iter()
+                .chain(package.extra_args.clone())
+                .chain(package.packages())
+                .collect(),
+            privileged: true,
+            privilege_provider: privilege_provider.clone(),
+            ..Default::default()
+        })])
     }
 }
 

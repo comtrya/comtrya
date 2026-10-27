@@ -102,26 +102,22 @@ impl PackageProvider for Xbps {
 
         let privilege_provider = utilities::get_privilege_provider(contexts);
 
-        Ok(vec![Step {
-            atom: Box::new(Exec {
-                command: String::from("xbps-install"),
-                arguments: [
-                    vec![
-                        String::from("-S"),
-                        String::from("--yes"),
-                        String::from("--update"),
-                    ],
-                    package.extra_args.clone(),
-                    need_installed,
-                ]
-                .concat(),
-                privileged: true,
-                privilege_provider: privilege_provider.clone(),
-                ..Default::default()
-            }),
-            initializers: vec![],
-            finalizers: vec![],
-        }])
+        Ok(vec![Step::new(Exec {
+            command: String::from("xbps-install"),
+            arguments: [
+                vec![
+                    String::from("-S"),
+                    String::from("--yes"),
+                    String::from("--update"),
+                ],
+                package.extra_args.clone(),
+                need_installed,
+            ]
+            .concat(),
+            privileged: true,
+            privilege_provider: privilege_provider.clone(),
+            ..Default::default()
+        })])
     }
 }
 

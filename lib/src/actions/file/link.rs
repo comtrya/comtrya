@@ -49,21 +49,14 @@ impl FileLink {
         match to.parent() {
             Some(parent) => {
                 vec![
-                    Step {
-                        atom: Box::new(DirCreate {
-                            path: parent.to_path_buf(),
-                        }),
-                        initializers: vec![],
-                        finalizers: vec![],
-                    },
-                    Step {
-                        atom: Box::new(Link {
-                            source: from.to_owned(),
-                            target: to,
-                        }),
-                        initializers: vec![Ensure(Box::new(FileExists(from)))],
-                        finalizers: vec![],
-                    },
+                    Step::new(DirCreate {
+                        path: parent.to_path_buf(),
+                    }),
+                    Step::new(Link {
+                        source: from.to_owned(),
+                        target: to,
+                    })
+                    .with_initializer(Ensure(Box::new(FileExists(from)))),
                 ]
             }
             None => vec![],
@@ -74,11 +67,7 @@ impl FileLink {
         use crate::atoms::directory::Create as DirCreate;
         use crate::atoms::file::Link;
 
-        let mut steps = vec![Step {
-            atom: Box::new(DirCreate { path: to.clone() }),
-            initializers: vec![],
-            finalizers: vec![],
-        }];
+        let mut steps = vec![Step::new(DirCreate { path: to.clone() })];
 
         if let Ok(paths) = std::fs::read_dir(from) {
             paths.for_each(|path| {
@@ -86,14 +75,13 @@ impl FileLink {
                     let p = path.path();
 
                     if let Some(file_name) = p.file_name() {
-                        steps.push(Step {
-                            atom: Box::new(Link {
+                        steps.push(
+                            Step::new(Link {
                                 source: p.clone(),
                                 target: to.join(file_name),
-                            }),
-                            initializers: vec![Ensure(Box::new(FileExists(p.clone())))],
-                            finalizers: vec![],
-                        })
+                            })
+                            .with_initializer(Ensure(Box::new(FileExists(p.clone())))),
+                        )
                     }
                 }
             })

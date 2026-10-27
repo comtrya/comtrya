@@ -17,13 +17,9 @@ impl Action for DirectoryCreate {
     }
 
     fn plan(&self, _: &Manifest, _context: &Contexts) -> anyhow::Result<Vec<Step>> {
-        Ok(vec![Step {
-            atom: Box::new(DirectoryCreateAtom {
-                path: PathBuf::from(&self.path),
-            }),
-            initializers: vec![],
-            finalizers: vec![],
-        }])
+        Ok(vec![Step::new(DirectoryCreateAtom {
+            path: PathBuf::from(&self.path),
+        })])
     }
 }
 

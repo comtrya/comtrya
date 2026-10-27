@@ -44,45 +44,33 @@ impl PackageProvider for Yay {
         let privilege_provider = utilities::get_privilege_provider(contexts);
 
         vec![
-            Step {
-                atom: Box::new(Exec {
-                    command: String::from("pacman"),
-                    arguments: vec![
-                        String::from("-S"),
-                        String::from("--noconfirm"),
-                        String::from("base-devel"),
-                        String::from("git"),
-                    ],
-                    privileged: true,
-                    privilege_provider: privilege_provider.clone(),
-                    ..Default::default()
-                }),
-                initializers: vec![],
-                finalizers: vec![],
-            },
-            Step {
-                atom: Box::new(Exec {
-                    command: String::from("git"),
-                    arguments: vec![
-                        String::from("clone"),
-                        String::from("https://aur.archlinux.org/yay.git"),
-                        String::from("/tmp/yay"),
-                    ],
-                    ..Default::default()
-                }),
-                initializers: vec![],
-                finalizers: vec![],
-            },
-            Step {
-                atom: Box::new(Exec {
-                    command: String::from("makepkg"),
-                    arguments: vec![String::from("-si"), String::from("--noconfirm")],
-                    working_dir: Some(String::from("/tmp/yay")),
-                    ..Default::default()
-                }),
-                initializers: vec![],
-                finalizers: vec![],
-            },
+            Step::new(Exec {
+                command: String::from("pacman"),
+                arguments: vec![
+                    String::from("-S"),
+                    String::from("--noconfirm"),
+                    String::from("base-devel"),
+                    String::from("git"),
+                ],
+                privileged: true,
+                privilege_provider: privilege_provider.clone(),
+                ..Default::default()
+            }),
+            Step::new(Exec {
+                command: String::from("git"),
+                arguments: vec![
+                    String::from("clone"),
+                    String::from("https://aur.archlinux.org/yay.git"),
+                    String::from("/tmp/yay"),
+                ],
+                ..Default::default()
+            }),
+            Step::new(Exec {
+                command: String::from("makepkg"),
+                arguments: vec![String::from("-si"), String::from("--noconfirm")],
+                working_dir: Some(String::from("/tmp/yay")),
+                ..Default::default()
+            }),
         ]
     }
 
@@ -137,20 +125,16 @@ impl PackageProvider for Yay {
             return Ok(vec![]);
         }
 
-        Ok(vec![Step {
-            atom: Box::new(Exec {
-                command: String::from("yay"),
-                arguments: [
-                    vec![String::from("-S"), String::from("--noconfirm")],
-                    package.extra_args.clone(),
-                    need_installed,
-                ]
-                .concat(),
-                ..Default::default()
-            }),
-            initializers: vec![],
-            finalizers: vec![],
-        }])
+        Ok(vec![Step::new(Exec {
+            command: String::from("yay"),
+            arguments: [
+                vec![String::from("-S"), String::from("--noconfirm")],
+                package.extra_args.clone(),
+                need_installed,
+            ]
+            .concat(),
+            ..Default::default()
+        })])
     }
 }
 

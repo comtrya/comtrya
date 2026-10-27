@@ -118,69 +118,43 @@ impl Action for FileCopy {
 
         let parent = path.clone();
         let mut steps = vec![
-            Step {
-                atom: Box::new(DirCreate {
-                    path: parent
-                        .parent()
-                        .ok_or_else(|| {
-                            anyhow!("Failed to get parent directory for FileCopy action")
-                        })?
-                        .into(),
-                }),
-                initializers: vec![],
-                finalizers: vec![],
-            },
-            Step {
-                atom: Box::new(Create { path: path.clone() }),
-                initializers: vec![],
-                finalizers: vec![],
-            },
-            Step {
-                atom: Box::new(Chmod {
-                    path: path.clone(),
-                    mode: self.chmod,
-                }),
-                initializers: vec![],
-                finalizers: vec![],
-            },
+            Step::new(DirCreate {
+                path: parent
+                    .parent()
+                    .ok_or_else(|| anyhow!("Failed to get parent directory for FileCopy action"))?
+                    .into(),
+            }),
+            Step::new(Create { path: path.clone() }),
+            Step::new(Chmod {
+                path: path.clone(),
+                mode: self.chmod,
+            }),
         ];
 
         #[cfg(unix)]
         let path_for_chown = path.clone();
         if let Some(passphrase) = self.passphrase.to_owned() {
-            steps.push(Step {
-                atom: Box::new(Decrypt {
-                    encrypted_content: contents,
-                    path,
-                    passphrase,
-                }),
-                initializers: vec![],
-                finalizers: vec![],
-            });
+            steps.push(Step::new(Decrypt {
+                encrypted_content: contents,
+                path,
+                passphrase,
+            }));
         } else {
-            steps.push(Step {
-                atom: Box::new(SetContents {
-                    path,
-                    contents,
-                    redact: self.process_with.is_some(),
-                }),
-                initializers: vec![],
-                finalizers: vec![],
-            });
+            steps.push(Step::new(SetContents {
+                path,
+                contents,
+                redact: self.process_with.is_some(),
+            }));
         }
 
         #[cfg(unix)]
         if let Some(user) = self.owner_user.clone() {
             if let Some(group) = self.owner_group.clone() {
-                steps.push(Step {
-                    atom: Box::new(Chown {
-                        path: path_for_chown,
-                        owner: user.clone(),
-                        group: group.clone(),
-                    }),
-                    initializers: vec![],
-                    finalizers: vec![],
-                })
+                steps.push(Step::new(Chown {
+                    path: path_for_chown,
+                    owner: user.clone(),
+                    group: group.clone(),
+                }))
             }
         }
 

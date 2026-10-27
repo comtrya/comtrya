@@ -26,15 +26,11 @@ impl Action for GitClone {
 
     fn plan(&self, _: &Manifest, _: &Contexts) -> anyhow::Result<Vec<Step>> {
         let url = gix::url::parse(self.repo_url.as_str())?;
-        Ok(vec![Step {
-            atom: Box::new(crate::atoms::git::Clone {
-                repository: url.clone(),
-                directory: PathBuf::from(self.directory.clone()),
-                reference: self.reference.clone(),
-            }),
-            initializers: vec![],
-            finalizers: vec![],
-        }])
+        Ok(vec![Step::new(crate::atoms::git::Clone {
+            repository: url.clone(),
+            directory: PathBuf::from(self.directory.clone()),
+            reference: self.reference.clone(),
+        })])
     }
 }
 
