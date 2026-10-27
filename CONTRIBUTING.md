@@ -63,6 +63,64 @@ Comtrya should be easy to read for someone who opens a file for the first time:
 - **Errors, not panics.** Anything a user can cause, like a missing file or a typo in a manifest, ends in an error that says what's wrong. `unwrap()`/`expect()` are only for things that can't happen.
 - **Refactors on their own.** Keep a pure clean-up in its own pull request, without changes in behaviour, so it's easy to review.
 
+### Adding an action
+
+An action is what a manifest asks for, like `file.copy`. It doesn't change the system itself: its `plan()` returns *steps*, and each step wraps an *atom*, the smallest change comtrya makes, like creating a directory or running a command. Comtrya checks every atom before it runs it, so an action that is already in place does nothing.
+
+Note: the action and atom API is being reworked for 0.11.0 (see the `v0.11.0` milestone), so details below may change.
+
+As an example, a `file.touch` action that creates an empty file:
+
+1. **Write the action** in the group it belongs to, below [`lib/src/actions/`](./lib/src/actions), here `lib/src/actions/file/touch.rs`, and declare the module in the group's `mod.rs`. The fields are what users write in manifests; their doc comments become the descriptions in the JSON schema that editors show.
+
+   ```rust
+   //! `file.touch`: creates an empty file
+
+   use crate::actions::Action;
+   use crate::atoms::file::Create;
+   use crate::contexts::Contexts;
+   use crate::manifests::Manifest;
+   use crate::steps::Step;
+   use schemars::JsonSchema;
+   use serde::{Deserialize, Serialize};
+   use std::path::PathBuf;
+
+   /// Creates an empty file, unless it exists
+   #[derive(JsonSchema, Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+   pub struct FileTouch {
+       /// The file to create
+       pub path: String,
+   }
+
+   impl Action for FileTouch {
+       fn summarize(&self) -> String {
+           format!("Creating file {}", self.path)
+       }
+
+       fn plan(&self, _manifest: &Manifest, _contexts: &Contexts) -> anyhow::Result<Vec<Step>> {
+           Ok(vec![Step::new(Create {
+               path: PathBuf::from(&self.path),
+           })])
+       }
+   }
+   ```
+
+2. **Reuse atoms.** [`lib/src/atoms/`](./lib/src/atoms) has atoms for files, directories, commands, downloads and git. A new atom implements the [`Atom`](./lib/src/atoms/mod.rs) trait: `plan()` says whether it needs to run, `execute()` makes the change, and `Display` describes the change in the output. `plan()` of an action and of an atom must never change the system, `--dry-run` relies on it.
+
+3. **Register it** with one line in the `actions!` table in [`lib/src/actions/registry.rs`](./lib/src/actions/registry.rs). The line gives the name in manifests, any aliases, and the type; the `Actions` enum, the serde names, the schema and the output all come from it:
+
+   ```rust
+   FileTouch(FileTouch) = "file.touch";
+   ```
+
+   Every action also supports `where` and `variants`, nothing to do for that.
+
+4. **Test it** next to the code: that a manifest entry deserializes into your action, and what `plan()` returns. Commands that only read the system, like asking a package manager what's installed, go through the [`Runner`](./lib/src/runner.rs) trait, so tests can answer them with `FakeRunner` instead of running them.
+
+5. **Document it** for users in [`docs/src/`](./docs/src), in the page of its group, with a table of its fields and an example. A test fails for any registered action that the docs don't mention.
+
+Don't use a new action in [`examples/`](./examples) yet: the [compatibility suite](#compatibility-with-existing-manifests) loads them with the last release too, which doesn't know the action.
+
 ### Compatibility with existing manifests
 
 [`compat/`](./compat) loads manifests with your changes and with the last release of `comtrya-lib`, and fails if any manifest means something different, for example because an alias is gone, a field is read differently, or another variant applies on some system. If the difference is intended, record it in `known_differences` in `compat/tests/v1.rs` and mention it in the release notes. New manifest rules belong in `compat/fixtures/v1/`.
