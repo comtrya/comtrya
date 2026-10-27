@@ -1,3 +1,5 @@
+//! `file.remove`
+
 use std::path::PathBuf;
 
 use schemars::JsonSchema;
@@ -7,8 +9,10 @@ use crate::{actions::Action, steps::Step};
 
 use super::FileAction;
 
+/// Removes a file
 #[derive(JsonSchema, Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct FileRemove {
+    /// The file to remove
     pub target: String,
 }
 

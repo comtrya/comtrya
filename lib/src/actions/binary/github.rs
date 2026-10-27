@@ -1,3 +1,5 @@
+//! `binary.github`
+
 use crate::actions::Action;
 use crate::atoms::file::Chmod;
 use crate::atoms::http::Download;
@@ -10,24 +12,36 @@ use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use tracing::debug;
 
+/// Downloads the release asset that matches this OS and CPU best, unless a file exists at
+/// `directory/name` already
 #[derive(Clone, Debug, Default, JsonSchema, PartialEq, Eq, Serialize, Deserialize)]
 pub struct BinaryGitHub {
+    /// The file name of the binary
     pub name: String,
+    /// The directory to put the binary in
     pub directory: String,
+    /// The repository, as `owner/repo`
     pub repository: String,
+    /// The tag of the release. The latest release without it, or with `latest`
     pub version: Option<String>,
 }
 
+/// Where releases are looked up
 const GITHUB_API: &str = "https://api.github.com";
 
+/// A release, as the GitHub API returns it
 #[derive(Deserialize)]
 struct Release {
+    /// The files of the release
     assets: Vec<ReleaseAsset>,
 }
 
+/// A file of a release
 #[derive(Deserialize)]
 struct ReleaseAsset {
+    /// The file name, like `tool-x86_64-unknown-linux-musl`
     name: String,
+    /// Where to download the file
     browser_download_url: String,
 }
 

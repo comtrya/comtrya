@@ -1,3 +1,5 @@
+//! `file.unarchive`: unpacks `.tar.gz` archives
+
 use super::FileAction;
 use crate::atoms::file::Unarchive;
 use crate::manifests::Manifest;
@@ -6,14 +8,19 @@ use crate::{actions::Action, contexts::Contexts};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+/// Unpacks an archive into a directory
 #[derive(JsonSchema, Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct FileUnarchive {
+    /// The archive. A path as it is, not below the manifest's `files` directory
     #[serde(alias = "source")]
     pub from: String,
 
+    /// The directory to unpack into
     #[serde(alias = "target")]
     pub to: String,
 
+    /// Unpack again when `to` exists already. On by default; when off, an existing `to` is left
+    /// alone
     pub force: Option<bool>,
 }
 

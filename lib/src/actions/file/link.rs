@@ -1,3 +1,5 @@
+//! `file.link`: symlinks to files in the manifest's `files` directory
+
 use super::FileAction;
 use crate::manifests::Manifest;
 use crate::steps::initializers::FileExists;
@@ -11,23 +13,33 @@ use std::path::PathBuf;
 use std::vec;
 
 // TODO: Next Major Version - Deprecate from and to
+/// Links `target` to `source`. With `walk_dir`, links each entry of the `source` directory
+/// instead
 #[derive(JsonSchema, Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct FileLink {
+    /// Old name of `source`
     pub from: Option<String>,
+    /// The file or directory to link to, below the manifest's `files` directory
     pub source: Option<String>,
 
+    /// Where to create the link
     pub target: Option<String>,
+    /// Old name of `target`
     pub to: Option<String>,
 
+    /// Link each entry of the `source` directory into the `target` directory, instead of the
+    /// directory itself
     #[serde(default = "walk_dir_default")]
     pub walk_dir: bool,
 }
 
+/// Directories are linked as a whole unless `walk_dir` says otherwise
 fn walk_dir_default() -> bool {
     false
 }
 
 impl FileLink {
+    /// `source`, or the old `from`
     fn source(&self) -> anyhow::Result<&str> {
         self.source
             .as_deref()
@@ -35,6 +47,7 @@ impl FileLink {
             .ok_or_else(|| anyhow!("file.link needs `source`"))
     }
 
+    /// `target`, or the old `to`
     fn target(&self) -> anyhow::Result<&str> {
         self.target
             .as_deref()
@@ -42,6 +55,7 @@ impl FileLink {
             .ok_or_else(|| anyhow!("file.link needs `target`"))
     }
 
+    /// Creates the directory of the link, and the link, if `from` exists
     pub fn plan_no_walk(from: PathBuf, to: PathBuf) -> Vec<Step> {
         use crate::atoms::directory::Create as DirCreate;
         use crate::atoms::file::Link;
@@ -63,6 +77,7 @@ impl FileLink {
         }
     }
 
+    /// Creates `to`, and in it a link to each entry of `from`
     pub fn plan_walk(from: PathBuf, to: PathBuf) -> Vec<Step> {
         use crate::atoms::directory::Create as DirCreate;
         use crate::atoms::file::Link;

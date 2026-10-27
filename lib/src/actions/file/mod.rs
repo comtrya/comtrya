@@ -1,3 +1,8 @@
+//! `file.*` actions: copy, download, link, change the owner of, remove and unpack files, and
+//! what they share
+
+#![warn(missing_docs, clippy::missing_docs_in_private_items)]
+
 pub mod chown;
 pub mod copy;
 pub mod download;
@@ -15,7 +20,9 @@ use schemars::JsonSchema;
 use serde::{de::Error, Deserialize, Deserializer};
 use std::path::{Path, PathBuf};
 
+/// Actions that read files from the manifest's `files` directory
 pub trait FileAction: Action {
+    /// `path` below the manifest's `files` directory, which must exist
     fn resolve(&self, manifest: &Manifest, path: &str) -> anyhow::Result<PathBuf> {
         Ok(manifest
             .root_dir
@@ -39,6 +46,7 @@ pub trait FileAction: Action {
             .to_path_buf())
     }
 
+    /// The contents of `path` below the manifest's `files` directory
     fn load(&self, manifest: &Manifest, path: &str) -> Result<Vec<u8>> {
         use std::io::ErrorKind;
         let file_path = manifest
@@ -90,10 +98,13 @@ fn change_owner(_: &Path, _: &Option<String>, _: &Option<String>) -> Option<Step
 #[derive(JsonSchema, Deserialize)]
 #[serde(untagged)]
 pub(crate) enum OctalMode {
+    /// Like `644`, read as octal digits
     Number(u32),
+    /// Like `"0644"`
     Text(String),
 }
 
+/// Reads `chmod` as octal, whether it's written as a number or a string
 fn from_octal<'de, D>(deserializer: D) -> Result<u32, D::Error>
 where
     D: Deserializer<'de>,
@@ -107,6 +118,7 @@ where
     u32::from_str_radix(&chmod, 8).map_err(D::Error::custom)
 }
 
+/// `rw-r--r--`
 fn default_chmod() -> u32 {
     0o644
 }

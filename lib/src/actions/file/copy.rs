@@ -1,3 +1,6 @@
+//! `file.copy`: writes a file from the manifest's `files` directory, optionally rendered,
+//! decrypted or piped through a command
+
 use super::{change_owner, create_parent, default_chmod, from_octal, FileAction, OctalMode};
 use crate::actions::Action;
 use crate::atoms::file::{Chmod, Create, Decrypt, SetContents};
@@ -12,34 +15,44 @@ use std::error::Error as StdError;
 use std::path::{Path, PathBuf};
 use tera::Tera;
 
+/// Copies a file from the manifest's `files` directory, when its contents differ. Always with
+/// `passphrase`
 #[derive(JsonSchema, Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct FileCopy {
+    /// The file to copy, below the manifest's `files` directory
     #[serde(alias = "source")]
     pub from: String,
 
+    /// Where to copy it to. Into a directory, the file keeps its name
     #[serde(alias = "target")]
     pub to: String,
 
+    /// The permissions of the file, `644` by default
     #[serde(default = "default_chmod", deserialize_with = "from_octal")]
     #[schemars(with = "OctalMode")]
     pub chmod: u32,
 
+    /// Render the file as a Tera template with the contexts first
     #[serde(default = "default_template")]
     pub template: bool,
 
+    /// Decrypt the file with this age passphrase. Can't be used with `process_with`
     pub passphrase: Option<String>,
 
     /// A command (program and arguments) that gets the source file on stdin. Its stdout is
     /// written to `to` instead, e.g. `[gpg, --decrypt]`
     pub process_with: Option<Vec<String>>,
 
+    /// The owner of the file, on unix. Needs `owned_by_group` too
     #[serde(rename = "owned_by_user")]
     pub owner_user: Option<String>,
 
+    /// The group of the file, on unix. Needs `owned_by_user` too
     #[serde(rename = "owned_by_group")]
     pub owner_group: Option<String>,
 }
 
+/// Files aren't templates unless `template` says so
 fn default_template() -> bool {
     false
 }

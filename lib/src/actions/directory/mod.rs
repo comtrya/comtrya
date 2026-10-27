@@ -1,3 +1,7 @@
+//! `directory.copy`, `directory.create` and `directory.remove`
+
+#![warn(missing_docs, clippy::missing_docs_in_private_items)]
+
 use crate::{actions::Action, manifests::Manifest};
 use anyhow::anyhow;
 use normpath::PathExt;
@@ -10,6 +14,7 @@ pub use copy::DirectoryCopy;
 pub use create::DirectoryCreate;
 pub use remove::DirectoryRemove;
 
+/// Actions that work on directories below the manifest's `files` directory
 pub trait DirectoryAction: Action {
     /// `path` below the manifest's `files` directory, which must exist
     fn resolve(&self, manifest: &Manifest, path: &str) -> anyhow::Result<PathBuf> {

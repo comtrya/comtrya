@@ -1,3 +1,5 @@
+//! `directory.copy`: `cp -r` on unix, `Xcopy` on Windows
+
 use super::DirectoryAction;
 use crate::actions::Action;
 use crate::contexts::Contexts;
@@ -6,9 +8,13 @@ use crate::{atoms::command::Exec, manifests::Manifest};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+/// Copies a directory from the manifest's `files` directory, every time
 #[derive(JsonSchema, Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct DirectoryCopy {
+    /// The directory to copy, below the manifest's `files` directory
     pub from: String,
+    /// Where to copy it to. With a trailing `/`, the contents of `from` are copied into it,
+    /// otherwise `from` itself
     pub to: String,
 }
 

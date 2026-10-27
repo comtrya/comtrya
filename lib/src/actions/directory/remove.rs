@@ -1,3 +1,5 @@
+//! `directory.remove`
+
 use std::path::PathBuf;
 
 use crate::atoms::directory::Remove as RemoveDirAtom;
@@ -8,8 +10,10 @@ use crate::{actions::Action, steps::Step};
 
 use super::DirectoryAction;
 
+/// Removes a directory
 #[derive(JsonSchema, Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct DirectoryRemove {
+    /// The directory to remove
     pub target: String,
 }
 
