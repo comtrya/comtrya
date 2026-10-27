@@ -14,6 +14,7 @@ use std::ops::Deref;
 use std::path::PathBuf;
 use tracing::{error, instrument, trace};
 
+/// The arguments of `comtrya apply` and `comtrya status`
 #[derive(Parser, Debug)]
 pub(crate) struct Apply {
     /// Run a subset of your manifests, comma separated list.

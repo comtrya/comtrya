@@ -1,3 +1,5 @@
+//! The command line arguments, and how they and `Comtrya.yaml` make the configuration
+
 use crate::commands;
 use clap::{Parser, Subcommand};
 use std::error::Error;
@@ -11,9 +13,11 @@ use std::{
 
 use tracing::{trace, warn};
 
+/// The arguments of `comtrya`
 #[derive(Parser, Debug, Default)]
 #[command(version, about, name="comtrya", long_about = None)]
 pub struct GlobalArgs {
+    /// Directory or git repository of the manifests, instead of `manifest_paths` from the config
     #[arg(short = 'd', long)]
     pub manifest_directory: Option<String>,
 
@@ -25,6 +29,7 @@ pub struct GlobalArgs {
     #[arg(long)]
     pub no_color: bool,
 
+    /// Set a variable, as `key=value`. Wins over `variables` from the config
     #[arg(short = 'D', long, value_parser = parse_key_val::<String, String>)]
     pub defines: Vec<(String, String)>,
 
@@ -32,10 +37,12 @@ pub struct GlobalArgs {
     #[arg(short, action = clap::ArgAction::Count)]
     pub verbose: u8,
 
+    /// The subcommand
     #[command(subcommand)]
     pub command: Commands,
 }
 
+/// The subcommands
 #[derive(Debug, Subcommand)]
 pub enum Commands {
     /// Apply manifests
@@ -80,6 +87,7 @@ where
     Ok((s[..pos].parse()?, s[pos + 1..].parse()?))
 }
 
+/// The configuration: `Comtrya.yaml`, with the overrides from the command line
 pub(crate) fn load_config(args: &GlobalArgs) -> Result<Config> {
     match lib_config(args) {
         Ok(config) => match args.manifest_directory.clone() {

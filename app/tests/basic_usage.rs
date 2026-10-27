@@ -1,3 +1,5 @@
+//! Runs the `comtrya` binary with the basic options
+
 use tempfile::TempDir;
 use utils::*;
 

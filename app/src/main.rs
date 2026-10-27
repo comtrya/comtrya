@@ -1,3 +1,7 @@
+//! `comtrya`: applies manifests to the system it runs on
+
+#![warn(missing_docs, clippy::missing_docs_in_private_items)]
+
 use crate::commands::ComtryaCommand;
 use crate::config::{Commands, GlobalArgs};
 
@@ -13,17 +17,24 @@ use tracing::{error, Level};
 #[allow(unused_imports)]
 use tracing_subscriber::{fmt::writer::MakeWriterExt, layer::SubscriberExt, FmtSubscriber};
 
+/// The subcommands
 mod commands;
+/// Command line arguments and `Comtrya.yaml`
 mod config;
 use config::Config;
 
+/// What every subcommand gets: the arguments, the configuration and the contexts
 #[derive(Debug)]
 pub struct Runtime {
+    /// The command line arguments
     pub(crate) args: GlobalArgs,
+    /// `Comtrya.yaml`, with the overrides from the command line
     pub(crate) config: Config,
+    /// The facts about the system, for templates and `where` conditions
     pub(crate) contexts: Contexts,
 }
 
+/// Runs the subcommand from the arguments
 pub(crate) fn execute(runtime: Runtime) -> anyhow::Result<()> {
     match &runtime.args.command {
         Commands::Apply(apply) => apply.execute(&runtime),
@@ -34,6 +45,7 @@ pub(crate) fn execute(runtime: Runtime) -> anyhow::Result<()> {
     }
 }
 
+/// Logs to stdout, more with each `-v`, and to journald on Linux when it's there
 fn configure_tracing(args: &GlobalArgs) {
     let stdout_writer = match args.verbose {
         0 => io::stdout.with_max_level(tracing::Level::INFO),
@@ -88,6 +100,7 @@ fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
+/// Tells the user about a newer comtrya on crates.io
 fn check_for_updates(no_color: bool) {
     use colored::*;
     use update_informer::{registry, Check};

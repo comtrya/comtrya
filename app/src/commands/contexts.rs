@@ -1,3 +1,5 @@
+//! `comtrya contexts`: lists the contexts manifests can use
+
 use super::ComtryaCommand;
 use crate::Runtime;
 use colored::Colorize;
@@ -6,6 +8,7 @@ use comtrya_lib::manifests::git_cache_dir;
 
 use clap::Parser;
 
+/// The arguments of `comtrya contexts`
 #[derive(Parser, Debug)]
 #[command()]
 pub(crate) struct Contexts {
