@@ -121,6 +121,11 @@ impl PackageProvider for Paru {
         // paru runs as the user and calls sudo itself
         super::refuse_root("paru", contexts)?;
 
+        let need_installed = self.query(package)?;
+        if need_installed.is_empty() {
+            return Ok(vec![]);
+        }
+
         Ok(vec![Step::new(Exec {
             command: String::from("paru"),
             arguments: [
@@ -135,7 +140,7 @@ impl PackageProvider for Paru {
                     String::from("--useask"),
                 ],
                 package.extra_args.clone(),
-                package.packages(),
+                need_installed,
             ]
             .concat(),
             ..Default::default()
@@ -146,7 +151,7 @@ impl PackageProvider for Paru {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::runner::fake::{fails, FakeRunner};
+    use crate::runner::fake::{fails, succeeds, FakeRunner};
     use pretty_assertions::assert_eq;
 
     #[test]
@@ -167,5 +172,48 @@ mod tests {
 
         assert_eq!(vec!["yay-bin"], paru.query(&package).unwrap());
         assert_eq!(vec!["pacman -Qq git yay-bin"], runner.calls());
+    }
+
+    fn paru(runner: FakeRunner) -> Paru {
+        Paru {
+            runner: runner.shared(),
+        }
+    }
+
+    fn package(list: &[&str]) -> PackageVariant {
+        PackageVariant {
+            list: list.iter().map(|p| p.to_string()).collect(),
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn install_skips_installed_packages() {
+        let runner = FakeRunner::new().answer(
+            "pacman -Qq git yay-bin",
+            fails("git\n", "error: package 'yay-bin' was not found\n"),
+        );
+
+        let steps = paru(runner)
+            .install(&package(&["git", "yay-bin"]), &Contexts::default())
+            .unwrap();
+
+        assert_eq!(1, steps.len());
+        assert!(
+            steps[0].atom.to_string().ends_with("--useask yay-bin"),
+            "{}",
+            steps[0].atom
+        );
+    }
+
+    #[test]
+    fn install_does_nothing_when_everything_is_installed() {
+        let runner = FakeRunner::new().answer("pacman -Qq git", succeeds("git\n"));
+
+        let steps = paru(runner)
+            .install(&package(&["git"]), &Contexts::default())
+            .unwrap();
+
+        assert!(steps.is_empty());
     }
 }

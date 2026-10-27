@@ -48,6 +48,7 @@ impl PackageProvider for Yay {
                 command: String::from("pacman"),
                 arguments: vec![
                     String::from("-S"),
+                    String::from("--needed"),
                     String::from("--noconfirm"),
                     String::from("base-devel"),
                     String::from("git"),
