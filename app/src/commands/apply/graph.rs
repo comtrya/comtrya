@@ -228,12 +228,8 @@ mod tests {
         ]);
 
         assert!(graph.broken.is_empty(), "{:?}", graph.broken);
-        let start = |name: &str| graph.starts(&[name.to_string()])[0];
-        assert_eq!(vec!["tools", "app"], names(&graph, start("app")));
-        assert_eq!(
-            vec!["nested.other", "nested"],
-            names(&graph, start("nested"))
-        );
+        assert_eq!(vec!["tools", "app"], names(&graph, &["app"]));
+        assert_eq!(vec!["nested.other", "nested"], names(&graph, &["nested"]));
     }
 
     #[test]
