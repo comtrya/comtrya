@@ -6,6 +6,7 @@ use crate::contexts::Contexts;
 use crate::runner::{self, CommandSpec, Runner};
 use crate::steps::Step;
 use crate::utilities;
+use anyhow::anyhow;
 use std::collections::HashSet;
 use std::sync::Arc;
 use tracing::{debug, trace, warn};
@@ -68,25 +69,21 @@ impl PackageProvider for Xbps {
     }
 
     fn query(&self, package: &PackageVariant) -> anyhow::Result<Vec<String>> {
-        let command = CommandSpec::new("xbps-query")
-            .arg("-s")
-            .args(package.packages());
-        let requested_already_installed: HashSet<String> =
-            String::from_utf8(self.runner.run(&command)?.stdout)?
-                .split('\n')
-                .map(String::from)
-                .collect();
-
-        debug!(
-            "all requested installed packages: {:?}",
-            requested_already_installed
-        );
+        let output = self.runner.run(&CommandSpec::new("xbps-query").arg("-l"))?;
+        if !output.success {
+            return Err(anyhow!(
+                "xbps-query -l failed: {}",
+                String::from_utf8_lossy(&output.stderr).trim()
+            ));
+        }
+        let list = String::from_utf8(output.stdout)?;
+        let installed = installed_packages(&list);
 
         Ok(package
             .packages()
             .into_iter()
             .filter(|p| {
-                if requested_already_installed.contains(p) {
+                if installed.contains(p.as_str()) {
                     trace!("{}: already installed", p);
                     false
                 } else {
@@ -125,5 +122,79 @@ impl PackageProvider for Xbps {
             initializers: vec![],
             finalizers: vec![],
         }])
+    }
+}
+
+/// The names of the installed packages in `xbps-query -l`, whose lines look like
+/// `ii git-2.43.0_1  Git Tree History Storage Tool`. `ii` means installed, and the name is the
+/// part of `<name>-<version>_<revision>` before the last `-`
+fn installed_packages(list: &str) -> HashSet<&str> {
+    list.lines()
+        .filter_map(|line| line.strip_prefix("ii "))
+        .filter_map(|line| line.split_whitespace().next())
+        .filter_map(|pkgver| pkgver.rsplit_once('-'))
+        .map(|(name, _version)| name)
+        .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::runner::fake::{fails, succeeds, FakeRunner};
+    use pretty_assertions::assert_eq;
+
+    /// Shortened from Void Linux
+    const LIST: &str = "\
+ii bash-5.2.037_1                     GNU Bourne Again Shell
+ii ca-certificates-20250419+3.131.1_2 Common CA certificates for SSL/TLS from Mozilla
+ii python3-yaml-6.0.2_2               YAML parser and emitter for Python3
+uu half-installed-1.0_1               Unpacked, but not configured
+";
+
+    #[test]
+    fn installed_packages_are_read_from_the_list() {
+        assert_eq!(
+            HashSet::from(["bash", "ca-certificates", "python3-yaml"]),
+            installed_packages(LIST)
+        );
+    }
+
+    #[test]
+    fn query_returns_the_packages_that_are_not_installed() {
+        let runner = FakeRunner::new()
+            .answer("xbps-query -l", succeeds(LIST))
+            .shared();
+        let xbps = Xbps {
+            runner: runner.clone(),
+        };
+        let package = PackageVariant {
+            // "dash" matches the description of bash, "python3" is the start of python3-yaml
+            list: ["bash", "python3-yaml", "dash", "python3", "half-installed"]
+                .map(String::from)
+                .to_vec(),
+            ..Default::default()
+        };
+
+        assert_eq!(
+            vec!["dash", "python3", "half-installed"],
+            xbps.query(&package).unwrap()
+        );
+        assert_eq!(vec!["xbps-query -l"], runner.calls());
+    }
+
+    #[test]
+    fn a_failing_query_is_an_error() {
+        let xbps = Xbps {
+            runner: FakeRunner::new()
+                .answer("xbps-query -l", fails("", "ERROR: can't open pkgdb"))
+                .shared(),
+        };
+        let package = PackageVariant {
+            name: Some(String::from("bash")),
+            ..Default::default()
+        };
+
+        let error = xbps.query(&package).unwrap_err();
+        assert!(error.to_string().contains("can't open pkgdb"), "{error}");
     }
 }
