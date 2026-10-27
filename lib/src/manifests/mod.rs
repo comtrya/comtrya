@@ -85,7 +85,7 @@ pub fn resolve(uri: &str) -> Result<PathBuf, ManifestProviderError> {
 }
 
 /// The name of the manifest at `location`: its path below `manifest_directory`, with `.`
-/// between the parts and without `.yaml`/`.yml`. `x/main.yaml` is `x`
+/// between the parts and without `.yaml`/`.yml`/`.toml`. `x/main.yaml` is `x`
 pub fn get_manifest_name(manifest_directory: &Path, location: &Path) -> anyhow::Result<String> {
     let local_name = location.strip_prefix(manifest_directory)?;
     let manifest_name = local_name
@@ -106,6 +106,7 @@ pub fn get_manifest_name(manifest_directory: &Path, location: &Path) -> anyhow::
 
     let manifest_name = manifest_name.trim_end_matches(".yaml");
     let manifest_name = manifest_name.trim_end_matches(".yml");
+    let manifest_name = manifest_name.trim_end_matches(".toml");
 
     Ok(String::from(manifest_name.trim_end_matches(".main")))
 }
@@ -114,6 +115,17 @@ pub fn get_manifest_name(manifest_directory: &Path, location: &Path) -> anyhow::
 #[cfg(unix)]
 mod test {
     use super::*;
+
+    #[test]
+    fn toml_is_not_part_of_the_name() {
+        let manifest_directory = PathBuf::from("/tmp");
+        let name = |location: &str| {
+            get_manifest_name(&manifest_directory, &PathBuf::from(location)).unwrap()
+        };
+
+        assert_eq!("test.git", name("/tmp/test/git.toml"));
+        assert_eq!("test", name("/tmp/test/main.toml"));
+    }
 
     #[test]
     fn test_top_level_main_yaml() {
