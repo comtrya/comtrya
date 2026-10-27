@@ -345,6 +345,79 @@ fn dry_run_fails_on_broken_manifests() {
     assert!(!f.created("valid"));
 }
 
+/// A `file.copy` whose source is missing, which fails when the action is planned
+fn copy_missing(f: &Fixture, name: &str) -> String {
+    format!(
+        "  - action: file.copy\n    from: {name}\n    to: '{}'\n",
+        f.out(name).display()
+    )
+}
+
+/// Actions that can't be planned fail a dry run too, like they fail a real one
+#[test]
+fn dry_run_fails_when_an_action_cant_be_planned() {
+    let f = Fixture::new();
+    f.manifest(
+        "broken.yaml",
+        &format!("actions:\n{}", copy_missing(&f, "zshrc")),
+    )
+    .manifest("valid.yaml", &format!("actions:\n{}", f.create("valid")));
+
+    let output = f.run_failing(&["apply", "--dry-run"]).get_output().clone();
+    let log = String::from_utf8_lossy(&output.stdout) + String::from_utf8_lossy(&output.stderr);
+
+    assert!(log.contains("zshrc was not found"), "{log}");
+    assert!(log.contains("1 manifest(s) failed"), "{log}");
+    assert!(!f.created("valid"));
+}
+
+/// A dry run changes nothing, so it reports every action of a manifest that can't be planned
+#[test]
+fn dry_run_reports_every_action_that_cant_be_planned() {
+    let f = Fixture::new();
+    f.manifest(
+        "broken.yaml",
+        &format!(
+            "actions:\n{}{}{}",
+            copy_missing(&f, "zshrc"),
+            f.create("between"),
+            copy_missing(&f, "bashrc")
+        ),
+    );
+
+    let stdout = f
+        .run_failing(&["apply", "--dry-run"])
+        .get_output()
+        .stdout
+        .clone();
+    let stdout = String::from_utf8_lossy(&stdout);
+
+    assert!(stdout.contains("zshrc was not found"), "{stdout}");
+    assert!(stdout.contains("bashrc was not found"), "{stdout}");
+}
+
+#[test]
+fn dry_run_skips_dependents_of_an_action_that_cant_be_planned() {
+    let f = Fixture::new();
+    f.manifest(
+        "broken.yaml",
+        &format!("actions:\n{}", copy_missing(&f, "zshrc")),
+    )
+    .manifest(
+        "dependent.yaml",
+        &format!("depends: [broken]\nactions:\n{}", f.create("dependent")),
+    );
+
+    let output = f.run_failing(&["apply", "--dry-run"]).get_output().clone();
+    let log = String::from_utf8_lossy(&output.stdout) + String::from_utf8_lossy(&output.stderr);
+
+    assert!(
+        log.contains("Skipping manifest, because a dependency failed"),
+        "{log}"
+    );
+    assert!(log.contains("2 manifest(s) failed"), "{log}");
+}
+
 /// YAML and TOML files in `files` directories are files for actions, never manifests (#575)
 #[test]
 fn files_directories_are_not_loaded_as_manifests() {

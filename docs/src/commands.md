@@ -63,6 +63,11 @@ comtrya -d ./manifests/ apply -m one
 `--dry-run` plans every action without changing the system. For `file.copy`, it shows a diff of what
 would change in each file; see [Files and Directories](./files-and-directories.md#seeing-what-changes).
 
+An action that can't be planned, like a `file.copy` whose source is missing, fails the dry run
+like it fails a real one: its manifest and the manifests that depend on it count as failed, and
+comtrya exits with a non-zero status. Unlike a real run, the dry run reports every action of a
+manifest that can't be planned, not only the first one.
+
 ```shell
 comtrya -d ./manifests apply --dry-run
 ```

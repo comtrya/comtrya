@@ -358,20 +358,21 @@ impl ComtryaCommand for Apply {
                     info!("{}", action.summarize());
                     span_action.exit();
 
-                    // Later actions usually build on earlier ones, so stop this manifest
-                    if !successful {
+                    // Later actions usually build on earlier ones, so stop this manifest. A dry
+                    // run changes nothing, so it goes on and reports every action that can't plan
+                    if !successful && !dry_run {
                         break;
                     }
-                }
-
-                if dry_run {
-                    span_manifest.exit();
-                    continue;
                 }
 
                 if !successful {
                     error!("Failed");
                     failed.insert(visited);
+                    span_manifest.exit();
+                    continue;
+                }
+
+                if dry_run {
                     span_manifest.exit();
                     continue;
                 }
