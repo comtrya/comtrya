@@ -16,7 +16,10 @@ impl ManifestProvider for LocalManifestProvider {
     fn resolve(&self, url: &str) -> Result<PathBuf, ManifestProviderError> {
         PathBuf::from(url)
             .canonicalize()
-            .map_err(|_| ManifestProviderError::NoResolution)
+            .map_err(|source| ManifestProviderError::NotFound {
+                path: url.to_string(),
+                source,
+            })
     }
 }
 
@@ -34,10 +37,10 @@ mod test {
 
         assert_eq!(cwd, local_manifest_provider.resolve(&cwd_string).unwrap());
 
-        assert_eq!(
-            Err(ManifestProviderError::NoResolution),
-            local_manifest_provider.resolve(&String::from("/never-resolve"))
-        );
+        assert!(matches!(
+            local_manifest_provider.resolve(&String::from("/never-resolve")),
+            Err(ManifestProviderError::NotFound { .. })
+        ));
     }
 
     #[test]
@@ -59,9 +62,9 @@ mod test {
                 .unwrap()
         );
 
-        assert_eq!(
-            Err(ManifestProviderError::NoResolution),
-            local_manifest_provider.resolve(&String::from("never-resolve"))
-        );
+        assert!(matches!(
+            local_manifest_provider.resolve(&String::from("never-resolve")),
+            Err(ManifestProviderError::NotFound { .. })
+        ));
     }
 }

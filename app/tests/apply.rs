@@ -418,6 +418,56 @@ fn dry_run_skips_dependents_of_an_action_that_cant_be_planned() {
     assert!(log.contains("2 manifest(s) failed"), "{log}");
 }
 
+/// Output of a failing run, to check that it explains the error instead of panicking
+fn failure_log(f: &Fixture, args: &[&str]) -> String {
+    let output = f.run_failing(args).get_output().clone();
+    let log = String::from_utf8_lossy(&output.stdout) + String::from_utf8_lossy(&output.stderr);
+    assert!(!log.contains("panicked"), "{log}");
+    log.to_string()
+}
+
+#[test]
+fn a_missing_manifest_directory_is_reported() {
+    let f = Fixture::new();
+
+    let log = failure_log(&f, &["apply"]);
+
+    assert!(log.contains("Can't find the manifests at"), "{log}");
+    assert!(log.contains("doesn't exist or can't be read"), "{log}");
+}
+
+#[test]
+fn a_missing_directory_copy_source_is_reported() {
+    let f = Fixture::new();
+    f.manifest(
+        "dir.yaml",
+        &format!(
+            "actions:\n  - action: directory.copy\n    from: nope\n    to: '{}'\n",
+            f.out("copy").display()
+        ),
+    );
+
+    let log = failure_log(&f, &["apply"]);
+
+    assert!(log.contains("nope was not found"), "{log}");
+}
+
+#[test]
+fn file_link_without_source_is_reported() {
+    let f = Fixture::new();
+    f.manifest(
+        "link.yaml",
+        &format!(
+            "actions:\n  - action: file.link\n    target: '{}'\n",
+            f.out("link").display()
+        ),
+    );
+
+    let log = failure_log(&f, &["apply"]);
+
+    assert!(log.contains("file.link needs `source`"), "{log}");
+}
+
 /// YAML and TOML files in `files` directories are files for actions, never manifests (#575)
 #[test]
 fn files_directories_are_not_loaded_as_manifests() {

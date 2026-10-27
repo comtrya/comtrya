@@ -40,7 +40,7 @@ impl ManifestProvider for GitManifestProvider {
         let config = self.parse_config_url(url);
         let clean_url = self.clean_git_url(&config.repository);
         let cache_path = git_cache_dir()
-            .ok_or(ManifestProviderError::NoResolution)?
+            .ok_or(ManifestProviderError::NoCacheDir)?
             .join(clean_url);
         if !cache_path.exists() {
             self.fetch_and_clone(&cache_path, &config)?;
@@ -57,51 +57,33 @@ impl GitManifestProvider {
         config: &GitConfig,
     ) -> anyhow::Result<(), super::ManifestProviderError> {
         info!("Preparing to fetch and clone manifests.");
-        let r = std::fs::create_dir_all(cache_path);
-        if r.is_err() {
-            return Err(ManifestProviderError::NoResolution);
-        }
+        std::fs::create_dir_all(cache_path).map_err(|source| ManifestProviderError::CacheDir {
+            path: cache_path.to_path_buf(),
+            source,
+        })?;
 
-        let url = gix::url::parse(config.repository.as_str());
-
-        if url.is_err() {
-            return Err(ManifestProviderError::NoResolution);
-        }
-
-        let url = url.unwrap();
-
-        unsafe {
-            let handler = interrupt::init_handler(1, || {});
-            if handler.is_err() {
-                return Err(ManifestProviderError::NoResolution);
+        let url = gix::url::parse(config.repository.as_str()).map_err(|err| {
+            ManifestProviderError::InvalidUrl {
+                url: config.repository.clone(),
+                message: err.to_string(),
             }
+        })?;
+        let clone_error = |message: String| ManifestProviderError::Clone {
+            url: config.repository.clone(),
+            message,
         };
 
-        let prepare_clone = gix::prepare_clone(url.clone(), cache_path);
-        if prepare_clone.is_err() {
-            return Err(ManifestProviderError::NoResolution);
-        }
-        let mut prepare_clone = prepare_clone.unwrap();
+        // SAFETY: called before any other thread could install a handler
+        unsafe { interrupt::init_handler(1, || {}) }
+            .map_err(|err| clone_error(format!("can't handle Ctrl-C: {err}")))?;
 
-        let prepare_checkout =
-            prepare_clone.fetch_then_checkout(gix::progress::Discard, &interrupt::IS_INTERRUPTED);
-        if prepare_checkout.is_err() {
-            return Err(ManifestProviderError::NoResolution);
-        }
-        let mut prepare_checkout = prepare_checkout.unwrap().0;
-
-        let repo = prepare_checkout.main_worktree(Discard, &interrupt::IS_INTERRUPTED);
-        if repo.is_err() {
-            return Err(ManifestProviderError::NoResolution);
-        }
-        let repo = repo.unwrap().0;
-
-        let success = repo
-            .find_default_remote(gix::remote::Direction::Fetch)
-            .expect("always present after clone");
-        if success.is_err() {
-            return Err(ManifestProviderError::NoResolution);
-        }
+        let (mut checkout, _) = gix::prepare_clone(url, cache_path)
+            .map_err(|err| clone_error(err.to_string()))?
+            .fetch_then_checkout(gix::progress::Discard, &interrupt::IS_INTERRUPTED)
+            .map_err(|err| clone_error(err.to_string()))?;
+        checkout
+            .main_worktree(Discard, &interrupt::IS_INTERRUPTED)
+            .map_err(|err| clone_error(err.to_string()))?;
 
         info!("Finished fetch and clone operation.");
 
