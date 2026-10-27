@@ -37,6 +37,7 @@ toml = "1.0"
 # Tera 2 changes the template language used in manifests (e.g. `get_env` was removed,
 # undefined variables error). Stay on 1.x until a deliberate migration; see .github/dependabot.yml.
 tera = "1.20"
+thiserror = "2.0"
 tracing = "0.1"
 hickory-resolver = "0.26.2"
 which = "8.0"

@@ -14,7 +14,40 @@ use std::{
     path::{Path, PathBuf},
 };
 use tera::Tera;
+use thiserror::Error as ThisError;
 use tracing::{debug, error, span};
+
+/// Manifests that loaded, and the ones that didn't
+#[derive(Debug, Default)]
+pub struct Loaded {
+    pub manifests: HashMap<String, Manifest>,
+    pub errors: Vec<LoadError>,
+}
+
+/// A manifest file that couldn't be loaded
+#[derive(Debug, ThisError)]
+#[error("Manifest '{name}' ({}) can't be loaded: {kind}", path.display())]
+pub struct LoadError {
+    /// The manifest's name, as other manifests refer to it in `depends`
+    pub name: String,
+    pub path: PathBuf,
+    pub kind: LoadErrorKind,
+}
+
+#[derive(Debug, ThisError)]
+pub enum LoadErrorKind {
+    #[error("the file can't be read: {0}")]
+    Read(#[source] std::io::Error),
+
+    #[error("templates can't be rendered: {0}")]
+    Render(String),
+
+    #[error("{0}")]
+    Parse(String),
+
+    #[error("it uses manifest version {found}, but this comtrya only supports version {supported}. Update comtrya")]
+    NewerVersion { found: u32, supported: u32 },
+}
 
 /// The part of a manifest that is readable before its templates are rendered
 #[derive(Deserialize)]
@@ -26,8 +59,18 @@ struct Unrendered {
     r#where: Option<String>,
 }
 
+/// Loads all manifests below `manifest_path`, and logs the ones that can't be loaded
 pub fn load(manifest_path: PathBuf, contexts: &Contexts) -> HashMap<String, Manifest> {
-    let mut manifests: HashMap<String, Manifest> = HashMap::new();
+    let loaded = load_all(manifest_path, contexts);
+    for err in &loaded.errors {
+        error!("{err}");
+    }
+    loaded.manifests
+}
+
+/// Loads all manifests below `manifest_path`, and returns the ones that can't be loaded as errors
+pub fn load_all(manifest_path: PathBuf, contexts: &Contexts) -> Loaded {
+    let mut loaded = Loaded::default();
 
     let mut walker = WalkBuilder::new(&manifest_path);
 
@@ -40,7 +83,7 @@ pub fn load(manifest_path: PathBuf, contexts: &Contexts) -> HashMap<String, Mani
         .max_depth(Some(9))
         .filter_entry(|entry| {
             !(entry.file_type().is_some_and(|ft| ft.is_dir())
-            && entry.file_name() == OsStr::new("files"))
+                && entry.file_name() == OsStr::new("files"))
         })
         .build()
         // Don't walk directories
@@ -63,82 +106,81 @@ pub fn load(manifest_path: PathBuf, contexts: &Contexts) -> HashMap<String, Mani
                 })
                 .unwrap_or(false)
         })
+        .flatten()
         .for_each(|entry| {
-            if let Ok(filename) = entry {
-                let span = span!(
-                    tracing::Level::INFO,
-                    "manifest_load",
-                    manifest = filename.file_name().to_str()
-                )
-                .entered();
+            let span = span!(
+                tracing::Level::INFO,
+                "manifest_load",
+                manifest = entry.file_name().to_str()
+            )
+            .entered();
 
-                let entry = canonicalize(filename.into_path()).ok().unwrap_or_default();
-                let contents =
-                    std::fs::read_to_string(entry.clone()).unwrap_or_else(|_| String::from(""));
-                let template = contents.as_str();
+            let path = canonicalize(entry.path()).unwrap_or_else(|_| entry.into_path());
+            let name = get_manifest_name(&manifest_path, &path)
+                .unwrap_or_else(|_| path.display().to_string());
 
-                // Checked before rendering, a newer format may use templates differently
-                let version = parse::<Unrendered>(template, &entry)
-                    .ok()
-                    .and_then(|unrendered| unrendered.version);
-                if let Err(err) = check_version(version) {
-                    error!("Manifest in file with path '{}' is skipped. Reason: {err}", &entry.display());
-                    span.exit();
-                    return;
+            match load_file(&path, contexts) {
+                Ok(mut manifest) => {
+                    manifest.root_dir = path.parent().map(|parent| parent.to_path_buf());
+                    manifest.name = Some(name.clone());
+                    loaded.manifests.insert(name, manifest);
                 }
-
-                let mut tera = Tera::default();
-                register_functions(&mut tera);
-
-                let manifest = match tera.render_str(template, &to_tera(contexts)) {
-                    Ok(rendered) => parse::<Manifest>(&rendered, &entry),
-                    // A template that only works where the manifest applies, like an env var
-                    // that only exists on Windows, is fine when `where` skips it anyway (#283)
-                    Err(err) => match false_where(template, &entry, contexts) {
-                        Some(condition) => {
-                            debug!("Not rendering templates, because the 'where' condition is false");
-                            Ok(Manifest {
-                                r#where: Some(condition),
-                                ..Default::default()
-                            })
-                        }
-                        None => {
-                            match err.source() {
-                                Some(err) => error!(message = err.source()),
-                                None => error!(message = err.to_string().as_str()),
-                            }
-
-                            span.exit();
-
-                            return;
-                        }
-                    },
-                };
-
-                match manifest.and_then(|manifest| check_version(manifest.version).map(|_| manifest)) {
-                    Ok(mut manifest) => {
-                        let name = get_manifest_name(&manifest_path, &entry)
-                            .expect("Failed to get manifest name");
-
-                        manifest.root_dir = entry.parent().map(|parent| parent.to_path_buf());
-
-                        manifest.name = Some(name.clone());
-
-                        manifests.insert(name, manifest);
-                    }
-                    Err(err) => {
-                        let manifest_name =
-                            get_manifest_name(&manifest_path, &entry).unwrap_or_default();
-
-                        error!("Manifest '{manifest_name}' in file with path '{}' cannot be parsed. Reason: {err}", &entry.display());
-                    }
-                }
-
-                span.exit();
+                Err(kind) => loaded.errors.push(LoadError { name, path, kind }),
             }
+
+            span.exit();
         });
 
-    manifests
+    loaded
+}
+
+fn load_file(path: &Path, contexts: &Contexts) -> Result<Manifest, LoadErrorKind> {
+    let template = std::fs::read_to_string(path).map_err(LoadErrorKind::Read)?;
+
+    // Checked before rendering, a newer format may use templates differently
+    let version = parse::<Unrendered>(&template, path)
+        .ok()
+        .and_then(|unrendered| unrendered.version);
+    check_version(version)?;
+
+    let mut tera = Tera::default();
+    register_functions(&mut tera);
+
+    let rendered = match tera.render_str(&template, &to_tera(contexts)) {
+        Ok(rendered) => rendered,
+        // A template that only works where the manifest applies, like an env var
+        // that only exists on Windows, is fine when `where` skips it anyway (#283)
+        Err(err) => {
+            return match false_where(&template, path, contexts) {
+                Some(condition) => {
+                    debug!("Not rendering templates, because the 'where' condition is false");
+                    Ok(Manifest {
+                        r#where: Some(condition),
+                        ..Default::default()
+                    })
+                }
+                None => Err(LoadErrorKind::Render(error_chain(&err))),
+            }
+        }
+    };
+
+    let manifest = parse::<Manifest>(&rendered, path)
+        .map_err(|err| LoadErrorKind::Parse(format!("{err:#}")))?;
+    check_version(manifest.version)?;
+
+    Ok(manifest)
+}
+
+/// Tera puts the useful part of a message into the error's sources
+fn error_chain(err: &dyn Error) -> String {
+    let mut message = err.to_string();
+    let mut source = err.source();
+    while let Some(err) = source {
+        message.push_str(": ");
+        message.push_str(&err.to_string());
+        source = err.source();
+    }
+    message
 }
 
 fn parse<T: DeserializeOwned>(contents: &str, path: &Path) -> anyhow::Result<T> {
@@ -149,11 +191,12 @@ fn parse<T: DeserializeOwned>(contents: &str, path: &Path) -> anyhow::Result<T> 
     }
 }
 
-fn check_version(version: Option<u32>) -> anyhow::Result<()> {
+fn check_version(version: Option<u32>) -> Result<(), LoadErrorKind> {
     match version {
-        Some(version) if version > MANIFEST_VERSION => Err(anyhow::anyhow!(
-            "it uses manifest version {version}, but this comtrya only supports version {MANIFEST_VERSION}. Update comtrya"
-        )),
+        Some(found) if found > MANIFEST_VERSION => Err(LoadErrorKind::NewerVersion {
+            found,
+            supported: MANIFEST_VERSION,
+        }),
         _ => Ok(()),
     }
 }

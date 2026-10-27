@@ -3,7 +3,7 @@ use crate::Runtime;
 use clap::Parser;
 use comfy_table::{Cell, ContentArrangement, Table};
 use comtrya_lib::contexts::evaluate_condition;
-use comtrya_lib::manifests::{load, Manifest};
+use comtrya_lib::manifests::{load_all, Loaded, Manifest};
 use core::panic;
 use petgraph::{visit::DfsPostOrder, Graph};
 use std::path::PathBuf;
@@ -65,7 +65,10 @@ impl Apply {
 
         println!("Load manifests from path: {:#?}", manifest_path);
 
-        let manifests = load(manifest_path, contexts);
+        let Loaded { manifests, errors } = load_all(manifest_path, contexts);
+        for err in &errors {
+            error!("{err}");
+        }
 
         let mut table = Table::new();
         table
@@ -80,6 +83,14 @@ impl Apply {
             ]);
         }
         println!("{table}");
+
+        if !errors.is_empty() {
+            return Err(anyhow::anyhow!(
+                "{} manifest(s) can't be loaded",
+                errors.len()
+            ));
+        }
+
         Ok(())
     }
 }
@@ -89,7 +100,25 @@ impl ComtryaCommand for Apply {
     fn execute(&self, runtime: &Runtime) -> anyhow::Result<()> {
         let contexts = &runtime.contexts;
         let manifest_path = self.manifest_path(runtime)?;
-        let manifests = load(manifest_path, contexts);
+        let Loaded {
+            mut manifests,
+            errors,
+        } = load_all(manifest_path, contexts);
+
+        // A manifest that can't be loaded fails like one whose action fails: it and everything
+        // that depends on it are skipped. It stays in the DAG as an empty placeholder for that
+        let mut load_failed = HashSet::new();
+        for err in errors {
+            error!("{err}");
+            load_failed.insert(err.name.clone());
+            manifests.insert(
+                err.name.clone(),
+                Manifest {
+                    name: Some(err.name),
+                    ..Default::default()
+                },
+            );
+        }
 
         // Build DAG
         let mut dag: Graph<Manifest, u32, petgraph::Directed> = Graph::new();
@@ -118,6 +147,9 @@ impl ComtryaCommand for Apply {
             })
             .collect();
 
+        // Manifests that depend on one that doesn't exist
+        let mut unresolved = HashSet::new();
+
         for (name, manifest) in manifests.iter() {
             manifest.depends.iter().for_each(|dependency| {
                 let (local_dependency_prefix, _) = name.rsplit_once('.').unwrap_or((name, ""));
@@ -130,8 +162,10 @@ impl ComtryaCommand for Apply {
                     None => {
                         error!(
                             message = "Unresolved dependency",
+                            manifest = name.as_str(),
                             dependency = resolved_dependency_name.as_str()
                         );
+                        unresolved.extend(manifest.dag_index);
 
                         return;
                     }
@@ -168,7 +202,12 @@ impl ComtryaCommand for Apply {
         let dry_run = self.dry_run;
 
         // Manifests that failed, or depend on one that did
-        let mut failed = HashSet::new();
+        let mut failed: HashSet<_> = manifests
+            .iter()
+            .filter(|(name, _)| load_failed.contains(*name))
+            .filter_map(|(_, manifest)| manifest.dag_index)
+            .chain(unresolved)
+            .collect();
 
         run_manifests.iter().for_each(|manifest| {
             let start = if manifest.eq(&String::from("")) {
@@ -196,8 +235,8 @@ impl ComtryaCommand for Apply {
                 // .unwrap() is safe here, because we just checked that the node exists
                 let m1 = dag.node_weight(visited).unwrap();
 
-                // Root manifest, nothing to do.
-                if m1.name.is_none() {
+                // Root manifest, nothing to do. Failed ones were reported already
+                if m1.name.is_none() || failed.contains(&visited) {
                     continue;
                 }
 

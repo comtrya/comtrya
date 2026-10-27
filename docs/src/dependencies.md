@@ -33,3 +33,7 @@ As shown, at the top of the `users.yaml` file, `depends` takes a lists of manife
 If an action fails, comtrya skips the remaining actions of that manifest and every manifest that depends on it, directly or indirectly. All other manifests still run, so one run shows every problem at once. At the end, comtrya exits with a non-zero status, so scripts and CI notice the failure.
 
 In the example above, if creating the group fails, `users.yaml` is skipped, while unrelated manifests are applied as usual.
+
+A manifest that can't be loaded counts as failed in the same way: invalid YAML or TOML, an unknown action or field value, a template that can't be rendered, or a newer manifest `version`. So does a manifest whose `depends` names a manifest that doesn't exist. This also applies to `--dry-run` and `comtrya status`, so they can check manifests in CI.
+
+A manifest whose `where` condition is false is not an error, even if its templates only work where it applies.

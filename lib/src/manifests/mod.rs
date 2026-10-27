@@ -1,5 +1,5 @@
 mod load;
-pub use load::load;
+pub use load::{load, load_all, LoadError, LoadErrorKind, Loaded};
 mod providers;
 use crate::actions::Actions;
 use petgraph::prelude::*;
