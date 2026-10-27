@@ -10,35 +10,19 @@ mod group;
 mod macos;
 mod package;
 pub use package::PackageProviders;
+mod registry;
+pub use registry::Actions;
 mod user;
 
-use crate::actions::macos::MacOSDefault;
 use crate::{
     contexts::{evaluate_condition, Contexts},
     manifests::Manifest,
     steps::Step,
 };
 use anyhow::anyhow;
-use binary::BinaryGitHub;
-use command::run::RunCommand;
-use directory::{DirectoryCopy, DirectoryCreate, DirectoryRemove};
-use file::chown::FileChown;
-use file::copy::FileCopy;
-use file::download::FileDownload;
-use file::link::FileLink;
-use file::remove::FileRemove;
-use file::unarchive::FileUnarchive;
-use git::GitClone;
-use group::add::GroupAdd;
-use package::{PackageInstall, PackageRepository};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use std::fmt::Display;
-use std::ops::Deref;
 use tracing::{error, warn};
-use user::add::UserAdd;
-
-use self::user::add_group::UserAddGroup;
 
 /// An action with its `where` condition and its variants, see [`ConditionalVariantAction::select`]
 #[derive(JsonSchema, Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Default)]
@@ -121,167 +105,6 @@ impl<T> ConditionalVariantAction<T> {
             Ok(false) => Ok(None),
             Err(error) => Err(anyhow!("Failed execution condition for action: {error}")),
         }
-    }
-}
-
-/// Every action, by its name in manifests
-#[derive(JsonSchema, Clone, Debug, Serialize, Deserialize)]
-#[serde(tag = "action")]
-pub enum Actions {
-    /// `command.run`, or `cmd.run`
-    #[serde(rename = "command.run", alias = "cmd.run")]
-    CommandRun(ConditionalVariantAction<RunCommand>),
-
-    /// `directory.copy`, or `dir.copy`
-    #[serde(rename = "directory.copy", alias = "dir.copy")]
-    DirectoryCopy(ConditionalVariantAction<DirectoryCopy>),
-
-    /// `directory.create`, or `dir.create`
-    #[serde(rename = "directory.create", alias = "dir.create")]
-    DirectoryCreate(ConditionalVariantAction<DirectoryCreate>),
-
-    /// `file.copy`
-    #[serde(rename = "file.copy")]
-    FileCopy(ConditionalVariantAction<FileCopy>),
-
-    /// `file.chown`
-    #[serde(rename = "file.chown")]
-    FileChown(ConditionalVariantAction<FileChown>),
-
-    /// `file.download`
-    #[serde(rename = "file.download")]
-    FileDownload(ConditionalVariantAction<FileDownload>),
-
-    /// `file.link`
-    #[serde(rename = "file.link")]
-    FileLink(ConditionalVariantAction<FileLink>),
-
-    /// `file.remove`
-    #[serde(rename = "file.remove")]
-    FileRemove(ConditionalVariantAction<FileRemove>),
-
-    /// `file.unarchive`
-    #[serde(rename = "file.unarchive")]
-    FileUnarchive(ConditionalVariantAction<FileUnarchive>),
-
-    /// `directory.remove`, or `dir.remove`
-    #[serde(rename = "directory.remove", alias = "dir.remove")]
-    DirectoryRemove(ConditionalVariantAction<DirectoryRemove>),
-
-    /// `binary.github`, or `binary.gh`, `bin.github`, `bin.gh`
-    #[serde(
-        rename = "binary.github",
-        alias = "binary.gh",
-        alias = "bin.github",
-        alias = "bin.gh"
-    )]
-    BinaryGitHub(ConditionalVariantAction<BinaryGitHub>),
-
-    /// `git.clone`
-    #[serde(rename = "git.clone")]
-    GitClone(ConditionalVariantAction<GitClone>),
-
-    /// `group.add`
-    #[serde(rename = "group.add")]
-    GroupAdd(ConditionalVariantAction<GroupAdd>),
-
-    /// `macos.default`
-    #[serde(rename = "macos.default")]
-    MacOSDefault(ConditionalVariantAction<MacOSDefault>),
-
-    /// `package.install`, or `package.installed`
-    #[serde(rename = "package.install", alias = "package.installed")]
-    PackageInstall(ConditionalVariantAction<PackageInstall>),
-
-    /// `package.repository`, or `package.repo`
-    #[serde(rename = "package.repository", alias = "package.repo")]
-    PackageRepository(ConditionalVariantAction<PackageRepository>),
-
-    /// `user.add`
-    #[serde(rename = "user.add")]
-    UserAdd(ConditionalVariantAction<UserAdd>),
-
-    /// `user.group`
-    #[serde(rename = "user.group")]
-    UserAddGroup(ConditionalVariantAction<UserAddGroup>),
-}
-
-impl Actions {
-    /// The action, whichever it is
-    pub fn inner_ref(&self) -> &dyn Action {
-        match self {
-            Actions::BinaryGitHub(a) => a,
-            Actions::CommandRun(a) => a,
-            Actions::DirectoryCopy(a) => a,
-            Actions::DirectoryCreate(a) => a,
-            Actions::FileCopy(a) => a,
-            Actions::FileChown(a) => a,
-            Actions::FileDownload(a) => a,
-            Actions::FileLink(a) => a,
-            Actions::FileUnarchive(a) => a,
-            Actions::GitClone(a) => a,
-            Actions::GroupAdd(a) => a,
-            Actions::MacOSDefault(a) => a,
-            Actions::PackageInstall(a) => a,
-            Actions::PackageRepository(a) => a,
-            Actions::UserAdd(a) => a,
-            Actions::UserAddGroup(a) => a,
-            Actions::FileRemove(a) => a,
-            Actions::DirectoryRemove(a) => a,
-        }
-    }
-}
-
-impl Deref for Actions {
-    type Target = dyn Action;
-    fn deref(&self) -> &Self::Target {
-        match self {
-            Actions::BinaryGitHub(a) => a,
-            Actions::CommandRun(a) => a,
-            Actions::DirectoryCopy(a) => a,
-            Actions::DirectoryCreate(a) => a,
-            Actions::FileCopy(a) => a,
-            Actions::FileChown(a) => a,
-            Actions::FileDownload(a) => a,
-            Actions::FileLink(a) => a,
-            Actions::FileUnarchive(a) => a,
-            Actions::GitClone(a) => a,
-            Actions::GroupAdd(a) => a,
-            Actions::MacOSDefault(a) => a,
-            Actions::PackageInstall(a) => a,
-            Actions::PackageRepository(a) => a,
-            Actions::UserAdd(a) => a,
-            Actions::UserAddGroup(a) => a,
-            Actions::FileRemove(a) => a,
-            Actions::DirectoryRemove(a) => a,
-        }
-    }
-}
-
-impl Display for Actions {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let name = match self {
-            Actions::CommandRun(_) => "command.run",
-            Actions::DirectoryCopy(_) => "directory.copy",
-            Actions::DirectoryCreate(_) => "directory.create",
-            Actions::FileCopy(_) => "file.copy",
-            Actions::FileChown(_) => "file.chown",
-            Actions::FileDownload(_) => "file.download",
-            Actions::FileLink(_) => "file.link",
-            Actions::FileRemove(_) => "file.remove",
-            Actions::FileUnarchive(_) => "file.unarchive",
-            Actions::DirectoryRemove(_) => "directory.remove",
-            Actions::BinaryGitHub(_) => "binary.github",
-            Actions::GitClone(_) => "git.clone",
-            Actions::GroupAdd(_) => "group.add",
-            Actions::MacOSDefault(_) => "macos.default",
-            Actions::PackageInstall(_) => "package.install",
-            Actions::PackageRepository(_) => "package.repository",
-            Actions::UserAdd(_) => "user.add",
-            Actions::UserAddGroup(_) => "user.group",
-        };
-
-        write!(f, "{name}")
     }
 }
 
