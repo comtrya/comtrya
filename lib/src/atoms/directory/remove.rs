@@ -1,10 +1,14 @@
+//! Removes a directory
+
 use std::path::PathBuf;
 
 use tracing::error;
 
 use crate::atoms::{Atom, Outcome};
 
+/// Removes an empty directory
 pub struct Remove {
+    /// The directory to remove
     pub target: PathBuf,
 }
 

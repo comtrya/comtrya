@@ -1,6 +1,9 @@
+//! Checks the output of an atom
+
 use super::Finalizer;
 use crate::atoms::Atom;
 
+/// Says yes if the atom's output contains the text
 #[derive(Clone, Debug)]
 pub struct OutputContains(pub &'static str);
 

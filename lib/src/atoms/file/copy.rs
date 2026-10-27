@@ -1,3 +1,5 @@
+//! Copies a file over another one
+
 use crate::atoms::Outcome;
 
 use super::super::Atom;
@@ -5,8 +7,11 @@ use super::FileAtom;
 use std::path::PathBuf;
 use tracing::error;
 
+/// Copies a file over an existing file, when their contents differ. No action uses it
 pub struct Copy {
+    /// The file to copy
     pub from: PathBuf,
+    /// The file to overwrite. Must exist
     pub to: PathBuf,
 }
 

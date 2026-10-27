@@ -1,18 +1,26 @@
+//! Initializers: checks before an atom runs, which can skip it
+
+/// Whether a program is installed
 mod command_found;
 pub use command_found::CommandFound;
 
+/// Whether a file exists
 mod file_exists;
 
 pub use file_exists::FileExists;
 
+/// How an initializer's answer is used
 #[allow(dead_code)]
 pub enum FlowControl {
+    /// The atom runs only if the initializer says yes
     Ensure(Box<dyn Initializer>),
+    /// The atom is skipped if the initializer says yes
     SkipIf(Box<dyn Initializer>),
 }
 
-/// Initializers allow us to modify or skip the execution of an atom
+/// A check before an atom runs, which can skip it
 pub trait Initializer {
+    /// The answer
     fn initialize(&self) -> anyhow::Result<bool>;
 }
 

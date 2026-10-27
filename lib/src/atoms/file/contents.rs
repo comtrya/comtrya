@@ -1,3 +1,5 @@
+//! Writes the contents of a file
+
 use crate::atoms::Outcome;
 
 use super::super::Atom;
@@ -6,8 +8,11 @@ use similar::TextDiff;
 use std::path::PathBuf;
 use tracing::error;
 
+/// Writes the contents of a file, when they differ
 pub struct SetContents {
+    /// The file
     pub path: PathBuf,
+    /// The new contents
     pub contents: Vec<u8>,
     /// Don't show the contents in a diff, e.g. because they were decrypted
     pub redact: bool,

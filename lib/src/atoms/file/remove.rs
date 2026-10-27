@@ -1,3 +1,5 @@
+//! Removes a file
+
 use std::path::PathBuf;
 
 use tracing::error;
@@ -6,7 +8,9 @@ use crate::atoms::{Atom, Outcome};
 
 use super::FileAtom;
 
+/// Removes a file. Not a directory
 pub struct Remove {
+    /// The file to remove
     pub target: PathBuf,
 }
 

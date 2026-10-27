@@ -1,5 +1,8 @@
+//! Checks whether a program is installed
+
 use super::Initializer;
 
+/// Says yes if the program is in `PATH`
 #[derive(Clone, Debug)]
 pub struct CommandFound(pub &'static str);
 
