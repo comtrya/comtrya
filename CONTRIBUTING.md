@@ -52,6 +52,17 @@ Run `./check.sh` (or `check.ps1` on Windows). It
 - runs the linter `cargo clippy`, which fails on any warning, like CI
 - runs all tests with `cargo test`
 
+### Code style
+
+Comtrya should be easy to read for someone who opens a file for the first time:
+
+- **Small pieces.** Prefer short functions with a name that says what they do over long ones with nested `if`/`match`/loops. When a file grows past a few hundred lines, split it into modules.
+- **No copies.** When two places do the same, share the code, for example a helper function or a common type for similar package providers.
+- **Document everything,** private functions, structs and fields included: what it is for, and anything surprising. One line is often enough. Every module starts with a `//!` line that says what it contains.
+- **Comments say why.** The code shows what happens; a comment explains why it has to be that way.
+- **Errors, not panics.** Anything a user can cause, like a missing file or a typo in a manifest, ends in an error that says what's wrong. `unwrap()`/`expect()` are only for things that can't happen.
+- **Refactors on their own.** Keep a pure clean-up in its own pull request, without changes in behaviour, so it's easy to review.
+
 ### Compatibility with existing manifests
 
 [`compat/`](./compat) loads manifests with your changes and with the last release of `comtrya-lib`, and fails if any manifest means something different, for example because an alias is gone or a field is read differently. If the difference is intended, record it in `known_differences` in `compat/tests/v1.rs` and mention it in the release notes. New manifest rules belong in `compat/fixtures/v1/`.

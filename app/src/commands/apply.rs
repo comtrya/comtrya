@@ -1,17 +1,18 @@
+//! `comtrya apply` and `comtrya status`
+
+mod graph;
+mod run;
+
 use super::ComtryaCommand;
 use crate::Runtime;
 use clap::Parser;
 use comfy_table::{Cell, ContentArrangement, Table};
-use comtrya_lib::contexts::evaluate_condition;
-use comtrya_lib::manifests::{load_all, Loaded, Manifest};
-use core::panic;
-use petgraph::{visit::DfsPostOrder, Graph};
+use comtrya_lib::manifests::{load_all, Loaded};
+use graph::ManifestGraph;
+use run::Run;
+use std::ops::Deref;
 use std::path::PathBuf;
-use std::{
-    collections::{HashMap, HashSet},
-    ops::Deref,
-};
-use tracing::{debug, error, info, instrument, span, trace, warn};
+use tracing::{error, instrument, trace};
 
 #[derive(Parser, Debug)]
 pub(crate) struct Apply {
@@ -30,6 +31,8 @@ pub(crate) struct Apply {
 }
 
 impl Apply {
+    /// The directory of the manifests: the first of `manifest_paths` in the config, cloned
+    /// first if it's a git repository
     fn manifest_path(&self, runtime: &Runtime) -> anyhow::Result<PathBuf> {
         for manifest in &self.manifests {
             if manifest.contains(std::path::MAIN_SEPARATOR) {
@@ -58,6 +61,7 @@ impl Apply {
         Ok(manifest_path)
     }
 
+    /// Lists the manifests with their number of actions, and fails if any can't be loaded
     #[instrument(skip(self, runtime))]
     pub fn status(&self, runtime: &Runtime) -> anyhow::Result<()> {
         let contexts = &runtime.contexts;
@@ -96,299 +100,22 @@ impl Apply {
 }
 
 impl ComtryaCommand for Apply {
+    /// Loads the manifests, and runs the selected ones with their dependencies first
     #[instrument(skip(self, runtime))]
     fn execute(&self, runtime: &Runtime) -> anyhow::Result<()> {
-        let contexts = &runtime.contexts;
         let manifest_path = self.manifest_path(runtime)?;
-        let Loaded {
-            mut manifests,
-            errors,
-        } = load_all(manifest_path, contexts);
+        let graph = ManifestGraph::build(load_all(manifest_path, &runtime.contexts));
 
-        // A manifest that can't be loaded fails like one whose action fails: it and everything
-        // that depends on it are skipped. It stays in the DAG as an empty placeholder for that
-        let mut load_failed = HashSet::new();
-        for err in errors {
-            error!("{err}");
-            load_failed.insert(err.name.clone());
-            manifests.insert(
-                err.name.clone(),
-                Manifest {
-                    name: Some(err.name),
-                    ..Default::default()
-                },
-            );
+        let mut run = Run::new(
+            &graph,
+            &runtime.contexts,
+            self.dry_run,
+            self.label.as_deref(),
+        );
+        for start in graph.starts(&self.manifests) {
+            run.from(start);
         }
 
-        // Build DAG
-        let mut dag: Graph<Manifest, u32, petgraph::Directed> = Graph::new();
-
-        let manifest_root = Manifest {
-            r#where: None,
-            root_dir: None,
-            dag_index: None,
-            name: None,
-            depends: vec![],
-            actions: vec![],
-            ..Default::default()
-        };
-
-        let root_index = dag.add_node(manifest_root);
-
-        let manifests: HashMap<String, Manifest> = manifests
-            .into_iter()
-            .map(|(name, mut manifest)| {
-                let abc = dag.add_node(manifest.clone());
-
-                manifest.dag_index = Some(abc);
-                dag.add_edge(root_index, abc, 0);
-
-                (name, manifest)
-            })
-            .collect();
-
-        // Manifests that depend on one that doesn't exist
-        let mut unresolved = HashSet::new();
-
-        for (name, manifest) in manifests.iter() {
-            manifest.depends.iter().for_each(|dependency| {
-                let (local_dependency_prefix, _) = name.rsplit_once('.').unwrap_or((name, ""));
-
-                let resolved_dependency_name =
-                    dependency.replace("./", format!("{local_dependency_prefix}.").as_str());
-
-                let m1 = match manifests.get(&resolved_dependency_name) {
-                    Some(manifest) => manifest,
-                    None => {
-                        error!(
-                            message = "Unresolved dependency",
-                            manifest = name.as_str(),
-                            dependency = resolved_dependency_name.as_str()
-                        );
-                        unresolved.extend(manifest.dag_index);
-
-                        return;
-                    }
-                };
-
-                trace!(
-                    message = "Dependency Registered",
-                    from = name.as_str(),
-                    to = m1.name.as_deref().unwrap_or("cannot extract name"),
-                );
-
-                if let (Some(from), Some(to)) = (manifest.dag_index, m1.dag_index) {
-                    dag.add_edge(from, to, 0);
-                } else {
-                    error!(message = "Cannot add dependency, missing dag index");
-                }
-            });
-        }
-
-        let clone_m = self.manifests.clone();
-
-        let run_manifests = if self.manifests.is_empty() {
-            // No manifests specified on command line, so run everything
-            vec![String::from("")]
-        } else {
-            // Run subset
-            manifests
-                .keys()
-                .filter(|z| clone_m.contains(z))
-                .cloned()
-                .collect::<Vec<String>>()
-        };
-
-        let dry_run = self.dry_run;
-
-        // Manifests that failed, or depend on one that did
-        let mut failed: HashSet<_> = manifests
-            .iter()
-            .filter(|(name, _)| load_failed.contains(*name))
-            .filter_map(|(_, manifest)| manifest.dag_index)
-            .chain(unresolved)
-            .collect();
-
-        run_manifests.iter().for_each(|manifest| {
-            let start = if manifest.eq(&String::from("")) {
-                root_index
-            } else if let Some(dag_index) = manifests
-                .get(manifest)
-                .and_then(|manifest| manifest.dag_index)
-            {
-                dag_index
-            } else {
-                // FIXME: Don't panic here. Find a better way to handle this.
-                panic!("Cannot find manifest in DAG");
-            };
-
-            let mut dfs = DfsPostOrder::new(&dag, start);
-
-            while let Some(visited) = dfs.next(&dag) {
-                if dag.node_weight(visited).is_none() {
-                    info!(
-                        message = "Skipping manifest, not found in DAG",
-                        index = visited.index()
-                    );
-                }
-
-                // .unwrap() is safe here, because we just checked that the node exists
-                let m1 = dag.node_weight(visited).unwrap();
-
-                // Root manifest, nothing to do. Failed ones were reported already
-                if m1.name.is_none() || failed.contains(&visited) {
-                    continue;
-                }
-
-                let span_manifest = span!(
-                    tracing::Level::INFO,
-                    "",
-                    manifest = m1.name.as_deref().unwrap_or("Cannot extract name"),
-                )
-                .entered();
-
-                if dag
-                    .neighbors(visited)
-                    .any(|dependency| failed.contains(&dependency))
-                {
-                    warn!("Skipping manifest, because a dependency failed");
-                    failed.insert(visited);
-                    span_manifest.exit();
-                    continue;
-                }
-
-                let mut successful = true;
-
-                if let Some(label) = self.label.as_ref() {
-                    if !m1.labels.contains(label) {
-                        info!(
-                            message = "Skipping manifest, label not found",
-                            label = label.as_str()
-                        );
-                        continue;
-                    }
-                }
-
-                if let Some(where_condition) = &m1.r#where {
-                    let where_result = match evaluate_condition(where_condition, contexts) {
-                        Ok(result) => {
-                            debug!(
-                                "Result of 'where' condition '{}' -> '{}'",
-                                where_condition, result
-                            );
-
-                            result
-                        }
-                        Err(err) => {
-                            warn!("'where' condition '{}' failed: {}", where_condition, err);
-                            false
-                        }
-                    };
-
-                    if !where_result {
-                        info!("Skip manifest, because 'where' conditions were false!");
-                        span_manifest.exit();
-                        continue;
-                    }
-                }
-
-                for action in m1.actions.iter() {
-                    let span_action = span!(tracing::Level::INFO, "", %action).entered();
-
-                    let action = action.inner_ref();
-
-                    let plan = match action.plan(m1, contexts) {
-                        Ok(steps) => steps,
-                        Err(err) => {
-                            error!("Action failed to get plan: {err:#}");
-                            successful = false;
-                            if dry_run {
-                                continue;
-                            }
-                            break;
-                        }
-                    };
-
-                    let mut steps = plan
-                        .into_iter()
-                        .filter(|step| step.do_initializers_allow_us_to_run())
-                        .filter(|step| match step.atom.plan() {
-                            Ok(outcome) => outcome.should_run,
-                            Err(err) => {
-                                warn!("Skipping {}: {err:#}", step.atom);
-                                false
-                            }
-                        })
-                        .peekable();
-
-                    if steps.peek().is_none() {
-                        info!("nothing to be done to reconcile action");
-                        span_action.exit();
-                        continue;
-                    }
-
-                    for mut step in steps {
-                        if let Some(change) = step.atom.describe_change() {
-                            if dry_run {
-                                info!("{change}");
-                            } else {
-                                debug!("{change}");
-                            }
-                        }
-
-                        if dry_run {
-                            continue;
-                        }
-
-                        match step.atom.execute() {
-                            Ok(_) => (),
-                            Err(err) => {
-                                error!("{} failed: {err:#}", step.atom);
-                                successful = false;
-                                break;
-                            }
-                        }
-
-                        if !step.do_finalizers_allow_us_to_continue() {
-                            error!("Finalizers won't allow us to continue with this action");
-                            successful = false;
-                            break;
-                        }
-                    }
-                    info!("{}", action.summarize());
-                    span_action.exit();
-
-                    // Later actions usually build on earlier ones, so stop this manifest. A dry
-                    // run changes nothing, so it goes on and reports every action that can't plan
-                    if !successful && !dry_run {
-                        break;
-                    }
-                }
-
-                if !successful {
-                    error!("Failed");
-                    failed.insert(visited);
-                    span_manifest.exit();
-                    continue;
-                }
-
-                if dry_run {
-                    span_manifest.exit();
-                    continue;
-                }
-
-                info!("Completed");
-                span_manifest.exit();
-            }
-        });
-
-        if !failed.is_empty() {
-            return Err(anyhow::anyhow!(
-                "{} manifest(s) failed or were skipped because a dependency failed",
-                failed.len()
-            ));
-        }
-
-        Ok(())
+        run.finish()
     }
 }
