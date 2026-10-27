@@ -1,3 +1,5 @@
+//! `directory.create`
+
 use crate::atoms::directory::Create as DirectoryCreateAtom;
 use crate::manifests::Manifest;
 use crate::steps::Step;
@@ -6,8 +8,10 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
+/// Creates a directory and its parents
 #[derive(JsonSchema, Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct DirectoryCreate {
+    /// The directory to create
     pub path: String,
 }
 

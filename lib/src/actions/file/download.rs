@@ -1,3 +1,5 @@
+//! `file.download`
+
 use super::{change_owner, create_parent, default_chmod, from_octal, FileAction, OctalMode};
 use crate::atoms::file::Chmod;
 use crate::atoms::http::Download;
@@ -8,25 +10,32 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
+/// Downloads a file, unless it exists already and matches `sha256`, if given
 #[derive(JsonSchema, Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename = "file.download")]
 pub struct FileDownload {
+    /// The URL to download
     #[serde(alias = "source")]
     pub from: String,
 
+    /// Where to save the file
     #[serde(alias = "target")]
     pub to: String,
 
+    /// The permissions of the file, `644` by default
     #[serde(default = "default_chmod", deserialize_with = "from_octal")]
     #[schemars(with = "OctalMode")]
     pub chmod: u32,
 
+    /// Not used
     #[serde(default = "default_template")]
     pub template: bool,
 
+    /// The owner of the file, on unix. Needs `owned_by_group` too
     #[serde(rename = "owned_by_user")]
     pub owner_user: Option<String>,
 
+    /// The group of the file, on unix. Needs `owned_by_user` too
     #[serde(rename = "owned_by_group")]
     pub owner_group: Option<String>,
 
@@ -35,11 +44,13 @@ pub struct FileDownload {
     pub sha256: Option<String>,
 }
 
+/// `template` is off unless set
 fn default_template() -> bool {
     false
 }
 
 impl FileDownload {
+    /// `sha256` in lowercase, or an error if it isn't 64 hex characters
     fn sha256(&self) -> anyhow::Result<Option<String>> {
         let Some(sha256) = &self.sha256 else {
             return Ok(None);

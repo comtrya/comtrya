@@ -1,3 +1,5 @@
+//! `file.chown`. Not supported on Windows
+
 use crate::actions::Action;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -6,10 +8,14 @@ use super::FileAction;
 #[cfg(unix)]
 use crate::atoms::file::Chown;
 
+/// Changes the owner and group of a file. Needs both, otherwise nothing changes
 #[derive(JsonSchema, Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct FileChown {
+    /// The file to change
     pub path: String,
+    /// The new owner
     pub user: Option<String>,
+    /// The new group
     pub group: Option<String>,
 }
 
