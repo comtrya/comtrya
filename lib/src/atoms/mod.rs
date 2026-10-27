@@ -1,8 +1,6 @@
 //! Atoms: the smallest changes comtrya makes, like writing a file or running a command. Actions
 //! plan them, wrapped in steps
 
-#![warn(missing_docs, clippy::missing_docs_in_private_items)]
-
 /// Running programs
 pub mod command;
 /// Creating and removing directories

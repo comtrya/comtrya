@@ -1,7 +1,5 @@
 //! Steps: the atoms an action plans, with the checks around them
 
-#![warn(missing_docs, clippy::missing_docs_in_private_items)]
-
 use crate::atoms::Atom;
 use crate::steps::finalizers::FlowControl;
 use tracing::error;

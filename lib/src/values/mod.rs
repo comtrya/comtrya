@@ -17,9 +17,13 @@ use std::{
 /// A context value. Booleans are stored as the numbers 1 and 0
 #[derive(Clone, PartialEq, PartialOrd)]
 pub enum Value {
+    /// No value, like `null` in YAML
     Null,
+    /// Text
     String(String),
+    /// A number
     Number(Number),
+    /// Several values
     List(Vec<Value>),
 }
 

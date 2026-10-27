@@ -1,7 +1,5 @@
 //! `Comtrya.yaml`: the configuration of a run
 
-#![warn(missing_docs, clippy::missing_docs_in_private_items)]
-
 use crate::actions::PackageProviders;
 use crate::contexts::privilege::Privilege;
 use serde::{Deserialize, Serialize};

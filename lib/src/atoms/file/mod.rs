@@ -1,7 +1,5 @@
 //! Writing, linking, and changing files
 
-#![warn(missing_docs, clippy::missing_docs_in_private_items)]
-
 /// Permissions
 mod chmod;
 /// Owner and group, on unix

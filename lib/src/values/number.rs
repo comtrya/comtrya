@@ -8,14 +8,18 @@ use std::fmt::{Debug, Display};
 /// A number from a context, a manifest or a variable include
 #[derive(Clone, PartialEq, PartialOrd)]
 pub struct Number {
+    /// The number, in the type it was read with
     inner: NumberVariant,
 }
 
 /// The type a number was read with
 #[derive(Clone, Copy)]
 enum NumberVariant {
+    /// A positive integer
     Unsigned(u64),
+    /// An integer read or given as `i64`, usually a negative one
     Signed(i64),
+    /// A number with a fraction
     Float(f64),
 }
 

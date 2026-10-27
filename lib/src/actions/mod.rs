@@ -1,3 +1,6 @@
+//! Actions: what manifests ask for, like `file.copy` or `package.install`. Each action plans the
+//! steps that bring the system there
+
 mod binary;
 mod command;
 mod directory;
@@ -37,28 +40,36 @@ use user::add::UserAdd;
 
 use self::user::add_group::UserAddGroup;
 
+/// An action with its `where` condition and its variants, see [`ConditionalVariantAction::select`]
 #[derive(JsonSchema, Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub struct ConditionalVariantAction<T> {
+    /// The action's own fields
     #[serde(flatten)]
     pub action: T,
 
+    /// `where`: the action only runs when it's true
     #[serde(rename = "where")]
     pub condition: Option<String>,
 
+    /// Other versions of the action, for other conditions
     #[serde(default)]
     pub variants: Vec<Variant<T>>,
 }
 
+/// Another version of an action, used instead of it when its `where` is true
 #[derive(JsonSchema, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Variant<T> {
+    /// The fields of this version
     #[serde(flatten)]
     pub action: T,
 
+    /// `where`: when this version applies. A variant without one never applies
     #[serde(rename = "where")]
     pub condition: Option<String>,
 }
 
 impl<T> Variant<T> {
+    /// A variant of `action` for `condition`
     pub fn new(action: T, condition: Option<String>) -> Self {
         Self { action, condition }
     }
@@ -113,39 +124,51 @@ impl<T> ConditionalVariantAction<T> {
     }
 }
 
+/// Every action, by its name in manifests
 #[derive(JsonSchema, Clone, Debug, Serialize, Deserialize)]
 #[serde(tag = "action")]
 pub enum Actions {
+    /// `command.run`, or `cmd.run`
     #[serde(rename = "command.run", alias = "cmd.run")]
     CommandRun(ConditionalVariantAction<RunCommand>),
 
+    /// `directory.copy`, or `dir.copy`
     #[serde(rename = "directory.copy", alias = "dir.copy")]
     DirectoryCopy(ConditionalVariantAction<DirectoryCopy>),
 
+    /// `directory.create`, or `dir.create`
     #[serde(rename = "directory.create", alias = "dir.create")]
     DirectoryCreate(ConditionalVariantAction<DirectoryCreate>),
 
+    /// `file.copy`
     #[serde(rename = "file.copy")]
     FileCopy(ConditionalVariantAction<FileCopy>),
 
+    /// `file.chown`
     #[serde(rename = "file.chown")]
     FileChown(ConditionalVariantAction<FileChown>),
 
+    /// `file.download`
     #[serde(rename = "file.download")]
     FileDownload(ConditionalVariantAction<FileDownload>),
 
+    /// `file.link`
     #[serde(rename = "file.link")]
     FileLink(ConditionalVariantAction<FileLink>),
 
+    /// `file.remove`
     #[serde(rename = "file.remove")]
     FileRemove(ConditionalVariantAction<FileRemove>),
 
+    /// `file.unarchive`
     #[serde(rename = "file.unarchive")]
     FileUnarchive(ConditionalVariantAction<FileUnarchive>),
 
+    /// `directory.remove`, or `dir.remove`
     #[serde(rename = "directory.remove", alias = "dir.remove")]
     DirectoryRemove(ConditionalVariantAction<DirectoryRemove>),
 
+    /// `binary.github`, or `binary.gh`, `bin.github`, `bin.gh`
     #[serde(
         rename = "binary.github",
         alias = "binary.gh",
@@ -154,29 +177,37 @@ pub enum Actions {
     )]
     BinaryGitHub(ConditionalVariantAction<BinaryGitHub>),
 
+    /// `git.clone`
     #[serde(rename = "git.clone")]
     GitClone(ConditionalVariantAction<GitClone>),
 
+    /// `group.add`
     #[serde(rename = "group.add")]
     GroupAdd(ConditionalVariantAction<GroupAdd>),
 
+    /// `macos.default`
     #[serde(rename = "macos.default")]
     MacOSDefault(ConditionalVariantAction<MacOSDefault>),
 
+    /// `package.install`, or `package.installed`
     #[serde(rename = "package.install", alias = "package.installed")]
     PackageInstall(ConditionalVariantAction<PackageInstall>),
 
+    /// `package.repository`, or `package.repo`
     #[serde(rename = "package.repository", alias = "package.repo")]
     PackageRepository(ConditionalVariantAction<PackageRepository>),
 
+    /// `user.add`
     #[serde(rename = "user.add")]
     UserAdd(ConditionalVariantAction<UserAdd>),
 
+    /// `user.group`
     #[serde(rename = "user.group")]
     UserAddGroup(ConditionalVariantAction<UserAddGroup>),
 }
 
 impl Actions {
+    /// The action, whichever it is
     pub fn inner_ref(&self) -> &dyn Action {
         match self {
             Actions::BinaryGitHub(a) => a,
@@ -254,12 +285,14 @@ impl Display for Actions {
     }
 }
 
+/// Not used
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ActionResult {
     /// Output / response
     pub message: String,
 }
 
+/// Not used
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ActionError {
     /// Error message
@@ -274,11 +307,14 @@ impl<E: std::error::Error> From<E> for ActionError {
     }
 }
 
+/// What every action can do
 pub trait Action {
+    /// One line about what the action does, for the output
     fn summarize(&self) -> String {
         warn!("need to define action summarize");
         "not found action summarize".to_string()
     }
+    /// The steps that bring the system to what the action asks for. Doesn't change the system
     fn plan(&self, manifest: &Manifest, context: &Contexts) -> anyhow::Result<Vec<Step>>;
 }
 

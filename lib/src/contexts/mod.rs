@@ -1,8 +1,6 @@
 //! Contexts: the facts about the system and the configuration, as templates and `where`
 //! conditions see them
 
-#![warn(missing_docs, clippy::missing_docs_in_private_items)]
-
 use rhai::{Engine, Scope};
 use std::collections::BTreeMap;
 use std::sync::LazyLock;

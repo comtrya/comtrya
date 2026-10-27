@@ -1,7 +1,5 @@
 //! Manifests: finding, loading and naming them
 
-#![warn(missing_docs, clippy::missing_docs_in_private_items)]
-
 /// Reading manifest files
 mod load;
 pub use load::{load, load_all, LoadError, LoadErrorKind, Loaded};
