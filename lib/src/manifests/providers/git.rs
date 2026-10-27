@@ -1,3 +1,6 @@
+//! Manifests in git repositories. A repository is cloned into the cache once, and not updated
+//! later
+
 use super::{ManifestProvider, ManifestProviderError};
 
 use gix;
@@ -6,6 +9,7 @@ use gix::progress::Discard;
 
 use tracing::info;
 
+/// Clones `https://`, `git://` and `ssh://` URLs
 #[derive(Debug)]
 pub struct GitManifestProvider;
 
@@ -15,10 +19,14 @@ pub fn git_cache_dir() -> Option<std::path::PathBuf> {
     dirs::cache_dir().map(|dir| dir.join("comtrya").join("manifests").join("git"))
 }
 
+/// A git location: `<url>[#<branch>][:<path>]`
 #[derive(Debug, PartialEq)]
 pub(crate) struct GitConfig {
+    /// The URL of the repository
     repository: String,
+    /// The branch. Parsed, but not used yet
     branch: Option<String>,
+    /// The directory in the repository. Parsed, but not used yet
     path: Option<String>,
 }
 
@@ -51,6 +59,7 @@ impl ManifestProvider for GitManifestProvider {
 }
 
 impl GitManifestProvider {
+    /// Clones the repository into `cache_path`
     fn fetch_and_clone(
         &self,
         cache_path: &std::path::Path,
@@ -90,6 +99,7 @@ impl GitManifestProvider {
         Ok(())
     }
 
+    /// Splits a location into URL, branch and path
     fn parse_config_url(&self, uri: &str) -> GitConfig {
         let (repository, parts) = match uri.split_once('#') {
             Some(parts) => parts,
@@ -122,6 +132,7 @@ impl GitManifestProvider {
         }
     }
 
+    /// The name of the repository's directory in the cache
     fn clean_git_url(&self, uri: &str) -> String {
         uri.to_string()
             .replace("https", "")

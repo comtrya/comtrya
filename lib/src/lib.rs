@@ -1,3 +1,7 @@
+//! The library behind comtrya: it loads manifests, gathers the facts about the system, and plans
+//! the steps that bring the system to the state the manifests describe. The `comtrya` binary runs
+//! them
+
 pub mod actions;
 pub mod atoms;
 pub mod config;

@@ -1,3 +1,5 @@
+//! `dns+txt://<host>`: variables from DNS TXT records
+
 use std::collections::HashMap;
 
 use anyhow::Result;
@@ -8,6 +10,8 @@ use hickory_resolver::Resolver;
 use reqwest::Url;
 use tokio::runtime::Runtime;
 
+/// Reads the TXT records of the host as `key=value`, using Google's DNS. Records without `=`
+/// are left out
 pub fn txt_record_values(url: &Url, contexts: &mut HashMap<String, String>) -> Result<()> {
     let resolver = Resolver::builder_with_config(
         ResolverConfig::udp_and_tcp(&GOOGLE),

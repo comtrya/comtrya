@@ -1,3 +1,5 @@
+//! Reads manifest files: renders their templates, checks their version, and parses them
+
 use super::{Manifest, MANIFEST_VERSION};
 use crate::{
     contexts::{evaluate_condition, to_tera, Contexts},
@@ -20,7 +22,9 @@ use tracing::{debug, error, span};
 /// Manifests that loaded, and the ones that didn't
 #[derive(Debug, Default)]
 pub struct Loaded {
+    /// The manifests by name
     pub manifests: HashMap<String, Manifest>,
+    /// The files that failed
     pub errors: Vec<LoadError>,
 }
 
@@ -30,31 +34,45 @@ pub struct Loaded {
 pub struct LoadError {
     /// The manifest's name, as other manifests refer to it in `depends`
     pub name: String,
+    /// The file
     pub path: PathBuf,
+    /// What went wrong
     pub kind: LoadErrorKind,
 }
 
+/// Why a manifest file can't be loaded
 #[derive(Debug, ThisError)]
 pub enum LoadErrorKind {
+    /// The file can't be read
     #[error("the file can't be read: {0}")]
     Read(#[source] std::io::Error),
 
+    /// A template in the file fails
     #[error("templates can't be rendered: {0}")]
     Render(String),
 
+    /// The file isn't a valid manifest
     #[error("{0}")]
     Parse(String),
 
+    /// The file needs a newer comtrya
     #[error("it uses manifest version {found}, but this comtrya only supports version {supported}. Update comtrya")]
-    NewerVersion { found: u32, supported: u32 },
+    NewerVersion {
+        /// The `version` of the file
+        found: u32,
+        /// The newest version this comtrya supports
+        supported: u32,
+    },
 }
 
 /// The part of a manifest that is readable before its templates are rendered
 #[derive(Deserialize)]
 struct Unrendered {
+    /// The manifest format
     #[serde(default)]
     version: Option<u32>,
 
+    /// The condition, to skip a manifest whose templates fail where it doesn't apply
     #[serde(default)]
     r#where: Option<String>,
 }
@@ -134,6 +152,7 @@ pub fn load_all(manifest_path: PathBuf, contexts: &Contexts) -> Loaded {
     loaded
 }
 
+/// Reads, renders and parses one manifest file
 fn load_file(path: &Path, contexts: &Contexts) -> Result<Manifest, LoadErrorKind> {
     let template = std::fs::read_to_string(path).map_err(LoadErrorKind::Read)?;
 
@@ -183,6 +202,7 @@ fn error_chain(err: &dyn Error) -> String {
     message
 }
 
+/// Parses YAML or TOML, by the file extension
 fn parse<T: DeserializeOwned>(contents: &str, path: &Path) -> anyhow::Result<T> {
     match path.extension().and_then(OsStr::to_str) {
         Some("yaml") | Some("yml") => Ok(serde_yaml_ng::from_str(contents)?),
@@ -191,6 +211,7 @@ fn parse<T: DeserializeOwned>(contents: &str, path: &Path) -> anyhow::Result<T> 
     }
 }
 
+/// Fails for a manifest format newer than this comtrya knows
 fn check_version(version: Option<u32>) -> Result<(), LoadErrorKind> {
     match version {
         Some(found) if found > MANIFEST_VERSION => Err(LoadErrorKind::NewerVersion {

@@ -1,5 +1,10 @@
+//! Functions for templates in manifests and files
+
+#![warn(missing_docs, clippy::missing_docs_in_private_items)]
+
 use tera::{Function, Result, Tera, Value};
 
+/// `read_file_contents(path=…)`: the contents of a file, without leading and trailing whitespace
 pub struct ReadFileContents;
 
 impl Function for ReadFileContents {
@@ -22,6 +27,7 @@ impl Function for ReadFileContents {
     }
 }
 
+/// Makes comtrya's functions available to templates
 pub fn register_functions(tera: &mut Tera) {
     tera.register_function("read_file_contents", ReadFileContents);
 }

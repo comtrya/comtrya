@@ -1,3 +1,5 @@
+//! The facts that become contexts
+
 use super::{os::OsFacts, privilege::Privilege, user::UserFacts, variable_include, Contexts};
 use crate::{actions::PackageProviders, config::Config, values::Value};
 use std::collections::BTreeMap;
@@ -7,19 +9,25 @@ use tracing::{instrument, trace, warn};
 /// Manifests see it as contexts, see [`Facts::to_contexts`]
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Facts {
+    /// The user running comtrya
     pub user: UserFacts,
+    /// The operating system
     pub os: OsFacts,
+    /// The environment comtrya runs in
     pub env: BTreeMap<String, String>,
     /// `variables` in `Comtrya.yaml`
     pub variables: BTreeMap<String, String>,
     /// Read from the sources in `include_variables` in `Comtrya.yaml`
     pub include_variables: BTreeMap<String, String>,
+    /// The program that runs privileged commands
     pub privilege: Privilege,
     /// `package_provider` in `Comtrya.yaml`, else the default for this OS
     pub package_provider: Option<PackageProviders>,
 }
 
 impl Facts {
+    /// Looks at the system and the configuration. A source in `include_variables` that fails is
+    /// logged, and its variables are left out
     #[instrument(skip(config))]
     pub fn gather(config: &Config) -> Self {
         let include_variables = variable_include::gather(config).unwrap_or_else(|err| {

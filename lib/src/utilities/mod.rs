@@ -1,3 +1,7 @@
+//! Small helpers that several actions use
+
+#![warn(missing_docs, clippy::missing_docs_in_private_items)]
+
 use crate::contexts::{privilege::Privilege, Contexts};
 
 use sha2::{Digest, Sha256};
@@ -8,6 +12,7 @@ pub fn sha256(data: impl AsRef<[u8]>) -> String {
     format!("{:x}", Sha256::digest(data))
 }
 
+/// The full path of a program in `PATH`
 pub fn get_binary_path(binary: &str) -> Result<String, anyhow::Error> {
     let binary = which(binary)?.to_string_lossy().to_string();
 

@@ -1,3 +1,5 @@
+//! `op://<vault>/<item>`: variables from a 1Password item
+
 use std::{collections::HashMap, io::ErrorKind};
 
 use anyhow::{anyhow, bail, Context, Result};
@@ -8,14 +10,18 @@ use crate::runner::{CommandSpec, Runner};
 /// The part of `op item get --format json` that holds the values
 #[derive(Deserialize)]
 struct Item {
+    /// The fields of the item
     #[serde(default)]
     fields: Vec<Field>,
 }
 
+/// A field of a 1Password item
 #[derive(Deserialize)]
 struct Field {
+    /// The name of the field, which becomes the variable name
     #[serde(default)]
     label: String,
+    /// The secret
     #[serde(default)]
     value: Option<String>,
 }
@@ -59,6 +65,7 @@ pub fn item_values(
     Ok(())
 }
 
+/// The vault, item and account of an `op://` include
 fn parse(include: &str) -> Result<(&str, &str, Option<&str>)> {
     let invalid =
         || anyhow!("{include} is not of the form op://<vault>/<item>[?account=<account>]");

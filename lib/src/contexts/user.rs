@@ -1,3 +1,5 @@
+//! The `user` context
+
 use crate::values::Value;
 use dirs::{config_dir, data_dir, data_local_dir, document_dir, home_dir};
 use std::collections::BTreeMap;
@@ -6,17 +8,26 @@ use std::path::PathBuf;
 /// The user running comtrya, the `user` context
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct UserFacts {
+    /// The uid. 0 on Windows
     pub id: u32,
+    /// The real name
     pub name: String,
+    /// The login name
     pub username: String,
+    /// The home directory
     pub home_dir: Option<PathBuf>,
+    /// Where configuration goes, like `~/.config`
     pub config_dir: Option<PathBuf>,
+    /// Where data goes, like `~/.local/share`
     pub data_dir: Option<PathBuf>,
+    /// Where data that stays on this machine goes
     pub data_local_dir: Option<PathBuf>,
+    /// The documents directory
     pub document_dir: Option<PathBuf>,
 }
 
 impl UserFacts {
+    /// Looks at the user running comtrya
     pub fn gather() -> Self {
         Self {
             id: uid(),
@@ -30,6 +41,7 @@ impl UserFacts {
         }
     }
 
+    /// The `user` context. Missing directories are `unknown`
     pub fn to_context(&self) -> BTreeMap<String, Value> {
         BTreeMap::from([
             (String::from("id"), self.id.to_string().into()),
@@ -44,6 +56,7 @@ impl UserFacts {
     }
 }
 
+/// A directory as a value for templates, or `unknown`
 fn dir(path: &Option<PathBuf>) -> Value {
     path.as_ref()
         .map(|path| template_path(&path.display().to_string()).into())
@@ -61,11 +74,13 @@ fn template_path(path: &str) -> String {
     }
 }
 
+/// The uid of the user running comtrya
 #[cfg(unix)]
 fn uid() -> u32 {
     uzers::get_current_uid()
 }
 
+/// Windows has no uids
 #[cfg(not(unix))]
 fn uid() -> u32 {
     0
