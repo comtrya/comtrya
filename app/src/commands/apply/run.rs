@@ -13,7 +13,9 @@ use tracing::{debug, error, info, span, warn};
 
 /// One `comtrya apply`: walks the graph and remembers which manifests failed
 pub(super) struct Run<'a> {
+    /// The manifests and their dependencies
     graph: &'a ManifestGraph,
+    /// The contexts for `where` conditions and plans
     contexts: &'a Contexts,
     /// Only plan and show what would change
     dry_run: bool,
@@ -24,6 +26,7 @@ pub(super) struct Run<'a> {
 }
 
 impl<'a> Run<'a> {
+    /// A run that hasn't visited any manifest yet
     pub(super) fn new(
         graph: &'a ManifestGraph,
         contexts: &'a Contexts,

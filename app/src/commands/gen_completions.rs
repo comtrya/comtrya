@@ -1,3 +1,5 @@
+//! `comtrya gen-completions`: shell completions
+
 use std::io;
 
 use super::ComtryaCommand;
@@ -8,6 +10,7 @@ use clap_complete::{generate, Generator, Shell};
 
 use crate::GlobalArgs;
 
+/// The arguments of `comtrya gen-completions`
 #[derive(Parser, Debug)]
 #[command(arg_required_else_help = true)]
 pub(crate) struct GenCompletions {
@@ -16,6 +19,7 @@ pub(crate) struct GenCompletions {
     shell: Shell,
 }
 
+/// Prints the completions of `cmd` for one shell
 fn print_completions<G: Generator>(gen: G, cmd: &mut Command) {
     generate(gen, cmd, cmd.get_name().to_string(), &mut io::stdout());
 }

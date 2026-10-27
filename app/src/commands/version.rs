@@ -1,8 +1,11 @@
+//! `comtrya version`
+
 use super::ComtryaCommand;
 use crate::Runtime;
 
 use clap::Parser;
 
+/// `comtrya version` has no arguments
 #[derive(Parser, Debug)]
 #[command()]
 pub(crate) struct Version {}
