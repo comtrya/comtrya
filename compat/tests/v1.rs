@@ -107,12 +107,28 @@ fn known_differences() -> Vec<(&'static str, &'static str)> {
     vec![]
 }
 
+/// Drops `null` fields, so a new optional field doesn't count as a difference.
+/// A field whose value turns into `null` still shows up as missing
+fn without_nulls(value: Value) -> Value {
+    match value {
+        Value::Object(fields) => Value::Object(
+            fields
+                .into_iter()
+                .filter(|(_, value)| !value.is_null())
+                .map(|(key, value)| (key, without_nulls(value)))
+                .collect(),
+        ),
+        Value::Array(items) => Value::Array(items.into_iter().map(without_nulls).collect()),
+        value => value,
+    }
+}
+
 fn current(dir: &Path, facts: &Value) -> BTreeMap<String, Value> {
     let contexts: comtrya_lib::contexts::Contexts =
         serde_json::from_value(facts.clone()).expect("facts are valid contexts");
     comtrya_lib::manifests::load(dir.to_path_buf(), &contexts)
         .into_iter()
-        .map(|(name, manifest)| (name, serde_json::to_value(manifest).unwrap()))
+        .map(|(name, manifest)| (name, without_nulls(serde_json::to_value(manifest).unwrap())))
         .collect()
 }
 
@@ -121,7 +137,7 @@ fn released(dir: &Path, facts: &Value) -> BTreeMap<String, Value> {
         serde_json::from_value(facts.clone()).expect("facts are valid contexts");
     released::manifests::load(dir.to_path_buf(), &contexts)
         .into_iter()
-        .map(|(name, manifest)| (name, serde_json::to_value(manifest).unwrap()))
+        .map(|(name, manifest)| (name, without_nulls(serde_json::to_value(manifest).unwrap())))
         .collect()
 }
 
