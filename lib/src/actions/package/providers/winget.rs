@@ -1,3 +1,5 @@
+//! winget on Windows
+
 use super::PackageProvider;
 use crate::actions::package::repository::PackageRepository;
 use crate::contexts::Contexts;
@@ -8,8 +10,10 @@ use std::sync::Arc;
 use tracing::warn;
 use which::which;
 
+/// winget. Installs one package per step, from the `winget` source
 #[derive(Clone)]
 pub struct Winget {
+    /// Runs `winget list` to find the installed packages
     runner: Arc<dyn Runner>,
 }
 
@@ -114,6 +118,7 @@ fn list_args(package: &str) -> Vec<String> {
     .to_vec()
 }
 
+/// `winget install` for one package, without any prompts
 fn install_args(extra_args: &[String], package: &str) -> Vec<String> {
     [
         vec![

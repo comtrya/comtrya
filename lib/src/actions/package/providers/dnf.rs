@@ -1,3 +1,5 @@
+//! dnf on Fedora, Red Hat and CentOS
+
 use super::PackageProvider;
 
 use crate::actions::package::{repository::PackageRepository, PackageVariant};
@@ -9,6 +11,7 @@ use serde::{Deserialize, Serialize};
 use tracing::warn;
 use which::which;
 
+/// dnf, as `dnf` or `yum`. Always runs `dnf install`, which skips installed packages
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Dnf {}
 

@@ -25,12 +25,14 @@ struct Helper {
     install_args: &'static [&'static str],
 }
 
+/// yay installs the packages without asking
 const YAY: Helper = Helper {
     command: "yay",
     name: "Yay",
     install_args: &["-S", "--noconfirm"],
 };
 
+/// paru installs the packages without asking, and keeps sudo alive while it builds
 const PARU: Helper = Helper {
     command: "paru",
     name: "Paru",
@@ -49,19 +51,24 @@ const PARU: Helper = Helper {
 /// Packages from the official repositories and the AUR, installed with yay or paru
 #[derive(Clone)]
 pub struct AurHelper {
+    /// Which helper this is
     helper: &'static Helper,
+    /// Runs `pacman -Q` to find the installed packages
     runner: Arc<dyn Runner>,
 }
 
 impl AurHelper {
+    /// yay, built from the AUR if it isn't installed
     pub fn yay() -> Self {
         Self::new(&YAY)
     }
 
+    /// paru, built from the AUR if it isn't installed
     pub fn paru() -> Self {
         Self::new(&PARU)
     }
 
+    /// The helper, with the commands running on this system
     fn new(helper: &'static Helper) -> Self {
         Self {
             helper,
@@ -174,6 +181,7 @@ fn refuse_root(provider: &str, contexts: &Contexts) -> anyhow::Result<()> {
     Ok(())
 }
 
+/// The arguments as owned strings, for `Exec`
 fn strings(args: &[&str]) -> Vec<String> {
     args.iter().map(|arg| arg.to_string()).collect()
 }

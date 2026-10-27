@@ -1,3 +1,6 @@
+//! The package managers behind `package.install` and `package.repository`, and how the one
+//! to use is chosen
+
 mod aptitude;
 use self::aptitude::Aptitude;
 mod aur;
@@ -30,49 +33,64 @@ use schemars::JsonSchema;
 use serde::{de::IntoDeserializer, Deserialize, Serialize};
 use tracing::{debug, trace};
 
+/// A package manager, by the name used for `provider` in manifests and `Comtrya.yaml`
 #[derive(JsonSchema, Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum PackageProviders {
+    /// apt on Debian and Ubuntu
     #[serde(rename = "aptitude", alias = "apt", alias = "apt-get")]
     Aptitude,
 
+    /// pkg on FreeBSD and DragonFly
     #[serde(rename = "bsdpkg")]
     BsdPkg,
 
+    /// dnf on Fedora and Red Hat
     #[serde(rename = "dnf", alias = "yum")]
     Dnf,
 
+    /// Homebrew on macOS
     #[serde(rename = "homebrew", alias = "brew")]
     Homebrew,
 
+    /// MacPorts on macOS
     #[serde(rename = "macports", alias = "port")]
     Macports,
 
+    /// pkgin on NetBSD
     #[serde(rename = "pkgin")]
     Pkgin,
 
+    /// Snaps on Linux
     #[serde(rename = "snapcraft", alias = "snap")]
     Snapcraft,
 
+    /// pacman on Arch, official repositories only
     #[serde(rename = "pacman")]
     Pacman,
 
+    /// yay on Arch, with the AUR
     #[serde(rename = "yay")]
     Yay,
 
+    /// paru on Arch, with the AUR
     #[serde(rename = "paru")]
     Paru,
 
+    /// winget on Windows
     #[serde(rename = "winget")]
     Winget,
 
+    /// xbps on Void Linux
     #[serde(rename = "xbps")]
     Xbps,
 
+    /// zypper on openSUSE
     #[serde(rename = "zypper")]
     Zypper,
 }
 
 impl PackageProviders {
+    /// The implementation of this package manager
     pub fn get_provider(self) -> Box<dyn PackageProvider> {
         match self {
             PackageProviders::Aptitude => Box::new(Aptitude {}),
@@ -196,11 +214,13 @@ impl PackageProviders {
     }
 }
 
+/// Whether comtrya runs as root, by its uid
 #[cfg(unix)]
 fn running_as_root() -> bool {
     uzers::get_current_uid() == 0
 }
 
+/// Windows has no root
 #[cfg(not(unix))]
 fn running_as_root() -> bool {
     false
@@ -223,17 +243,27 @@ fn missing(package: &PackageVariant, installed: impl Fn(&str) -> bool) -> Vec<St
         .collect()
 }
 
+/// A package manager: what `package.install` and `package.repository` plan their steps with
 pub trait PackageProvider {
+    /// The name shown in the output
     fn name(&self) -> &str;
+    /// Whether the package manager is installed
     fn available(&self) -> bool;
+    /// Steps that install the package manager itself. Empty if comtrya can't install it, then
+    /// the action fails when it isn't `available`
     fn bootstrap(&self, contexts: &Contexts) -> Vec<Step>;
+    /// Whether the repository is set up already, so nothing needs to be done
     fn has_repository(&self, package: &PackageRepository) -> bool;
+    /// Steps that add the repository and its key
     fn add_repository(
         &self,
         package: &PackageRepository,
         contexts: &Contexts,
     ) -> anyhow::Result<Vec<Step>>;
+    /// The requested packages that aren't installed. Providers that can't tell return all of
+    /// them
     fn query(&self, package: &PackageVariant) -> anyhow::Result<Vec<String>>;
+    /// Steps that install the packages that are missing
     fn install(&self, package: &PackageVariant, contexts: &Contexts) -> anyhow::Result<Vec<Step>>;
 }
 

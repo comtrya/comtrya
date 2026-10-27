@@ -1,3 +1,5 @@
+//! zypper on openSUSE and SUSE
+
 use super::PackageProvider;
 use crate::actions::package::{repository::PackageRepository, PackageVariant};
 use crate::atoms::command::Exec;
@@ -8,6 +10,7 @@ use serde::{Deserialize, Serialize};
 use tracing::warn;
 use which::which;
 
+/// zypper. Always runs `zypper install`, which skips installed packages
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Zypper {}
 

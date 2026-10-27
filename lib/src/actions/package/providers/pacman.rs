@@ -1,3 +1,5 @@
+//! pacman on Arch: packages from the official repositories, also as root
+
 use super::PackageProvider;
 use crate::actions::package::{repository::PackageRepository, PackageVariant};
 use crate::atoms::command::Exec;
@@ -13,6 +15,7 @@ use which::which;
 /// Packages from the official Arch repositories. AUR packages need `yay` or `paru`
 #[derive(Clone)]
 pub struct Pacman {
+    /// Runs `pacman -Q` to find the installed packages
     runner: Arc<dyn Runner>,
 }
 
@@ -86,6 +89,7 @@ pub(super) fn missing(
     Ok(super::missing(package, |p| installed.contains(p)))
 }
 
+/// `pacman -S --needed` with the privilege provider
 fn install_step(package: &PackageVariant, packages: Vec<String>, contexts: &Contexts) -> Step {
     let privilege_provider = utilities::get_privilege_provider(contexts);
 

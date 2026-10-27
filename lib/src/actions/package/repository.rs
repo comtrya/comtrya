@@ -1,3 +1,5 @@
+//! `package.repository`: adds a package repository, and its signing key, to a package manager
+
 use super::providers::PackageProviders;
 use crate::actions::Action;
 use crate::contexts::Contexts;
@@ -9,22 +11,33 @@ use serde::{Deserialize, Serialize};
 use std::ops::Deref;
 use tracing::span;
 
+/// Adds a package repository, unless the provider finds it already
 #[derive(JsonSchema, Clone, Debug, Default, Serialize, Deserialize)]
 pub struct PackageRepository {
+    /// The repository. For apt `<uri> <suite> [<component>...]` or a `ppa:`, for Homebrew a
+    /// tap, for dnf the URL of a `.repo` file
     #[serde(alias = "url")]
     pub name: String,
 
+    /// The key the repository is signed with
     pub key: Option<RepositoryKey>,
 
+    /// The package manager to use. Without it, `package_provider` from `Comtrya.yaml` or the
+    /// default of the OS is used
     #[serde(default)]
     pub provider: Option<PackageProviders>,
 }
 
+/// The signing key of a repository
 #[derive(JsonSchema, Clone, Debug, Default, Serialize, Deserialize)]
 pub struct RepositoryKey {
+    /// Where to download the key from
     pub url: String,
+    /// The file name of the key for apt, without `.asc`. Defaults to a hash of `url`
     pub name: Option<String>,
+    /// Not used yet
     pub key: Option<String>,
+    /// Not used yet
     pub fingerprint: Option<String>,
 }
 

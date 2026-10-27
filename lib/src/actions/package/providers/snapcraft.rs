@@ -1,3 +1,5 @@
+//! Snaps on Linux. comtrya installs snapd with apt when it's missing
+
 use super::PackageProvider;
 use crate::actions::package::repository::PackageRepository;
 use crate::contexts::Contexts;
@@ -8,6 +10,7 @@ use std::default::Default;
 use tracing::warn;
 use which::which;
 
+/// snap, as `snapcraft` or `snap`. Always runs `snap install`
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Snapcraft {}
 

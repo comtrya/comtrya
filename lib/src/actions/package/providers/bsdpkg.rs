@@ -1,3 +1,5 @@
+//! pkg on FreeBSD and DragonFly. The only provider besides apt that installs local package files
+
 use super::PackageProvider;
 use crate::actions::package::repository::PackageRepository;
 use crate::contexts::Contexts;
@@ -9,10 +11,12 @@ use serde::{Deserialize, Serialize};
 use tracing::{instrument, warn};
 use which::which;
 
+/// pkg. Always runs `pkg install`, which skips installed packages
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct BsdPkg {}
 
 impl BsdPkg {
+    /// Keeps pkg from asking questions
     fn env(&self) -> Vec<(String, String)> {
         vec![(String::from("ASSUME_ALWAYS_YES"), String::from("true"))]
     }

@@ -1,3 +1,5 @@
+//! xbps on Void Linux
+
 use super::PackageProvider;
 use crate::actions::package::repository::PackageRepository;
 use crate::actions::package::PackageVariant;
@@ -12,8 +14,10 @@ use std::sync::Arc;
 use tracing::warn;
 use which::which;
 
+/// xbps
 #[derive(Clone)]
 pub struct Xbps {
+    /// Runs `xbps-query -l` to find the installed packages
     runner: Arc<dyn Runner>,
 }
 

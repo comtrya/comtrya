@@ -1,3 +1,5 @@
+//! pkgin on NetBSD, and on other systems with pkgsrc
+
 use super::PackageProvider;
 use crate::actions::package::repository::PackageRepository;
 use crate::contexts::Contexts;
@@ -9,6 +11,8 @@ use serde::{Deserialize, Serialize};
 use tracing::{instrument, warn};
 use which::which;
 
+/// pkgin. Tries the install with `pkgin -n` first, and stops when pkgin would remove packages
+/// for it
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Pkgin {}
 
