@@ -206,13 +206,13 @@ fn where_condition_skips_manifest_before_rendering_templates() {
     // Where the manifest applies, the broken template is still reported
     f.manifest("skipped.yaml", &windows_only("os.name != \"no-such-os\""));
 
-    let output = f.run(&["apply"]).get_output().clone();
+    let output = f.run_failing(&["apply"]).get_output().clone();
     let log = String::from_utf8_lossy(&output.stdout) + String::from_utf8_lossy(&output.stderr);
 
     assert!(log.contains("COMTRYA_UNSET_VARIABLE"), "{log}");
 }
 
-/// A manifest for a newer format is refused instead of misread
+/// A manifest for a newer format is refused instead of misread, and fails the run
 #[test]
 fn manifests_with_a_newer_version_are_skipped() {
     let f = Fixture::new();
@@ -225,7 +225,7 @@ fn manifests_with_a_newer_version_are_skipped() {
         &format!("version: 1\nactions:\n{}", f.create("current")),
     );
 
-    let output = f.run(&["apply"]).get_output().clone();
+    let output = f.run_failing(&["apply"]).get_output().clone();
     let log = String::from_utf8_lossy(&output.stdout) + String::from_utf8_lossy(&output.stderr);
 
     assert!(f.created("current"));
@@ -284,10 +284,65 @@ fn broken_manifests_dont_stop_the_others() {
         )
         .manifest("valid.yaml", &format!("actions:\n{}", f.create("valid")));
 
-    f.run(&["apply"]);
+    let output = f.run_failing(&["apply"]).get_output().clone();
+    let log = String::from_utf8_lossy(&output.stdout) + String::from_utf8_lossy(&output.stderr);
 
     assert!(f.created("valid"));
     assert!(!f.created("never"));
+    assert!(log.contains("Manifest 'invalid'"), "{log}");
+    assert!(log.contains("Manifest 'unknown-variable'"), "{log}");
+}
+
+/// A manifest that depends on one that can't be loaded must not run without it
+#[test]
+fn manifests_that_depend_on_a_broken_one_are_skipped() {
+    let f = Fixture::new();
+    f.manifest("broken.yaml", "actions:\n  - action: no.such.action\n")
+        .manifest(
+            "dependent.yaml",
+            &format!("depends: [broken]\nactions:\n{}", f.create("dependent")),
+        )
+        .manifest(
+            "missing.yaml",
+            &format!(
+                "depends: [no-such-manifest]\nactions:\n{}",
+                f.create("missing")
+            ),
+        )
+        .manifest(
+            "unrelated.yaml",
+            &format!("actions:\n{}", f.create("unrelated")),
+        );
+
+    let output = f.run_failing(&["apply"]).get_output().clone();
+    let log = String::from_utf8_lossy(&output.stdout) + String::from_utf8_lossy(&output.stderr);
+
+    assert!(f.created("unrelated"));
+    assert!(!f.created("dependent"));
+    assert!(!f.created("missing"));
+    assert!(log.contains("no-such-manifest"), "{log}");
+}
+
+/// Selecting a broken manifest with `-m` fails too, instead of doing nothing
+#[test]
+fn selecting_a_broken_manifest_fails() {
+    let f = Fixture::new();
+    f.manifest("broken.yaml", "actions:\n  - action: no.such.action\n");
+
+    f.run_failing(&["apply", "-m", "broken"]);
+}
+
+/// `--dry-run` is how CI checks manifests, so broken ones must fail it
+#[test]
+fn dry_run_fails_on_broken_manifests() {
+    let f = Fixture::new();
+    f.manifest("broken.yaml", "actions:\n  - action: no.such.action\n")
+        .manifest("valid.yaml", &format!("actions:\n{}", f.create("valid")));
+
+    f.run_failing(&["apply", "--dry-run"]);
+    f.run_failing(&["status"]);
+
+    assert!(!f.created("valid"));
 }
 
 /// YAML and TOML files in `files` directories are files for actions, never manifests (#575)

@@ -25,7 +25,7 @@ args = [ "hi" ]
 
 ## Manifest version
 
-A manifest can state the format it is written for with a top-level `version` key. Only version `1` exists so far, and leaving the key out means the same. Comtrya skips manifests with a newer version than it supports and reports an error, instead of misreading them.
+A manifest can state the format it is written for with a top-level `version` key. Only version `1` exists so far, and leaving the key out means the same. Comtrya refuses manifests with a newer version than it supports instead of misreading them. They fail like any other manifest that can't be loaded, see [When something fails](./dependencies.md#when-something-fails).
 
 ```yaml
 version: 1
