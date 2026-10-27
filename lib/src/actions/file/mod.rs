@@ -6,12 +6,14 @@ pub mod remove;
 pub mod unarchive;
 
 use crate::actions::Action;
+use crate::atoms::directory::Create as DirCreate;
 use crate::manifests::Manifest;
+use crate::steps::Step;
 use anyhow::{anyhow, Result};
 use normpath::PathExt;
 use schemars::JsonSchema;
 use serde::{de::Error, Deserialize, Deserializer};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 pub trait FileAction: Action {
     fn resolve(&self, manifest: &Manifest, path: &str) -> anyhow::Result<PathBuf> {
@@ -56,6 +58,34 @@ pub trait FileAction: Action {
     }
 }
 
+/// Creates the directory that `path` will be written to
+fn create_parent(path: &Path) -> Result<Step> {
+    let parent = path
+        .parent()
+        .ok_or_else(|| anyhow!("Failed to get parent directory of path: {}", path.display()))?;
+
+    Ok(Step::new(DirCreate {
+        path: parent.into(),
+    }))
+}
+
+/// Gives `path` to `user` and `group`, if both are set. Ownership is ignored on Windows
+#[cfg(unix)]
+fn change_owner(path: &Path, user: &Option<String>, group: &Option<String>) -> Option<Step> {
+    use crate::atoms::file::Chown;
+
+    Some(Step::new(Chown {
+        path: path.into(),
+        owner: user.clone()?,
+        group: group.clone()?,
+    }))
+}
+
+#[cfg(not(unix))]
+fn change_owner(_: &Path, _: &Option<String>, _: &Option<String>) -> Option<Step> {
+    None
+}
+
 /// File permissions in octal notation, written as a number (`644`) or a string (`"0644"`)
 #[derive(JsonSchema, Deserialize)]
 #[serde(untagged)]
@@ -79,4 +109,21 @@ where
 
 fn default_chmod() -> u32 {
     0o644
+}
+
+#[cfg(all(test, unix))]
+mod tests {
+    use super::change_owner;
+    use std::path::Path;
+
+    #[test]
+    fn the_owner_needs_a_user_and_a_group() {
+        let user = Some(String::from("ferris"));
+        let group = Some(String::from("crabs"));
+        let path = Path::new("a");
+
+        assert!(change_owner(path, &user, &group).is_some());
+        assert!(change_owner(path, &user, &None).is_none());
+        assert!(change_owner(path, &None, &group).is_none());
+    }
 }

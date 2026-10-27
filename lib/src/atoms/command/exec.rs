@@ -3,7 +3,8 @@ use crate::atoms::Outcome;
 use super::super::Atom;
 use crate::utilities;
 use anyhow::{anyhow, Context};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+use std::process::{Command, Output, Stdio};
 use tracing::debug;
 
 #[derive(Default)]
@@ -73,6 +74,47 @@ impl Exec {
         }
     }
 
+    /// The process to start, with the environment and working directory of this command
+    fn process(&self, command: &str, arguments: &[String]) -> Command {
+        let mut process = Command::new(command);
+        process.envs(self.environment.clone()).args(arguments);
+        // Without one, the command runs where comtrya runs
+        if let Some(working_dir) = &self.working_dir {
+            process.current_dir(working_dir);
+        }
+        process
+    }
+
+    /// Keeps stderr, and writes stdout to `stdout_file` or keeps it for `output_string`
+    fn succeeded(&mut self, output: Output) -> anyhow::Result<()> {
+        self.status.stderr = String::from_utf8(output.stderr)?;
+
+        if let Some(stdout_file) = &self.stdout_file {
+            return write_stdout(stdout_file, &output.stdout);
+        }
+
+        self.status.stdout = String::from_utf8(output.stdout)?;
+        debug!("stdout: {}", &self.status.stdout);
+
+        Ok(())
+    }
+
+    /// Keeps the output, and fails with the exit code and stderr
+    fn failed(&mut self, output: Output) -> anyhow::Result<()> {
+        let code = output.status.code().unwrap_or(1);
+        self.status.stdout = String::from_utf8(output.stdout)?;
+        self.status.stderr = String::from_utf8(output.stderr)?;
+
+        debug!("exit code: {}", &self.status.code);
+        debug!("stdout: {}", &self.status.stdout);
+        debug!("stderr: {}", &self.status.stderr);
+
+        match self.status.stderr.trim() {
+            "" => Err(anyhow!("Command failed with exit code: {code}")),
+            stderr => Err(anyhow!("Command failed with exit code: {code}: {stderr}")),
+        }
+    }
+
     fn elevate(&mut self) -> anyhow::Result<()> {
         tracing::info!(
             "Privilege elevation required to run `{} {}`. Validating privileges ...",
@@ -82,16 +124,16 @@ impl Exec {
 
         let privilege_provider = utilities::get_binary_path(&self.privilege_provider)?;
 
-        match std::process::Command::new(privilege_provider)
-            .stdin(std::process::Stdio::inherit())
-            .stdout(std::process::Stdio::inherit())
-            .stderr(std::process::Stdio::inherit())
+        match Command::new(privilege_provider)
+            .stdin(Stdio::inherit())
+            .stdout(Stdio::inherit())
+            .stderr(Stdio::inherit())
             .arg("--validate")
             .output()
         {
-            Ok(std::process::Output { status, .. }) if status.success() => Ok(()),
+            Ok(Output { status, .. }) if status.success() => Ok(()),
 
-            Ok(std::process::Output { stderr, .. }) => Err(anyhow!(
+            Ok(Output { stderr, .. }) => Err(anyhow!(
                 "Command requires privilege escalation, but couldn't elevate privileges: {}",
                 String::from_utf8(stderr)?
             )),
@@ -101,6 +143,19 @@ impl Exec {
             )),
         }
     }
+}
+
+/// Writes the output of a command to `path`, creating its directory if needed
+fn write_stdout(path: &Path, stdout: &[u8]) -> anyhow::Result<()> {
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    std::fs::write(path, stdout)
+        .with_context(|| format!("Failed to write stdout to {}", path.display()))?;
+
+    debug!("stdout written to {}", path.display());
+
+    Ok(())
 }
 
 impl std::fmt::Display for Exec {
@@ -139,68 +194,15 @@ impl Atom for Exec {
         // If we require root, we need to use sudo with inherited IO
         // to ensure the user can respond if prompted for a password
         if command.eq("doas") || command.eq("sudo") || command.eq("run0") {
-            match self.elevate() {
-                Ok(_) => (),
-                Err(err) => {
-                    return Err(anyhow!(err));
-                }
-            }
+            self.elevate()?;
         }
 
-        let mut process = std::process::Command::new(&command);
-        process.envs(self.environment.clone()).args(&arguments);
-        // Without one, the command runs where comtrya runs
-        if let Some(working_dir) = &self.working_dir {
-            process.current_dir(working_dir);
-        }
+        let output = self.process(&command, &arguments).output()?;
 
-        match process.output() {
-            Ok(output) if output.status.success() => {
-                self.status.stderr = String::from_utf8(output.stderr)?;
-
-                if let Some(stdout_file) = &self.stdout_file {
-                    if let Some(parent) = stdout_file.parent() {
-                        std::fs::create_dir_all(parent)?;
-                    }
-                    std::fs::write(stdout_file, output.stdout).with_context(|| {
-                        format!("Failed to write stdout to {}", stdout_file.display())
-                    })?;
-
-                    debug!("stdout written to {}", stdout_file.display());
-
-                    return Ok(());
-                }
-
-                self.status.stdout = String::from_utf8(output.stdout)?;
-
-                debug!("stdout: {}", &self.status.stdout);
-
-                Ok(())
-            }
-
-            Ok(output) => {
-                self.status.stdout = String::from_utf8(output.stdout)?;
-                self.status.stderr = String::from_utf8(output.stderr)?;
-
-                debug!("exit code: {}", &self.status.code);
-                debug!("stdout: {}", &self.status.stdout);
-                debug!("stderr: {}", &self.status.stderr);
-
-                let stderr = self.status.stderr.trim();
-                if stderr.is_empty() {
-                    Err(anyhow!(
-                        "Command failed with exit code: {}",
-                        output.status.code().unwrap_or(1)
-                    ))
-                } else {
-                    Err(anyhow!(
-                        "Command failed with exit code: {}: {stderr}",
-                        output.status.code().unwrap_or(1)
-                    ))
-                }
-            }
-
-            Err(err) => Err(anyhow!(err)),
+        if output.status.success() {
+            self.succeeded(output)
+        } else {
+            self.failed(output)
         }
     }
 
