@@ -49,21 +49,17 @@ impl PackageProvider for Zypper {
     fn install(&self, package: &PackageVariant, contexts: &Contexts) -> anyhow::Result<Vec<Step>> {
         let privilege_provider = utilities::get_privilege_provider(contexts);
 
-        Ok(vec![Step {
-            atom: Box::new(Exec {
-                command: String::from("zypper"),
-                arguments: vec![String::from("install"), String::from("-y")]
-                    .into_iter()
-                    .chain(package.extra_args.clone())
-                    .chain(package.packages())
-                    .collect(),
-                privileged: true,
-                privilege_provider: privilege_provider.clone(),
-                ..Default::default()
-            }),
-            initializers: vec![],
-            finalizers: vec![],
-        }])
+        Ok(vec![Step::new(Exec {
+            command: String::from("zypper"),
+            arguments: vec![String::from("install"), String::from("-y")]
+                .into_iter()
+                .chain(package.extra_args.clone())
+                .chain(package.packages())
+                .collect(),
+            privileged: true,
+            privilege_provider: privilege_provider.clone(),
+            ..Default::default()
+        })])
     }
 }
 

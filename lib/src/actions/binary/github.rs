@@ -148,23 +148,15 @@ impl Action for BinaryGitHub {
         };
 
         Ok(vec![
-            Step {
-                atom: Box::new(Download {
-                    url: asset.url,
-                    to: PathBuf::from(format!("{}/{}", self.directory, self.name)),
-                    sha256: None,
-                }),
-                initializers: vec![],
-                finalizers: vec![],
-            },
-            Step {
-                atom: Box::new(Chmod {
-                    path: PathBuf::from(format!("{}/{}", self.directory, self.name)),
-                    mode: 0o755,
-                }),
-                initializers: vec![],
-                finalizers: vec![],
-            },
+            Step::new(Download {
+                url: asset.url,
+                to: PathBuf::from(format!("{}/{}", self.directory, self.name)),
+                sha256: None,
+            }),
+            Step::new(Chmod {
+                path: PathBuf::from(format!("{}/{}", self.directory, self.name)),
+                mode: 0o755,
+            }),
         ])
     }
 }

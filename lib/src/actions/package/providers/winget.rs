@@ -97,14 +97,12 @@ impl PackageProvider for Winget {
 
         Ok(need_installed
             .iter()
-            .map::<Step, _>(|p| Step {
-                atom: Box::new(Exec {
+            .map::<Step, _>(|p| {
+                Step::new(Exec {
                     command: String::from("winget"),
                     arguments: install_args(&package.extra_args, p),
                     ..Default::default()
-                }),
-                initializers: vec![],
-                finalizers: vec![],
+                })
             })
             .collect())
     }

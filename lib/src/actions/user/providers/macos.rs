@@ -47,17 +47,13 @@ impl UserProvider for MacOSUserProvider {
 
         let privilege_provider = utilities::get_privilege_provider(contexts);
 
-        let mut steps: Vec<Step> = vec![Step {
-            atom: Box::new(Exec {
-                command: cli.display().to_string(),
-                arguments: vec![].into_iter().chain(args.clone()).collect(),
-                privileged: true,
-                privilege_provider: privilege_provider.clone(),
-                ..Default::default()
-            }),
-            initializers: vec![],
-            finalizers: vec![],
-        }];
+        let mut steps: Vec<Step> = vec![Step::new(Exec {
+            command: cli.display().to_string(),
+            arguments: vec![].into_iter().chain(args.clone()).collect(),
+            privileged: true,
+            privilege_provider: privilege_provider.clone(),
+            ..Default::default()
+        })];
 
         if !user.group.is_empty() {
             let user_group = UserAddGroup {
@@ -108,17 +104,13 @@ impl UserProvider for MacOSUserProvider {
                 user.username.clone(),
             ];
 
-            steps.push(Step {
-                atom: Box::new(Exec {
-                    command: cli.display().to_string().clone(),
-                    arguments: args.into_iter().collect(),
-                    privileged: true,
-                    privilege_provider: privilege_provider.clone(),
-                    ..Default::default()
-                }),
-                initializers: vec![],
-                finalizers: vec![],
-            });
+            steps.push(Step::new(Exec {
+                command: cli.display().to_string().clone(),
+                arguments: args.into_iter().collect(),
+                privileged: true,
+                privilege_provider: privilege_provider.clone(),
+                ..Default::default()
+            }));
         }
 
         Ok(steps)

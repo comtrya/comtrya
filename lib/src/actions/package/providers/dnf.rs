@@ -30,21 +30,17 @@ impl PackageProvider for Dnf {
     fn bootstrap(&self, contexts: &Contexts) -> Vec<Step> {
         let privilege_provider = utilities::get_privilege_provider(contexts);
 
-        vec![Step {
-            atom: Box::new(Exec {
-                command: String::from("yum"),
-                arguments: vec![
-                    String::from("install"),
-                    String::from("--assumeyes"),
-                    String::from("dnf"),
-                ],
-                privileged: true,
-                privilege_provider: privilege_provider.clone(),
-                ..Default::default()
-            }),
-            initializers: vec![],
-            finalizers: vec![],
-        }]
+        vec![Step::new(Exec {
+            command: String::from("yum"),
+            arguments: vec![
+                String::from("install"),
+                String::from("--assumeyes"),
+                String::from("dnf"),
+            ],
+            privileged: true,
+            privilege_provider: privilege_provider.clone(),
+            ..Default::default()
+        })]
     }
 
     fn has_repository(&self, _: &PackageRepository) -> bool {
@@ -61,51 +57,39 @@ impl PackageProvider for Dnf {
         let privilege_provider = utilities::get_privilege_provider(contexts);
 
         if let Some(key) = repository.key.clone() {
-            steps.extend(vec![Step {
-                atom: Box::new(Exec {
-                    command: String::from("rpm"),
-                    arguments: vec![String::from("--import"), key.url],
-                    privileged: true,
-                    privilege_provider: privilege_provider.clone(),
-                    ..Default::default()
-                }),
-                initializers: vec![],
-                finalizers: vec![],
-            }]);
+            steps.extend(vec![Step::new(Exec {
+                command: String::from("rpm"),
+                arguments: vec![String::from("--import"), key.url],
+                privileged: true,
+                privilege_provider: privilege_provider.clone(),
+                ..Default::default()
+            })]);
         }
 
         steps.extend(vec![
-            Step {
-                atom: Box::new(Exec {
-                    command: String::from("dnf"),
-                    arguments: vec![
-                        String::from("config-manager"),
-                        String::from("--assumeyes"),
-                        String::from("--add-repo"),
-                        repository.name.clone(),
-                    ],
-                    privileged: true,
-                    privilege_provider: privilege_provider.clone(),
-                    ..Default::default()
-                }),
-                initializers: vec![],
-                finalizers: vec![],
-            },
-            Step {
-                atom: Box::new(Exec {
-                    command: String::from("dnf"),
-                    arguments: vec![
-                        String::from("update"),
-                        String::from("--assumeyes"),
-                        String::from("--refresh"),
-                    ],
-                    privileged: true,
-                    privilege_provider: privilege_provider.clone(),
-                    ..Default::default()
-                }),
-                initializers: vec![],
-                finalizers: vec![],
-            },
+            Step::new(Exec {
+                command: String::from("dnf"),
+                arguments: vec![
+                    String::from("config-manager"),
+                    String::from("--assumeyes"),
+                    String::from("--add-repo"),
+                    repository.name.clone(),
+                ],
+                privileged: true,
+                privilege_provider: privilege_provider.clone(),
+                ..Default::default()
+            }),
+            Step::new(Exec {
+                command: String::from("dnf"),
+                arguments: vec![
+                    String::from("update"),
+                    String::from("--assumeyes"),
+                    String::from("--refresh"),
+                ],
+                privileged: true,
+                privilege_provider: privilege_provider.clone(),
+                ..Default::default()
+            }),
         ]);
 
         Ok(steps)
@@ -118,25 +102,21 @@ impl PackageProvider for Dnf {
     fn install(&self, package: &PackageVariant, contexts: &Contexts) -> anyhow::Result<Vec<Step>> {
         let privilege_provider = utilities::get_privilege_provider(contexts);
 
-        Ok(vec![Step {
-            atom: Box::new(Exec {
-                command: String::from("dnf"),
-                arguments: vec![
-                    String::from("install"),
-                    String::from("--assumeyes"),
-                    String::from("--quiet"),
-                ]
-                .into_iter()
-                .chain(package.extra_args.clone())
-                .chain(self.query(package)?)
-                .collect(),
-                privileged: true,
-                privilege_provider: privilege_provider.clone(),
-                ..Default::default()
-            }),
-            initializers: vec![],
-            finalizers: vec![],
-        }])
+        Ok(vec![Step::new(Exec {
+            command: String::from("dnf"),
+            arguments: vec![
+                String::from("install"),
+                String::from("--assumeyes"),
+                String::from("--quiet"),
+            ]
+            .into_iter()
+            .chain(package.extra_args.clone())
+            .chain(self.query(package)?)
+            .collect(),
+            privileged: true,
+            privilege_provider: privilege_provider.clone(),
+            ..Default::default()
+        })])
     }
 }
 

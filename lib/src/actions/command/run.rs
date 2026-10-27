@@ -63,21 +63,17 @@ impl Action for RunCommand {
 
         let privilege_provider = utilities::get_privilege_provider(contexts);
 
-        Ok(vec![Step {
-            atom: Box::new(Exec {
-                command: self.command.clone(),
-                arguments: self.args.clone(),
-                privileged: self.privileged,
-                working_dir: Some(self.dir.clone()),
-                privilege_provider: privilege_provider.clone(),
-                stdout_file: self.stdout_file(),
-                // Only for the command, comtrya's own environment stays as it is
-                environment: self.env.clone().into_iter().collect(),
-                ..Default::default()
-            }),
-            initializers: vec![],
-            finalizers: vec![],
-        }])
+        Ok(vec![Step::new(Exec {
+            command: self.command.clone(),
+            arguments: self.args.clone(),
+            privileged: self.privileged,
+            working_dir: Some(self.dir.clone()),
+            privilege_provider: privilege_provider.clone(),
+            stdout_file: self.stdout_file(),
+            // Only for the command, comtrya's own environment stays as it is
+            environment: self.env.clone().into_iter().collect(),
+            ..Default::default()
+        })])
     }
 }
 

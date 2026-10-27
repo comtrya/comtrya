@@ -30,11 +30,7 @@ impl Action for FileRemove {
 
         let path = PathBuf::from(&self.target);
 
-        let steps = vec![Step {
-            atom: Box::new(RemoveFile { target: path }),
-            initializers: vec![],
-            finalizers: vec![],
-        }];
+        let steps = vec![Step::new(RemoveFile { target: path })];
 
         Ok(steps)
     }

@@ -18,20 +18,16 @@ pub struct MacOSDefault {
 
 impl Action for MacOSDefault {
     fn plan(&self, _: &Manifest, _: &Contexts) -> anyhow::Result<Vec<Step>> {
-        Ok(vec![Step {
-            atom: Box::new(Exec {
-                command: String::from("defaults"),
-                arguments: vec![
-                    String::from("write"),
-                    self.domain.clone(),
-                    self.key.clone(),
-                    format!("-{}", self.kind),
-                    self.value.clone(),
-                ],
-                ..Default::default()
-            }),
-            initializers: vec![],
-            finalizers: vec![],
-        }])
+        Ok(vec![Step::new(Exec {
+            command: String::from("defaults"),
+            arguments: vec![
+                String::from("write"),
+                self.domain.clone(),
+                self.key.clone(),
+                format!("-{}", self.kind),
+                self.value.clone(),
+            ],
+            ..Default::default()
+        })])
     }
 }

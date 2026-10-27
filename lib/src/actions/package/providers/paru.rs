@@ -44,46 +44,34 @@ impl PackageProvider for Paru {
         let privilege_provider = utilities::get_privilege_provider(contexts);
 
         vec![
-            Step {
-                atom: Box::new(Exec {
-                    command: String::from("pacman"),
-                    arguments: vec![
-                        String::from("-S"),
-                        String::from("--noconfirm"),
-                        String::from("--needed"),
-                        String::from("base-devel"),
-                        String::from("git"),
-                    ],
-                    privileged: true,
-                    privilege_provider: privilege_provider.clone(),
-                    ..Default::default()
-                }),
-                initializers: vec![],
-                finalizers: vec![],
-            },
-            Step {
-                atom: Box::new(Exec {
-                    command: String::from("git"),
-                    arguments: vec![
-                        String::from("clone"),
-                        String::from("https://aur.archlinux.org/paru.git"),
-                        String::from("/tmp/paru"),
-                    ],
-                    ..Default::default()
-                }),
-                initializers: vec![],
-                finalizers: vec![],
-            },
-            Step {
-                atom: Box::new(Exec {
-                    command: String::from("makepkg"),
-                    arguments: vec![String::from("-si"), String::from("--noconfirm")],
-                    working_dir: Some(String::from("/tmp/paru")),
-                    ..Default::default()
-                }),
-                initializers: vec![],
-                finalizers: vec![],
-            },
+            Step::new(Exec {
+                command: String::from("pacman"),
+                arguments: vec![
+                    String::from("-S"),
+                    String::from("--noconfirm"),
+                    String::from("--needed"),
+                    String::from("base-devel"),
+                    String::from("git"),
+                ],
+                privileged: true,
+                privilege_provider: privilege_provider.clone(),
+                ..Default::default()
+            }),
+            Step::new(Exec {
+                command: String::from("git"),
+                arguments: vec![
+                    String::from("clone"),
+                    String::from("https://aur.archlinux.org/paru.git"),
+                    String::from("/tmp/paru"),
+                ],
+                ..Default::default()
+            }),
+            Step::new(Exec {
+                command: String::from("makepkg"),
+                arguments: vec![String::from("-si"), String::from("--noconfirm")],
+                working_dir: Some(String::from("/tmp/paru")),
+                ..Default::default()
+            }),
         ]
     }
 
@@ -133,29 +121,25 @@ impl PackageProvider for Paru {
         // paru runs as the user and calls sudo itself
         super::refuse_root("paru", contexts)?;
 
-        Ok(vec![Step {
-            atom: Box::new(Exec {
-                command: String::from("paru"),
-                arguments: [
-                    vec![
-                        String::from("-Sq"),
-                        String::from("--batchinstall"),
-                        String::from("--needed"),
-                        String::from("--noconfirm"),
-                        String::from("--noprogressbar"),
-                        String::from("--skipreview"),
-                        String::from("--sudoloop"),
-                        String::from("--useask"),
-                    ],
-                    package.extra_args.clone(),
-                    package.packages(),
-                ]
-                .concat(),
-                ..Default::default()
-            }),
-            initializers: vec![],
-            finalizers: vec![],
-        }])
+        Ok(vec![Step::new(Exec {
+            command: String::from("paru"),
+            arguments: [
+                vec![
+                    String::from("-Sq"),
+                    String::from("--batchinstall"),
+                    String::from("--needed"),
+                    String::from("--noconfirm"),
+                    String::from("--noprogressbar"),
+                    String::from("--skipreview"),
+                    String::from("--sudoloop"),
+                    String::from("--useask"),
+                ],
+                package.extra_args.clone(),
+                package.packages(),
+            ]
+            .concat(),
+            ..Default::default()
+        })])
     }
 }
 

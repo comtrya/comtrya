@@ -26,17 +26,13 @@ impl GroupProvider for LinuxGroupProvider {
 
         let privilege_provider = utilities::get_privilege_provider(contexts);
 
-        vec![Step {
-            atom: Box::new(Exec {
-                command: cli.display().to_string(),
-                arguments: vec![group.group_name.clone()],
-                privileged: true,
-                privilege_provider: privilege_provider.clone(),
-                ..Default::default()
-            }),
-            initializers: vec![],
-            finalizers: vec![],
-        }]
+        vec![Step::new(Exec {
+            command: cli.display().to_string(),
+            arguments: vec![group.group_name.clone()],
+            privileged: true,
+            privilege_provider: privilege_provider.clone(),
+            ..Default::default()
+        })]
     }
 }
 

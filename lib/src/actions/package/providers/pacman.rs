@@ -93,26 +93,22 @@ impl PackageProvider for Pacman {
 fn install_step(package: &PackageVariant, packages: Vec<String>, contexts: &Contexts) -> Step {
     let privilege_provider = utilities::get_privilege_provider(contexts);
 
-    Step {
-        atom: Box::new(Exec {
-            command: String::from("pacman"),
-            arguments: [
-                vec![
-                    String::from("-S"),
-                    String::from("--needed"),
-                    String::from("--noconfirm"),
-                ],
-                package.extra_args.clone(),
-                packages,
-            ]
-            .concat(),
-            privileged: true,
-            privilege_provider,
-            ..Default::default()
-        }),
-        initializers: vec![],
-        finalizers: vec![],
-    }
+    Step::new(Exec {
+        command: String::from("pacman"),
+        arguments: [
+            vec![
+                String::from("-S"),
+                String::from("--needed"),
+                String::from("--noconfirm"),
+            ],
+            package.extra_args.clone(),
+            packages,
+        ]
+        .concat(),
+        privileged: true,
+        privilege_provider,
+        ..Default::default()
+    })
 }
 
 #[cfg(test)]

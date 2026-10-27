@@ -59,20 +59,16 @@ impl PackageProvider for Macports {
 
         let privilege_provider = utilities::get_privilege_provider(contexts);
 
-        Ok(vec![Step {
-            atom: Box::new(Exec {
-                command: cli.display().to_string(),
-                arguments: vec![String::from("install")]
-                    .into_iter()
-                    .chain(package.extra_args.clone())
-                    .chain(package.packages())
-                    .collect(),
-                privileged: true,
-                privilege_provider: privilege_provider.clone(),
-                ..Default::default()
-            }),
-            initializers: vec![],
-            finalizers: vec![],
-        }])
+        Ok(vec![Step::new(Exec {
+            command: cli.display().to_string(),
+            arguments: vec![String::from("install")]
+                .into_iter()
+                .chain(package.extra_args.clone())
+                .chain(package.packages())
+                .collect(),
+            privileged: true,
+            privilege_provider: privilege_provider.clone(),
+            ..Default::default()
+        })])
     }
 }

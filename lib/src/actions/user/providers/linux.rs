@@ -49,17 +49,13 @@ impl UserProvider for LinuxUserProvider {
 
         let privilege_provider = utilities::get_privilege_provider(contexts);
 
-        let mut steps: Vec<Step> = vec![Step {
-            atom: Box::new(Exec {
-                command: cli.display().to_string(),
-                arguments: vec![].into_iter().chain(args.clone()).collect(),
-                privileged: true,
-                privilege_provider: privilege_provider.clone(),
-                ..Default::default()
-            }),
-            initializers: vec![],
-            finalizers: vec![],
-        }];
+        let mut steps: Vec<Step> = vec![Step::new(Exec {
+            command: cli.display().to_string(),
+            arguments: vec![].into_iter().chain(args.clone()).collect(),
+            privileged: true,
+            privilege_provider: privilege_provider.clone(),
+            ..Default::default()
+        })];
 
         if !user.group.is_empty() {
             let user_groups = UserAddGroup {
@@ -99,22 +95,18 @@ impl UserProvider for LinuxUserProvider {
         let mut steps: Vec<Step> = vec![];
 
         for group in user.group.iter() {
-            steps.push(Step {
-                atom: Box::new(Exec {
-                    command: cli.display().to_string(),
-                    arguments: vec![
-                        String::from("-a"),
-                        String::from("-G"),
-                        String::from(group),
-                        user.username.clone(),
-                    ],
-                    privileged: true,
-                    privilege_provider: privilege_provider.clone(),
-                    ..Default::default()
-                }),
-                initializers: vec![],
-                finalizers: vec![],
-            });
+            steps.push(Step::new(Exec {
+                command: cli.display().to_string(),
+                arguments: vec![
+                    String::from("-a"),
+                    String::from("-G"),
+                    String::from(group),
+                    user.username.clone(),
+                ],
+                privileged: true,
+                privilege_provider: privilege_provider.clone(),
+                ..Default::default()
+            }));
         }
 
         Ok(steps)

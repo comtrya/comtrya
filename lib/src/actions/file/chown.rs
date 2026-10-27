@@ -38,17 +38,11 @@ impl Action for FileChown {
         _: &crate::manifests::Manifest,
         _: &crate::contexts::Contexts,
     ) -> anyhow::Result<Vec<crate::steps::Step>> {
-        let steps = vec![crate::steps::Step {
-            atom: Box::new(Chown {
-                path: self.path.clone().parse()?,
-                owner: self.user.clone().unwrap_or("".to_string()),
-                group: self.group.clone().unwrap_or("".to_string()),
-            }),
-            initializers: vec![],
-            finalizers: vec![],
-        }];
-
-        Ok(steps)
+        Ok(vec![crate::steps::Step::new(Chown {
+            path: self.path.clone().parse()?,
+            owner: self.user.clone().unwrap_or_default(),
+            group: self.group.clone().unwrap_or_default(),
+        })])
     }
 }
 
