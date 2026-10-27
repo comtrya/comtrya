@@ -1,42 +1,53 @@
-use crate::contexts::{Context, ContextProvider};
-use anyhow::Result;
+use crate::values::Value;
 use gethostname::gethostname;
-use os_info;
+use std::collections::BTreeMap;
 
-pub struct OSContextProvider {}
+/// The operating system, the `os` context
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct OsFacts {
+    pub hostname: String,
+    /// `unix` or `windows`
+    pub family: String,
+    /// `linux`, `macos`, `windows`, …
+    pub name: String,
+    pub distribution: String,
+    pub codename: Option<String>,
+    pub bitness: String,
+    pub version: String,
+    pub edition: Option<String>,
+}
 
-impl ContextProvider for OSContextProvider {
-    fn get_prefix(&self) -> String {
-        String::from("os")
-    }
-
-    fn get_contexts(&self) -> Result<Vec<super::Context>> {
+impl OsFacts {
+    pub fn gather() -> Self {
         let osinfo = os_info::get();
 
-        Ok(vec![
-            Context::KeyValueContext(String::from("hostname"), gethostname().into()),
-            Context::KeyValueContext(String::from("family"), std::env::consts::FAMILY.into()),
-            Context::KeyValueContext(String::from("name"), std::env::consts::OS.into()),
-            Context::KeyValueContext(
+        Self {
+            hostname: gethostname().to_str().unwrap_or("unknown").to_string(),
+            family: std::env::consts::FAMILY.to_string(),
+            name: std::env::consts::OS.to_string(),
+            distribution: osinfo.os_type().to_string(),
+            codename: osinfo.codename().map(String::from),
+            bitness: osinfo.bitness().to_string(),
+            version: osinfo.version().to_string(),
+            edition: osinfo.edition().map(String::from),
+        }
+    }
+
+    pub fn to_context(&self) -> BTreeMap<String, Value> {
+        let or_unknown = |value: &Option<String>| value.as_deref().unwrap_or("unknown").into();
+
+        BTreeMap::from([
+            (String::from("hostname"), self.hostname.clone().into()),
+            (String::from("family"), self.family.clone().into()),
+            (String::from("name"), self.name.clone().into()),
+            (
                 String::from("distribution"),
-                format!("{}", osinfo.os_type()).into(),
+                self.distribution.clone().into(),
             ),
-            Context::KeyValueContext(
-                String::from("codename"),
-                String::from(osinfo.codename().unwrap_or("unknown")).into(),
-            ),
-            Context::KeyValueContext(
-                String::from("bitness"),
-                format!("{}", osinfo.bitness()).into(),
-            ),
-            Context::KeyValueContext(
-                String::from("version"),
-                format!("{}", osinfo.version()).into(),
-            ),
-            Context::KeyValueContext(
-                String::from("edition"),
-                String::from(osinfo.edition().unwrap_or("unknown")).into(),
-            ),
+            (String::from("codename"), or_unknown(&self.codename)),
+            (String::from("bitness"), self.bitness.clone().into()),
+            (String::from("version"), self.version.clone().into()),
+            (String::from("edition"), or_unknown(&self.edition)),
         ])
     }
 }
@@ -46,81 +57,27 @@ mod test {
     use super::*;
 
     #[test]
-    fn it_can_prefix() {
-        let oscontext = OSContextProvider {};
-        let prefix = oscontext.get_prefix();
-        assert_eq!(String::from("os"), prefix);
+    fn family_and_name_come_from_the_target() {
+        let os = OsFacts::gather();
+
+        #[cfg(target_os = "macos")]
+        assert_eq!(("unix", "macos"), (os.family.as_str(), os.name.as_str()));
+        #[cfg(target_os = "linux")]
+        assert_eq!(("unix", "linux"), (os.family.as_str(), os.name.as_str()));
+        #[cfg(target_os = "freebsd")]
+        assert_eq!(("unix", "freebsd"), (os.family.as_str(), os.name.as_str()));
+        #[cfg(windows)]
+        assert_eq!(
+            ("windows", "windows"),
+            (os.family.as_str(), os.name.as_str())
+        );
     }
 
     #[test]
-    #[cfg(target_os = "macos")]
-    fn it_can_macos() {
-        let oscontext = OSContextProvider {};
-        let keyvaluepairs = oscontext.get_contexts().unwrap();
+    fn missing_values_are_unknown_in_the_context() {
+        let context = OsFacts::default().to_context();
 
-        keyvaluepairs.iter().for_each(|context| match context {
-            Context::KeyValueContext(k, v) => match k.as_ref() {
-                "family" => assert_eq!(v.to_string(), String::from("unix")),
-                "name" => assert_eq!(v.to_string(), String::from("macos")),
-                _ => (),
-            },
-            Context::ListContext(_, _) => {
-                assert_eq!(true, false);
-            }
-        })
-    }
-
-    #[test]
-    #[cfg(windows)]
-    fn it_can_windows() {
-        let oscontext = OSContextProvider {};
-        let keyvaluepairs = oscontext.get_contexts().unwrap();
-
-        keyvaluepairs.iter().for_each(|context| match context {
-            Context::KeyValueContext(k, v) => match k.as_ref() {
-                "family" => assert_eq!(v.to_string(), String::from("windows")),
-                "name" => assert_eq!(v.to_string(), String::from("windows")),
-                _ => (),
-            },
-            Context::ListContext(_, _) => {
-                assert_eq!(true, false);
-            }
-        })
-    }
-
-    #[test]
-    #[cfg(target_os = "linux")]
-    fn it_can_linux() {
-        let oscontext = OSContextProvider {};
-        let keyvaluepairs = oscontext.get_contexts().unwrap();
-
-        keyvaluepairs.iter().for_each(|context| match context {
-            Context::KeyValueContext(k, v) => match k.as_ref() {
-                "family" => assert_eq!(v.to_string(), String::from("unix")),
-                "name" => assert_eq!(v.to_string(), String::from("linux")),
-                _ => (),
-            },
-            Context::ListContext(_, _) => {
-                assert_eq!(true, false);
-            }
-        })
-    }
-
-    #[test]
-    #[cfg(target_os = "freebsd")]
-    fn it_can_linux() {
-        let oscontext = OSContextProvider {};
-        let keyvaluepairs = oscontext.get_contexts().unwrap();
-
-        keyvaluepairs.iter().for_each(|context| match context {
-            Context::KeyValueContext(k, v) => match k.as_ref() {
-                "family" => assert_eq!(v.to_string(), String::from("unix")),
-                "name" => assert_eq!(v.to_string(), String::from("freebsd")),
-                _ => (),
-            },
-            Context::ListContext(_, _) => {
-                assert_eq!(true, false);
-            }
-        })
+        assert_eq!("unknown", context["codename"].to_string());
+        assert_eq!("unknown", context["edition"].to_string());
     }
 }
