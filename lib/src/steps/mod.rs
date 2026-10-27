@@ -1,15 +1,20 @@
 //! Steps: the atoms an action plans, with the checks around them
 
+#![warn(missing_docs, clippy::missing_docs_in_private_items)]
+
 use crate::atoms::Atom;
 use crate::steps::finalizers::FlowControl;
 use tracing::error;
 
+/// Checks after an atom ran
 pub mod finalizers;
+/// Checks before an atom runs
 pub mod initializers;
 
 /// One change to the system: an atom, guarded by initializers that decide whether it runs and
 /// finalizers that decide whether the action goes on after it
 pub struct Step {
+    /// The change to make
     pub atom: Box<dyn Atom>,
     /// Checked before the atom runs, see [`Step::do_initializers_allow_us_to_run`]
     pub initializers: Vec<initializers::FlowControl>,

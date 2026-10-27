@@ -1,7 +1,10 @@
+//! Checks whether a file exists
+
 use std::path::PathBuf;
 
 use super::Initializer;
 
+/// Says yes if the path exists
 #[derive(Clone, Debug)]
 pub struct FileExists(pub PathBuf);
 

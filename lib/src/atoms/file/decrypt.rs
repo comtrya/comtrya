@@ -1,3 +1,5 @@
+//! Decrypts age-encrypted contents into a file
+
 use crate::atoms::Outcome;
 
 use super::super::Atom;
@@ -8,9 +10,13 @@ use std::io::Read;
 use std::path::PathBuf;
 use tracing::error;
 
+/// Writes decrypted contents to a file, every time. Skipped if they can't be decrypted
 pub struct Decrypt {
+    /// The contents, encrypted with an age passphrase and ASCII armored
     pub encrypted_content: Vec<u8>,
+    /// The age passphrase
     pub passphrase: String,
+    /// The file to write
     pub path: PathBuf,
 }
 
@@ -71,6 +77,7 @@ impl Atom for Decrypt {
     }
 }
 
+/// Decrypts armored age contents with a passphrase
 fn decrypt(passphrase: &str, encrypted_content: &[u8]) -> anyhow::Result<Vec<u8>> {
     let decryptor = age::Decryptor::new(ArmoredReader::new(encrypted_content))?;
     if !decryptor.is_scrypt() {

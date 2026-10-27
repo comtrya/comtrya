@@ -1,3 +1,5 @@
+//! Unpacks `.tar.gz` archives
+
 use std::{fs::File, path::PathBuf};
 
 use flate2::read::GzDecoder;
@@ -7,9 +9,13 @@ use crate::atoms::{Atom, Outcome};
 
 use super::FileAtom;
 
+/// Unpacks a `.tar.gz` archive into a directory
 pub struct Unarchive {
+    /// The archive
     pub origin: PathBuf,
+    /// The directory to unpack into
     pub dest: PathBuf,
+    /// Unpack again if `dest` exists already
     pub force: bool,
 }
 

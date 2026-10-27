@@ -1,11 +1,16 @@
+//! Sets the permissions of a file
+
 use crate::atoms::Outcome;
 
 use super::super::Atom;
 use super::FileAtom;
 use std::path::PathBuf;
 
+/// Sets the permissions of a file, when they differ
 pub struct Chmod {
+    /// The file
     pub path: PathBuf,
+    /// The permissions, like `0o644`
     pub mode: u32,
 }
 

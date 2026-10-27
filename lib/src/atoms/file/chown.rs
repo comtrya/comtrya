@@ -1,3 +1,5 @@
+//! Sets the owner and group of a file
+
 use crate::atoms::Outcome;
 
 use super::super::Atom;
@@ -7,10 +9,14 @@ use std::path::PathBuf;
 #[cfg(unix)]
 use tracing::error;
 
+/// Sets the owner and group of a file, when they differ. Skipped if either doesn't exist
 #[derive(Debug)]
 pub struct Chown {
+    /// The file
     pub path: PathBuf,
+    /// The user name of the new owner
     pub owner: String,
+    /// The name of the new group
     pub group: String,
 }
 

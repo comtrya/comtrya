@@ -1,10 +1,14 @@
+//! Creates an empty file
+
 use crate::atoms::Outcome;
 
 use super::super::Atom;
 use super::FileAtom;
 use std::path::PathBuf;
 
+/// Creates an empty file, unless it exists
 pub struct Create {
+    /// The file to create
     pub path: PathBuf,
 }
 

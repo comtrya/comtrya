@@ -1,9 +1,13 @@
+//! Creates a directory
+
 use crate::atoms::Outcome;
 
 use super::super::Atom;
 use std::path::PathBuf;
 
+/// Creates a directory and its parents, unless it exists
 pub struct Create {
+    /// The directory to create
     pub path: PathBuf,
 }
 

@@ -1,3 +1,5 @@
+//! Runs a program, with the privilege provider if needed, and keeps its output
+
 use crate::atoms::Outcome;
 
 use super::super::Atom;
@@ -7,26 +9,39 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, Output, Stdio};
 use tracing::debug;
 
+/// Runs a program, every time. Fails when the program exits with an error
 #[derive(Default)]
 pub struct Exec {
+    /// The program to run, found in `PATH`
     pub command: String,
+    /// The arguments of the program
     pub arguments: Vec<String>,
+    /// Where the program runs. Where comtrya runs without it
     pub working_dir: Option<String>,
+    /// Environment variables for the program only. A `PATH` here is also where the program is looked up
     pub environment: Vec<(String, String)>,
+    /// Run the program with `privilege_provider`, unless comtrya runs as root
     pub privileged: bool,
+    /// The program that runs commands as root, like `sudo`, `doas` or `run0`
     pub privilege_provider: String,
     /// Writes stdout to this file instead of logging it
     pub stdout_file: Option<PathBuf>,
+    /// What the last run returned
     pub(crate) status: ExecStatus,
 }
 
+/// What a run of the program returned
 #[derive(Default)]
 pub(crate) struct ExecStatus {
+    /// The exit code. Never set yet, so always 0
     code: i32,
+    /// The output, unless it went to `stdout_file`
     stdout: String,
+    /// The error output
     stderr: String,
 }
 
+/// Runs `command` without arguments
 #[allow(dead_code)]
 pub fn new_run_command(command: String) -> Exec {
     Exec {
@@ -36,6 +51,7 @@ pub fn new_run_command(command: String) -> Exec {
 }
 
 impl Exec {
+    /// The program and arguments to run: prefixed with the privilege provider if needed
     fn elevate_if_required(&self) -> (String, Vec<String>) {
         // Depending on the priviledged flag and who who the current user is
         // we can determine if we need to prepend sudo to the command
@@ -115,6 +131,7 @@ impl Exec {
         }
     }
 
+    /// Asks for the password up front with `--validate`, so the prompt is visible
     fn elevate(&mut self) -> anyhow::Result<()> {
         tracing::info!(
             "Privilege elevation required to run `{} {}`. Validating privileges ...",

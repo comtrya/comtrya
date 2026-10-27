@@ -1,3 +1,5 @@
+//! Creates a symlink
+
 use crate::atoms::Outcome;
 
 use super::super::Atom;
@@ -5,8 +7,12 @@ use super::FileAtom;
 use std::path::{Path, PathBuf};
 use tracing::{error, warn};
 
+/// Links `target` to `source`. Replaces symlinks that point elsewhere or are broken, but
+/// never files or directories
 pub struct Link {
+    /// What the link points to. Must exist
     pub source: PathBuf,
+    /// Where the link is created
     pub target: PathBuf,
 }
 

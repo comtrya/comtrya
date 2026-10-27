@@ -1,3 +1,5 @@
+//! Downloads a file
+
 use crate::atoms::Outcome;
 
 use super::super::Atom;
@@ -6,8 +8,11 @@ use anyhow::anyhow;
 use std::io::Write;
 use std::{fs::File, path::PathBuf};
 
+/// Downloads a file, unless it exists and matches `sha256`
 pub struct Download {
+    /// What to download
     pub url: String,
+    /// Where to save it
     pub to: PathBuf,
     /// Expected SHA-256 of the file as lowercase hex. Without it, an existing file is kept
     pub sha256: Option<String>,

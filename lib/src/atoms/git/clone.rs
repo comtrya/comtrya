@@ -1,3 +1,5 @@
+//! Clones a repository
+
 use super::super::Atom;
 use crate::atoms::Outcome;
 use gix::interrupt;
@@ -5,9 +7,12 @@ use gix::{progress::Discard, Url};
 use std::path::PathBuf;
 use tracing::instrument;
 
+/// Clones a repository, unless `directory` exists
 #[derive(Default)]
 pub struct Clone {
+    /// The URL of the repository
     pub repository: Url,
+    /// Where to clone it to
     pub directory: PathBuf,
     /// Branch or tag to check out, the remote's `HEAD` if `None`
     pub reference: Option<String>,
