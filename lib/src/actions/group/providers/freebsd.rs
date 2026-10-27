@@ -1,3 +1,5 @@
+//! `pw groupadd` on FreeBSD
+
 use super::GroupProvider;
 use crate::contexts::Contexts;
 use crate::steps::Step;
@@ -5,6 +7,7 @@ use crate::{actions::group::GroupVariant, atoms::command::Exec, utilities};
 use serde::{Deserialize, Serialize};
 use tracing::warn;
 
+/// Creates groups with `pw groupadd`
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct FreeBSDGroupProvider {}
 

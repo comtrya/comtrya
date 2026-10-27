@@ -1,3 +1,5 @@
+//! The tools users are created and changed with, per OS
+
 mod freebsd;
 use self::freebsd::FreeBSDUserProvider;
 use crate::steps::Step;
@@ -13,22 +15,28 @@ use self::macos::MacOSUserProvider;
 
 use crate::contexts::Contexts;
 
+/// The tool to create and change users with
 #[derive(JsonSchema, Clone, Debug, Serialize, Deserialize)]
 pub enum UserProviders {
+    /// `pw useradd` and `pw usermod`
     #[serde(alias = "freebsd")]
     FreeBSD,
 
+    /// For systems comtrya can't create users on. Only warns
     #[serde(alias = "none")]
     None,
 
+    /// `useradd` and `usermod`
     #[serde(alias = "linux")]
     Linux,
 
+    /// `dscl`
     #[serde(alias = "macos")]
     MacOs,
 }
 
 impl UserProviders {
+    /// The implementation of this tool
     pub fn get_provider(self) -> Box<dyn UserProvider> {
         match self {
             UserProviders::FreeBSD => Box::new(FreeBSDUserProvider {}),
@@ -59,7 +67,10 @@ impl Default for UserProviders {
     }
 }
 
+/// A tool that creates and changes users
 pub trait UserProvider {
+    /// Steps that create the user and add it to its groups
     fn add_user(&self, user: &UserVariant, contexts: &Contexts) -> anyhow::Result<Vec<Step>>;
+    /// Steps that add an existing user to groups
     fn add_to_group(&self, user: &UserAddGroup, contexts: &Contexts) -> anyhow::Result<Vec<Step>>;
 }

@@ -1,3 +1,5 @@
+//! `user.add`
+
 use super::User;
 use super::UserVariant;
 use crate::actions::Action;
@@ -9,6 +11,7 @@ use std::ops::Deref;
 #[cfg(unix)]
 use tracing::debug;
 
+/// The `user.add` action
 pub type UserAdd = User;
 
 impl Action for UserAdd {

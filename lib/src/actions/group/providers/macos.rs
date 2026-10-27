@@ -1,3 +1,5 @@
+//! `dscl` on macOS
+
 use super::GroupProvider;
 use crate::contexts::Contexts;
 use crate::steps::Step;
@@ -6,6 +8,7 @@ use serde::{Deserialize, Serialize};
 use tracing::warn;
 use which::which;
 
+/// Creates groups with `dscl`
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct MacOsGroupProvider {}
 

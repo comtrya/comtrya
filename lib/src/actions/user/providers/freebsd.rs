@@ -1,3 +1,5 @@
+//! `pw useradd` and `pw usermod` on FreeBSD
+
 use super::UserProvider;
 use crate::actions::user::{add_group::UserAddGroup, UserVariant};
 use crate::atoms::command::Exec;
@@ -7,6 +9,7 @@ use crate::utilities;
 use serde::{Deserialize, Serialize};
 use tracing::warn;
 
+/// Creates and changes users with `pw`
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct FreeBSDUserProvider {}
 

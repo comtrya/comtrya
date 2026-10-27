@@ -1,3 +1,5 @@
+//! `git.clone`, with the git built into comtrya
+
 use crate::actions::Action;
 use crate::contexts::Contexts;
 use crate::manifests::Manifest;
@@ -6,12 +8,14 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
+/// Clones a repository, unless `directory` exists already. Doesn't pull later changes
 #[derive(JsonSchema, Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct GitClone {
-    /// `repository` is the name comtrya 0.8.7 and earlier used
+    /// The URL of the repository. `repository` is the name comtrya 0.8.7 and earlier used
     #[serde(alias = "repository")]
     pub repo_url: String,
 
+    /// Where to clone the repository to
     pub directory: String,
 
     /// Branch or tag to check out instead of the remote's default branch

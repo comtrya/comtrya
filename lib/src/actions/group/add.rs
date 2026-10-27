@@ -1,3 +1,5 @@
+//! `group.add`
+
 use super::Group;
 use super::GroupVariant;
 use crate::actions::Action;
@@ -6,6 +8,7 @@ use crate::manifests::Manifest;
 use crate::steps::Step;
 use std::ops::Deref;
 
+/// The `group.add` action
 pub type GroupAdd = Group;
 
 impl Action for GroupAdd {
