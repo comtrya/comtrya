@@ -104,7 +104,10 @@ fn manifest_dirs() -> Vec<PathBuf> {
 
 /// Intended differences to the release, as (manifest directory, manifest name)
 fn known_differences() -> Vec<(&'static str, &'static str)> {
-    vec![]
+    vec![
+        // 0.11.0 accepts `repository` and `reference` again, 0.10.0 refuses them
+        ("v1", "git-clone-reference"),
+    ]
 }
 
 /// Drops `null` fields, so a new optional field doesn't count as a difference.
@@ -189,6 +192,7 @@ fn fixtures_cover_the_v1_rules() {
         vec![
             "aliases",
             "deep.a.b.deep",
+            "git-clone-reference",
             "nested",
             "nested.other",
             "templates",
@@ -221,4 +225,8 @@ fn fixtures_cover_the_v1_rules() {
         ],
         actions
     );
+
+    let clone = &manifests["git-clone-reference"]["actions"][0];
+    assert_eq!("https://github.com/comtrya/comtrya", clone["repo_url"]);
+    assert_eq!("v0.9.2", clone["reference"]);
 }
