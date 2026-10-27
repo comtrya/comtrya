@@ -1,17 +1,15 @@
-use super::FileAction;
-use super::{default_chmod, from_octal, OctalMode};
-#[cfg(unix)]
-use crate::atoms::file::Chown;
-use crate::atoms::file::Decrypt;
+use super::{change_owner, create_parent, default_chmod, from_octal, FileAction, OctalMode};
+use crate::actions::Action;
+use crate::atoms::file::{Chmod, Create, Decrypt, SetContents};
+use crate::contexts::{to_tera, Contexts};
 use crate::manifests::Manifest;
 use crate::steps::Step;
 use crate::tera_functions::register_functions;
-use crate::{actions::Action, contexts::to_tera};
 use anyhow::anyhow;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::error::Error as StdError;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use tera::Tera;
 
 #[derive(JsonSchema, Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -46,7 +44,52 @@ fn default_template() -> bool {
     false
 }
 
-impl FileCopy {}
+impl FileCopy {
+    /// The source file, piped through `process_with` and rendered as a template if asked for
+    fn contents(&self, manifest: &Manifest, contexts: &Contexts) -> anyhow::Result<Vec<u8>> {
+        let contents = self
+            .load(manifest, &self.from)
+            .map_err(|err| anyhow!("Failed to get contents for FileCopy action: {err}"))?;
+
+        let contents = match &self.process_with {
+            Some(command) => process(command, contents)?,
+            None => contents,
+        };
+
+        if self.template {
+            render(&contents, contexts)
+        } else {
+            Ok(contents)
+        }
+    }
+
+    /// The file to write. When `to` is a directory, the file keeps its name inside of it
+    fn target(&self) -> PathBuf {
+        let path = PathBuf::from(&self.to);
+
+        match Path::new(&self.from).file_name() {
+            Some(file_name) if path.is_dir() => path.join(file_name),
+            _ => path,
+        }
+    }
+
+    /// Decrypts the contents with the passphrase, or writes them as they are
+    fn write(&self, path: PathBuf, contents: Vec<u8>) -> Step {
+        match &self.passphrase {
+            Some(passphrase) => Step::new(Decrypt {
+                encrypted_content: contents,
+                path,
+                passphrase: passphrase.clone(),
+            }),
+            None => Step::new(SetContents {
+                path,
+                contents,
+                // The output of `process_with` is often a secret, so it's kept out of the diff
+                redact: self.process_with.is_some(),
+            }),
+        }
+    }
+}
 
 impl FileAction for FileCopy {}
 
@@ -55,111 +98,47 @@ impl Action for FileCopy {
         format!("Copy file from {} to {}", self.from, self.to)
     }
 
-    fn plan(
-        &self,
-        manifest: &Manifest,
-        context: &crate::contexts::Contexts,
-    ) -> anyhow::Result<Vec<Step>> {
+    fn plan(&self, manifest: &Manifest, contexts: &Contexts) -> anyhow::Result<Vec<Step>> {
         if self.passphrase.is_some() && self.process_with.is_some() {
             return Err(anyhow!(
                 "FileCopy can use either passphrase or process_with, not both"
             ));
         }
 
-        let contents = match self.load(manifest, &self.from) {
-            Ok(contents) => {
-                let contents = match &self.process_with {
-                    Some(command) => process(command, contents)?,
-                    None => contents,
-                };
+        let contents = self.contents(manifest, contexts)?;
+        let path = self.target();
 
-                if self.template {
-                    let mut tera = Tera::default();
-                    register_functions(&mut tera);
-
-                    let content_as_str = std::str::from_utf8(&contents)?;
-
-                    match tera.render_str(content_as_str, &to_tera(context)) {
-                        Ok(rendered) => rendered,
-                        Err(err) => match err.source() {
-                            Some(source) => {
-                                return Err(anyhow!(
-                                    "Failed to render contents for FileCopy action: {source}"
-                                ));
-                            }
-                            None => {
-                                return Err(anyhow!(
-                                    "Failed to render contents for FileCopy action: {err}"
-                                ));
-                            }
-                        },
-                    }
-                    .as_bytes()
-                    .to_vec()
-                } else {
-                    contents
-                }
-            }
-            Err(err) => {
-                return Err(anyhow!("Failed to get contents for FileCopy action: {err}"));
-            }
-        };
-
-        use crate::atoms::directory::Create as DirCreate;
-        use crate::atoms::file::{Chmod, Create, SetContents};
-
-        let mut path = PathBuf::from(&self.to);
-
-        if path.is_dir() {
-            if let Some(file_name) = PathBuf::from(self.from.clone()).file_name() {
-                path = path.join(file_name);
-            }
-        }
-
-        let parent = path.clone();
         let mut steps = vec![
-            Step::new(DirCreate {
-                path: parent
-                    .parent()
-                    .ok_or_else(|| anyhow!("Failed to get parent directory for FileCopy action"))?
-                    .into(),
-            }),
+            create_parent(&path)?,
             Step::new(Create { path: path.clone() }),
             Step::new(Chmod {
                 path: path.clone(),
                 mode: self.chmod,
             }),
+            self.write(path.clone(), contents),
         ];
-
-        #[cfg(unix)]
-        let path_for_chown = path.clone();
-        if let Some(passphrase) = self.passphrase.to_owned() {
-            steps.push(Step::new(Decrypt {
-                encrypted_content: contents,
-                path,
-                passphrase,
-            }));
-        } else {
-            steps.push(Step::new(SetContents {
-                path,
-                contents,
-                redact: self.process_with.is_some(),
-            }));
-        }
-
-        #[cfg(unix)]
-        if let Some(user) = self.owner_user.clone() {
-            if let Some(group) = self.owner_group.clone() {
-                steps.push(Step::new(Chown {
-                    path: path_for_chown,
-                    owner: user.clone(),
-                    group: group.clone(),
-                }))
-            }
-        }
+        steps.extend(change_owner(&path, &self.owner_user, &self.owner_group));
 
         Ok(steps)
     }
+}
+
+/// Renders `contents` as a Tera template with the contexts
+fn render(contents: &[u8], contexts: &Contexts) -> anyhow::Result<Vec<u8>> {
+    let mut tera = Tera::default();
+    register_functions(&mut tera);
+
+    let rendered = tera
+        .render_str(std::str::from_utf8(contents)?, &to_tera(contexts))
+        .map_err(|err| {
+            // Tera's own message only says that rendering failed, the source says why
+            let reason = err
+                .source()
+                .map_or(err.to_string(), |source| source.to_string());
+            anyhow!("Failed to render contents for FileCopy action: {reason}")
+        })?;
+
+    Ok(rendered.into_bytes())
 }
 
 /// Runs `command` with `input` on stdin and returns its stdout
@@ -363,5 +342,66 @@ mod tests {
         ];
         let err = super::process(&command, vec![]).unwrap_err().to_string();
         assert!(err.contains("bad key"), "{err}");
+    }
+
+    fn copy(from: &str, to: &str) -> super::FileCopy {
+        super::FileCopy {
+            from: String::from(from),
+            to: String::from(to),
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn the_file_keeps_its_name_when_copied_into_a_directory() {
+        let dir = tempfile::tempdir().unwrap();
+        let to = dir.path().to_str().unwrap();
+
+        assert_eq!(dir.path().join("b.txt"), copy("a/b.txt", to).target());
+        assert_eq!(
+            dir.path().join("c.txt"),
+            copy("a/b.txt", dir.path().join("c.txt").to_str().unwrap()).target()
+        );
+    }
+
+    #[test]
+    fn templates_are_rendered_with_the_contexts() {
+        let mut contexts = crate::contexts::Contexts::default();
+        contexts.insert(
+            String::from("user"),
+            [(String::from("name"), "ferris".into())]
+                .into_iter()
+                .collect(),
+        );
+
+        let rendered = super::render(b"hi {{ user.name }}", &contexts).unwrap();
+        assert_eq!(b"hi ferris".to_vec(), rendered);
+
+        let err = super::render(b"{{ nope }}", &contexts).unwrap_err();
+        assert!(
+            err.to_string().contains("Failed to render contents"),
+            "{err}"
+        );
+    }
+
+    #[test]
+    fn plan_writes_the_file_and_sets_the_owner() {
+        use crate::actions::Action;
+
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::create_dir(dir.path().join("files")).unwrap();
+        std::fs::write(dir.path().join("files/a"), "hello").unwrap();
+        let manifest = crate::manifests::Manifest {
+            root_dir: Some(dir.path().to_path_buf()),
+            ..Default::default()
+        };
+        let mut action = copy("a", dir.path().join("out/a").to_str().unwrap());
+        action.owner_user = Some(String::from("ferris"));
+        action.owner_group = Some(String::from("crabs"));
+
+        let steps = action.plan(&manifest, &Default::default()).unwrap();
+
+        // create the directory and the file, chmod, write, and chown on unix only
+        assert_eq!(if cfg!(unix) { 5 } else { 4 }, steps.len());
     }
 }

@@ -1,7 +1,6 @@
-use super::FileAction;
-use super::{default_chmod, from_octal, OctalMode};
-#[cfg(unix)]
-use crate::atoms::file::Chown;
+use super::{change_owner, create_parent, default_chmod, from_octal, FileAction, OctalMode};
+use crate::atoms::file::Chmod;
+use crate::atoms::http::Download;
 use crate::manifests::Manifest;
 use crate::steps::Step;
 use crate::{actions::Action, contexts::Contexts};
@@ -65,26 +64,11 @@ impl Action for FileDownload {
     }
 
     fn plan(&self, _manifest: &Manifest, _context: &Contexts) -> anyhow::Result<Vec<Step>> {
-        use crate::atoms::directory::Create as DirCreate;
-        use crate::atoms::file::Chmod;
-        use crate::atoms::http::Download;
-
         let sha256 = self.sha256()?;
         let path = PathBuf::from(&self.to);
-        let parent = path.clone();
 
-        let steps = vec![
-            Step::new(DirCreate {
-                path: parent
-                    .parent()
-                    .ok_or_else(|| {
-                        anyhow::anyhow!(
-                            "Failed to get parent directory of path: {}",
-                            path.display()
-                        )
-                    })?
-                    .into(),
-            }),
+        let mut steps = vec![
+            create_parent(&path)?,
             Step::new(Download {
                 url: self.from.clone(),
                 to: path.clone(),
@@ -95,27 +79,9 @@ impl Action for FileDownload {
                 mode: self.chmod,
             }),
         ];
+        steps.extend(change_owner(&path, &self.owner_user, &self.owner_group));
 
-        #[cfg(unix)]
-        {
-            let mut steps = steps;
-            if let Some(user) = self.owner_user.clone() {
-                if let Some(group) = self.owner_group.clone() {
-                    steps.push(Step::new(Chown {
-                        path: path.clone(),
-                        owner: user.clone(),
-                        group: group.clone(),
-                    }))
-                }
-            }
-
-            Ok(steps)
-        }
-
-        #[cfg(not(unix))]
-        {
-            Ok(steps)
-        }
+        Ok(steps)
     }
 }
 

@@ -55,9 +55,11 @@ fn fetch_release(
     Ok(request.send()?.error_for_status()?.json()?)
 }
 
-struct GitHubAsset {
-    pub url: String,
-    pub score: i32,
+impl BinaryGitHub {
+    /// Where the binary is installed
+    fn path(&self) -> PathBuf {
+        PathBuf::from(format!("{}/{}", self.directory, self.name))
+    }
 }
 
 impl Action for BinaryGitHub {
@@ -70,7 +72,7 @@ impl Action for BinaryGitHub {
 
     fn plan(&self, _: &Manifest, _: &Contexts) -> anyhow::Result<Vec<Step>> {
         // Don't need to do anything if something already exists at the path
-        if std::path::Path::new(format!("{}/{}", self.directory, self.name).as_str()).exists() {
+        if self.path().exists() {
             return Ok(vec![]);
         };
 
@@ -84,81 +86,76 @@ impl Action for BinaryGitHub {
         let release = fetch_release(GITHUB_API, owner, repo, self.version.as_deref())
             .map_err(|e| anyhow!("Failed to find a release: {e}"))?;
 
-        let asset: Option<GitHubAsset> = release.assets.into_iter().fold(None, |acc, asset| {
-            let mut score = 0;
-
-            let mut score_terms = vec![
-                std::env::consts::OS.to_lowercase(),
-                std::env::consts::ARCH.to_lowercase(),
-            ];
-
-            let os = os_info::get();
-            if os.os_type() == os_info::Type::Macos {
-                score_terms.push(String::from("darwin"));
-                score_terms.push(String::from("apple"));
-            } else {
-                score_terms.push(os.os_type().to_string());
-            };
-
-            if std::env::consts::ARCH == "aarch64" {
-                score_terms.push("arm".to_string());
-                score_terms.push("aarch".to_string());
-            } else {
-                score_terms.push("unknown".to_string());
-            };
-
-            match os.bitness() {
-                os_info::Bitness::X32 => score_terms.push("32".to_string()),
-                os_info::Bitness::X64 => score_terms.push("64".to_string()),
-                _ => (),
-            }
-
-            score_terms.iter().for_each(|term| {
-                if asset.name.to_lowercase().contains(term.as_str()) {
-                    score += 1;
-                }
-            });
-
-            match acc {
-                Some(ass) => {
-                    if score > ass.score {
-                        Some(GitHubAsset {
-                            url: asset.browser_download_url.clone(),
-                            score,
-                        })
-                    } else {
-                        Some(ass)
-                    }
-                }
-                None => Some(GitHubAsset {
-                    url: asset.browser_download_url.clone(),
-                    score,
-                }),
-            }
-        });
-
-        let asset = match asset {
-            Some(asset) => {
-                debug!("Downloading {:?}", asset.url);
-                asset
-            }
-            None => {
-                return Err(anyhow!("Failed to find a downloadable asset"));
-            }
-        };
+        let asset = best_asset(release.assets, &platform_terms())
+            .ok_or_else(|| anyhow!("Failed to find a downloadable asset"))?;
+        debug!("Downloading {:?}", asset.browser_download_url);
 
         Ok(vec![
             Step::new(Download {
-                url: asset.url,
-                to: PathBuf::from(format!("{}/{}", self.directory, self.name)),
+                url: asset.browser_download_url,
+                to: self.path(),
                 sha256: None,
             }),
             Step::new(Chmod {
-                path: PathBuf::from(format!("{}/{}", self.directory, self.name)),
+                path: self.path(),
                 mode: 0o755,
             }),
         ])
     }
+}
+
+/// Words in asset names that point to this OS and CPU, like `linux`, `x86_64` and `64`
+fn platform_terms() -> Vec<String> {
+    let os = os_info::get();
+    let mut terms = vec![
+        std::env::consts::OS.to_lowercase(),
+        std::env::consts::ARCH.to_lowercase(),
+    ];
+
+    if os.os_type() == os_info::Type::Macos {
+        terms.extend([String::from("darwin"), String::from("apple")]);
+    } else {
+        terms.push(os.os_type().to_string());
+    }
+
+    if std::env::consts::ARCH == "aarch64" {
+        terms.extend([String::from("arm"), String::from("aarch")]);
+    } else {
+        // as in `x86_64-unknown-linux-musl`
+        terms.push(String::from("unknown"));
+    }
+
+    match os.bitness() {
+        os_info::Bitness::X32 => terms.push(String::from("32")),
+        os_info::Bitness::X64 => terms.push(String::from("64")),
+        _ => (),
+    }
+
+    terms
+}
+
+/// The asset whose name contains the most `terms`. The first one wins a tie
+fn best_asset(assets: Vec<ReleaseAsset>, terms: &[String]) -> Option<ReleaseAsset> {
+    let score = |asset: &ReleaseAsset| {
+        let name = asset.name.to_lowercase();
+        terms
+            .iter()
+            .filter(|term| name.contains(term.as_str()))
+            .count()
+    };
+
+    let mut best: Option<(usize, ReleaseAsset)> = None;
+    for asset in assets {
+        let asset_score = score(&asset);
+        if best
+            .as_ref()
+            .is_none_or(|(best_score, _)| asset_score > *best_score)
+        {
+            best = Some((asset_score, asset));
+        }
+    }
+
+    best.map(|(_, asset)| asset)
 }
 
 #[cfg(test)]
@@ -236,5 +233,45 @@ mod tests {
             .unwrap();
 
         assert!(error.to_string().contains("404"), "{error}");
+    }
+
+    fn assets(names: &[&str]) -> Vec<ReleaseAsset> {
+        names
+            .iter()
+            .map(|name| ReleaseAsset {
+                name: name.to_string(),
+                browser_download_url: format!("https://example.com/{name}"),
+            })
+            .collect()
+    }
+
+    fn terms(terms: &[&str]) -> Vec<String> {
+        terms.iter().map(|term| term.to_string()).collect()
+    }
+
+    #[test]
+    fn the_asset_with_the_most_terms_wins() {
+        let assets = assets(&["tool-windows.zip", "tool-x86_64-linux", "tool-linux"]);
+
+        let best = best_asset(assets, &terms(&["linux", "x86_64"])).unwrap();
+
+        assert_eq!("tool-x86_64-linux", best.name);
+    }
+
+    #[test]
+    fn the_first_asset_wins_a_tie() {
+        let assets = assets(&["tool-Linux.tar.gz", "tool-linux.zip"]);
+
+        let best = best_asset(assets, &terms(&["linux"])).unwrap();
+
+        assert_eq!("tool-Linux.tar.gz", best.name);
+    }
+
+    #[test]
+    fn an_asset_is_picked_even_without_a_match() {
+        let best = best_asset(assets(&["tool.zip"]), &terms(&["linux"])).unwrap();
+
+        assert_eq!("tool.zip", best.name);
+        assert!(best_asset(vec![], &terms(&["linux"])).is_none());
     }
 }
