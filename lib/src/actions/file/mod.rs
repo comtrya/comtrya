@@ -1,8 +1,6 @@
 //! `file.*` actions: copy, download, link, change the owner of, remove and unpack files, and
 //! what they share
 
-#![warn(missing_docs, clippy::missing_docs_in_private_items)]
-
 pub mod chown;
 pub mod copy;
 pub mod download;

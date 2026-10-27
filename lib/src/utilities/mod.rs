@@ -1,7 +1,5 @@
 //! Small helpers that several actions use
 
-#![warn(missing_docs, clippy::missing_docs_in_private_items)]
-
 use crate::contexts::{privilege::Privilege, Contexts};
 
 use sha2::{Digest, Sha256};

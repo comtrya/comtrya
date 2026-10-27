@@ -1,7 +1,5 @@
 //! Functions for templates in manifests and files
 
-#![warn(missing_docs, clippy::missing_docs_in_private_items)]
-
 use tera::{Function, Result, Tera, Value};
 
 /// `read_file_contents(path=…)`: the contents of a file, without leading and trailing whitespace

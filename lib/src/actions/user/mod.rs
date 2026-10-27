@@ -1,7 +1,5 @@
 //! `user.add` and `user.group`
 
-#![warn(missing_docs, clippy::missing_docs_in_private_items)]
-
 pub mod add;
 pub mod add_group;
 pub mod providers;

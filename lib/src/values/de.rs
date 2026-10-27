@@ -13,6 +13,7 @@ impl<'de> Deserialize<'de> for Value {
     }
 }
 
+/// Builds a value from what serde reads
 struct ValueVisitor;
 
 impl<'de> Visitor<'de> for ValueVisitor {

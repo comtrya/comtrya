@@ -1,7 +1,5 @@
 //! `directory.copy`, `directory.create` and `directory.remove`
 
-#![warn(missing_docs, clippy::missing_docs_in_private_items)]
-
 use crate::{actions::Action, manifests::Manifest};
 use anyhow::anyhow;
 use normpath::PathExt;

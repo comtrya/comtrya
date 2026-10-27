@@ -1,8 +1,6 @@
 //! `package.install` and `package.repository`: packages and repositories of the system's
 //! package manager, the "provider"
 
-#![warn(missing_docs, clippy::missing_docs_in_private_items)]
-
 mod install;
 mod providers;
 mod repository;
