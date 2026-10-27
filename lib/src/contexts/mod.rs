@@ -1,7 +1,8 @@
 use anyhow::Result;
-use rhai::Scope;
+use rhai::{Engine, Scope};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
+use std::sync::LazyLock;
 use tracing::{instrument, trace, warn};
 use user::UserContextProvider;
 
@@ -102,6 +103,21 @@ pub fn to_tera(contexts: &Contexts) -> tera::Context {
     context
 }
 
+/// One engine for every `where` condition. `sync` makes it shareable between threads
+static ENGINE: LazyLock<Engine> = LazyLock::new(|| {
+    let mut engine = Engine::new();
+    // A condition that loops forever stops with an error instead of hanging the run
+    engine.set_max_operations(100_000);
+    engine
+});
+
+/// Evaluates a `where` condition against the contexts
+pub fn evaluate_condition(condition: &str, contexts: &Contexts) -> anyhow::Result<bool> {
+    ENGINE
+        .eval_with_scope::<bool>(&mut to_rhai(contexts), condition)
+        .map_err(|err| anyhow::anyhow!("{err}"))
+}
+
 pub fn to_rhai(context: &Contexts) -> rhai::Scope<'_> {
     let mut scope = Scope::new();
 
@@ -126,6 +142,25 @@ mod test {
     use super::*;
     use pretty_assertions::assert_eq;
     use rhai::Engine;
+
+    #[test]
+    fn conditions_are_evaluated_against_the_contexts() {
+        let mut contexts: Contexts = BTreeMap::new();
+        let mut user_context: BTreeMap<String, Value> = BTreeMap::new();
+        user_context.insert(String::from("username"), String::from("rawkode").into());
+        contexts.insert(String::from("user"), user_context);
+
+        assert!(evaluate_condition(r#"user.username == "rawkode""#, &contexts).unwrap());
+        assert!(!evaluate_condition(r#"user.username == "root""#, &contexts).unwrap());
+        assert!(evaluate_condition("user.username ==", &contexts).is_err());
+        assert!(evaluate_condition(r#"user.username"#, &contexts).is_err());
+    }
+
+    #[test]
+    fn a_condition_that_never_ends_fails() {
+        let error = evaluate_condition("loop {}", &BTreeMap::new()).unwrap_err();
+        assert!(error.to_string().contains("Too many operations"), "{error}");
+    }
 
     #[test]
     fn it_can_convert_to_rhai() {

@@ -10,7 +10,11 @@ pub use package::PackageProviders;
 mod user;
 
 use crate::actions::macos::MacOSDefault;
-use crate::{contexts::Contexts, manifests::Manifest, steps::Step};
+use crate::{
+    contexts::{evaluate_condition, Contexts},
+    manifests::Manifest,
+    steps::Step,
+};
 use anyhow::anyhow;
 use binary::BinaryGitHub;
 use command::run::RunCommand;
@@ -24,7 +28,6 @@ use file::unarchive::FileUnarchive;
 use git::GitClone;
 use group::add::GroupAdd;
 use package::{PackageInstall, PackageRepository};
-use rhai::Engine;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
@@ -70,9 +73,6 @@ where
     }
 
     fn plan(&self, manifest: &Manifest, context: &Contexts) -> Result<Vec<Step>, anyhow::Error> {
-        let engine = Engine::new();
-        let mut scope = crate::contexts::to_rhai(context);
-
         let variant = self.variants.iter().find(|variant| {
             if variant.condition.is_none() {
                 return false;
@@ -80,7 +80,7 @@ where
 
             // .unwrap() is safe here because we checked for None above
             let condition = variant.condition.clone().unwrap();
-            match engine.eval_with_scope::<bool>(&mut scope, condition.as_str()) {
+            match evaluate_condition(condition.as_str(), context) {
                 Ok(b) => b,
                 Err(error) => {
                     error!("Failed execution condition for action: {}", error);
@@ -100,7 +100,7 @@ where
         // .unwrap() is safe here because we checked for None above
         let condition = self.condition.as_ref().unwrap();
 
-        match engine.eval_with_scope::<bool>(&mut scope, condition.as_str()) {
+        match evaluate_condition(condition.as_str(), context) {
             Ok(true) => self.action.plan(manifest, context),
             Ok(false) => Ok(vec![]),
             Err(error) => Err(anyhow!("Failed execution condition for action: {error}")),
