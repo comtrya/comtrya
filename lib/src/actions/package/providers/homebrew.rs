@@ -1,3 +1,5 @@
+//! Homebrew on macOS. comtrya installs Homebrew itself when it's missing
+
 use super::PackageProvider;
 use crate::actions::package::repository::PackageRepository;
 use crate::contexts::Contexts;
@@ -7,8 +9,10 @@ use crate::{actions::package::PackageVariant, atoms::command::Exec};
 use std::{path::Path, sync::Arc};
 use which::which;
 
+/// Homebrew, as `homebrew` or `brew`. Repositories are taps
 #[derive(Clone)]
 pub struct Homebrew {
+    /// Runs `brew --prefix` to find the installed formulae and casks
     runner: Arc<dyn Runner>,
 }
 

@@ -1,3 +1,5 @@
+//! `package.install`
+
 use super::providers::PackageProviders;
 use super::Package;
 use super::PackageVariant;
@@ -10,6 +12,7 @@ use std::ops::Deref;
 use tracing::debug;
 use tracing::span;
 
+/// The `package.install` action
 pub type PackageInstall = Package;
 
 impl Action for PackageInstall {

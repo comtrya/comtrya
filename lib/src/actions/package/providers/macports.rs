@@ -1,3 +1,5 @@
+//! MacPorts on macOS
+
 use super::PackageProvider;
 use crate::actions::package::repository::PackageRepository;
 use crate::contexts::Contexts;
@@ -7,6 +9,7 @@ use serde::{Deserialize, Serialize};
 use tracing::warn;
 use which::which;
 
+/// MacPorts, as `macports` or `port`. Does nothing when `port` isn't installed
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Macports {}
 

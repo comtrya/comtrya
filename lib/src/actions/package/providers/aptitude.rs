@@ -1,3 +1,6 @@
+//! apt on Debian, Ubuntu and their derivatives. Repositories are written as deb822 files,
+//! PPAs are added with `add-apt-repository`
+
 use super::PackageProvider;
 use crate::actions::package::{
     repository::{PackageRepository, RepositoryKey},
@@ -12,10 +15,12 @@ use serde::{Deserialize, Serialize};
 use tracing::warn;
 use which::which;
 
+/// apt, as `aptitude`, `apt` or `apt-get`. Always runs `apt install`, which skips installed packages
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Aptitude {}
 
 impl Aptitude {
+    /// Keeps apt and the package scripts from asking questions
     fn env(&self) -> Vec<(String, String)> {
         vec![(
             String::from("DEBIAN_FRONTEND"),
@@ -23,6 +28,7 @@ impl Aptitude {
         )]
     }
 
+    /// Runs `command` with the privilege provider and without questions
     fn privileged_exec(&self, command: &str, arguments: Vec<String>, contexts: &Contexts) -> Step {
         let privilege_provider = utilities::get_privilege_provider(contexts);
 
@@ -36,6 +42,7 @@ impl Aptitude {
         })
     }
 
+    /// Installs what comtrya itself needs, like `curl` for repository keys
     fn apt_install(&self, packages: &[&str], contexts: &Contexts) -> Step {
         self.privileged_exec(
             "apt",
@@ -47,10 +54,12 @@ impl Aptitude {
         )
     }
 
+    /// Reads the package lists again, after a repository was added
     fn apt_update(&self, contexts: &Contexts) -> Step {
         self.privileged_exec("apt", vec![String::from("update")], contexts)
     }
 
+    /// Where the key of a repository is downloaded to, and what `Signed-By` points to
     fn key_path(key: &RepositoryKey) -> String {
         let key_name = key
             .name
@@ -63,12 +72,16 @@ impl Aptitude {
 /// A repository in the one-line format `<uri> <suite> [<component>...]`,
 /// e.g. `https://download.docker.com/linux/debian trixie stable`
 struct DebRepository<'a> {
+    /// Where the repository is, like `https://download.docker.com/linux/debian`
     uri: &'a str,
+    /// The release, like `trixie`
     suite: &'a str,
+    /// The parts of the release, like `main` or `stable`. Can be empty
     components: Vec<&'a str>,
 }
 
 impl<'a> DebRepository<'a> {
+    /// Splits the one-line format, and fails without a URI and a suite
     fn parse(name: &'a str) -> anyhow::Result<Self> {
         let mut parts = name.split_whitespace();
 
@@ -98,6 +111,7 @@ impl<'a> DebRepository<'a> {
         format!("/etc/apt/sources.list.d/comtrya-{name}.sources")
     }
 
+    /// The contents of the sources file
     fn deb822(&self, signed_by: Option<&str>) -> String {
         let mut contents = format!("Types: deb\nURIs: {}\nSuites: {}\n", self.uri, self.suite);
 
