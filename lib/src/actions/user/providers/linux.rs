@@ -1,3 +1,5 @@
+//! `useradd` and `usermod` on Linux
+
 use super::UserProvider;
 use crate::contexts::Contexts;
 use crate::steps::Step;
@@ -9,6 +11,7 @@ use serde::{Deserialize, Serialize};
 use tracing::warn;
 use which::which;
 
+/// Creates users with `useradd` and changes them with `usermod`
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct LinuxUserProvider {}
 

@@ -1,3 +1,5 @@
+//! `command.run`: runs a program, every time
+
 use crate::contexts::Contexts;
 use crate::steps::Step;
 use crate::{actions::Action, manifests::Manifest, utilities};
@@ -6,13 +8,17 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
+/// Runs a program with arguments, optionally with the privilege provider
 #[derive(JsonSchema, Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RunCommand {
+    /// The program to run, found in `PATH`, or in the `PATH` from `env`
     pub command: String,
 
+    /// The arguments of the program
     #[serde(default)]
     pub args: Vec<String>,
 
+    /// Run the program with the privilege provider, like sudo, unless comtrya runs as root
     #[serde(default = "get_false", alias = "sudo")]
     pub privileged: bool,
 
@@ -21,6 +27,7 @@ pub struct RunCommand {
     #[schemars(transform = remove_default)]
     pub dir: String,
 
+    /// Environment variables for the program only
     #[serde(default)]
     pub env: HashMap<String, String>,
 
@@ -29,6 +36,7 @@ pub struct RunCommand {
     pub stdout: Option<String>,
 }
 
+/// Commands run without privileges unless `privileged` says so
 fn get_false() -> bool {
     false
 }
@@ -46,6 +54,7 @@ fn get_cwd() -> String {
 }
 
 impl RunCommand {
+    /// `stdout`, relative to `dir`
     fn stdout_file(&self) -> Option<PathBuf> {
         self.stdout
             .as_ref()

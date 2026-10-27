@@ -1,3 +1,5 @@
+//! For systems without a known tool: only warns
+
 use super::UserProvider;
 use crate::actions::user::{add_group::UserAddGroup, UserVariant};
 use crate::contexts::Contexts;
@@ -5,6 +7,7 @@ use crate::steps::Step;
 use serde::{Deserialize, Serialize};
 use tracing::warn;
 
+/// Warns that users can't be created or changed on this system
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct NoneUserProvider {}
 

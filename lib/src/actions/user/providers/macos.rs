@@ -1,3 +1,5 @@
+//! `dscl` on macOS
+
 use super::UserProvider;
 use crate::actions::user::{add_group::UserAddGroup, UserVariant};
 use crate::atoms::command::Exec;
@@ -8,6 +10,7 @@ use serde::{Deserialize, Serialize};
 use tracing::warn;
 use which::which;
 
+/// Creates and changes users with `dscl`
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct MacOSUserProvider {}
 

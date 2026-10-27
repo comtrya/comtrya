@@ -1,3 +1,5 @@
+//! `user.group`: adds an existing user to groups
+
 use super::providers::UserProviders;
 use crate::actions::Action;
 use crate::contexts::Contexts;
@@ -8,14 +10,18 @@ use serde::{Deserialize, Serialize};
 use std::ops::Deref;
 
 // pub type UserAddGroup = User;
+/// Adds a user to groups
 #[derive(JsonSchema, Clone, Debug, Default, Serialize, Deserialize)]
 pub struct UserAddGroup {
+    /// The user
     #[serde(default)]
     pub username: String,
 
+    /// The groups to add the user to
     #[serde(default)]
     pub group: Vec<String>,
 
+    /// How users are changed. Defaults to the tool of this OS
     #[serde(default)]
     pub provider: UserProviders,
 }

@@ -1,3 +1,5 @@
+//! The tools groups are created with, per OS
+
 // mod freebsd;
 // use self::freebsd::FreeBSDUserProvider;
 use crate::steps::Step;
@@ -14,22 +16,28 @@ use self::linux::LinuxGroupProvider;
 mod macos;
 use self::macos::MacOsGroupProvider;
 
+/// The tool to create groups with
 #[derive(JsonSchema, Clone, Debug, Serialize, Deserialize)]
 pub enum GroupProviders {
+    /// For systems comtrya can't create groups on. Only warns
     #[serde(alias = "none")]
     None,
 
+    /// `pw groupadd`
     #[serde(alias = "freebsd")]
     FreeBSD,
 
+    /// `groupadd`
     #[serde(alias = "linux")]
     Linux,
 
+    /// `dscl`
     #[serde(alias = "macos")]
     MacOs,
 }
 
 impl GroupProviders {
+    /// The implementation of this tool
     pub fn get_provider(self) -> Box<dyn GroupProvider> {
         match self {
             GroupProviders::None => Box::new(NoneGroupProvider {}),
@@ -59,6 +67,8 @@ impl Default for GroupProviders {
     }
 }
 
+/// A tool that creates groups
 pub trait GroupProvider {
+    /// Steps that create the group. None, with a warning, if the tool or the name is missing
     fn add_group(&self, group: &GroupVariant, contexts: &Contexts) -> Vec<Step>;
 }
