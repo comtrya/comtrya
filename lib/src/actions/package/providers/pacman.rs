@@ -7,7 +7,7 @@ use crate::steps::Step;
 use crate::utilities;
 use std::collections::HashSet;
 use std::sync::Arc;
-use tracing::{debug, trace, warn};
+use tracing::warn;
 use which::which;
 
 /// Packages from the official Arch repositories. AUR packages need `yay` or `paru`
@@ -56,28 +56,7 @@ impl PackageProvider for Pacman {
     }
 
     fn query(&self, package: &PackageVariant) -> anyhow::Result<Vec<String>> {
-        // `pacman -Qq` prints the installed ones and fails for the others, so ignore the status
-        let command = CommandSpec::new("pacman")
-            .args(["-Q", "-q"])
-            .args(package.packages());
-        let installed: HashSet<String> = String::from_utf8(self.runner.run(&command)?.stdout)?
-            .lines()
-            .map(String::from)
-            .collect();
-
-        Ok(package
-            .packages()
-            .into_iter()
-            .filter(|p| {
-                if installed.contains(p) {
-                    trace!("{}: already installed", p);
-                    false
-                } else {
-                    debug!("{}: doesn't appear to be installed", p);
-                    true
-                }
-            })
-            .collect())
+        missing(self.runner.as_ref(), package)
     }
 
     fn install(&self, package: &PackageVariant, contexts: &Contexts) -> anyhow::Result<Vec<Step>> {
@@ -88,6 +67,23 @@ impl PackageProvider for Pacman {
 
         Ok(vec![install_step(package, need_installed, contexts)])
     }
+}
+
+/// The requested packages that pacman doesn't list as installed. The AUR helpers use it too
+pub(super) fn missing(
+    runner: &dyn Runner,
+    package: &PackageVariant,
+) -> anyhow::Result<Vec<String>> {
+    // `pacman -Qq` prints the installed ones and fails for the others, so ignore the status
+    let command = CommandSpec::new("pacman")
+        .args(["-Q", "-q"])
+        .args(package.packages());
+    let installed: HashSet<String> = String::from_utf8(runner.run(&command)?.stdout)?
+        .lines()
+        .map(String::from)
+        .collect();
+
+    Ok(super::missing(package, |p| installed.contains(p)))
 }
 
 fn install_step(package: &PackageVariant, packages: Vec<String>, contexts: &Contexts) -> Step {

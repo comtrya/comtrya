@@ -9,7 +9,7 @@ use crate::utilities;
 use anyhow::anyhow;
 use std::collections::HashSet;
 use std::sync::Arc;
-use tracing::{debug, trace, warn};
+use tracing::warn;
 use which::which;
 
 #[derive(Clone)]
@@ -79,19 +79,7 @@ impl PackageProvider for Xbps {
         let list = String::from_utf8(output.stdout)?;
         let installed = installed_packages(&list);
 
-        Ok(package
-            .packages()
-            .into_iter()
-            .filter(|p| {
-                if installed.contains(p.as_str()) {
-                    trace!("{}: already installed", p);
-                    false
-                } else {
-                    debug!("{}: doesn't appear to be installed", p);
-                    true
-                }
-            })
-            .collect())
+        Ok(super::missing(package, |p| installed.contains(p)))
     }
 
     fn install(&self, package: &PackageVariant, contexts: &Contexts) -> anyhow::Result<Vec<Step>> {

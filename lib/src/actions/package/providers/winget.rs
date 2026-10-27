@@ -5,7 +5,7 @@ use crate::runner::{self, CommandSpec, Runner};
 use crate::steps::Step;
 use crate::{actions::package::PackageVariant, atoms::command::Exec};
 use std::sync::Arc;
-use tracing::{debug, trace, warn};
+use tracing::warn;
 use which::which;
 
 #[derive(Clone)]
@@ -18,6 +18,28 @@ impl Default for Winget {
         Self {
             runner: runner::system(),
         }
+    }
+}
+
+impl Winget {
+    /// Whether `winget list` finds the package. A failing winget counts as not installed, so
+    /// the install is tried anyway
+    fn is_installed(&self, package: &str) -> bool {
+        let output = match self
+            .runner
+            .run(&CommandSpec::new("winget").args(list_args(package)))
+        {
+            Ok(output) => output,
+            Err(e) => {
+                warn!("Failed to query winget for package {}: {}", package, e);
+                return false;
+            }
+        };
+
+        // winget exits with 0 even if nothing is found, and prints "No installed package found"
+        String::from_utf8_lossy(&output.stdout)
+            .to_lowercase()
+            .contains(&package.to_lowercase())
     }
 }
 
@@ -53,38 +75,7 @@ impl PackageProvider for Winget {
     }
 
     fn query(&self, package: &PackageVariant) -> anyhow::Result<Vec<String>> {
-        // Find all packages that aren't already installed
-        Ok(package
-            .packages()
-            .into_iter()
-            .filter(|p| {
-                // We use `winget list -e --id <package_name>`
-                // `--accept-source-agreements` prevents it from blocking on first run,
-                // `--disable-interactivity` stops winget from prompting at all
-                let output = self
-                    .runner
-                    .run(&CommandSpec::new("winget").args(list_args(p)));
-
-                match output {
-                    Ok(output) => {
-                        let stdout = String::from_utf8_lossy(&output.stdout);
-                        // Winget returns 0 even if nothing is found, so we must parse the output.
-                        // If it contains the package ID, it's installed. Otherwise, it prints "No installed package found"
-                        if stdout.to_lowercase().contains(&p.to_lowercase()) {
-                            trace!("{}: already installed", p);
-                            false // installed, so filter it out
-                        } else {
-                            debug!("{}: doesn't appear to be installed", p);
-                            true // not installed, keep it
-                        }
-                    }
-                    Err(e) => {
-                        warn!("Failed to query winget for package {}: {}", p, e);
-                        true // assume not installed on error to attempt install
-                    }
-                }
-            })
-            .collect())
+        Ok(super::missing(package, |p| self.is_installed(p)))
     }
 
     fn install(&self, package: &PackageVariant, _contexts: &Contexts) -> anyhow::Result<Vec<Step>> {
@@ -108,6 +99,8 @@ impl PackageProvider for Winget {
     }
 }
 
+/// `winget list -e --id <package>`. `--accept-source-agreements` keeps it from blocking on the
+/// first run, `--disable-interactivity` stops it from prompting at all
 fn list_args(package: &str) -> Vec<String> {
     [
         "list",

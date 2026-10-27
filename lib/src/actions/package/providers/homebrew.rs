@@ -5,7 +5,6 @@ use crate::runner::{self, CommandSpec, Runner};
 use crate::steps::Step;
 use crate::{actions::package::PackageVariant, atoms::command::Exec};
 use std::{path::Path, sync::Arc};
-use tracing::{debug, trace};
 use which::which;
 
 #[derive(Clone)]
@@ -71,22 +70,10 @@ impl PackageProvider for Homebrew {
         let cellar = Path::new(&prefix).join("Cellar");
         let caskroom = Path::new(&prefix).join("Caskroom");
 
-        Ok(package
-            .packages()
-            .into_iter()
-            .filter(|p| {
-                if cellar.join(p).is_dir() {
-                    trace!("{}: found in Cellar", p);
-                    false
-                } else if caskroom.join(p).is_dir() {
-                    trace!("{}: found in Caskroom", p);
-                    false
-                } else {
-                    debug!("{}: doesn't appear to be installed", p);
-                    true
-                }
-            })
-            .collect())
+        // Formulae are installed below the Cellar, casks below the Caskroom
+        Ok(super::missing(package, |p| {
+            cellar.join(p).is_dir() || caskroom.join(p).is_dir()
+        }))
     }
 
     fn install(&self, package: &PackageVariant, _contexts: &Contexts) -> anyhow::Result<Vec<Step>> {
