@@ -1,5 +1,7 @@
 mod aptitude;
 use self::aptitude::Aptitude;
+mod aur;
+use self::aur::AurHelper;
 use crate::steps::Step;
 mod bsdpkg;
 use self::bsdpkg::BsdPkg;
@@ -11,14 +13,10 @@ mod macports;
 use self::macports::Macports;
 mod pacman;
 use self::pacman::Pacman;
-mod paru;
-use self::paru::Paru;
 mod pkgin;
 use self::pkgin::Pkgin;
 mod snapcraft;
 use self::snapcraft::Snapcraft;
-mod yay;
-use self::yay::Yay;
 mod winget;
 use self::winget::Winget;
 mod xbps;
@@ -30,6 +28,7 @@ use crate::contexts::Contexts;
 use anyhow::anyhow;
 use schemars::JsonSchema;
 use serde::{de::IntoDeserializer, Deserialize, Serialize};
+use tracing::{debug, trace};
 
 #[derive(JsonSchema, Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum PackageProviders {
@@ -83,8 +82,8 @@ impl PackageProviders {
             PackageProviders::Macports => Box::new(Macports {}),
             PackageProviders::Pkgin => Box::new(Pkgin {}),
             PackageProviders::Pacman => Box::new(Pacman::default()),
-            PackageProviders::Yay => Box::new(Yay::default()),
-            PackageProviders::Paru => Box::new(Paru::default()),
+            PackageProviders::Yay => Box::new(AurHelper::yay()),
+            PackageProviders::Paru => Box::new(AurHelper::paru()),
             PackageProviders::Winget => Box::new(Winget::default()),
             PackageProviders::Xbps => Box::new(Xbps::default()),
             PackageProviders::Zypper => Box::new(Zypper {}),
@@ -207,20 +206,21 @@ fn running_as_root() -> bool {
     false
 }
 
-/// AUR helpers (`makepkg`) refuse to run as root, with an error that doesn't say what to do
-fn refuse_root(provider: &str, contexts: &Contexts) -> anyhow::Result<()> {
-    let root = contexts
-        .get("user")
-        .and_then(|user| user.get("id"))
-        .is_some_and(|id| id.to_string() == "0");
-
-    if root {
-        return Err(anyhow!(
-            "{provider} can't run as root. Run comtrya as a normal user, it asks for sudo where needed, or use `provider: pacman` for packages from the official repositories"
-        ));
-    }
-
-    Ok(())
+/// The requested packages that `installed` doesn't find, in the order they were requested
+fn missing(package: &PackageVariant, installed: impl Fn(&str) -> bool) -> Vec<String> {
+    package
+        .packages()
+        .into_iter()
+        .filter(|p| {
+            if installed(p) {
+                trace!("{}: already installed", p);
+                false
+            } else {
+                debug!("{}: doesn't appear to be installed", p);
+                true
+            }
+        })
+        .collect()
 }
 
 pub trait PackageProvider {
@@ -317,44 +317,6 @@ mod tests {
         let parsed: PackageProviders = serde_yaml_ng::from_str("pacman").unwrap();
 
         assert_eq!(parsed, PackageProviders::Pacman);
-    }
-
-    fn user_contexts(id: &str) -> Contexts {
-        let mut contexts = Contexts::default();
-        contexts.insert(
-            String::from("user"),
-            [(String::from("id"), id.into())].into_iter().collect(),
-        );
-        contexts
-    }
-
-    #[test]
-    fn aur_helpers_refuse_to_run_as_root() {
-        let package = PackageVariant {
-            name: Some(String::from("yay-only-package")),
-            list: vec![],
-            extra_args: vec![],
-            provider: None,
-            file: false,
-        };
-
-        for provider in [PackageProviders::Yay, PackageProviders::Paru] {
-            let provider = provider.get_provider();
-
-            let err = match provider.install(&package, &user_contexts("0")) {
-                Ok(_) => panic!("{} installed as root", provider.name()),
-                Err(err) => err.to_string(),
-            };
-            assert!(err.contains("can't run as root"), "{err}");
-            assert!(err.contains("provider: pacman"), "{err}");
-        }
-    }
-
-    #[test]
-    fn root_is_detected_by_uid() {
-        assert!(refuse_root("yay", &user_contexts("0")).is_err());
-        assert!(refuse_root("yay", &user_contexts("1000")).is_ok());
-        assert!(refuse_root("yay", &Contexts::default()).is_ok());
     }
 
     #[test]
