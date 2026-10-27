@@ -100,9 +100,24 @@ impl ManifestGraph {
         }
     }
 
-    /// Where runs start: the root for all manifests, or the selected ones.
-    /// Names that don't match a manifest are ignored
-    pub(super) fn starts(&self, selected: &[String]) -> Vec<NodeIndex> {
+    /// The manifests to run, dependencies first: all of them, or the selected ones with what
+    /// they depend on. Names that don't match a manifest are ignored
+    pub(super) fn run_order(&self, selected: &[String]) -> Vec<NodeIndex> {
+        // One walk for all starts: `move_to` keeps what's finished, so a manifest that several
+        // selected ones depend on runs once
+        let mut walk = DfsPostOrder::empty(&self.dag);
+        let mut order = vec![];
+        for start in self.starts(selected) {
+            walk.move_to(start);
+            while let Some(node) = walk.next(&self.dag) {
+                order.push(node);
+            }
+        }
+        order
+    }
+
+    /// Where the walk starts: the root for all manifests, or the selected ones
+    fn starts(&self, selected: &[String]) -> Vec<NodeIndex> {
         if selected.is_empty() {
             return vec![self.root];
         }
@@ -111,16 +126,6 @@ impl ManifestGraph {
             .iter()
             .filter_map(|name| self.nodes.get(name).copied())
             .collect()
-    }
-
-    /// `start` and everything it depends on, dependencies first
-    pub(super) fn dependencies_first(&self, start: NodeIndex) -> Vec<NodeIndex> {
-        let mut walk = DfsPostOrder::new(&self.dag, start);
-        let mut order = vec![];
-        while let Some(node) = walk.next(&self.dag) {
-            order.push(node);
-        }
-        order
     }
 
     /// Whether any manifest that `node` depends on is in `failed`
@@ -164,9 +169,10 @@ mod tests {
         })
     }
 
-    fn names(graph: &ManifestGraph, start: NodeIndex) -> Vec<String> {
+    fn names(graph: &ManifestGraph, selected: &[&str]) -> Vec<String> {
+        let selected: Vec<String> = selected.iter().map(|name| name.to_string()).collect();
         graph
-            .dependencies_first(start)
+            .run_order(&selected)
             .into_iter()
             .filter_map(|node| graph.dag[node].name.clone())
             .collect()
@@ -182,9 +188,19 @@ mod tests {
     #[test]
     fn dependencies_come_first() {
         let graph = graph(&[manifest("app", &["base"]), manifest("base", &[])]);
-        let app = graph.starts(&["app".to_string()])[0];
 
-        assert_eq!(vec!["base", "app"], names(&graph, app));
+        assert_eq!(vec!["base", "app"], names(&graph, &["app"]));
+    }
+
+    #[test]
+    fn a_shared_dependency_runs_once() {
+        let graph = graph(&[
+            manifest("a", &["base"]),
+            manifest("b", &["base"]),
+            manifest("base", &[]),
+        ]);
+
+        assert_eq!(vec!["base", "a", "b"], names(&graph, &["a", "b"]));
     }
 
     #[test]

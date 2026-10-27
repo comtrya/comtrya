@@ -108,9 +108,7 @@ impl ComtryaCommand for Apply {
             self.dry_run,
             self.label.as_deref(),
         );
-        for start in graph.starts(&self.manifests) {
-            run.from(start);
-        }
+        run.all(graph.run_order(&self.manifests));
 
         run.finish()
     }

@@ -42,9 +42,9 @@ impl<'a> Run<'a> {
         }
     }
 
-    /// Runs `start` and everything it depends on, dependencies first
-    pub(super) fn from(&mut self, start: NodeIndex) {
-        for node in self.graph.dependencies_first(start) {
+    /// Runs the manifests in `order`, see [`ManifestGraph::run_order`]
+    pub(super) fn all(&mut self, order: Vec<NodeIndex>) {
+        for node in order {
             self.visit(node);
         }
     }
