@@ -4,6 +4,7 @@
 use comtrya_lib::manifests::{LoadError, Loaded, Manifest};
 use petgraph::{graph::NodeIndex, visit::DfsPostOrder, Graph};
 use std::collections::{HashMap, HashSet};
+use std::path::Path;
 use tracing::{error, trace};
 
 /// The manifests of a run and their dependencies.
@@ -23,11 +24,11 @@ pub(super) struct ManifestGraph {
 }
 
 impl ManifestGraph {
-    /// Builds the graph of the loaded manifests.
+    /// Builds the graph of the manifests loaded from `manifest_dir`.
     ///
     /// A manifest that can't be loaded fails like one whose action fails: it and everything that
     /// depends on it are skipped. It stays in the graph as an empty placeholder for that.
-    pub(super) fn build(loaded: Loaded) -> Self {
+    pub(super) fn build(loaded: Loaded, manifest_dir: &Path) -> Self {
         let Loaded { manifests, errors } = loaded;
 
         let mut graph = ManifestGraph {
@@ -45,7 +46,7 @@ impl ManifestGraph {
             graph.add_placeholder(error);
         }
         for (name, manifest) in &manifests {
-            graph.add_dependencies(name, manifest);
+            graph.add_dependencies(name, manifest, &directory_name(manifest, manifest_dir));
         }
 
         graph
@@ -71,13 +72,13 @@ impl ManifestGraph {
         self.broken.insert(node);
     }
 
-    /// Adds an edge from the manifest `name` to each of its dependencies. A dependency that
-    /// doesn't exist makes the manifest broken
-    fn add_dependencies(&mut self, name: &str, manifest: &Manifest) {
+    /// Adds an edge from the manifest `name` in `directory` to each of its dependencies. A
+    /// dependency that doesn't exist makes the manifest broken
+    fn add_dependencies(&mut self, name: &str, manifest: &Manifest, directory: &str) {
         let node = self.nodes[name];
 
         for dependency in &manifest.depends {
-            let dependency = dependency_name(name, dependency);
+            let dependency = dependency_name(directory, dependency);
 
             match self.nodes.get(&dependency) {
                 Some(&dependency_node) => {
@@ -131,14 +132,33 @@ impl ManifestGraph {
     }
 }
 
-/// The full name of `dependency`, as written in the `depends` of the manifest `manifest_name`.
-/// `./` stands for the directory of the manifest: `./main` in `nested.other` is `nested.main`
-fn dependency_name(manifest_name: &str, dependency: &str) -> String {
-    let (directory, _) = manifest_name
-        .rsplit_once('.')
-        .unwrap_or((manifest_name, ""));
+/// The directory of `manifest` below `manifest_dir`, written like a manifest name: `nested` for
+/// `nested/main.yaml` and `nested/other.yaml`, empty for a top-level manifest
+fn directory_name(manifest: &Manifest, manifest_dir: &Path) -> String {
+    let Some(directory) = manifest
+        .root_dir
+        .as_deref()
+        .and_then(|root_dir| root_dir.strip_prefix(manifest_dir).ok())
+    else {
+        return String::new();
+    };
 
-    dependency.replace("./", &format!("{directory}."))
+    directory
+        .components()
+        .map(|component| component.as_os_str().to_string_lossy())
+        .collect::<Vec<_>>()
+        .join(".")
+}
+
+/// The full name of `dependency`, as written in the `depends` of a manifest in `directory`.
+/// `./` stands for that directory: `./main` in `nested` is `nested.main`, at the top just `main`
+fn dependency_name(directory: &str, dependency: &str) -> String {
+    let prefix = match directory {
+        "" => String::new(),
+        directory => format!("{directory}."),
+    };
+
+    dependency.replace("./", &prefix)
 }
 
 #[cfg(test)]
@@ -155,13 +175,24 @@ mod tests {
     }
 
     fn graph(manifests: &[Manifest]) -> ManifestGraph {
-        ManifestGraph::build(Loaded {
-            manifests: manifests
-                .iter()
-                .map(|m| (m.name.clone().unwrap(), m.clone()))
-                .collect(),
-            errors: vec![],
-        })
+        ManifestGraph::build(
+            Loaded {
+                manifests: manifests
+                    .iter()
+                    .map(|m| (m.name.clone().unwrap(), m.clone()))
+                    .collect(),
+                errors: vec![],
+            },
+            Path::new("/manifests"),
+        )
+    }
+
+    /// A manifest in `directory` below `/manifests`
+    fn manifest_in(directory: &str, name: &str, depends: &[&str]) -> Manifest {
+        Manifest {
+            root_dir: Some(Path::new("/manifests").join(directory)),
+            ..manifest(name, depends)
+        }
     }
 
     fn names(graph: &ManifestGraph, start: NodeIndex) -> Vec<String> {
@@ -174,9 +205,29 @@ mod tests {
 
     #[test]
     fn relative_dependencies_are_in_the_same_directory() {
-        assert_eq!("nested.main", dependency_name("nested.other", "./main"));
-        assert_eq!("a.b.c", dependency_name("a.b.x", "./c"));
-        assert_eq!("other", dependency_name("nested.x", "other"));
+        assert_eq!("nested.main", dependency_name("nested", "./main"));
+        assert_eq!("a.b.c", dependency_name("a.b", "./c"));
+        assert_eq!("other", dependency_name("nested", "other"));
+        assert_eq!("main", dependency_name("", "./main"));
+    }
+
+    #[test]
+    fn relative_dependencies_follow_the_manifest_file() {
+        let graph = graph(&[
+            // app.yaml, nested/main.yaml and nested/other.yaml
+            manifest_in("", "app", &["./tools"]),
+            manifest_in("", "tools", &[]),
+            manifest_in("nested", "nested", &["./other"]),
+            manifest_in("nested", "nested.other", &[]),
+        ]);
+
+        assert!(graph.broken.is_empty(), "{:?}", graph.broken);
+        let start = |name: &str| graph.starts(&[name.to_string()])[0];
+        assert_eq!(vec!["tools", "app"], names(&graph, start("app")));
+        assert_eq!(
+            vec!["nested.other", "nested"],
+            names(&graph, start("nested"))
+        );
     }
 
     #[test]
@@ -204,14 +255,17 @@ mod tests {
 
     #[test]
     fn manifests_that_cant_be_loaded_are_broken_placeholders() {
-        let graph = ManifestGraph::build(Loaded {
-            manifests: HashMap::from([("app".to_string(), manifest("app", &["broken"]))]),
-            errors: vec![LoadError {
-                name: "broken".to_string(),
-                path: PathBuf::from("broken.yaml"),
-                kind: comtrya_lib::manifests::LoadErrorKind::Parse("nope".to_string()),
-            }],
-        });
+        let graph = ManifestGraph::build(
+            Loaded {
+                manifests: HashMap::from([("app".to_string(), manifest("app", &["broken"]))]),
+                errors: vec![LoadError {
+                    name: "broken".to_string(),
+                    path: PathBuf::from("broken.yaml"),
+                    kind: comtrya_lib::manifests::LoadErrorKind::Parse("nope".to_string()),
+                }],
+            },
+            Path::new("/manifests"),
+        );
         let broken = graph.nodes["broken"];
 
         assert_eq!(HashSet::from([broken]), graph.broken);
