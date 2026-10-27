@@ -3,17 +3,27 @@ use crate::actions::package::repository::PackageRepository;
 use crate::actions::package::PackageVariant;
 use crate::atoms::command::Exec;
 use crate::contexts::Contexts;
+use crate::runner::{self, CommandSpec, Runner};
 use crate::steps::Step;
 use crate::utilities;
-use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
-use std::process::Command;
+use std::sync::Arc;
 use tracing::warn;
 use tracing::{debug, trace};
 use which::which;
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub struct Paru {}
+#[derive(Clone)]
+pub struct Paru {
+    runner: Arc<dyn Runner>,
+}
+
+impl Default for Paru {
+    fn default() -> Self {
+        Self {
+            runner: runner::system(),
+        }
+    }
+}
 
 impl PackageProvider for Paru {
     fn name(&self) -> &str {
@@ -90,19 +100,14 @@ impl PackageProvider for Paru {
     }
 
     fn query(&self, package: &PackageVariant) -> anyhow::Result<Vec<String>> {
-        let requested_already_installed: HashSet<String> = String::from_utf8(
-            Command::new("pacman")
-                .args(
-                    vec![String::from("-Qq")]
-                        .into_iter()
-                        .chain(package.packages()),
-                )
-                .output()?
-                .stdout,
-        )?
-        .split('\n')
-        .map(String::from)
-        .collect();
+        let command = CommandSpec::new("pacman")
+            .args(["-Qq"])
+            .args(package.packages());
+        let requested_already_installed: HashSet<String> =
+            String::from_utf8(self.runner.run(&command)?.stdout)?
+                .split('\n')
+                .map(String::from)
+                .collect();
 
         debug!(
             "all requested installed packages: {:?}",
@@ -151,5 +156,32 @@ impl PackageProvider for Paru {
             initializers: vec![],
             finalizers: vec![],
         }])
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::runner::fake::{fails, FakeRunner};
+    use pretty_assertions::assert_eq;
+
+    #[test]
+    fn query_asks_pacman_what_is_installed() {
+        let runner = FakeRunner::new()
+            .answer(
+                "pacman -Qq git yay-bin",
+                fails("git\n", "error: package 'yay-bin' was not found\n"),
+            )
+            .shared();
+        let paru = Paru {
+            runner: runner.clone(),
+        };
+        let package = PackageVariant {
+            list: vec![String::from("git"), String::from("yay-bin")],
+            ..Default::default()
+        };
+
+        assert_eq!(vec!["yay-bin"], paru.query(&package).unwrap());
+        assert_eq!(vec!["pacman -Qq git yay-bin"], runner.calls());
     }
 }

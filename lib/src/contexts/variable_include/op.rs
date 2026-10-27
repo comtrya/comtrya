@@ -1,7 +1,9 @@
-use std::{collections::HashMap, io::ErrorKind, process::Command};
+use std::{collections::HashMap, io::ErrorKind};
 
 use anyhow::{anyhow, bail, Context, Result};
 use serde::Deserialize;
+
+use crate::runner::{CommandSpec, Runner};
 
 /// The part of `op item get --format json` that holds the values
 #[derive(Deserialize)]
@@ -20,23 +22,27 @@ struct Field {
 
 /// Loads the fields of a 1Password item, `op://<vault>/<item>[?account=<account>]`, with the
 /// 1Password CLI. The values are secrets: they must never end up in an error or log message.
-pub fn item_values(include: &str, contexts: &mut HashMap<String, String>) -> Result<()> {
+pub fn item_values(
+    include: &str,
+    runner: &dyn Runner,
+    contexts: &mut HashMap<String, String>,
+) -> Result<()> {
     let (vault, item, account) = parse(include)?;
 
-    let mut command = Command::new("op");
-    command.args(["item", "get", item, "--vault", vault, "--format", "json"]);
+    let mut command =
+        CommandSpec::new("op").args(["item", "get", item, "--vault", vault, "--format", "json"]);
     if let Some(account) = account {
-        command.args(["--account", account]);
+        command = command.args(["--account", account]);
     }
 
-    let output = command.output().map_err(|err| match err.kind() {
+    let output = runner.run(&command).map_err(|err| match err.kind() {
         ErrorKind::NotFound => anyhow!(
             "{include} needs the 1Password CLI `op`, see https://developer.1password.com/docs/cli/get-started/"
         ),
         _ => anyhow!("failed to run `op` for {include}: {err}"),
     })?;
 
-    if !output.status.success() {
+    if !output.success {
         bail!(
             "`op` failed to read {include}: {}. Sign in with `op signin`, or turn on the 1Password app integration",
             String::from_utf8_lossy(&output.stderr).trim()
@@ -96,7 +102,62 @@ fn values(item: Item) -> impl Iterator<Item = (String, String)> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::runner::fake::{fails, succeeds, FakeRunner};
     use pretty_assertions::assert_eq;
+
+    const GET: &str = "op item get GitHub --vault My Vault --format json";
+
+    #[test]
+    fn reads_the_item_with_the_cli() {
+        let runner = FakeRunner::new().answer(
+            &format!("{GET} --account my.1password.com"),
+            succeeds(r#"{"fields": [{"label": "token", "value": "s3cret"}]}"#),
+        );
+        let mut contexts = HashMap::new();
+
+        item_values(
+            "op://My Vault/GitHub?account=my.1password.com",
+            &runner,
+            &mut contexts,
+        )
+        .unwrap();
+
+        assert_eq!(Some(&"s3cret".to_string()), contexts.get("token"));
+    }
+
+    #[test]
+    fn a_missing_cli_says_where_to_get_it() {
+        let error = item_values(
+            "op://My Vault/GitHub",
+            &FakeRunner::new(),
+            &mut HashMap::new(),
+        )
+        .unwrap_err();
+
+        assert!(
+            error.to_string().contains("needs the 1Password CLI `op`"),
+            "{error}"
+        );
+    }
+
+    #[test]
+    fn a_failing_cli_says_how_to_sign_in() {
+        let runner = FakeRunner::new().answer(GET, fails("", "[ERROR] not signed in\n"));
+
+        let error = item_values("op://My Vault/GitHub", &runner, &mut HashMap::new()).unwrap_err();
+
+        assert!(error.to_string().contains("not signed in"), "{error}");
+        assert!(error.to_string().contains("op signin"), "{error}");
+    }
+
+    #[test]
+    fn an_unreadable_item_keeps_its_secrets_out_of_the_error() {
+        let runner = FakeRunner::new().answer(GET, succeeds(r#"{"fields": "s3cret"}"#));
+
+        let error = item_values("op://My Vault/GitHub", &runner, &mut HashMap::new()).unwrap_err();
+
+        assert!(!format!("{error:#}").contains("s3cret"), "{error:#}");
+    }
 
     #[test]
     fn parses_vault_item_and_account() {
