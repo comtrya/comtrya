@@ -1,14 +1,21 @@
+//! Runs read-only commands, and fakes them in tests
+
+#![warn(missing_docs, clippy::missing_docs_in_private_items)]
+
 use std::{fmt, io, sync::Arc};
 
 /// A command that only reads the system, like asking a package manager what's installed.
 /// Commands that change the system are atoms, see [`crate::atoms::command::Exec`]
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct CommandSpec {
+    /// The program, found in `PATH`
     pub program: String,
+    /// Its arguments
     pub args: Vec<String>,
 }
 
 impl CommandSpec {
+    /// `program` without arguments
     pub fn new(program: impl Into<String>) -> Self {
         Self {
             program: program.into(),
@@ -16,11 +23,13 @@ impl CommandSpec {
         }
     }
 
+    /// Adds an argument
     pub fn arg(mut self, arg: impl Into<String>) -> Self {
         self.args.push(arg.into());
         self
     }
 
+    /// Adds arguments
     pub fn args<I, S>(mut self, args: I) -> Self
     where
         I: IntoIterator<Item = S>,
@@ -41,15 +50,20 @@ impl fmt::Display for CommandSpec {
     }
 }
 
+/// What a command returned
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct CommandOutput {
+    /// Whether it exited with 0
     pub success: bool,
+    /// Its output
     pub stdout: Vec<u8>,
+    /// Its error output
     pub stderr: Vec<u8>,
 }
 
 /// Runs read-only commands, so tests can replace the system with [`fake::FakeRunner`]
 pub trait Runner: Send + Sync {
+    /// Runs `command` and waits for it. Fails only if it can't be started
     fn run(&self, command: &CommandSpec) -> io::Result<CommandOutput>;
 }
 
@@ -76,6 +90,7 @@ pub fn system() -> Arc<dyn Runner> {
     Arc::new(SystemRunner)
 }
 
+/// A runner that answers from a script, for tests
 #[cfg(test)]
 pub mod fake {
     use super::*;
@@ -84,11 +99,14 @@ pub mod fake {
     /// Answers commands from a script. A command without an answer fails like a missing program
     #[derive(Default)]
     pub struct FakeRunner {
+        /// The answers by command line
         answers: HashMap<String, CommandOutput>,
+        /// The command lines that ran, in order
         calls: Mutex<Vec<String>>,
     }
 
     impl FakeRunner {
+        /// A runner without answers
         pub fn new() -> Self {
             Self::default()
         }
@@ -104,6 +122,7 @@ pub mod fake {
             self.calls.lock().unwrap().clone()
         }
 
+        /// The runner, to share with the code under test
         pub fn shared(self) -> Arc<Self> {
             Arc::new(self)
         }
@@ -120,6 +139,7 @@ pub mod fake {
         }
     }
 
+    /// A command that exits with 0 and prints `stdout`
     pub fn succeeds(stdout: &str) -> CommandOutput {
         CommandOutput {
             success: true,
@@ -128,6 +148,7 @@ pub mod fake {
         }
     }
 
+    /// A command that fails, and prints `stdout` and `stderr`
     pub fn fails(stdout: &str, stderr: &str) -> CommandOutput {
         CommandOutput {
             success: false,

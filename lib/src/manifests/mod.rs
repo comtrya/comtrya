@@ -1,5 +1,11 @@
+//! Manifests: finding, loading and naming them
+
+#![warn(missing_docs, clippy::missing_docs_in_private_items)]
+
+/// Reading manifest files
 mod load;
 pub use load::{load, load_all, LoadError, LoadErrorKind, Loaded};
+/// Finding the directory with the manifests
 mod providers;
 use crate::actions::Actions;
 use petgraph::prelude::*;
@@ -12,6 +18,7 @@ use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use tracing::error;
 
+/// A manifest file: actions, and when and after what they run
 #[derive(JsonSchema, Clone, Debug, Default, Serialize, Deserialize)]
 pub struct Manifest {
     /// The manifest format. Only `1` exists so far; comtrya refuses manifests written for a
@@ -19,24 +26,31 @@ pub struct Manifest {
     #[serde(default)]
     pub version: Option<u32>,
 
+    /// A condition on the contexts. The manifest is skipped when it's false
     #[serde(default)]
     pub r#where: Option<String>,
 
+    /// The name, from the file's path below the manifest directory, like `dev.git` for `dev/git.yaml`
     #[serde(default)]
     pub name: Option<String>,
 
+    /// Labels to select manifests with `--label`
     #[serde(default)]
     pub labels: Vec<String>,
 
+    /// Manifests that run before this one, by name
     #[serde(default)]
     pub depends: Vec<String>,
 
+    /// What the manifest does
     #[serde(default)]
     pub actions: Vec<Actions>,
 
+    /// The directory of the manifest file. Its `files` directory holds the files actions use
     #[serde(skip)]
     pub root_dir: Option<PathBuf>,
 
+    /// Not used
     #[serde(skip)]
     pub dag_index: Option<NodeIndex<u32>>,
 }
@@ -72,6 +86,8 @@ pub fn resolve(uri: &str) -> Result<PathBuf, ManifestProviderError> {
     }))
 }
 
+/// The name of the manifest at `location`: its path below `manifest_directory`, with `.`
+/// between the parts and without `.yaml`/`.yml`. `x/main.yaml` is `x`
 pub fn get_manifest_name(manifest_directory: &Path, location: &Path) -> anyhow::Result<String> {
     let local_name = location.strip_prefix(manifest_directory)?;
     let manifest_name = local_name

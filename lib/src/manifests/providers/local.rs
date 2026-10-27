@@ -1,7 +1,10 @@
+//! Manifests in a local directory
+
 use super::{ManifestProvider, ManifestProviderError};
 
 use std::path::PathBuf;
 
+/// Accepts any path that exists
 #[derive(Debug)]
 pub struct LocalManifestProvider;
 

@@ -1,3 +1,5 @@
+//! The `os` context
+
 use crate::values::Value;
 use gethostname::gethostname;
 use std::collections::BTreeMap;
@@ -5,19 +7,26 @@ use std::collections::BTreeMap;
 /// The operating system, the `os` context
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct OsFacts {
+    /// The name of this machine
     pub hostname: String,
     /// `unix` or `windows`
     pub family: String,
     /// `linux`, `macos`, `windows`, …
     pub name: String,
+    /// The OS as `os_info` names it, like `Debian` or `Mac OS`
     pub distribution: String,
+    /// The release name, like `trixie`, where the OS has one
     pub codename: Option<String>,
+    /// `32-bit` or `64-bit`
     pub bitness: String,
+    /// The version of the OS
     pub version: String,
+    /// The edition, like `Pro` on Windows, where the OS has one
     pub edition: Option<String>,
 }
 
 impl OsFacts {
+    /// Looks at the running OS
     pub fn gather() -> Self {
         let osinfo = os_info::get();
 
@@ -33,6 +42,7 @@ impl OsFacts {
         }
     }
 
+    /// The `os` context. Missing values are `unknown`
     pub fn to_context(&self) -> BTreeMap<String, Value> {
         let or_unknown = |value: &Option<String>| value.as_deref().unwrap_or("unknown").into();
 

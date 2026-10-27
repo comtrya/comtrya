@@ -1,9 +1,12 @@
+//! `file+toml://` and `file+yaml://`: variables from local files
+
 use std::collections::HashMap;
 
 use anyhow::Result;
 use reqwest::Url;
 use toml::Value;
 
+/// Reads the top-level keys of a TOML file
 pub fn toml_values(url: &Url, contexts: &mut HashMap<String, String>) -> Result<()> {
     let path = url.path();
 
@@ -17,6 +20,7 @@ pub fn toml_values(url: &Url, contexts: &mut HashMap<String, String>) -> Result<
     Ok(())
 }
 
+/// Reads the top-level keys of a YAML file
 pub fn yaml_values(url: &Url, contexts: &mut HashMap<String, String>) -> Result<()> {
     let path = url.path();
 

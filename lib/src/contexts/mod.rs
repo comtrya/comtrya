@@ -1,3 +1,8 @@
+//! Contexts: the facts about the system and the configuration, as templates and `where`
+//! conditions see them
+
+#![warn(missing_docs, clippy::missing_docs_in_private_items)]
+
 use rhai::{Engine, Scope};
 use std::collections::BTreeMap;
 use std::sync::LazyLock;
@@ -5,15 +10,20 @@ use tracing::trace;
 
 use crate::{config::Config, values::Value};
 
+/// What comtrya knows before it loads manifests
 pub mod facts;
+/// The operating system
 pub mod os;
+/// The program that runs privileged commands
 pub mod privilege;
 /// The user running comtrya
 pub mod user;
+/// Variables from the sources in `include_variables`
 pub mod variable_include;
 
 pub use facts::Facts;
 
+/// Values by context and key, like `user` and `home_dir` for `user.home_dir`
 pub type Contexts = BTreeMap<String, BTreeMap<String, Value>>;
 
 /// Gathers the [`Facts`] and returns them as contexts
@@ -21,6 +31,7 @@ pub fn build_contexts(config: &Config) -> Contexts {
     Facts::gather(config).to_contexts()
 }
 
+/// The contexts for rendering a template
 pub fn to_tera(contexts: &Contexts) -> tera::Context {
     let mut context = tera::Context::new();
 
@@ -43,6 +54,7 @@ pub fn evaluate_condition(condition: &str, contexts: &Contexts) -> anyhow::Resul
         .map_err(|err| anyhow::anyhow!("{err}"))
 }
 
+/// The contexts as constants for a `where` condition
 pub fn to_rhai(context: &Contexts) -> anyhow::Result<rhai::Scope<'_>> {
     let mut scope = Scope::new();
 
