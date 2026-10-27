@@ -100,7 +100,10 @@ impl ComtryaCommand for Apply {
     #[instrument(skip(self, runtime))]
     fn execute(&self, runtime: &Runtime) -> anyhow::Result<()> {
         let manifest_path = self.manifest_path(runtime)?;
-        let graph = ManifestGraph::build(load_all(manifest_path, &runtime.contexts));
+        let graph = ManifestGraph::build(
+            load_all(manifest_path.clone(), &runtime.contexts),
+            &manifest_path,
+        );
 
         let mut run = Run::new(
             &graph,
