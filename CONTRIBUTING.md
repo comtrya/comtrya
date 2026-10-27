@@ -54,7 +54,7 @@ Run `./check.sh` (or `check.ps1` on Windows). It
 
 ### Compatibility with existing manifests
 
-[`compat/`](./compat) loads manifests with your changes and with the last release of `comtrya-lib`, and fails if any manifest means something different, for example because an alias is gone or a field is read differently. If the difference is intended, record it in `known_differences` in `compat/tests/v1.rs` and mention it in the release notes. New manifest rules belong in `compat/fixtures/v1/`.
+[`compat/`](./compat) loads manifests with your changes and with the last release of `comtrya-lib`, and fails if any manifest means something different, for example because an alias is gone, a field is read differently, or another variant applies on some system. If the difference is intended, record it in `known_differences` in `compat/tests/v1.rs` and mention it in the release notes. New manifest rules belong in `compat/fixtures/v1/`.
 
 ### Documentation
 

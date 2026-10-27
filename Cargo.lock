@@ -688,9 +688,12 @@ dependencies = [
 name = "comtrya-compat"
 version = "0.0.0"
 dependencies = [
+ "anyhow",
  "comtrya-lib 0.10.0",
  "comtrya-lib 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "pretty_assertions",
+ "rhai",
+ "serde",
  "serde_json",
 ]
 
