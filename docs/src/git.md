@@ -2,19 +2,16 @@
 
 - git.clone
 
-## Use notice
+## git.clone
 
-This functionality was removed in 0.8.8. However, it is back as of version 0.9.1. The older implementation had issues with openssl that caused some headaches. However, as of version 0.9.1, a new implementation will be available utilizing gix as the backend for git. There are some breaking changes.
+Clones a git repository. Nothing happens if `directory` already exists.
 
-## git.clone [0.9.1 and later]
-
-Perform a git clone on a repository from GitHub.
-
-| Key        | Type   | Optional | Description           |
-|:-----------|:-------|:---------|:----------------------|
-| action     | string | no       | `git.clone`           |
-| repo_url   | string | no       | repository to clone   |
-| directory  | string | no       | directory to clone to |
+| Key        | Type   | Optional | Description                                                          |
+|:-----------|:-------|:---------|:---------------------------------------------------------------------|
+| action     | string | no       | `git.clone`                                                          |
+| repo_url   | string | no       | URL of the repository to clone. `repository` works as well           |
+| directory  | string | no       | directory to clone to                                                |
+| reference  | string | yes      | branch or tag to check out, instead of the repository's default branch |
 
 ### Example
 
@@ -22,24 +19,14 @@ Perform a git clone on a repository from GitHub.
 actions:
   - action: git.clone
     repo_url: https://github.com/comtrya/comtrya
-    directory: /Users/test/Testing/comtrya/
+    directory: "{{ user.home_dir }}/Code/comtrya"
+
+  - action: git.clone
+    repo_url: https://github.com/comtrya/comtrya
+    reference: v0.10.0
+    directory: "{{ user.home_dir }}/Code/comtrya-0.10.0"
 ```
 
-## git.clone [0.8.7 and prior]
+### History
 
-Perform a git clone on a repository from GitHub.
-
-| Key        | Type   | Optional | Description           |
-|:-----------|:-------|:---------|:----------------------|
-| action     | string | no       | `git.clone`           |
-| repository | string | no       | repository to clone   |
-| directory  | string | no       | directory to clone to |
-
-
-### Example
-
-```yaml
-- action: git.clone
-  repository: comtrya/comtrya
-  directory: {{ user.home_dir }}/Code/src/
-```
+comtrya 0.8.7 and earlier named the URL `repository`. `git.clone` was removed in 0.8.8 and came back in 0.9.1 with `repo_url` and without `reference`. Since 0.11.0, both names and `reference` work again, so manifests written for 0.8.7 run unchanged.

@@ -9,16 +9,26 @@ use tracing::instrument;
 pub struct Clone {
     pub repository: Url,
     pub directory: PathBuf,
+    /// Branch or tag to check out, the remote's `HEAD` if `None`
+    pub reference: Option<String>,
 }
 
 impl std::fmt::Display for Clone {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "GitClone {} to {}",
-            self.repository,
-            self.directory.display()
-        )
+        match &self.reference {
+            Some(reference) => write!(
+                f,
+                "GitClone {}#{reference} to {}",
+                self.repository,
+                self.directory.display()
+            ),
+            None => write!(
+                f,
+                "GitClone {} to {}",
+                self.repository,
+                self.directory.display()
+            ),
+        }
     }
 }
 
@@ -39,7 +49,8 @@ impl Atom for Clone {
 
         std::fs::create_dir_all(&self.directory)?;
 
-        let mut prepare_clone = gix::prepare_clone(self.repository.clone(), &self.directory)?;
+        let mut prepare_clone = gix::prepare_clone(self.repository.clone(), &self.directory)?
+            .with_ref_name(self.reference.as_deref())?;
         let (mut prepare_checkout, _) = prepare_clone
             .fetch_then_checkout(gix::progress::Discard, &interrupt::IS_INTERRUPTED)?;
 
