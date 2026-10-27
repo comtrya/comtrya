@@ -1,0 +1,42 @@
+# The v1 rules for which variant applies, see `ConditionalVariantAction::select`
+actions:
+  # A variant applies even when the action's own `where` is false
+  - action: command.run
+    command: echo
+    args: [action]
+    where: os.name == "plan9"
+    variants:
+      - where: os.name == "linux"
+        command: echo
+        args: [linux]
+  # The first matching variant wins, a variant without `where` never applies
+  - action: command.run
+    command: echo
+    args: [action]
+    variants:
+      - command: echo
+        args: [no where]
+      - where: os.family == "unix"
+        command: echo
+        args: [unix]
+      - where: os.name == "linux"
+        command: echo
+        args: [linux]
+  # A variant's broken `where` counts as false
+  - action: command.run
+    command: echo
+    args: [action]
+    variants:
+      - where: os.name ==
+        command: echo
+        args: [broken]
+  # The action's broken `where` is an error
+  - action: command.run
+    command: echo
+    args: [action]
+    where: os.name ==
+  # The action's false `where` skips it
+  - action: command.run
+    command: echo
+    args: [action]
+    where: os.name == "plan9"

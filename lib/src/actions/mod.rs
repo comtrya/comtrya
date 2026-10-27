@@ -73,36 +73,41 @@ where
     }
 
     fn plan(&self, manifest: &Manifest, context: &Contexts) -> Result<Vec<Step>, anyhow::Error> {
-        let variant = self.variants.iter().find(|variant| {
-            if variant.condition.is_none() {
-                return false;
-            }
+        match self.select(context)? {
+            Some(action) => action.plan(manifest, context),
+            None => Ok(vec![]),
+        }
+    }
+}
 
-            // .unwrap() is safe here because we checked for None above
-            let condition = variant.condition.clone().unwrap();
-            match evaluate_condition(condition.as_str(), context) {
-                Ok(b) => b,
-                Err(error) => {
+impl<T> ConditionalVariantAction<T> {
+    /// The action that applies: the first variant whose `where` is true, else the action itself
+    /// if its own `where` is true or missing, else `None`. These are the v1 rules:
+    ///
+    /// - A variant applies even when the action's own `where` is false
+    /// - A variant without `where` never applies
+    /// - A variant's `where` that can't be evaluated counts as false, the action's is an error
+    pub fn select(&self, contexts: &Contexts) -> anyhow::Result<Option<&T>> {
+        let variant = self.variants.iter().find(|variant| {
+            variant.condition.as_ref().is_some_and(|condition| {
+                evaluate_condition(condition, contexts).unwrap_or_else(|error| {
                     error!("Failed execution condition for action: {}", error);
                     false
-                }
-            }
+                })
+            })
         });
 
         if let Some(variant) = variant {
-            return variant.action.plan(manifest, context);
+            return Ok(Some(&variant.action));
         }
 
-        if self.condition.is_none() {
-            return self.action.plan(manifest, context);
-        }
+        let Some(condition) = &self.condition else {
+            return Ok(Some(&self.action));
+        };
 
-        // .unwrap() is safe here because we checked for None above
-        let condition = self.condition.as_ref().unwrap();
-
-        match evaluate_condition(condition.as_str(), context) {
-            Ok(true) => self.action.plan(manifest, context),
-            Ok(false) => Ok(vec![]),
+        match evaluate_condition(condition, contexts) {
+            Ok(true) => Ok(Some(&self.action)),
+            Ok(false) => Ok(None),
             Err(error) => Err(anyhow!("Failed execution condition for action: {error}")),
         }
     }
@@ -338,5 +343,90 @@ actions:
         let serialized = serde_json::to_value(action).unwrap();
         assert_eq!(serialized["action"], action.to_string());
         assert_eq!("binary.github", action.to_string());
+    }
+
+    mod select {
+        use super::super::{ConditionalVariantAction, Variant};
+        use crate::contexts::Contexts;
+        use crate::values::Value;
+        use pretty_assertions::assert_eq;
+        use std::collections::BTreeMap;
+
+        fn linux() -> Contexts {
+            Contexts::from([(
+                String::from("os"),
+                BTreeMap::from([(String::from("name"), Value::from("linux"))]),
+            )])
+        }
+
+        fn action(
+            condition: Option<&str>,
+            variants: &[(Option<&str>, &'static str)],
+        ) -> ConditionalVariantAction<&'static str> {
+            ConditionalVariantAction {
+                action: "action",
+                condition: condition.map(String::from),
+                variants: variants
+                    .iter()
+                    .map(|(condition, name)| Variant::new(*name, condition.map(String::from)))
+                    .collect(),
+            }
+        }
+
+        fn selected(action: &ConditionalVariantAction<&'static str>) -> Option<&'static str> {
+            action.select(&linux()).unwrap().copied()
+        }
+
+        const LINUX: Option<&str> = Some(r#"os.name == "linux""#);
+        const MACOS: Option<&str> = Some(r#"os.name == "macos""#);
+
+        #[test]
+        fn without_conditions_the_action_applies() {
+            assert_eq!(Some("action"), selected(&action(None, &[])));
+        }
+
+        #[test]
+        fn the_action_where_decides_without_a_matching_variant() {
+            assert_eq!(
+                Some("action"),
+                selected(&action(LINUX, &[(MACOS, "macos")]))
+            );
+            assert_eq!(None, selected(&action(MACOS, &[(MACOS, "macos")])));
+        }
+
+        #[test]
+        fn the_first_matching_variant_wins() {
+            let action = action(
+                None,
+                &[(MACOS, "macos"), (LINUX, "first"), (LINUX, "second")],
+            );
+
+            assert_eq!(Some("first"), selected(&action));
+        }
+
+        #[test]
+        fn a_variant_applies_even_when_the_action_where_is_false() {
+            assert_eq!(Some("linux"), selected(&action(MACOS, &[(LINUX, "linux")])));
+        }
+
+        #[test]
+        fn a_variant_without_where_never_applies() {
+            assert_eq!(
+                Some("action"),
+                selected(&action(None, &[(None, "variant")]))
+            );
+        }
+
+        #[test]
+        fn a_broken_variant_where_counts_as_false() {
+            let action = action(None, &[(Some("os.name =="), "broken"), (LINUX, "linux")]);
+
+            assert_eq!(Some("linux"), selected(&action));
+        }
+
+        #[test]
+        fn a_broken_action_where_is_an_error() {
+            assert!(action(Some("os.name =="), &[]).select(&linux()).is_err());
+        }
     }
 }

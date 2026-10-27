@@ -1,6 +1,7 @@
 //! Loads manifests with this checkout's lib and with the last release, and compares what they
 //! mean: which manifests exist, their names, `where`, dependencies and every action with its
-//! variants. A refactor that changes any of this for an existing manifest fails here.
+//! variants, and under each set of facts, which manifests run and which variant of each action
+//! applies. A refactor that changes any of this for an existing manifest fails here.
 //!
 //! When a difference is intended, put it in the release notes and record it in
 //! `known_differences` instead of changing the fixtures.
@@ -177,6 +178,119 @@ fn manifests_mean_what_they_meant_in_the_last_release() {
     }
 }
 
+/// Records which action the released `ConditionalVariantAction::plan` picks, so the release's own
+/// code decides which variant wins
+#[derive(Default, serde::Deserialize)]
+#[serde(transparent)]
+struct Recorder(Value);
+
+thread_local! {
+    static PLANNED: std::cell::RefCell<Option<Value>> = const { std::cell::RefCell::new(None) };
+}
+
+impl released::actions::Action for Recorder {
+    fn plan(
+        &self,
+        _: &released::manifests::Manifest,
+        _: &released::contexts::Contexts,
+    ) -> anyhow::Result<Vec<released::steps::Step>> {
+        PLANNED.with(|planned| *planned.borrow_mut() = Some(self.0.clone()));
+        Ok(vec![])
+    }
+}
+
+/// What a manifest does under the facts: whether it runs, and which action or variant of each
+/// action applies. `None` for an action means it's skipped, `"error"` that its `where` is broken
+fn selections(
+    manifest: &Value,
+    manifest_applies: impl Fn(&str) -> bool,
+    select: impl Fn(&Value) -> Result<Option<Value>, ()>,
+) -> Value {
+    if let Some(condition) = manifest["where"].as_str() {
+        if !manifest_applies(condition) {
+            return json!("manifest skipped");
+        }
+    }
+
+    manifest["actions"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .map(|action| match select(action) {
+            Ok(selected) => json!(selected),
+            Err(()) => json!("error"),
+        })
+        .collect()
+}
+
+fn current_selections(manifest: &Value, facts: &Value) -> Value {
+    let contexts: comtrya_lib::contexts::Contexts = serde_json::from_value(facts.clone()).unwrap();
+
+    selections(
+        manifest,
+        |condition| {
+            comtrya_lib::contexts::evaluate_condition(condition, &contexts).unwrap_or(false)
+        },
+        |action| {
+            let action: comtrya_lib::actions::ConditionalVariantAction<Value> =
+                serde_json::from_value(action.clone()).unwrap();
+            action
+                .select(&contexts)
+                .map(|selected| selected.cloned())
+                .map_err(|_| ())
+        },
+    )
+}
+
+fn released_selections(manifest: &Value, facts: &Value) -> Value {
+    use released::actions::Action;
+
+    let contexts: released::contexts::Contexts = serde_json::from_value(facts.clone()).unwrap();
+
+    selections(
+        manifest,
+        // How 0.10.0 evaluated a manifest's `where`
+        |condition| {
+            rhai::Engine::new()
+                .eval_with_scope::<bool>(&mut released::contexts::to_rhai(&contexts), condition)
+                .unwrap_or(false)
+        },
+        |action| {
+            let action: released::actions::ConditionalVariantAction<Recorder> =
+                serde_json::from_value(action.clone()).unwrap();
+            PLANNED.with(|planned| planned.borrow_mut().take());
+            action
+                .plan(&Default::default(), &contexts)
+                .map(|_| PLANNED.with(|planned| planned.borrow_mut().take()))
+                .map_err(|_| ())
+        },
+    )
+}
+
+#[test]
+fn variants_win_like_in_the_last_release() {
+    for dir in manifest_dirs() {
+        let dir = dir.canonicalize().unwrap();
+        let dir_name = dir.file_name().unwrap().to_string_lossy().to_string();
+
+        for (system, facts) in facts() {
+            let current = current(&dir, &facts);
+
+            for (name, manifest) in released(&dir, &facts) {
+                if known_differences().contains(&(dir_name.as_str(), name.as_str())) {
+                    continue;
+                }
+
+                assert_eq!(
+                    released_selections(&manifest, &facts),
+                    current_selections(&current[&name], &facts),
+                    "what applies in manifest {name} in {dir_name} on {system}"
+                );
+            }
+        }
+    }
+}
+
 /// Guards the fixtures themselves: they only protect what they still contain
 #[test]
 fn fixtures_cover_the_v1_rules() {
@@ -197,6 +311,7 @@ fn fixtures_cover_the_v1_rules() {
             "nested.other",
             "templates",
             "toml.command.toml",
+            "variant-rules",
             "variants",
             "versioned",
             "where-false-template",
@@ -225,6 +340,48 @@ fn fixtures_cover_the_v1_rules() {
         ],
         actions
     );
+
+    // What applies, shortened to `args[0]` or the package list, to see that the rules decide
+    let applies = |manifest: &str, system: usize| -> Vec<String> {
+        let (_, facts) = &facts()[system];
+        let selections = current_selections(&manifests[manifest], facts);
+        let Some(selections) = selections.as_array() else {
+            return vec![selections.as_str().unwrap().to_string()];
+        };
+        selections
+            .iter()
+            .map(|selected| match selected {
+                Value::Null => String::from("skipped"),
+                Value::String(marker) => marker.clone(),
+                selected if selected["args"].is_array() => {
+                    selected["args"][0].as_str().unwrap().to_string()
+                }
+                selected => selected["list"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .map(|package| package.as_str().unwrap())
+                    .collect::<Vec<_>>()
+                    .join(","),
+            })
+            .collect()
+    };
+    let (debian, arch_as_root, macos, windows) = (0, 1, 2, 3);
+    assert_eq!(
+        vec!["linux", "unix", "action", "error", "skipped"],
+        applies("variant-rules", debian)
+    );
+    assert_eq!(
+        vec!["skipped", "unix", "action", "error", "skipped"],
+        applies("variant-rules", macos)
+    );
+    assert_eq!(vec!["linux", "git"], applies("variants", debian));
+    // root fails the action's `where`, but the linux variant applies anyway
+    assert_eq!(
+        vec!["linux", "git,base-devel"],
+        applies("variants", arch_as_root)
+    );
+    assert_eq!(vec!["manifest skipped"], applies("variants", windows));
 
     let clone = &manifests["git-clone-reference"]["actions"][0];
     assert_eq!("https://github.com/comtrya/comtrya", clone["repo_url"]);
