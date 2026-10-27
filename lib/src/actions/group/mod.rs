@@ -32,19 +32,13 @@ impl From<&Group> for GroupVariant {
     fn from(group: &Group) -> Self {
         let os = os_info::get();
 
-        // Check for variant configuration for this OS
-        let variant = group.variants.get(&os.os_type());
-
-        // No variant overlays
-        if variant.is_none() {
+        // The variant for this OS overlays the action, if there is one
+        let Some(variant) = group.variants.get(&os.os_type()) else {
             return GroupVariant {
                 provider: group.provider.clone(),
                 group_name: group.group_name.clone(),
             };
         };
-
-        // .unwrap() is safe here because we checked for None above
-        let variant = variant.unwrap();
 
         debug!(message = "Built Variant", variant = ?variant);
 

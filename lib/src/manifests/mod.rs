@@ -6,6 +6,7 @@ use petgraph::prelude::*;
 pub use providers::git_cache_dir;
 pub use providers::register_providers;
 pub use providers::ManifestProvider;
+pub use providers::ManifestProviderError;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
@@ -43,27 +44,32 @@ pub struct Manifest {
 /// The newest manifest format this version of comtrya understands
 pub const MANIFEST_VERSION: u32 = 1;
 
-pub fn resolve(uri: &String) -> Option<PathBuf> {
-    let manifest_directory = register_providers()
-        .into_iter()
-        .filter(|provider| std::ops::Deref::deref(&provider).looks_familiar(uri))
-        .fold(None, |path, provider| {
-            if path.is_some() {
-                return path;
+/// Finds the manifests at `uri`: a local directory, or a git repository that's cloned into the
+/// cache. The error is the one of the last provider that tried
+pub fn resolve(uri: &str) -> Result<PathBuf, ManifestProviderError> {
+    let mut error = None;
+
+    for provider in register_providers()
+        .iter()
+        .filter(|provider| provider.looks_familiar(uri))
+    {
+        match provider.resolve(uri) {
+            Ok(path) => {
+                return path
+                    .canonicalize()
+                    .map_err(|source| ManifestProviderError::NotFound {
+                        path: path.display().to_string(),
+                        source,
+                    })
             }
-
-            provider.resolve(uri.as_str()).ok()
-        });
-
-    let manifest_directory = match manifest_directory {
-        Some(dir) => dir.canonicalize().expect("Failed to canonicalize path"),
-        None => {
-            error!("Failed to find manifests at {}", &uri);
-            panic!();
+            Err(err) => error = Some(err),
         }
-    };
+    }
 
-    Some(manifest_directory)
+    Err(error.unwrap_or_else(|| ManifestProviderError::NotFound {
+        path: uri.to_string(),
+        source: std::io::ErrorKind::NotFound.into(),
+    }))
 }
 
 pub fn get_manifest_name(manifest_directory: &Path, location: &Path) -> anyhow::Result<String> {
@@ -219,6 +225,34 @@ mod test {
         assert_eq!(
             "test.nested.hello",
             get_manifest_name(&manifest_directory, &location).unwrap()
+        );
+    }
+}
+
+#[cfg(test)]
+mod resolve_tests {
+    use super::*;
+
+    #[test]
+    fn a_local_directory_resolves_to_its_canonical_path() {
+        let dir = tempfile::tempdir().unwrap();
+
+        assert_eq!(
+            dir.path().canonicalize().unwrap(),
+            resolve(dir.path().to_str().unwrap()).unwrap()
+        );
+    }
+
+    #[test]
+    fn a_missing_directory_says_which() {
+        let error = resolve("/comtrya-no-such-directory").unwrap_err();
+
+        assert!(matches!(error, ManifestProviderError::NotFound { .. }));
+        assert!(
+            error
+                .to_string()
+                .starts_with("/comtrya-no-such-directory doesn't exist or can't be read: "),
+            "{error}"
         );
     }
 }

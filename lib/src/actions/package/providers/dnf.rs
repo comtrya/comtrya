@@ -60,10 +60,7 @@ impl PackageProvider for Dnf {
 
         let privilege_provider = utilities::get_privilege_provider(contexts);
 
-        if repository.key.is_some() {
-            // .unwrap() is safe here because we checked for key presence above
-            let key = repository.clone().key.unwrap();
-
+        if let Some(key) = repository.key.clone() {
             steps.extend(vec![Step {
                 atom: Box::new(Exec {
                     command: String::from("rpm"),

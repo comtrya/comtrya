@@ -57,11 +57,8 @@ impl From<&User> for UserVariant {
     fn from(user: &User) -> Self {
         let os = os_info::get();
 
-        // Check for variant configuration for this OS
-        let variant = user.variants.get(&os.os_type());
-
-        // No variant overlays
-        if variant.is_none() {
+        // The variant for this OS overlays the action, if there is one
+        let Some(variant) = user.variants.get(&os.os_type()) else {
             return UserVariant {
                 provider: user.provider.clone(),
                 username: user.username.clone(),
@@ -71,9 +68,6 @@ impl From<&User> for UserVariant {
                 group: user.group.clone(),
             };
         };
-
-        // .unwrap() is safe here because we checked for None above
-        let variant = variant.unwrap();
 
         debug!(message = "Built Variant", variant = ?variant);
 

@@ -4,11 +4,11 @@ use crate::steps::initializers::FileExists;
 use crate::steps::initializers::FlowControl::Ensure;
 use crate::steps::Step;
 use crate::{actions::Action, contexts::Contexts};
+use anyhow::anyhow;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::vec;
-use tracing::error;
 
 // TODO: Next Major Version - Deprecate from and to
 #[derive(JsonSchema, Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -28,29 +28,18 @@ fn walk_dir_default() -> bool {
 }
 
 impl FileLink {
-    fn source(&self) -> String {
-        if self.source.is_none() && self.from.is_none() {
-            error!("Field 'source' is required for file.link");
-        }
-
-        if let Some(ref source) = self.source {
-            source.to_string()
-        } else {
-            // .unwrap() is safe here because we already checked for None
-            self.from.clone().unwrap()
-        }
+    fn source(&self) -> anyhow::Result<&str> {
+        self.source
+            .as_deref()
+            .or(self.from.as_deref())
+            .ok_or_else(|| anyhow!("file.link needs `source`"))
     }
 
-    fn target(&self) -> String {
-        if self.target.is_none() && self.to.is_none() {
-            error!("Field 'target' is required for file.link");
-        }
-        if let Some(ref target) = self.target {
-            target.to_string()
-        } else {
-            // .unwrap() is safe here because we already checked for None
-            self.to.clone().unwrap()
-        }
+    fn target(&self) -> anyhow::Result<&str> {
+        self.target
+            .as_deref()
+            .or(self.to.as_deref())
+            .ok_or_else(|| anyhow!("file.link needs `target`"))
     }
 
     pub fn plan_no_walk(from: PathBuf, to: PathBuf) -> Vec<Step> {
@@ -126,9 +115,9 @@ impl Action for FileLink {
     }
 
     fn plan(&self, manifest: &Manifest, _: &Contexts) -> anyhow::Result<Vec<Step>> {
-        let from: PathBuf = self.resolve(manifest, self.source().as_str())?;
+        let from: PathBuf = self.resolve(manifest, self.source()?)?;
 
-        let to = PathBuf::from(self.target());
+        let to = PathBuf::from(self.target()?);
 
         // Can't walk a file
         if from.is_file() {
@@ -165,8 +154,8 @@ mod tests {
 
         match actions.pop() {
             Some(Actions::FileLink(action)) => {
-                assert_eq!("a", action.action.source());
-                assert_eq!("b", action.action.target());
+                assert_eq!("a", action.action.source().unwrap());
+                assert_eq!("b", action.action.target().unwrap());
             }
             _ => {
                 panic!("FileLink didn't deserialize to the correct type");
@@ -184,8 +173,8 @@ mod tests {
 
         match actions.pop() {
             Some(Actions::FileLink(action)) => {
-                assert_eq!("a", action.action.source());
-                assert_eq!("b", action.action.target());
+                assert_eq!("a", action.action.source().unwrap());
+                assert_eq!("b", action.action.target().unwrap());
             }
             _ => {
                 panic!("FileLink didn't deserialize to the correct type");

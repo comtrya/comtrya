@@ -45,14 +45,9 @@ impl Apply {
             )
         })?;
 
-        let manifest_path = match crate::manifests::resolve(first_manifest_path) {
-            Some(path) => path,
-            None => {
-                return Err(anyhow::anyhow!(
-                    "Manifest location, {first_manifest_path:?}, could be resolved"
-                ))
-            }
-        };
+        let manifest_path = crate::manifests::resolve(first_manifest_path).map_err(|err| {
+            anyhow::anyhow!("Can't find the manifests at {first_manifest_path}: {err}")
+        })?;
 
         trace!(manifests = self.manifests.join(",").deref(),);
         Ok(manifest_path)

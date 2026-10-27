@@ -39,27 +39,24 @@ static ENGINE: LazyLock<Engine> = LazyLock::new(|| {
 /// Evaluates a `where` condition against the contexts
 pub fn evaluate_condition(condition: &str, contexts: &Contexts) -> anyhow::Result<bool> {
     ENGINE
-        .eval_with_scope::<bool>(&mut to_rhai(contexts), condition)
+        .eval_with_scope::<bool>(&mut to_rhai(contexts)?, condition)
         .map_err(|err| anyhow::anyhow!("{err}"))
 }
 
-pub fn to_rhai(context: &Contexts) -> rhai::Scope<'_> {
+pub fn to_rhai(context: &Contexts) -> anyhow::Result<rhai::Scope<'_>> {
     let mut scope = Scope::new();
 
-    context.iter().for_each(|(m, v)| {
-        let dynamic = match rhai::serde::to_dynamic(v) {
-            Ok(dynamic) => dynamic,
-            Err(error) => {
-                panic!("Failed to convert context value to dynamic: {error}");
-            }
-        };
+    for (m, v) in context {
+        let dynamic = rhai::serde::to_dynamic(v)
+            .map_err(|error| anyhow::anyhow!("context {m} can't be used in conditions: {error}"))?;
 
-        trace!("Add dynamic constant '{}' -> {}", &m, &dynamic);
+        // Only the name: env and included variables often hold secrets
+        trace!("Add dynamic constant '{}'", &m);
 
         scope.push_constant(m.clone(), dynamic);
-    });
+    }
 
-    scope
+    Ok(scope)
 }
 
 #[cfg(test)]
@@ -97,7 +94,7 @@ mod test {
         user_context.insert(String::from("username"), String::from("rawkode").into());
         contexts.insert(String::from("user"), user_context);
 
-        let mut rhai_context = to_rhai(&contexts);
+        let mut rhai_context = to_rhai(&contexts).unwrap();
         assert!(rhai_context.contains("user"));
 
         let result = engine

@@ -67,11 +67,8 @@ impl From<&Package> for PackageVariant {
     fn from(package: &Package) -> Self {
         let os = os_info::get();
 
-        // Check for variant configuration for this OS
-        let variant = package.variants.get(&os.os_type());
-
-        // No variant overlays
-        if variant.is_none() {
+        // The variant for this OS overlays the action, if there is one
+        let Some(variant) = package.variants.get(&os.os_type()) else {
             return PackageVariant {
                 name: package.name.clone(),
                 list: package.list.clone(),
@@ -80,9 +77,6 @@ impl From<&Package> for PackageVariant {
                 file: package.file,
             };
         };
-
-        // .unwrap() is safe here because we checked for None above
-        let variant = variant.unwrap();
 
         debug!(message = "Built Variant", variant = ?variant);
 

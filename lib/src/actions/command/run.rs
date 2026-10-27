@@ -38,10 +38,11 @@ fn remove_default(schema: &mut schemars::Schema) {
     schema.remove("default");
 }
 
+/// The directory comtrya runs in, or `.` if it's gone, which fails later with a clear error
 fn get_cwd() -> String {
     std::env::current_dir()
         .map(|current_dir| current_dir.display().to_string())
-        .expect("Failed to get current directory")
+        .unwrap_or_else(|_| String::from("."))
 }
 
 impl RunCommand {

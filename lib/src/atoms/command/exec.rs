@@ -147,16 +147,14 @@ impl Atom for Exec {
             }
         }
 
-        match std::process::Command::new(&command)
-            .envs(self.environment.clone())
-            .args(&arguments)
-            .current_dir(self.working_dir.clone().unwrap_or_else(|| {
-                std::env::current_dir()
-                    .map(|current_dir| current_dir.display().to_string())
-                    .expect("Failed to get current directory")
-            }))
-            .output()
-        {
+        let mut process = std::process::Command::new(&command);
+        process.envs(self.environment.clone()).args(&arguments);
+        // Without one, the command runs where comtrya runs
+        if let Some(working_dir) = &self.working_dir {
+            process.current_dir(working_dir);
+        }
+
+        match process.output() {
             Ok(output) if output.status.success() => {
                 self.status.stderr = String::from_utf8(output.stderr)?;
 

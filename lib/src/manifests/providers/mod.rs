@@ -12,9 +12,31 @@ pub fn register_providers() -> Vec<Box<dyn ManifestProvider>> {
     ]
 }
 
-#[derive(Debug, PartialEq, Eq)]
+/// Why the manifests at a location can't be found
+#[derive(Debug, thiserror::Error)]
 pub enum ManifestProviderError {
-    NoResolution,
+    #[error("{path} doesn't exist or can't be read: {source}")]
+    NotFound {
+        path: String,
+        #[source]
+        source: std::io::Error,
+    },
+
+    #[error("there is no cache directory to clone git manifests into")]
+    NoCacheDir,
+
+    #[error("can't create the cache directory {}: {source}", path.display())]
+    CacheDir {
+        path: PathBuf,
+        #[source]
+        source: std::io::Error,
+    },
+
+    #[error("{url} is not a valid git URL: {message}")]
+    InvalidUrl { url: String, message: String },
+
+    #[error("can't clone {url}: {message}")]
+    Clone { url: String, message: String },
 }
 
 /// ManifestProviders are responsible for taking a String
