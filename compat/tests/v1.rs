@@ -108,6 +108,11 @@ fn known_differences() -> Vec<(&'static str, &'static str)> {
     vec![
         // 0.11.0 accepts `repository` and `reference` again, 0.10.0 refuses them
         ("v1", "git-clone-reference"),
+        // 0.11.0 drops `.toml` from manifest names like `.yaml`, 0.10.0 kept it
+        ("v1", "toml.command.toml"),
+        ("v1", "toml.command"),
+        ("examples", "toml-examples.command.command.toml"),
+        ("examples", "toml-examples.command.command"),
     ]
 }
 
@@ -299,7 +304,7 @@ fn fixtures_cover_the_v1_rules() {
     let manifests = current(&dir, debian);
     let names: Vec<&str> = manifests.keys().map(String::as_str).collect();
 
-    // main.yaml takes its directory's name, .toml stays in the name, depth 3 still loads,
+    // main.yaml takes its directory's name, .toml is dropped from the name, depth 3 still loads,
     // files/ is skipped, a broken template and a newer version drop the manifest, and a
     // false `where` keeps it without rendering
     assert_eq!(
@@ -310,7 +315,7 @@ fn fixtures_cover_the_v1_rules() {
             "nested",
             "nested.other",
             "templates",
-            "toml.command.toml",
+            "toml.command",
             "variant-rules",
             "variants",
             "versioned",
