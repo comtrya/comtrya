@@ -17,12 +17,12 @@ dirs = "6.0"
 gethostname = "1.1"
 ignore = "0.4"
 normpath = "1.5"
-octocrab = "0.54"
 os_info = { version = "3.14", features = ["schemars"] }
 petgraph = "0.8"
 regex = "1.12"
 reqwest = { version = "0.13", default-features = false, features = [
     "blocking",
+    "json",
     "rustls",
 ] }
 rhai = { version = "1.24", features = ["serde"] }

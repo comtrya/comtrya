@@ -8,7 +8,6 @@ use anyhow::anyhow;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
-use tokio::runtime::Runtime;
 use tracing::debug;
 
 #[derive(Clone, Debug, Default, JsonSchema, PartialEq, Eq, Serialize, Deserialize)]
@@ -17,6 +16,43 @@ pub struct BinaryGitHub {
     pub directory: String,
     pub repository: String,
     pub version: Option<String>,
+}
+
+const GITHUB_API: &str = "https://api.github.com";
+
+#[derive(Deserialize)]
+struct Release {
+    assets: Vec<ReleaseAsset>,
+}
+
+#[derive(Deserialize)]
+struct ReleaseAsset {
+    name: String,
+    browser_download_url: String,
+}
+
+/// A release from the GitHub API: the latest one, or the one tagged `version`. Uses
+/// `GITHUB_TOKEN` when it's set, which raises the API's rate limit
+fn fetch_release(
+    api: &str,
+    owner: &str,
+    repo: &str,
+    version: Option<&str>,
+) -> anyhow::Result<Release> {
+    let url = match version {
+        None | Some("latest") => format!("{api}/repos/{owner}/{repo}/releases/latest"),
+        Some(tag) => format!("{api}/repos/{owner}/{repo}/releases/tags/{tag}"),
+    };
+
+    let mut request = reqwest::blocking::Client::new()
+        .get(&url)
+        .header("Accept", "application/vnd.github+json")
+        .header("User-Agent", concat!("comtrya/", env!("CARGO_PKG_VERSION")));
+    if let Ok(token) = std::env::var("GITHUB_TOKEN") {
+        request = request.bearer_auth(token);
+    }
+
+    Ok(request.send()?.error_for_status()?.json()?)
 }
 
 struct GitHubAsset {
@@ -38,13 +74,6 @@ impl Action for BinaryGitHub {
             return Ok(vec![]);
         };
 
-        let async_runtime = match Runtime::new() {
-            Ok(runtime) => runtime,
-            Err(e) => {
-                return Err(anyhow!("Failed to create async runtime: {e}"));
-            }
-        };
-
         let (owner, repo) = self.repository.split_once('/').ok_or_else(|| {
             anyhow!(
                 "Failed to parse repository name: {}",
@@ -52,23 +81,8 @@ impl Action for BinaryGitHub {
             )
         })?;
 
-        let octocrab = async_runtime.block_on(async { octocrab::instance() });
-
-        let repos = octocrab.repos(owner, repo);
-        let releases = repos.releases();
-
-        let result = match &self.version {
-            Some(version) if version == "latest" => async_runtime.block_on(releases.get_latest()),
-            Some(version) => async_runtime.block_on(releases.get_by_tag(version.as_str())),
-            None => async_runtime.block_on(releases.get_latest()),
-        };
-
-        let release = match result {
-            Ok(release) => release,
-            Err(e) => {
-                return Err(anyhow!("Failed to find a release: {e}"));
-            }
-        };
+        let release = fetch_release(GITHUB_API, owner, repo, self.version.as_deref())
+            .map_err(|e| anyhow!("Failed to find a release: {e}"))?;
 
         let asset: Option<GitHubAsset> = release.assets.into_iter().fold(None, |acc, asset| {
             let mut score = 0;
@@ -109,7 +123,7 @@ impl Action for BinaryGitHub {
                 Some(ass) => {
                     if score > ass.score {
                         Some(GitHubAsset {
-                            url: asset.browser_download_url.into(),
+                            url: asset.browser_download_url.clone(),
                             score,
                         })
                     } else {
@@ -117,7 +131,7 @@ impl Action for BinaryGitHub {
                     }
                 }
                 None => Some(GitHubAsset {
-                    url: asset.browser_download_url.into(),
+                    url: asset.browser_download_url.clone(),
                     score,
                 }),
             }
@@ -152,5 +166,83 @@ impl Action for BinaryGitHub {
                 finalizers: vec![],
             },
         ])
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::{Read, Write};
+    use std::net::TcpListener;
+    use std::sync::mpsc;
+
+    /// Answers one request with `body`, and sends back the request line
+    fn serve(status: u16, body: &'static str) -> (String, mpsc::Receiver<String>) {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let api = format!("http://{}", listener.local_addr().unwrap());
+        let (sender, receiver) = mpsc::channel();
+        std::thread::spawn(move || {
+            let (mut stream, _) = listener.accept().unwrap();
+            let mut request = [0; 4096];
+            let read = stream.read(&mut request).unwrap();
+            let request = String::from_utf8_lossy(&request[..read]).to_string();
+            sender.send(request).unwrap();
+            let header = format!(
+                "HTTP/1.1 {status} X\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+                body.len()
+            );
+            let _ = stream.write_all(header.as_bytes());
+            let _ = stream.write_all(body.as_bytes());
+        });
+        (api, receiver)
+    }
+
+    const RELEASE: &str = r#"{"tag_name":"v1.0.0","assets":[{"name":"tool-x86_64-unknown-linux-musl","browser_download_url":"https://example.com/tool","size":1}]}"#;
+
+    #[test]
+    fn fetches_the_latest_release() {
+        let (api, request) = serve(200, RELEASE);
+
+        let release = fetch_release(&api, "comtrya", "comtrya", None).unwrap();
+
+        assert_eq!(1, release.assets.len());
+        assert_eq!("tool-x86_64-unknown-linux-musl", release.assets[0].name);
+        assert_eq!(
+            "https://example.com/tool",
+            release.assets[0].browser_download_url
+        );
+        let request = request.recv().unwrap();
+        assert!(
+            request.starts_with("GET /repos/comtrya/comtrya/releases/latest "),
+            "{request}"
+        );
+        assert!(
+            request.to_lowercase().contains("user-agent: comtrya/"),
+            "{request}"
+        );
+    }
+
+    #[test]
+    fn fetches_a_release_by_tag() {
+        let (api, request) = serve(200, RELEASE);
+
+        fetch_release(&api, "comtrya", "comtrya", Some("v0.9.2")).unwrap();
+
+        let request = request.recv().unwrap();
+        assert!(
+            request.starts_with("GET /repos/comtrya/comtrya/releases/tags/v0.9.2 "),
+            "{request}"
+        );
+    }
+
+    #[test]
+    fn a_missing_release_is_an_error() {
+        let (api, _request) = serve(404, r#"{"message":"Not Found"}"#);
+
+        let error = fetch_release(&api, "comtrya", "comtrya", Some("v0.0.0"))
+            .err()
+            .unwrap();
+
+        assert!(error.to_string().contains("404"), "{error}");
     }
 }

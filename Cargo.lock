@@ -709,7 +709,6 @@ dependencies = [
  "hickory-resolver",
  "ignore",
  "normpath",
- "octocrab",
  "os_info",
  "petgraph",
  "pretty_assertions",
