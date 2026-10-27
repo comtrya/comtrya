@@ -3,16 +3,26 @@ use crate::actions::package::repository::PackageRepository;
 use crate::actions::package::PackageVariant;
 use crate::atoms::command::Exec;
 use crate::contexts::Contexts;
+use crate::runner::{self, CommandSpec, Runner};
 use crate::steps::Step;
 use crate::utilities;
-use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
-use std::process::Command;
+use std::sync::Arc;
 use tracing::{debug, trace, warn};
 use which::which;
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub struct Xbps {}
+#[derive(Clone)]
+pub struct Xbps {
+    runner: Arc<dyn Runner>,
+}
+
+impl Default for Xbps {
+    fn default() -> Self {
+        Self {
+            runner: runner::system(),
+        }
+    }
+}
 
 impl PackageProvider for Xbps {
     fn name(&self) -> &str {
@@ -58,19 +68,14 @@ impl PackageProvider for Xbps {
     }
 
     fn query(&self, package: &PackageVariant) -> anyhow::Result<Vec<String>> {
-        let requested_already_installed: HashSet<String> = String::from_utf8(
-            Command::new("xbps-query")
-                .args(
-                    vec![String::from("-s")]
-                        .into_iter()
-                        .chain(package.packages()),
-                )
-                .output()?
-                .stdout,
-        )?
-        .split('\n')
-        .map(String::from)
-        .collect();
+        let command = CommandSpec::new("xbps-query")
+            .arg("-s")
+            .args(package.packages());
+        let requested_already_installed: HashSet<String> =
+            String::from_utf8(self.runner.run(&command)?.stdout)?
+                .split('\n')
+                .map(String::from)
+                .collect();
 
         debug!(
             "all requested installed packages: {:?}",

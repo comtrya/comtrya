@@ -1,15 +1,25 @@
 use super::PackageProvider;
 use crate::actions::package::repository::PackageRepository;
 use crate::contexts::Contexts;
+use crate::runner::{self, CommandSpec, Runner};
 use crate::steps::Step;
 use crate::{actions::package::PackageVariant, atoms::command::Exec};
-use serde::{Deserialize, Serialize};
-use std::process::Command;
+use std::sync::Arc;
 use tracing::{debug, trace, warn};
 use which::which;
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub struct Winget {}
+#[derive(Clone)]
+pub struct Winget {
+    runner: Arc<dyn Runner>,
+}
+
+impl Default for Winget {
+    fn default() -> Self {
+        Self {
+            runner: runner::system(),
+        }
+    }
+}
 
 impl PackageProvider for Winget {
     fn name(&self) -> &str {
@@ -51,7 +61,9 @@ impl PackageProvider for Winget {
                 // We use `winget list -e --id <package_name>`
                 // `--accept-source-agreements` prevents it from blocking on first run,
                 // `--disable-interactivity` stops winget from prompting at all
-                let output = Command::new("winget").args(list_args(p)).output();
+                let output = self
+                    .runner
+                    .run(&CommandSpec::new("winget").args(list_args(p)));
 
                 match output {
                     Ok(output) => {
@@ -131,7 +143,39 @@ fn install_args(extra_args: &[String], package: &str) -> Vec<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::runner::fake::{succeeds, FakeRunner};
     use pretty_assertions::assert_eq;
+
+    #[test]
+    fn query_reads_the_list_output_because_the_exit_code_is_always_0() {
+        let list = |id: &str| format!("winget {}", list_args(id).join(" "));
+        let winget = Winget {
+            runner: FakeRunner::new()
+                .answer(
+                    &list("Git.Git"),
+                    succeeds("Name Id      Version\nGit  Git.Git 2.47.0\n"),
+                )
+                .answer(
+                    &list("BurntSushi.ripgrep.MSVC"),
+                    succeeds("No installed package found matching input criteria.\n"),
+                )
+                .shared(),
+        };
+        let package = PackageVariant {
+            list: vec![
+                String::from("Git.Git"),
+                String::from("BurntSushi.ripgrep.MSVC"),
+                // winget fails to run: assumed missing, so it's installed
+                String::from("Microsoft.PowerShell"),
+            ],
+            ..Default::default()
+        };
+
+        assert_eq!(
+            vec!["BurntSushi.ripgrep.MSVC", "Microsoft.PowerShell"],
+            winget.query(&package).unwrap()
+        );
+    }
 
     // winget must never wait for input, comtrya runs unattended
     const NON_INTERACTIVE: [&str; 2] = ["--accept-source-agreements", "--disable-interactivity"];

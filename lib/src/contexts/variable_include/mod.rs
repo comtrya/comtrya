@@ -4,6 +4,7 @@ use anyhow::Result;
 use reqwest::Url;
 
 use crate::config::Config;
+use crate::runner::SystemRunner;
 
 pub mod dns;
 pub mod file;
@@ -17,7 +18,7 @@ pub fn gather(config: &Config) -> Result<BTreeMap<String, String>> {
         for variable_include in variable_includes {
             // Vault and item names may contain spaces, which a URL can't
             if variable_include.starts_with("op://") {
-                op::item_values(variable_include, &mut contexts)?;
+                op::item_values(variable_include, &SystemRunner, &mut contexts)?;
                 continue;
             }
 
