@@ -673,7 +673,6 @@ dependencies = [
  "dirs",
  "petgraph",
  "predicates",
- "rhai",
  "serde",
  "serde_yaml_ng",
  "strip-ansi-escapes",
@@ -3797,6 +3796,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "no-std-compat"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b93853da6d84c2e3c7d730d6473e8817692dd89be387eb01b94d7f108ecb5b8c"
+dependencies = [
+ "spin",
+]
+
+[[package]]
 name = "nom"
 version = "8.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4902,6 +4910,7 @@ dependencies = [
  "ahash",
  "bitflags 2.11.0",
  "compact_str",
+ "no-std-compat",
  "num-traits",
  "once_cell",
  "rhai_codegen",
@@ -5526,6 +5535,12 @@ dependencies = [
  "libc",
  "windows-sys 0.61.2",
 ]
+
+[[package]]
+name = "spin"
+version = "0.5.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6e63cff320ae2c57904679ba7cb63280a3dc4613885beafb148ee7bf9aa9042d"
 
 [[package]]
 name = "stable_deref_trait"

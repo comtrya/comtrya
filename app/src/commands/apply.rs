@@ -2,11 +2,10 @@ use super::ComtryaCommand;
 use crate::Runtime;
 use clap::Parser;
 use comfy_table::{Cell, ContentArrangement, Table};
-use comtrya_lib::contexts::to_rhai;
+use comtrya_lib::contexts::evaluate_condition;
 use comtrya_lib::manifests::{load, Manifest};
 use core::panic;
 use petgraph::{visit::DfsPostOrder, Graph};
-use rhai::Engine;
 use std::path::PathBuf;
 use std::{
     collections::{HashMap, HashSet},
@@ -168,9 +167,6 @@ impl ComtryaCommand for Apply {
 
         let dry_run = self.dry_run;
 
-        let engine = Engine::new();
-        let mut scope = to_rhai(contexts);
-
         // Manifests that failed, or depend on one that did
         let mut failed = HashSet::new();
 
@@ -235,21 +231,20 @@ impl ComtryaCommand for Apply {
                 }
 
                 if let Some(where_condition) = &m1.r#where {
-                    let where_result =
-                        match engine.eval_with_scope::<bool>(&mut scope, where_condition) {
-                            Ok(result) => {
-                                debug!(
-                                    "Result of 'where' condition '{}' -> '{}'",
-                                    where_condition, result
-                                );
+                    let where_result = match evaluate_condition(where_condition, contexts) {
+                        Ok(result) => {
+                            debug!(
+                                "Result of 'where' condition '{}' -> '{}'",
+                                where_condition, result
+                            );
 
-                                result
-                            }
-                            Err(err) => {
-                                warn!("'where' condition '{}' failed: {}", where_condition, err);
-                                false
-                            }
-                        };
+                            result
+                        }
+                        Err(err) => {
+                            warn!("'where' condition '{}' failed: {}", where_condition, err);
+                            false
+                        }
+                    };
 
                     if !where_result {
                         info!("Skip manifest, because 'where' conditions were false!");

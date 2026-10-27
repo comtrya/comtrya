@@ -1,11 +1,10 @@
 use super::{Manifest, MANIFEST_VERSION};
 use crate::{
-    contexts::{to_rhai, to_tera, Contexts},
+    contexts::{evaluate_condition, to_tera, Contexts},
     manifests::get_manifest_name,
     tera_functions::register_functions,
 };
 use ignore::WalkBuilder;
-use rhai::Engine;
 use serde::{de::DeserializeOwned, Deserialize};
 use std::{
     collections::HashMap,
@@ -163,8 +162,7 @@ fn check_version(version: Option<u32>) -> anyhow::Result<()> {
 fn false_where(contents: &str, path: &Path, contexts: &Contexts) -> Option<String> {
     let condition = parse::<Unrendered>(contents, path).ok()?.r#where?;
 
-    Engine::new()
-        .eval_with_scope::<bool>(&mut to_rhai(contexts), &condition)
+    evaluate_condition(&condition, contexts)
         .is_ok_and(|result| !result)
         .then_some(condition)
 }
