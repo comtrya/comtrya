@@ -112,8 +112,8 @@ impl Action for FileLink {
     fn summarize(&self) -> String {
         format!(
             "Linking file {} to {}",
-            self.from.clone().unwrap_or(String::from("unknown")),
-            self.to.clone().unwrap_or(String::from("unknown"))
+            self.source().unwrap_or("unknown"),
+            self.target().unwrap_or("unknown")
         )
     }
 
@@ -273,5 +273,16 @@ mod tests {
         let steps = file_link_action.plan(&manifest, &contexts).unwrap();
         // One link per file, plus creating the target directory
         assert_eq!(steps.len(), number_of_files + 1);
+    }
+
+    #[test]
+    fn summary_names_source_and_target_in_both_spellings() {
+        let link = |yaml: &str| -> FileLink { serde_yaml_ng::from_str(yaml).unwrap() };
+
+        assert_eq!(
+            "Linking file a to b",
+            link("source: a\ntarget: b\n").summarize()
+        );
+        assert_eq!("Linking file a to b", link("from: a\nto: b\n").summarize());
     }
 }
