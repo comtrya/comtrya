@@ -28,7 +28,7 @@ impl Action for FileRemove {
     fn plan(
         &self,
         _: &crate::manifests::Manifest,
-        _: &crate::contexts::Contexts,
+        _: &crate::actions::PlanCx,
     ) -> anyhow::Result<Vec<crate::steps::Step>> {
         use crate::atoms::file::Remove as RemoveFile;
 

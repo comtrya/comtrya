@@ -1,9 +1,9 @@
 //! `directory.create`
 
+use crate::actions::{Action, PlanCx};
 use crate::atoms::directory::Create as DirectoryCreateAtom;
 use crate::manifests::Manifest;
 use crate::steps::Step;
-use crate::{actions::Action, contexts::Contexts};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
@@ -20,7 +20,7 @@ impl Action for DirectoryCreate {
         format!("Creating directory {}", self.path)
     }
 
-    fn plan(&self, _: &Manifest, _context: &Contexts) -> anyhow::Result<Vec<Step>> {
+    fn plan(&self, _: &Manifest, _context: &PlanCx) -> anyhow::Result<Vec<Step>> {
         Ok(vec![Step::new(DirectoryCreateAtom {
             path: PathBuf::from(&self.path),
         })])

@@ -7,7 +7,7 @@ use crate::actions::package::{
     PackageVariant,
 };
 use crate::atoms::command::Exec;
-use crate::contexts::Contexts;
+use crate::contexts::Facts;
 use crate::steps::Step;
 use crate::utilities;
 use anyhow::anyhow;
@@ -29,8 +29,8 @@ impl Aptitude {
     }
 
     /// Runs `command` with the privilege provider and without questions
-    fn privileged_exec(&self, command: &str, arguments: Vec<String>, contexts: &Contexts) -> Step {
-        let privilege_provider = utilities::get_privilege_provider(contexts);
+    fn privileged_exec(&self, command: &str, arguments: Vec<String>, facts: &Facts) -> Step {
+        let privilege_provider = utilities::get_privilege_provider(facts);
 
         Step::new(Exec {
             command: String::from(command),
@@ -43,20 +43,20 @@ impl Aptitude {
     }
 
     /// Installs what comtrya itself needs, like `curl` for repository keys
-    fn apt_install(&self, packages: &[&str], contexts: &Contexts) -> Step {
+    fn apt_install(&self, packages: &[&str], facts: &Facts) -> Step {
         self.privileged_exec(
             "apt",
             [String::from("install"), String::from("--yes")]
                 .into_iter()
                 .chain(packages.iter().map(|p| p.to_string()))
                 .collect(),
-            contexts,
+            facts,
         )
     }
 
     /// Reads the package lists again, after a repository was added
-    fn apt_update(&self, contexts: &Contexts) -> Step {
-        self.privileged_exec("apt", vec![String::from("update")], contexts)
+    fn apt_update(&self, facts: &Facts) -> Step {
+        self.privileged_exec("apt", vec![String::from("update")], facts)
     }
 
     /// Where the key of a repository is downloaded to, and what `Signed-By` points to
@@ -142,7 +142,7 @@ impl PackageProvider for Aptitude {
         }
     }
 
-    fn bootstrap(&self, _contexts: &Contexts) -> Vec<Step> {
+    fn bootstrap(&self, _facts: &Facts) -> Vec<Step> {
         // apt can't be installed by comtrya
         vec![]
     }
@@ -169,22 +169,22 @@ impl PackageProvider for Aptitude {
     fn add_repository(
         &self,
         repository: &PackageRepository,
-        contexts: &Contexts,
+        facts: &Facts,
     ) -> anyhow::Result<Vec<Step>> {
         let mut steps: Vec<Step> = vec![];
 
         // PPAs only exist on Ubuntu, which still ships add-apt-repository
         if repository.name.starts_with("ppa:") {
             if which("add-apt-repository").is_err() {
-                steps.push(self.apt_install(&["software-properties-common"], contexts));
+                steps.push(self.apt_install(&["software-properties-common"], facts));
             }
 
             steps.push(self.privileged_exec(
                 "add-apt-repository",
                 vec![String::from("--yes"), repository.name.clone()],
-                contexts,
+                facts,
             ));
-            steps.push(self.apt_update(contexts));
+            steps.push(self.apt_update(facts));
 
             return Ok(steps);
         }
@@ -196,7 +196,7 @@ impl PackageProvider for Aptitude {
                 let key_path = Aptitude::key_path(key);
 
                 if which("curl").is_err() {
-                    steps.push(self.apt_install(&["curl", "ca-certificates"], contexts));
+                    steps.push(self.apt_install(&["curl", "ca-certificates"], facts));
                 }
 
                 steps.push(self.privileged_exec(
@@ -207,7 +207,7 @@ impl PackageProvider for Aptitude {
                         key_path.clone(),
                         key.url.clone(),
                     ],
-                    contexts,
+                    facts,
                 ));
 
                 Some(key_path)
@@ -226,9 +226,9 @@ impl PackageProvider for Aptitude {
                 deb.deb822(signed_by.as_deref()),
                 deb.sources_path(),
             ],
-            contexts,
+            facts,
         ));
-        steps.push(self.apt_update(contexts));
+        steps.push(self.apt_update(facts));
 
         Ok(steps)
     }
@@ -237,7 +237,7 @@ impl PackageProvider for Aptitude {
         Ok(package.packages())
     }
 
-    fn install(&self, package: &PackageVariant, contexts: &Contexts) -> anyhow::Result<Vec<Step>> {
+    fn install(&self, package: &PackageVariant, facts: &Facts) -> anyhow::Result<Vec<Step>> {
         Ok(vec![self.privileged_exec(
             "apt",
             [String::from("install"), String::from("--yes")]
@@ -245,7 +245,7 @@ impl PackageProvider for Aptitude {
                 .chain(package.extra_args.clone())
                 .chain(package.packages())
                 .collect(),
-            contexts,
+            facts,
         )])
     }
 }
@@ -253,14 +253,14 @@ impl PackageProvider for Aptitude {
 #[cfg(test)]
 mod test {
     use crate::actions::package::repository::RepositoryKey;
-    use crate::contexts::Contexts;
+    use crate::contexts::Facts;
     use pretty_assertions::assert_eq;
 
     use super::*;
 
     fn add_repository(repository: PackageRepository) -> Vec<String> {
         Aptitude {}
-            .add_repository(&repository, &Contexts::default())
+            .add_repository(&repository, &Facts::default())
             .unwrap()
             .iter()
             .map(|step| step.atom.to_string())
@@ -370,7 +370,7 @@ mod test {
                     name: String::from("test"),
                     ..Default::default()
                 },
-                &Contexts::default(),
+                &Facts::default(),
             )
             .is_err());
     }

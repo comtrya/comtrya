@@ -3,7 +3,7 @@
 use super::PackageProvider;
 use crate::actions::package::{repository::PackageRepository, PackageVariant};
 use crate::atoms::command::Exec;
-use crate::contexts::Contexts;
+use crate::contexts::Facts;
 use crate::runner::{self, CommandSpec, Runner};
 use crate::steps::Step;
 use crate::utilities;
@@ -42,7 +42,7 @@ impl PackageProvider for Pacman {
         }
     }
 
-    fn bootstrap(&self, _contexts: &Contexts) -> Vec<Step> {
+    fn bootstrap(&self, _facts: &Facts) -> Vec<Step> {
         vec![]
     }
 
@@ -53,7 +53,7 @@ impl PackageProvider for Pacman {
     fn add_repository(
         &self,
         _repository: &PackageRepository,
-        _contexts: &Contexts,
+        _facts: &Facts,
     ) -> anyhow::Result<Vec<Step>> {
         Ok(vec![])
     }
@@ -62,13 +62,13 @@ impl PackageProvider for Pacman {
         missing(self.runner.as_ref(), package)
     }
 
-    fn install(&self, package: &PackageVariant, contexts: &Contexts) -> anyhow::Result<Vec<Step>> {
+    fn install(&self, package: &PackageVariant, facts: &Facts) -> anyhow::Result<Vec<Step>> {
         let need_installed = self.query(package)?;
         if need_installed.is_empty() {
             return Ok(vec![]);
         }
 
-        Ok(vec![install_step(package, need_installed, contexts)])
+        Ok(vec![install_step(package, need_installed, facts)])
     }
 }
 
@@ -90,8 +90,8 @@ pub(super) fn missing(
 }
 
 /// `pacman -S --needed` with the privilege provider
-fn install_step(package: &PackageVariant, packages: Vec<String>, contexts: &Contexts) -> Step {
-    let privilege_provider = utilities::get_privilege_provider(contexts);
+fn install_step(package: &PackageVariant, packages: Vec<String>, facts: &Facts) -> Step {
+    let privilege_provider = utilities::get_privilege_provider(facts);
 
     Step::new(Exec {
         command: String::from("pacman"),
@@ -162,7 +162,7 @@ mod test {
             file: false,
         };
 
-        let step = install_step(&package, package.packages(), &Contexts::default());
+        let step = install_step(&package, package.packages(), &Facts::default());
 
         assert_eq!(
             "CommandExec with: privileged=true: pacman -S --needed --noconfirm --asdeps git ripgrep",

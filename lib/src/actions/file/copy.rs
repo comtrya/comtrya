@@ -2,7 +2,7 @@
 //! decrypted or piped through a command
 
 use super::{change_owner, create_parent, default_chmod, from_octal, FileAction, OctalMode};
-use crate::actions::Action;
+use crate::actions::{Action, PlanCx};
 use crate::atoms::file::{Chmod, Create, Decrypt, SetContents};
 use crate::contexts::{to_tera, Contexts};
 use crate::manifests::Manifest;
@@ -113,14 +113,14 @@ impl Action for FileCopy {
         format!("Copy file from {} to {}", self.from, self.to)
     }
 
-    fn plan(&self, manifest: &Manifest, contexts: &Contexts) -> anyhow::Result<Vec<Step>> {
+    fn plan(&self, manifest: &Manifest, cx: &PlanCx) -> anyhow::Result<Vec<Step>> {
         if self.passphrase.is_some() && self.process_with.is_some() {
             return Err(anyhow!(
                 "FileCopy can use either passphrase or process_with, not both"
             ));
         }
 
-        let contents = self.contents(manifest, contexts)?;
+        let contents = self.contents(manifest, cx.contexts)?;
         let path = self.target();
 
         let mut steps = vec![
@@ -314,7 +314,7 @@ mod tests {
         };
 
         let err = copy
-            .plan(&Default::default(), &Default::default())
+            .plan(&Default::default(), &crate::actions::PlanCx::empty())
             .err()
             .expect("plan must fail");
         assert!(err.to_string().contains("not both"), "{err}");
@@ -414,7 +414,9 @@ mod tests {
         action.owner_user = Some(String::from("ferris"));
         action.owner_group = Some(String::from("crabs"));
 
-        let steps = action.plan(&manifest, &Default::default()).unwrap();
+        let steps = action
+            .plan(&manifest, &crate::actions::PlanCx::empty())
+            .unwrap();
 
         // create the directory and the file, chmod, write, and chown on unix only
         assert_eq!(if cfg!(unix) { 5 } else { 4 }, steps.len());

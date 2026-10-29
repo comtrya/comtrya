@@ -1,7 +1,7 @@
 //! `git.clone`, with the git built into comtrya
 
 use crate::actions::Action;
-use crate::contexts::Contexts;
+use crate::actions::PlanCx;
 use crate::manifests::Manifest;
 use crate::steps::Step;
 use schemars::JsonSchema;
@@ -29,7 +29,7 @@ impl Action for GitClone {
         format!("Cloning repository {} to {}", self.repo_url, self.directory)
     }
 
-    fn plan(&self, _: &Manifest, _: &Contexts) -> anyhow::Result<Vec<Step>> {
+    fn plan(&self, _: &Manifest, _: &PlanCx) -> anyhow::Result<Vec<Step>> {
         let url = gix::url::parse(self.repo_url.as_str())?;
         Ok(vec![Step::new(crate::atoms::git::Clone {
             repository: url.clone(),

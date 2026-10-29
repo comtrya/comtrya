@@ -2,7 +2,7 @@
 
 use super::DirectoryAction;
 use crate::actions::Action;
-use crate::contexts::Contexts;
+use crate::actions::PlanCx;
 use crate::steps::Step;
 use crate::{atoms::command::Exec, manifests::Manifest};
 use schemars::JsonSchema;
@@ -28,7 +28,7 @@ impl Action for DirectoryCopy {
         format!("Copying {} to {}", self.from, self.to)
     }
 
-    fn plan(&self, manifest: &Manifest, _context: &Contexts) -> anyhow::Result<Vec<Step>> {
+    fn plan(&self, manifest: &Manifest, _context: &PlanCx) -> anyhow::Result<Vec<Step>> {
         let from: String = self.resolve(manifest, &self.from)?.display().to_string();
 
         Ok(vec![Step::new(Exec {
@@ -45,7 +45,7 @@ impl Action for DirectoryCopy {
         format!("Copying {} to {}", self.from, self.to)
     }
 
-    fn plan(&self, manifest: &Manifest, _context: &Contexts) -> anyhow::Result<Vec<Step>> {
+    fn plan(&self, manifest: &Manifest, _context: &PlanCx) -> anyhow::Result<Vec<Step>> {
         let mut from: String = self.resolve(manifest, &self.from)?.display().to_string();
 
         if self.to.ends_with("/") {

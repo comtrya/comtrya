@@ -4,7 +4,7 @@
 use super::{pacman, PackageProvider};
 use crate::actions::package::{repository::PackageRepository, PackageVariant};
 use crate::atoms::command::Exec;
-use crate::contexts::Contexts;
+use crate::contexts::Facts;
 use crate::runner::{self, Runner};
 use crate::steps::Step;
 use crate::utilities;
@@ -77,7 +77,7 @@ impl AurHelper {
     }
 
     /// Builds the helper from its AUR sources, after installing what `makepkg` needs
-    fn build_from_aur(&self, contexts: &Contexts) -> Vec<Step> {
+    fn build_from_aur(&self, facts: &Facts) -> Vec<Step> {
         let command = self.helper.command;
         let build_dir = format!("/tmp/{command}");
 
@@ -86,7 +86,7 @@ impl AurHelper {
                 command: String::from("pacman"),
                 arguments: strings(&["-S", "--needed", "--noconfirm", "base-devel", "git"]),
                 privileged: true,
-                privilege_provider: utilities::get_privilege_provider(contexts),
+                privilege_provider: utilities::get_privilege_provider(facts),
                 ..Default::default()
             }),
             Step::new(Exec {
@@ -123,19 +123,15 @@ impl PackageProvider for AurHelper {
         }
     }
 
-    fn bootstrap(&self, contexts: &Contexts) -> Vec<Step> {
-        self.build_from_aur(contexts)
+    fn bootstrap(&self, facts: &Facts) -> Vec<Step> {
+        self.build_from_aur(facts)
     }
 
     fn has_repository(&self, _: &PackageRepository) -> bool {
         false
     }
 
-    fn add_repository(
-        &self,
-        _: &PackageRepository,
-        _contexts: &Contexts,
-    ) -> anyhow::Result<Vec<Step>> {
+    fn add_repository(&self, _: &PackageRepository, _facts: &Facts) -> anyhow::Result<Vec<Step>> {
         Ok(vec![])
     }
 
@@ -144,8 +140,8 @@ impl PackageProvider for AurHelper {
         pacman::missing(self.runner.as_ref(), package)
     }
 
-    fn install(&self, package: &PackageVariant, contexts: &Contexts) -> anyhow::Result<Vec<Step>> {
-        refuse_root(self.helper.command, contexts)?;
+    fn install(&self, package: &PackageVariant, facts: &Facts) -> anyhow::Result<Vec<Step>> {
+        refuse_root(self.helper.command, facts)?;
 
         let need_installed = self.query(package)?;
         if need_installed.is_empty() {
@@ -166,13 +162,8 @@ impl PackageProvider for AurHelper {
 }
 
 /// AUR helpers (`makepkg`) refuse to run as root, with an error that doesn't say what to do
-fn refuse_root(provider: &str, contexts: &Contexts) -> anyhow::Result<()> {
-    let root = contexts
-        .get("user")
-        .and_then(|user| user.get("id"))
-        .is_some_and(|id| id.to_string() == "0");
-
-    if root {
+fn refuse_root(provider: &str, facts: &Facts) -> anyhow::Result<()> {
+    if facts.user.id == 0 {
         return Err(anyhow!(
             "{provider} can't run as root. Run comtrya as a normal user, it asks for sudo where needed, or use `provider: pacman` for packages from the official repositories"
         ));
@@ -189,6 +180,7 @@ fn strings(args: &[&str]) -> Vec<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::contexts::user::UserFacts;
     use crate::runner::fake::{fails, succeeds, FakeRunner};
     use pretty_assertions::assert_eq;
 
@@ -206,13 +198,14 @@ mod tests {
         }
     }
 
-    fn user_contexts(id: &str) -> Contexts {
-        let mut contexts = Contexts::default();
-        contexts.insert(
-            String::from("user"),
-            [(String::from("id"), id.into())].into_iter().collect(),
-        );
-        contexts
+    fn user_facts(id: u32) -> Facts {
+        Facts {
+            user: UserFacts {
+                id,
+                ..Default::default()
+            },
+            ..Default::default()
+        }
     }
 
     #[test]
@@ -247,7 +240,7 @@ mod tests {
             );
 
             let steps = with_runner(helper, runner)
-                .install(&package(&["git", "yay-bin"]), &Contexts::default())
+                .install(&package(&["git", "yay-bin"]), &user_facts(1000))
                 .unwrap();
 
             assert_eq!(1, steps.len());
@@ -263,7 +256,7 @@ mod tests {
         let runner = FakeRunner::new().answer("pacman -Q -q git", succeeds("git\n"));
 
         let steps = with_runner(&PARU, runner)
-            .install(&package(&["git"]), &Contexts::default())
+            .install(&package(&["git"]), &user_facts(1000))
             .unwrap();
 
         assert!(steps.is_empty());
@@ -271,7 +264,7 @@ mod tests {
 
     #[test]
     fn bootstrap_builds_the_helper_from_the_aur() {
-        let steps = AurHelper::paru().bootstrap(&Contexts::default());
+        let steps = AurHelper::paru().bootstrap(&Facts::default());
         let commands: Vec<String> = steps.iter().map(|step| step.atom.to_string()).collect();
 
         assert_eq!(3, commands.len());
@@ -283,7 +276,7 @@ mod tests {
     #[test]
     fn aur_helpers_refuse_to_run_as_root() {
         for helper in [AurHelper::yay(), AurHelper::paru()] {
-            let err = match helper.install(&package(&["yay-only-package"]), &user_contexts("0")) {
+            let err = match helper.install(&package(&["yay-only-package"]), &user_facts(0)) {
                 Ok(_) => panic!("{} installed as root", helper.name()),
                 Err(err) => err.to_string(),
             };
@@ -294,8 +287,7 @@ mod tests {
 
     #[test]
     fn root_is_detected_by_uid() {
-        assert!(refuse_root("yay", &user_contexts("0")).is_err());
-        assert!(refuse_root("yay", &user_contexts("1000")).is_ok());
-        assert!(refuse_root("yay", &Contexts::default()).is_ok());
+        assert!(refuse_root("yay", &user_facts(0)).is_err());
+        assert!(refuse_root("yay", &user_facts(1000)).is_ok());
     }
 }

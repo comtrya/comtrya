@@ -2,7 +2,7 @@
 
 use super::providers::PackageProviders;
 use crate::actions::Action;
-use crate::contexts::Contexts;
+use crate::actions::PlanCx;
 use crate::manifests::Manifest;
 use crate::steps::Step;
 use anyhow::anyhow;
@@ -66,9 +66,9 @@ impl Action for PackageRepository {
         format!("Adding repository {}", self.name)
     }
 
-    fn plan(&self, _manifest: &Manifest, context: &Contexts) -> anyhow::Result<Vec<Step>> {
+    fn plan(&self, _manifest: &Manifest, cx: &PlanCx) -> anyhow::Result<Vec<Step>> {
         let box_provider =
-            PackageProviders::resolve(self.provider.as_ref(), context)?.get_provider();
+            PackageProviders::resolve(self.provider.as_ref(), cx.facts)?.get_provider();
         let provider = box_provider.deref();
 
         let span = span!(
@@ -84,18 +84,18 @@ impl Action for PackageRepository {
 
         // If the provider isn't available, see if we can bootstrap it
         if !provider.available() {
-            if provider.bootstrap(context).is_empty() {
+            if provider.bootstrap(cx.facts).is_empty() {
                 return Err(anyhow!(
                     "Package Provider, {}, isn't available. Skipping action",
                     provider.name()
                 ));
             }
 
-            atoms.append(&mut provider.bootstrap(context));
+            atoms.append(&mut provider.bootstrap(cx.facts));
         }
 
         if !provider.has_repository(self) {
-            atoms.append(&mut provider.add_repository(self, context)?);
+            atoms.append(&mut provider.add_repository(self, cx.facts)?);
         }
 
         span.exit();

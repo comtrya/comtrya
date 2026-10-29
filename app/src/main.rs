@@ -7,8 +7,7 @@ use crate::config::{Commands, GlobalArgs};
 
 use std::io;
 
-use comtrya_lib::contexts::build_contexts;
-use comtrya_lib::contexts::Contexts;
+use comtrya_lib::contexts::{Contexts, Facts};
 use comtrya_lib::manifests;
 
 use clap::Parser;
@@ -30,7 +29,9 @@ pub struct Runtime {
     pub(crate) args: GlobalArgs,
     /// `Comtrya.yaml`, with the overrides from the command line
     pub(crate) config: Config,
-    /// The facts about the system, for templates and `where` conditions
+    /// The typed facts about the system and the configuration
+    pub(crate) facts: Facts,
+    /// The same facts, for templates and `where` conditions
     pub(crate) contexts: Contexts,
 }
 
@@ -88,10 +89,12 @@ fn main() -> anyhow::Result<()> {
     }
 
     // Run Context Providers
-    let contexts = build_contexts(&config);
+    let facts = Facts::gather(&config);
+    let contexts = facts.to_contexts();
     let runtime = Runtime {
         args,
         config,
+        facts,
         contexts,
     };
 

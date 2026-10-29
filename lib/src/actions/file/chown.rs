@@ -32,7 +32,7 @@ impl Action for FileChown {
     fn plan(
         &self,
         _: &crate::manifests::Manifest,
-        _: &crate::contexts::Contexts,
+        _: &crate::actions::PlanCx,
     ) -> anyhow::Result<Vec<crate::steps::Step>> {
         tracing::warn!("This action is not supported on windows.");
         Ok(vec![])
@@ -42,7 +42,7 @@ impl Action for FileChown {
     fn plan(
         &self,
         _: &crate::manifests::Manifest,
-        _: &crate::contexts::Contexts,
+        _: &crate::actions::PlanCx,
     ) -> anyhow::Result<Vec<crate::steps::Step>> {
         Ok(vec![crate::steps::Step::new(Chown {
             path: self.path.clone().parse()?,
