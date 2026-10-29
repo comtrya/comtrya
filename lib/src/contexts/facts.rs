@@ -27,13 +27,10 @@ pub struct Facts {
 
 impl Facts {
     /// Looks at the system and the configuration. A source in `include_variables` that fails is
-    /// logged, and its variables are left out
+    /// logged, and only its variables are left out
     #[instrument(skip(config))]
     pub fn gather(config: &Config) -> Self {
-        let include_variables = variable_include::gather(config).unwrap_or_else(|err| {
-            warn!("Error getting contexts from provider: include_variables -> {err}");
-            BTreeMap::new()
-        });
+        let include_variables = variable_include::gather(config);
 
         Self {
             user: UserFacts::gather(),
