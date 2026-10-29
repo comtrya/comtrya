@@ -24,6 +24,16 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use tracing::{error, warn};
 
+/// A field that a manifest sets but comtrya doesn't use, and what to do instead
+type Ignored = (&'static str, &'static str);
+
+/// Warns about each ignored field, so a manifest doesn't silently do less than it says
+fn warn_ignored(ignored: &[Ignored]) {
+    for (field, instead) in ignored {
+        warn!("`{field}` is ignored, {instead}");
+    }
+}
+
 /// An action with its `where` condition and its variants, see [`ConditionalVariantAction::select`]
 #[derive(JsonSchema, Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub struct ConditionalVariantAction<T> {
