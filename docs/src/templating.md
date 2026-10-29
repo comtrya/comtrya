@@ -44,7 +44,7 @@ include_variables:
 
 The values become plain template variables: Comtrya logs what an action does, so a secret used in a path or command can show up in its output. `comtrya contexts` lists their names, and prints the values only with `--show-values`. To put secrets into files without that, see `process_with` in [file.copy](./files-and-directories.md#filecopy).
 
-If one of the includes fails, for example because `op` isn't signed in, Comtrya logs a warning and the `include_variables` context stays empty.
+If one of the includes fails, for example because `op` isn't signed in, Comtrya logs a warning and leaves out only that include's variables.
 
 On Windows, the `user` directories use forward slashes, e.g. `C:/Users/me`. Windows accepts them, and they are safe inside double-quoted YAML strings. Other values, like `env.USERPROFILE`, still contain backslashes: put those in single quotes, e.g. `'{{ env.USERPROFILE }}'`, because YAML reads `\U` in double quotes as an escape.
 
