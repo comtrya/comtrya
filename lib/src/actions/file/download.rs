@@ -5,7 +5,10 @@ use crate::atoms::file::Chmod;
 use crate::atoms::http::Download;
 use crate::manifests::Manifest;
 use crate::steps::Step;
-use crate::{actions::Action, contexts::Contexts};
+use crate::{
+    actions::{Action, Ignored},
+    contexts::Contexts,
+};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
@@ -27,7 +30,7 @@ pub struct FileDownload {
     #[schemars(with = "OctalMode")]
     pub chmod: u32,
 
-    /// Not used
+    /// Ignored with a warning: downloaded files aren't rendered
     #[serde(default = "default_template")]
     pub template: bool,
 
@@ -50,6 +53,14 @@ fn default_template() -> bool {
 }
 
 impl FileDownload {
+    /// The fields of this action that are set but not used
+    fn ignored_fields(&self) -> Vec<Ignored> {
+        match self.template {
+            true => vec![("template", "downloaded files aren't rendered")],
+            false => vec![],
+        }
+    }
+
     /// `sha256` in lowercase, or an error if it isn't 64 hex characters
     fn sha256(&self) -> anyhow::Result<Option<String>> {
         let Some(sha256) = &self.sha256 else {
@@ -75,6 +86,7 @@ impl Action for FileDownload {
     }
 
     fn plan(&self, _manifest: &Manifest, _context: &Contexts) -> anyhow::Result<Vec<Step>> {
+        crate::actions::warn_ignored(&self.ignored_fields());
         let sha256 = self.sha256()?;
         let path = PathBuf::from(&self.to);
 
@@ -98,6 +110,22 @@ impl Action for FileDownload {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn template_is_named_as_ignored() {
+        let download = |template| super::FileDownload {
+            template,
+            ..Default::default()
+        };
+
+        let fields: Vec<&str> = download(true)
+            .ignored_fields()
+            .iter()
+            .map(|(f, _)| *f)
+            .collect();
+        assert_eq!(vec!["template"], fields);
+        assert!(download(false).ignored_fields().is_empty());
+    }
+
     #[cfg(unix)]
     use crate::actions::file::download::FileDownload;
     #[cfg(unix)]

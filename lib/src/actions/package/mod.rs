@@ -5,12 +5,12 @@ mod install;
 mod providers;
 mod repository;
 
+use crate::actions::Ignored;
 pub(crate) use install::PackageInstall;
 pub use providers::PackageProviders;
 pub(crate) use repository::PackageRepository;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use tracing::warn;
 
 /// Installs packages with a package manager. Packages that are already installed are skipped
 /// where the provider can tell
@@ -69,16 +69,6 @@ pub struct PackageVariant {
     /// Install from a local file given as `name`
     #[serde(default)]
     file: bool,
-}
-
-/// A field that a manifest sets but comtrya doesn't use, and what to do instead
-type Ignored = (&'static str, &'static str);
-
-/// Warns about each ignored field, so a manifest doesn't silently do less than it says
-fn warn_ignored(ignored: &[Ignored]) {
-    for (field, instead) in ignored {
-        warn!("`{field}` is ignored, {instead}");
-    }
 }
 
 impl Package {

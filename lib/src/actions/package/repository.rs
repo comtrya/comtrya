@@ -43,7 +43,7 @@ pub struct RepositoryKey {
 
 impl PackageRepository {
     /// The fields of the key that are set but not used
-    pub(super) fn ignored_fields(&self) -> Vec<super::Ignored> {
+    pub(super) fn ignored_fields(&self) -> Vec<crate::actions::Ignored> {
         let Some(key) = &self.key else {
             return vec![];
         };
@@ -77,7 +77,7 @@ impl Action for PackageRepository {
         )
         .entered();
 
-        super::warn_ignored(&self.ignored_fields());
+        crate::actions::warn_ignored(&self.ignored_fields());
 
         let mut atoms: Vec<Step> = vec![];
 
