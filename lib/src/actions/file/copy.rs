@@ -21,10 +21,12 @@ use tera::Tera;
 pub struct FileCopy {
     /// The file to copy, below the manifest's `files` directory
     #[serde(alias = "source")]
+    #[schemars(extend("x-aliases" = ["source"]))]
     pub from: String,
 
     /// Where to copy it to. Into a directory, the file keeps its name
     #[serde(alias = "target")]
+    #[schemars(extend("x-aliases" = ["target"]))]
     pub to: String,
 
     /// The permissions of the file, `644` by default

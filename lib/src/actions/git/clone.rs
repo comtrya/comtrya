@@ -13,6 +13,7 @@ use std::path::PathBuf;
 pub struct GitClone {
     /// The URL of the repository. `repository` is the name comtrya 0.8.7 and earlier used
     #[serde(alias = "repository")]
+    #[schemars(extend("x-aliases" = ["repository"]))]
     pub repo_url: String,
 
     /// Where to clone the repository to

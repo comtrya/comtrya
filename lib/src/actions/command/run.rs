@@ -20,6 +20,7 @@ pub struct RunCommand {
 
     /// Run the program with the privilege provider, like sudo, unless comtrya runs as root
     #[serde(default = "get_false", alias = "sudo")]
+    #[schemars(extend("x-aliases" = ["sudo"]))]
     pub privileged: bool,
 
     /// Working directory of the command, defaults to the directory comtrya is run from

@@ -36,6 +36,16 @@ actions:
       - hi
 ```
 
+## Unknown keys
+
+Comtrya warns about keys it doesn't read, like a misspelled field, and names the key it probably means:
+
+```
+WARN dev.yaml: `ags` in action 1 (command.run) is ignored, did you mean `args`?
+```
+
+The manifest still runs without them. When the misspelled key is a required one, the manifest can't be loaded, and the error names the likely typo. A `Comtrya.yaml` in the manifest directory is the config, not a manifest.
+
 ## Editor support
 
 A JSON schema for manifests is published at `https://comtrya.dev/schema.json`. Editors with a YAML or TOML language server can use it for completion and validation.

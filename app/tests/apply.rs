@@ -495,6 +495,55 @@ fn files_directories_are_not_loaded_as_manifests() {
     assert!(!status.contains("files"), "{status}");
 }
 
+/// Everything comtrya printed
+fn output_log(assert: Assert) -> String {
+    let output = assert.get_output();
+    String::from_utf8_lossy(&output.stdout).to_string() + &String::from_utf8_lossy(&output.stderr)
+}
+
+/// `Comtrya.yaml` next to the manifests is the config, not a manifest named `Comtrya`
+#[test]
+fn the_config_file_is_not_a_manifest() {
+    let f = Fixture::new();
+    f.manifest("Comtrya.yaml", "variables:\n  a: b\n")
+        .manifest("app.yaml", &format!("actions:\n{}", f.create("app")));
+
+    let log = output_log(f.run(&["status"]));
+
+    assert!(log.contains("| app "), "{log}");
+    assert!(!log.contains("Comtrya "), "{log}");
+    assert!(!log.contains("ignored"), "{log}");
+}
+
+#[test]
+fn keys_nothing_reads_are_warned_about() {
+    let f = Fixture::new();
+    f.manifest(
+        "app.yaml",
+        "actions:\n  - action: command.run\n    command: echo\n    ags: [a]\n",
+    );
+
+    let log = output_log(f.run(&["status"]));
+
+    assert!(
+        log.contains("`ags` in action 1 (command.run) is ignored, did you mean `args`?"),
+        "{log}"
+    );
+}
+
+/// A misspelled required field fails loading, and the error names the likely typo
+#[test]
+fn a_misspelled_required_field_is_named_in_the_error() {
+    let f = Fixture::new();
+    let action = f.create("app").replace("path:", "pth:");
+    f.manifest("app.yaml", &format!("actions:\n{action}"));
+
+    let log = failure_log(&f, &["status"]);
+
+    assert!(log.contains("missing field `path`"), "{log}");
+    assert!(log.contains("did you mean `path`?"), "{log}");
+}
+
 #[test]
 fn user_directories_work_in_double_quoted_strings() {
     // On Windows, `C:\Users\...` in a double-quoted YAML string is an invalid escape

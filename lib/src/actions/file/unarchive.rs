@@ -13,10 +13,12 @@ use serde::{Deserialize, Serialize};
 pub struct FileUnarchive {
     /// The archive. A path as it is, not below the manifest's `files` directory
     #[serde(alias = "source")]
+    #[schemars(extend("x-aliases" = ["source"]))]
     pub from: String,
 
     /// The directory to unpack into
     #[serde(alias = "target")]
+    #[schemars(extend("x-aliases" = ["target"]))]
     pub to: String,
 
     /// Unpack again when `to` exists already. On by default; when off, an existing `to` is left

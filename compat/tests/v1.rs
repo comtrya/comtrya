@@ -113,6 +113,8 @@ fn known_differences() -> Vec<(&'static str, &'static str)> {
         ("v1", "toml.command"),
         ("examples", "toml-examples.command.command.toml"),
         ("examples", "toml-examples.command.command"),
+        // 0.11.0 doesn't load `Comtrya.yaml` next to the manifests as a manifest, 0.10.0 did
+        ("examples", "Comtrya"),
     ]
 }
 

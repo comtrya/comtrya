@@ -19,10 +19,12 @@ use std::path::PathBuf;
 pub struct FileDownload {
     /// The URL to download
     #[serde(alias = "source")]
+    #[schemars(extend("x-aliases" = ["source"]))]
     pub from: String,
 
     /// Where to save the file
     #[serde(alias = "target")]
+    #[schemars(extend("x-aliases" = ["target"]))]
     pub to: String,
 
     /// The permissions of the file, `644` by default
