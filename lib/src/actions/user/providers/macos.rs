@@ -3,7 +3,7 @@
 use super::UserProvider;
 use crate::actions::user::{add_group::UserAddGroup, UserVariant};
 use crate::atoms::command::Exec;
-use crate::contexts::Contexts;
+use crate::contexts::Facts;
 use crate::steps::Step;
 use crate::utilities;
 use anyhow::{bail, Context};
@@ -15,7 +15,7 @@ use which::which;
 pub struct MacOSUserProvider {}
 
 impl UserProvider for MacOSUserProvider {
-    fn add_user(&self, user: &UserVariant, contexts: &Contexts) -> anyhow::Result<Vec<Step>> {
+    fn add_user(&self, user: &UserVariant, facts: &Facts) -> anyhow::Result<Vec<Step>> {
         if user.username.is_empty() {
             bail!("can't create a user without a username");
         }
@@ -40,7 +40,7 @@ impl UserProvider for MacOSUserProvider {
             args.push(user.fullname.clone());
         }
 
-        let privilege_provider = utilities::get_privilege_provider(contexts);
+        let privilege_provider = utilities::get_privilege_provider(facts);
 
         let mut steps: Vec<Step> = vec![Step::new(Exec {
             command: cli.display().to_string(),
@@ -56,7 +56,7 @@ impl UserProvider for MacOSUserProvider {
                 group: user.group.clone(),
                 provider: user.provider.clone(),
             };
-            for group in self.add_to_group(&user_group, contexts)? {
+            for group in self.add_to_group(&user_group, facts)? {
                 steps.push(group);
             }
         }
@@ -64,11 +64,11 @@ impl UserProvider for MacOSUserProvider {
         Ok(steps)
     }
 
-    fn add_to_group(&self, user: &UserAddGroup, contexts: &Contexts) -> anyhow::Result<Vec<Step>> {
+    fn add_to_group(&self, user: &UserAddGroup, facts: &Facts) -> anyhow::Result<Vec<Step>> {
         super::check_add_to_group(user)?;
         let cli = which("dscl").context("can't find `dscl` to add users to groups with")?;
 
-        let privilege_provider = utilities::get_privilege_provider(contexts);
+        let privilege_provider = utilities::get_privilege_provider(facts);
 
         let mut steps: Vec<Step> = vec![];
 
@@ -102,12 +102,12 @@ impl UserProvider for MacOSUserProvider {
 mod test {
     use crate::actions::user::providers::{MacOSUserProvider, UserProvider};
     use crate::actions::user::{add_group::UserAddGroup, UserVariant};
-    use crate::contexts::Contexts;
+    use crate::contexts::Facts;
 
     #[test]
     fn test_add_user() {
         let user_provider = MacOSUserProvider {};
-        let contexts = Contexts::default();
+        let facts = Facts::default();
         let steps = user_provider.add_user(
             &UserVariant {
                 username: String::from("test"),
@@ -117,7 +117,7 @@ mod test {
                 group: vec![],
                 ..Default::default()
             },
-            &contexts,
+            &facts,
         );
 
         let steps = steps.unwrap();
@@ -132,7 +132,7 @@ mod test {
     #[test]
     fn test_add_user_no_username_fails() {
         let user_provider = MacOSUserProvider {};
-        let contexts = Contexts::default();
+        let facts = Facts::default();
         let steps = user_provider.add_user(
             &UserVariant {
                 username: String::from(""),
@@ -142,7 +142,7 @@ mod test {
                 group: vec![],
                 ..Default::default()
             },
-            &contexts,
+            &facts,
         );
 
         assert!(steps.is_err());
@@ -151,14 +151,14 @@ mod test {
     #[test]
     fn test_add_to_group() {
         let user_provider = MacOSUserProvider {};
-        let contexts = Contexts::default();
+        let facts = Facts::default();
         let steps = user_provider.add_to_group(
             &UserAddGroup {
                 username: String::from("test"),
                 group: vec![String::from("testgroup"), String::from("wheel")],
                 ..Default::default()
             },
-            &contexts,
+            &facts,
         );
 
         assert_eq!(steps.unwrap().len(), 2);
@@ -167,7 +167,7 @@ mod test {
     #[test]
     fn test_create_user_add_to_group() {
         let user_provider = MacOSUserProvider {};
-        let contexts = Contexts::default();
+        let facts = Facts::default();
         let steps = user_provider.add_user(
             &UserVariant {
                 username: String::from("test"),
@@ -177,7 +177,7 @@ mod test {
                 group: vec![String::from("testgroup")],
                 ..Default::default()
             },
-            &contexts,
+            &facts,
         );
 
         assert_eq!(steps.unwrap().len(), 2);

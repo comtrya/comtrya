@@ -2,8 +2,8 @@
 
 use super::graph::ManifestGraph;
 use comtrya_lib::{
-    actions::Action,
-    contexts::{evaluate_condition, Contexts},
+    actions::{Action, PlanCx},
+    contexts::evaluate_condition,
     manifests::Manifest,
     steps::Step,
 };
@@ -15,8 +15,8 @@ use tracing::{debug, error, info, span, warn};
 pub(super) struct Run<'a> {
     /// The manifests and their dependencies
     graph: &'a ManifestGraph,
-    /// The contexts for `where` conditions and plans
-    contexts: &'a Contexts,
+    /// The facts and contexts for `where` conditions and plans
+    cx: PlanCx<'a>,
     /// Only plan and show what would change
     dry_run: bool,
     /// Only manifests with this label run
@@ -29,13 +29,13 @@ impl<'a> Run<'a> {
     /// A run that hasn't visited any manifest yet
     pub(super) fn new(
         graph: &'a ManifestGraph,
-        contexts: &'a Contexts,
+        cx: PlanCx<'a>,
         dry_run: bool,
         label: Option<&'a str>,
     ) -> Self {
         Run {
             graph,
-            contexts,
+            cx,
             dry_run,
             label,
             failed: graph.broken.clone(),
@@ -112,7 +112,7 @@ impl<'a> Run<'a> {
             return true;
         };
 
-        let allowed = match evaluate_condition(condition, self.contexts) {
+        let allowed = match evaluate_condition(condition, self.cx.contexts) {
             Ok(result) => {
                 debug!("Result of 'where' condition '{condition}' -> '{result}'");
                 result
@@ -152,7 +152,7 @@ impl<'a> Run<'a> {
 
     /// Plans one action and runs the steps that are needed, false if it failed
     fn run_action(&self, manifest: &Manifest, action: &dyn Action) -> bool {
-        let steps = match action.plan(manifest, self.contexts) {
+        let steps = match action.plan(manifest, &self.cx) {
             Ok(steps) => steps,
             Err(err) => {
                 error!("Action failed to get plan: {err:#}");

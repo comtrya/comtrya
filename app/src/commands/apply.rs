@@ -7,7 +7,10 @@ use super::ComtryaCommand;
 use crate::Runtime;
 use clap::Parser;
 use comfy_table::{Cell, ContentArrangement, Table};
-use comtrya_lib::manifests::{load_all, Loaded};
+use comtrya_lib::{
+    actions::PlanCx,
+    manifests::{load_all, Loaded},
+};
 use graph::ManifestGraph;
 use run::Run;
 use std::ops::Deref;
@@ -107,7 +110,7 @@ impl ComtryaCommand for Apply {
 
         let mut run = Run::new(
             &graph,
-            &runtime.contexts,
+            PlanCx::new(&runtime.facts, &runtime.contexts),
             self.dry_run,
             self.label.as_deref(),
         );

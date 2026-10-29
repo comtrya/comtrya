@@ -1,6 +1,6 @@
 //! Small helpers that several actions use
 
-use crate::contexts::{privilege::Privilege, Contexts};
+use crate::contexts::Facts;
 
 use sha2::{Digest, Sha256};
 use which::which;
@@ -17,14 +17,9 @@ pub fn get_binary_path(binary: &str) -> Result<String, anyhow::Error> {
     Ok(binary)
 }
 
-/// The command that elevates privileges: the `privilege` context set from `Comtrya.yaml`,
-/// or `sudo` without one
-pub fn get_privilege_provider(contexts: &Contexts) -> String {
-    contexts
-        .get("privilege")
-        .and_then(|privilege| privilege.first_key_value())
-        .map(|(_, provider)| provider.to_string())
-        .unwrap_or_else(|| Privilege::Sudo.to_string())
+/// The command that elevates privileges: `privilege` from `Comtrya.yaml`, `sudo` by default
+pub fn get_privilege_provider(facts: &Facts) -> String {
+    facts.privilege.to_string()
 }
 
 /// Whether comtrya runs as root, by its uid: also under another name, like FreeBSD's `toor`,
@@ -43,22 +38,21 @@ pub fn running_as_root() -> bool {
 #[cfg(test)]
 mod test {
     use super::*;
-    use std::collections::BTreeMap;
+    use crate::contexts::privilege::Privilege;
 
     #[test]
     fn the_configured_privilege_provider_is_used() {
-        let mut contexts = Contexts::new();
-        contexts.insert(
-            String::from("privilege"),
-            BTreeMap::from([(String::from("privilege"), String::from("doas").into())]),
-        );
+        let facts = Facts {
+            privilege: Privilege::Doas,
+            ..Default::default()
+        };
 
-        assert_eq!("doas", get_privilege_provider(&contexts));
+        assert_eq!("doas", get_privilege_provider(&facts));
     }
 
     #[test]
     fn sudo_is_the_default_privilege_provider() {
-        assert_eq!("sudo", get_privilege_provider(&Contexts::new()));
+        assert_eq!("sudo", get_privilege_provider(&Facts::default()));
     }
 
     /// apt key file names are derived from it, so it must never change.

@@ -1,10 +1,10 @@
 //! `file.unarchive`: unpacks `.tar.gz` archives
 
 use super::FileAction;
+use crate::actions::{Action, PlanCx};
 use crate::atoms::file::Unarchive;
 use crate::manifests::Manifest;
 use crate::steps::Step;
-use crate::{actions::Action, contexts::Contexts};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -35,7 +35,7 @@ impl Action for FileUnarchive {
         format!("Unarchiving file {} to {}", self.from, self.to)
     }
 
-    fn plan(&self, _manifest: &Manifest, _context: &Contexts) -> anyhow::Result<Vec<Step>> {
+    fn plan(&self, _manifest: &Manifest, _context: &PlanCx) -> anyhow::Result<Vec<Step>> {
         let steps = vec![Step::new(Unarchive {
             origin: self.from.clone().into(),
             dest: self.to.clone().into(),

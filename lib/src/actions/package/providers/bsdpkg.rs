@@ -2,7 +2,7 @@
 
 use super::PackageProvider;
 use crate::actions::package::repository::PackageRepository;
-use crate::contexts::Contexts;
+use crate::contexts::Facts;
 use crate::steps::finalizers::FlowControl::StopIf;
 use crate::steps::finalizers::OutputContains;
 use crate::steps::Step;
@@ -38,8 +38,8 @@ impl PackageProvider for BsdPkg {
     }
 
     #[instrument(name = "bootstrap", level = "info", skip(self))]
-    fn bootstrap(&self, contexts: &Contexts) -> Vec<Step> {
-        let privilege_provider = utilities::get_privilege_provider(contexts);
+    fn bootstrap(&self, facts: &Facts) -> Vec<Step> {
+        let privilege_provider = utilities::get_privilege_provider(facts);
 
         vec![Step::new(Exec {
             command: String::from("/usr/sbin/pkg"),
@@ -55,11 +55,7 @@ impl PackageProvider for BsdPkg {
         false
     }
 
-    fn add_repository(
-        &self,
-        _: &PackageRepository,
-        _contexts: &Contexts,
-    ) -> anyhow::Result<Vec<Step>> {
+    fn add_repository(&self, _: &PackageRepository, _facts: &Facts) -> anyhow::Result<Vec<Step>> {
         Ok(vec![])
     }
 
@@ -69,8 +65,8 @@ impl PackageProvider for BsdPkg {
         Ok(package.packages())
     }
 
-    fn install(&self, package: &PackageVariant, contexts: &Contexts) -> anyhow::Result<Vec<Step>> {
-        let privilege_provider = utilities::get_privilege_provider(contexts);
+    fn install(&self, package: &PackageVariant, facts: &Facts) -> anyhow::Result<Vec<Step>> {
+        let privilege_provider = utilities::get_privilege_provider(facts);
 
         if package.file {
             return Ok(vec![Step::new(Exec {

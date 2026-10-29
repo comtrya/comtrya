@@ -2,7 +2,7 @@
 
 use super::PackageProvider;
 use crate::actions::package::repository::PackageRepository;
-use crate::contexts::Contexts;
+use crate::contexts::Facts;
 use crate::steps::Step;
 use crate::{actions::package::PackageVariant, atoms::command::Exec, utilities};
 use serde::{Deserialize, Serialize};
@@ -29,8 +29,8 @@ impl PackageProvider for Snapcraft {
         }
     }
 
-    fn bootstrap(&self, contexts: &Contexts) -> Vec<Step> {
-        let privilege_provider = utilities::get_privilege_provider(contexts);
+    fn bootstrap(&self, facts: &Facts) -> Vec<Step> {
+        let privilege_provider = utilities::get_privilege_provider(facts);
 
         vec![Step::new(Exec {
             command: String::from("apt"),
@@ -52,7 +52,7 @@ impl PackageProvider for Snapcraft {
     fn add_repository(
         &self,
         _package: &PackageRepository,
-        _contexts: &Contexts,
+        _facts: &Facts,
     ) -> anyhow::Result<Vec<Step>> {
         Ok(vec![])
     }
@@ -61,8 +61,8 @@ impl PackageProvider for Snapcraft {
         Ok(package.packages())
     }
 
-    fn install(&self, package: &PackageVariant, contexts: &Contexts) -> anyhow::Result<Vec<Step>> {
-        let privilege_provider = utilities::get_privilege_provider(contexts);
+    fn install(&self, package: &PackageVariant, facts: &Facts) -> anyhow::Result<Vec<Step>> {
+        let privilege_provider = utilities::get_privilege_provider(facts);
         Ok(vec![Step::new(Exec {
             command: String::from("snap"),
             arguments: vec![String::from("install"), String::from("--yes")]
@@ -80,14 +80,14 @@ impl PackageProvider for Snapcraft {
 #[cfg(test)]
 mod test {
     use crate::actions::package::providers::PackageProviders;
-    use crate::contexts::Contexts;
+    use crate::contexts::Facts;
 
     use super::*;
 
     #[test]
     fn test_install() {
         let snapcraft = Snapcraft {};
-        let contexts = Contexts::default();
+        let facts = Facts::default();
         let steps = snapcraft.install(
             &PackageVariant {
                 name: Some(String::from("")),
@@ -96,7 +96,7 @@ mod test {
                 provider: Some(PackageProviders::Snapcraft),
                 file: false,
             },
-            &contexts,
+            &facts,
         );
 
         assert_eq!(steps.unwrap().len(), 1);

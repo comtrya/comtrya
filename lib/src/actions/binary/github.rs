@@ -1,9 +1,9 @@
 //! `binary.github`
 
 use crate::actions::Action;
+use crate::actions::PlanCx;
 use crate::atoms::file::Chmod;
 use crate::atoms::http::Download;
-use crate::contexts::Contexts;
 use crate::manifests::Manifest;
 use crate::steps::Step;
 use anyhow::anyhow;
@@ -84,7 +84,7 @@ impl Action for BinaryGitHub {
         )
     }
 
-    fn plan(&self, _: &Manifest, _: &Contexts) -> anyhow::Result<Vec<Step>> {
+    fn plan(&self, _: &Manifest, _: &PlanCx) -> anyhow::Result<Vec<Step>> {
         // Don't need to do anything if something already exists at the path
         if self.path().exists() {
             return Ok(vec![]);

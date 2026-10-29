@@ -1,14 +1,11 @@
 //! `file.download`
 
 use super::{change_owner, create_parent, default_chmod, from_octal, FileAction, OctalMode};
+use crate::actions::{Action, Ignored, PlanCx};
 use crate::atoms::file::Chmod;
 use crate::atoms::http::Download;
 use crate::manifests::Manifest;
 use crate::steps::Step;
-use crate::{
-    actions::{Action, Ignored},
-    contexts::Contexts,
-};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
@@ -87,7 +84,7 @@ impl Action for FileDownload {
         format!("Downloading file {} to {}", self.from, self.to)
     }
 
-    fn plan(&self, _manifest: &Manifest, _context: &Contexts) -> anyhow::Result<Vec<Step>> {
+    fn plan(&self, _manifest: &Manifest, _context: &PlanCx) -> anyhow::Result<Vec<Step>> {
         crate::actions::warn_ignored(&self.ignored_fields());
         let sha256 = self.sha256()?;
         let path = PathBuf::from(&self.to);
@@ -247,7 +244,7 @@ mod tests {
             sha256: None,
         };
 
-        let steps = file_download.plan(&Default::default(), &Default::default());
+        let steps = file_download.plan(&Default::default(), &crate::actions::PlanCx::empty());
         assert!(steps.is_ok());
         let steps = steps.unwrap();
         assert_eq!(4, steps.len());

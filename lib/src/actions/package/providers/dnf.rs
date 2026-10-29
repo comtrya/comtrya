@@ -4,7 +4,7 @@ use super::PackageProvider;
 
 use crate::actions::package::{repository::PackageRepository, PackageVariant};
 use crate::atoms::command::Exec;
-use crate::contexts::Contexts;
+use crate::contexts::Facts;
 use crate::steps::Step;
 use crate::utilities;
 use serde::{Deserialize, Serialize};
@@ -30,8 +30,8 @@ impl PackageProvider for Dnf {
         }
     }
 
-    fn bootstrap(&self, contexts: &Contexts) -> Vec<Step> {
-        let privilege_provider = utilities::get_privilege_provider(contexts);
+    fn bootstrap(&self, facts: &Facts) -> Vec<Step> {
+        let privilege_provider = utilities::get_privilege_provider(facts);
 
         vec![Step::new(Exec {
             command: String::from("yum"),
@@ -53,11 +53,11 @@ impl PackageProvider for Dnf {
     fn add_repository(
         &self,
         repository: &PackageRepository,
-        contexts: &Contexts,
+        facts: &Facts,
     ) -> anyhow::Result<Vec<Step>> {
         let mut steps: Vec<Step> = vec![];
 
-        let privilege_provider = utilities::get_privilege_provider(contexts);
+        let privilege_provider = utilities::get_privilege_provider(facts);
 
         if let Some(key) = repository.key.clone() {
             steps.extend(vec![Step::new(Exec {
@@ -102,8 +102,8 @@ impl PackageProvider for Dnf {
         Ok(package.packages())
     }
 
-    fn install(&self, package: &PackageVariant, contexts: &Contexts) -> anyhow::Result<Vec<Step>> {
-        let privilege_provider = utilities::get_privilege_provider(contexts);
+    fn install(&self, package: &PackageVariant, facts: &Facts) -> anyhow::Result<Vec<Step>> {
+        let privilege_provider = utilities::get_privilege_provider(facts);
 
         Ok(vec![Step::new(Exec {
             command: String::from("dnf"),
@@ -126,21 +126,21 @@ impl PackageProvider for Dnf {
 #[cfg(test)]
 mod test {
     use crate::actions::package::{providers::PackageProviders, repository::RepositoryKey};
-    use crate::contexts::Contexts;
+    use crate::contexts::Facts;
 
     use super::*;
 
     #[test]
     fn test_add_repository_without_key() {
         let dnf = Dnf {};
-        let contexts = Contexts::default();
+        let facts = Facts::default();
         let steps = dnf.add_repository(
             &PackageRepository {
                 name: String::from("test"),
                 provider: Some(PackageProviders::Dnf),
                 ..Default::default()
             },
-            &contexts,
+            &facts,
         );
 
         assert_eq!(steps.unwrap().len(), 2);
@@ -149,7 +149,7 @@ mod test {
     #[test]
     fn test_repository_with_key() {
         let dnf = Dnf {};
-        let contexts = Contexts::default();
+        let facts = Facts::default();
         let steps = dnf.add_repository(
             &PackageRepository {
                 name: String::from("test"),
@@ -159,7 +159,7 @@ mod test {
                 }),
                 provider: Some(PackageProviders::Dnf),
             },
-            &contexts,
+            &facts,
         );
 
         assert_eq!(steps.unwrap().len(), 3);

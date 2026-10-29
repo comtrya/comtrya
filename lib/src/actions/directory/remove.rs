@@ -29,7 +29,7 @@ impl Action for DirectoryRemove {
     fn plan(
         &self,
         _manifest: &crate::manifests::Manifest,
-        _context: &crate::contexts::Contexts,
+        _context: &crate::actions::PlanCx,
     ) -> anyhow::Result<Vec<crate::steps::Step>> {
         let path = PathBuf::from(&self.target);
 

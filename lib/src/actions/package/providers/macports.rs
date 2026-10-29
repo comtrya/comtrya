@@ -2,7 +2,7 @@
 
 use super::PackageProvider;
 use crate::actions::package::repository::PackageRepository;
-use crate::contexts::Contexts;
+use crate::contexts::Facts;
 use crate::steps::Step;
 use crate::{actions::package::PackageVariant, atoms::command::Exec, utilities};
 use serde::{Deserialize, Serialize};
@@ -28,7 +28,7 @@ impl PackageProvider for Macports {
         }
     }
 
-    fn bootstrap(&self, _contexts: &Contexts) -> Vec<Step> {
+    fn bootstrap(&self, _facts: &Facts) -> Vec<Step> {
         vec![]
     }
 
@@ -42,7 +42,7 @@ impl PackageProvider for Macports {
     fn add_repository(
         &self,
         _repository: &PackageRepository,
-        _contexts: &Contexts,
+        _facts: &Facts,
     ) -> anyhow::Result<Vec<Step>> {
         Ok(vec![])
     }
@@ -51,7 +51,7 @@ impl PackageProvider for Macports {
         Ok(vec![])
     }
 
-    fn install(&self, package: &PackageVariant, contexts: &Contexts) -> anyhow::Result<Vec<Step>> {
+    fn install(&self, package: &PackageVariant, facts: &Facts) -> anyhow::Result<Vec<Step>> {
         let cli = match which("port") {
             Ok(c) => c,
             Err(_) => {
@@ -60,7 +60,7 @@ impl PackageProvider for Macports {
             }
         };
 
-        let privilege_provider = utilities::get_privilege_provider(contexts);
+        let privilege_provider = utilities::get_privilege_provider(facts);
 
         Ok(vec![Step::new(Exec {
             command: cli.display().to_string(),

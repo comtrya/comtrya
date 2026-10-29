@@ -2,7 +2,7 @@
 
 use super::PackageProvider;
 use crate::actions::package::repository::PackageRepository;
-use crate::contexts::Contexts;
+use crate::contexts::Facts;
 use crate::runner::{self, CommandSpec, Runner};
 use crate::steps::Step;
 use crate::{actions::package::PackageVariant, atoms::command::Exec};
@@ -62,7 +62,7 @@ impl PackageProvider for Winget {
         }
     }
 
-    fn bootstrap(&self, _contexts: &Contexts) -> Vec<Step> {
+    fn bootstrap(&self, _facts: &Facts) -> Vec<Step> {
         vec![]
     }
 
@@ -70,11 +70,7 @@ impl PackageProvider for Winget {
         true
     }
 
-    fn add_repository(
-        &self,
-        _: &PackageRepository,
-        _contexts: &Contexts,
-    ) -> anyhow::Result<Vec<Step>> {
+    fn add_repository(&self, _: &PackageRepository, _facts: &Facts) -> anyhow::Result<Vec<Step>> {
         Ok(vec![])
     }
 
@@ -82,7 +78,7 @@ impl PackageProvider for Winget {
         Ok(super::missing(package, |p| self.is_installed(p)))
     }
 
-    fn install(&self, package: &PackageVariant, _contexts: &Contexts) -> anyhow::Result<Vec<Step>> {
+    fn install(&self, package: &PackageVariant, _facts: &Facts) -> anyhow::Result<Vec<Step>> {
         // does not require privilege escalation
 
         let need_installed = self.query(package)?;

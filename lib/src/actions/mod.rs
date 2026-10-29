@@ -15,7 +15,7 @@ pub use registry::Actions;
 mod user;
 
 use crate::{
-    contexts::{evaluate_condition, Contexts},
+    contexts::{evaluate_condition, Contexts, Facts},
     manifests::Manifest,
     steps::Step,
 };
@@ -77,9 +77,9 @@ where
         self.action.summarize()
     }
 
-    fn plan(&self, manifest: &Manifest, context: &Contexts) -> Result<Vec<Step>, anyhow::Error> {
-        match self.select(context)? {
-            Some(action) => action.plan(manifest, context),
+    fn plan(&self, manifest: &Manifest, cx: &PlanCx) -> Result<Vec<Step>, anyhow::Error> {
+        match self.select(cx.contexts)? {
+            Some(action) => action.plan(manifest, cx),
             None => Ok(vec![]),
         }
     }
@@ -148,7 +148,37 @@ pub trait Action {
         "not found action summarize".to_string()
     }
     /// The steps that bring the system to what the action asks for. Doesn't change the system
-    fn plan(&self, manifest: &Manifest, context: &Contexts) -> anyhow::Result<Vec<Step>>;
+    fn plan(&self, manifest: &Manifest, cx: &PlanCx) -> anyhow::Result<Vec<Step>>;
+}
+
+/// What actions plan with: the typed facts about this machine, and the contexts that templates
+/// and `where` conditions see
+#[derive(Clone, Copy, Debug)]
+pub struct PlanCx<'a> {
+    /// What comtrya knows about the system and its configuration
+    pub facts: &'a Facts,
+    /// The same, as templates and `where` see it
+    pub contexts: &'a Contexts,
+}
+
+impl<'a> PlanCx<'a> {
+    /// The facts and the contexts made from them
+    pub fn new(facts: &'a Facts, contexts: &'a Contexts) -> Self {
+        Self { facts, contexts }
+    }
+}
+
+#[cfg(test)]
+impl PlanCx<'static> {
+    /// Default facts and no contexts, for tests that don't care
+    pub fn empty() -> Self {
+        use std::sync::LazyLock;
+
+        static FACTS: LazyLock<Facts> = LazyLock::new(Facts::default);
+        static CONTEXTS: LazyLock<Contexts> = LazyLock::new(Contexts::default);
+
+        Self::new(&FACTS, &CONTEXTS)
+    }
 }
 
 #[cfg(test)]

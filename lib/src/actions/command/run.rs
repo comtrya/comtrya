@@ -1,6 +1,6 @@
 //! `command.run`: runs a program, every time
 
-use crate::contexts::Contexts;
+use crate::actions::PlanCx;
 use crate::steps::Step;
 use crate::{actions::Action, manifests::Manifest, utilities};
 use schemars::JsonSchema;
@@ -68,10 +68,10 @@ impl Action for RunCommand {
         format!("Running {} command", self.command)
     }
 
-    fn plan(&self, _: &Manifest, contexts: &Contexts) -> anyhow::Result<Vec<Step>> {
+    fn plan(&self, _: &Manifest, cx: &PlanCx) -> anyhow::Result<Vec<Step>> {
         use crate::atoms::command::Exec;
 
-        let privilege_provider = utilities::get_privilege_provider(contexts);
+        let privilege_provider = utilities::get_privilege_provider(cx.facts);
 
         Ok(vec![Step::new(Exec {
             command: self.command.clone(),

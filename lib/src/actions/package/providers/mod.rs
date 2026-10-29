@@ -27,10 +27,10 @@ use self::xbps::Xbps;
 mod zypper;
 use self::zypper::Zypper;
 use super::{repository::PackageRepository, PackageVariant};
-use crate::contexts::Contexts;
+use crate::contexts::Facts;
 use anyhow::anyhow;
 use schemars::JsonSchema;
-use serde::{de::IntoDeserializer, Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 use tracing::{debug, trace};
 
 /// A package manager, by the name used for `provider` in manifests and `Comtrya.yaml`
@@ -128,32 +128,18 @@ impl PackageProviders {
         }
     }
 
-    /// The provider an action uses: its own `provider`, else `packages.provider` from the
-    /// contexts (`package_provider` in `Comtrya.yaml`), else the default for this OS
-    pub fn resolve(
-        provider: Option<&PackageProviders>,
-        contexts: &Contexts,
-    ) -> anyhow::Result<Self> {
-        if let Some(provider) = provider {
-            return Ok(provider.clone());
-        }
-
-        if let Some(name) = contexts
-            .get("packages")
-            .and_then(|packages| packages.get("provider"))
-        {
-            let name = name.to_string();
-            return PackageProviders::deserialize(name.as_str().into_deserializer()).map_err(
-                |err: serde::de::value::Error| anyhow!("Invalid package provider: {err}"),
-            );
-        }
-
-        PackageProviders::for_os().ok_or_else(|| {
-            anyhow!(
-                "There is no default package provider for {}. Set `provider` on the action, or `package_provider` in Comtrya.yaml",
-                os_info::get().os_type()
-            )
-        })
+    /// The provider an action uses: its own `provider`, else the one in the facts
+    /// (`package_provider` in `Comtrya.yaml`, else the default for this OS)
+    pub fn resolve(provider: Option<&PackageProviders>, facts: &Facts) -> anyhow::Result<Self> {
+        provider
+            .cloned()
+            .or_else(|| facts.package_provider.clone())
+            .ok_or_else(|| {
+                anyhow!(
+                    "There is no default package provider for {}. Set `provider` on the action, or `package_provider` in Comtrya.yaml",
+                    os_info::get().os_type()
+                )
+            })
     }
 
     /// The usual package provider of this OS, if comtrya knows one
@@ -240,29 +226,29 @@ pub trait PackageProvider {
     fn available(&self) -> bool;
     /// Steps that install the package manager itself. Empty if comtrya can't install it, then
     /// the action fails when it isn't `available`
-    fn bootstrap(&self, contexts: &Contexts) -> Vec<Step>;
+    fn bootstrap(&self, facts: &Facts) -> Vec<Step>;
     /// Whether the repository is set up already, so nothing needs to be done
     fn has_repository(&self, package: &PackageRepository) -> bool;
     /// Steps that add the repository and its key
     fn add_repository(
         &self,
         package: &PackageRepository,
-        contexts: &Contexts,
+        facts: &Facts,
     ) -> anyhow::Result<Vec<Step>>;
     /// The requested packages that aren't installed. Providers that can't tell return all of
     /// them
     fn query(&self, package: &PackageVariant) -> anyhow::Result<Vec<String>>;
     /// Steps that install the packages that are missing
-    fn install(&self, package: &PackageVariant, contexts: &Contexts) -> anyhow::Result<Vec<Step>>;
+    fn install(&self, package: &PackageVariant, facts: &Facts) -> anyhow::Result<Vec<Step>>;
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{config::Config, contexts::build_contexts};
+    use crate::config::Config;
 
-    fn contexts(package_provider: Option<PackageProviders>) -> Contexts {
-        build_contexts(&Config {
+    fn facts(package_provider: Option<PackageProviders>) -> Facts {
+        Facts::gather(&Config {
             package_provider,
             ..Default::default()
         })
@@ -270,31 +256,31 @@ mod tests {
 
     #[test]
     fn the_action_provider_wins() {
-        let contexts = contexts(Some(PackageProviders::Pkgin));
-        let provider = PackageProviders::resolve(Some(&PackageProviders::Xbps), &contexts).unwrap();
+        let facts = facts(Some(PackageProviders::Pkgin));
+        let provider = PackageProviders::resolve(Some(&PackageProviders::Xbps), &facts).unwrap();
 
         assert_eq!(provider, PackageProviders::Xbps);
     }
 
     #[test]
     fn the_configured_provider_replaces_the_os_default() {
-        let contexts = contexts(Some(PackageProviders::Pkgin));
+        let facts = facts(Some(PackageProviders::Pkgin));
 
         assert_eq!(
-            PackageProviders::resolve(None, &contexts).unwrap(),
+            PackageProviders::resolve(None, &facts).unwrap(),
             PackageProviders::Pkgin
         );
     }
 
     #[test]
     fn without_configuration_the_os_default_is_used() {
-        let contexts = contexts(None);
+        let facts = facts(None);
 
         match PackageProviders::for_os() {
             Some(default) => {
-                assert_eq!(PackageProviders::resolve(None, &contexts).unwrap(), default)
+                assert_eq!(PackageProviders::resolve(None, &facts).unwrap(), default)
             }
-            None => assert!(PackageProviders::resolve(None, &contexts).is_err()),
+            None => assert!(PackageProviders::resolve(None, &facts).is_err()),
         }
     }
 

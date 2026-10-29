@@ -1,11 +1,11 @@
 //! `file.link`: symlinks to files in the manifest's `files` directory
 
 use super::FileAction;
+use crate::actions::{Action, PlanCx};
 use crate::manifests::Manifest;
 use crate::steps::initializers::FileExists;
 use crate::steps::initializers::FlowControl::Ensure;
 use crate::steps::Step;
-use crate::{actions::Action, contexts::Contexts};
 use anyhow::anyhow;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -117,7 +117,7 @@ impl Action for FileLink {
         )
     }
 
-    fn plan(&self, manifest: &Manifest, _: &Contexts) -> anyhow::Result<Vec<Step>> {
+    fn plan(&self, manifest: &Manifest, _: &PlanCx) -> anyhow::Result<Vec<Step>> {
         let from: PathBuf = self.resolve(manifest, self.source()?)?;
 
         let to = PathBuf::from(self.target()?);
@@ -137,9 +137,7 @@ impl Action for FileLink {
 #[cfg(test)]
 mod tests {
     use crate::{
-        actions::{Action, Actions},
-        config::Config,
-        contexts::build_contexts,
+        actions::{Action, Actions, PlanCx},
         manifests::Manifest,
     };
 
@@ -205,10 +203,6 @@ mod tests {
             ..Default::default()
         };
 
-        let config = Config::default();
-
-        let contexts = build_contexts(&config);
-
         let target: String = source_dir
             .path()
             .parent()
@@ -223,7 +217,7 @@ mod tests {
             ..Default::default()
         };
 
-        let steps = file_link_action.plan(&manifest, &contexts).unwrap();
+        let steps = file_link_action.plan(&manifest, &PlanCx::empty()).unwrap();
         assert_eq!(steps.len(), 2);
     }
 
@@ -257,10 +251,6 @@ mod tests {
             ..Default::default()
         };
 
-        let config = Config::default();
-
-        let contexts = build_contexts(&config);
-
         let target: String = source_dir.parent().unwrap().to_str().unwrap().to_string();
 
         let file_link_action: FileLink = FileLink {
@@ -270,7 +260,7 @@ mod tests {
             ..Default::default()
         };
 
-        let steps = file_link_action.plan(&manifest, &contexts).unwrap();
+        let steps = file_link_action.plan(&manifest, &PlanCx::empty()).unwrap();
         // One link per file, plus creating the target directory
         assert_eq!(steps.len(), number_of_files + 1);
     }

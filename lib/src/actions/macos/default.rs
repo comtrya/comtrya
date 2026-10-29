@@ -1,7 +1,7 @@
 //! `macos.default`: `defaults write`
 
+use crate::actions::PlanCx;
 use crate::atoms::command::Exec;
-use crate::contexts::Contexts;
 use crate::steps::Step;
 use crate::{actions::Action, manifests::Manifest};
 use schemars::JsonSchema;
@@ -24,7 +24,7 @@ pub struct MacOSDefault {
 }
 
 impl Action for MacOSDefault {
-    fn plan(&self, _: &Manifest, _: &Contexts) -> anyhow::Result<Vec<Step>> {
+    fn plan(&self, _: &Manifest, _: &PlanCx) -> anyhow::Result<Vec<Step>> {
         Ok(vec![Step::new(Exec {
             command: String::from("defaults"),
             arguments: vec![

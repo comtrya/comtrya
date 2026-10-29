@@ -4,7 +4,7 @@ use super::providers::PackageProviders;
 use super::Package;
 use super::PackageVariant;
 use crate::actions::Action;
-use crate::contexts::Contexts;
+use crate::actions::PlanCx;
 use crate::manifests::Manifest;
 use crate::steps::Step;
 use anyhow::anyhow;
@@ -19,9 +19,9 @@ impl Action for PackageInstall {
         "Installing packages".to_string()
     }
 
-    fn plan(&self, _manifest: &Manifest, context: &Contexts) -> anyhow::Result<Vec<Step>> {
+    fn plan(&self, _manifest: &Manifest, cx: &PlanCx) -> anyhow::Result<Vec<Step>> {
         let variant: PackageVariant = self.into();
-        let provider_type = PackageProviders::resolve(variant.provider.as_ref(), context)?;
+        let provider_type = PackageProviders::resolve(variant.provider.as_ref(), cx.facts)?;
         let box_provider = provider_type.clone().get_provider();
         let provider = box_provider.deref();
 
@@ -45,17 +45,17 @@ impl Action for PackageInstall {
 
         // If the provider isn't available, see if we can bootstrap it
         if !provider.available() {
-            if provider.bootstrap(context).is_empty() {
+            if provider.bootstrap(cx.facts).is_empty() {
                 return Err(anyhow!(
                     "Package Provider, {}, isn't available. Skipping action",
                     provider.name()
                 ));
             }
 
-            atoms.append(&mut provider.bootstrap(context));
+            atoms.append(&mut provider.bootstrap(cx.facts));
         }
 
-        atoms.append(&mut provider.install(&variant, context)?);
+        atoms.append(&mut provider.install(&variant, cx.facts)?);
 
         span.exit();
 
@@ -85,7 +85,7 @@ mod tests {
             ..Default::default()
         };
 
-        let Err(error) = package.plan(&Manifest::default(), &Contexts::default()) else {
+        let Err(error) = package.plan(&Manifest::default(), &PlanCx::empty()) else {
             panic!("homebrew can't install local files");
         };
 

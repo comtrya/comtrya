@@ -6,7 +6,7 @@ use crate::steps::Step;
 mod none;
 use self::{freebsd::FreeBSDGroupProvider, none::NoneGroupProvider};
 use super::GroupVariant;
-use crate::contexts::Contexts;
+use crate::contexts::Facts;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -70,5 +70,5 @@ impl Default for GroupProviders {
 /// A tool that creates groups
 pub trait GroupProvider {
     /// Steps that create the group. Fails if the tool or the name is missing
-    fn add_group(&self, group: &GroupVariant, contexts: &Contexts) -> anyhow::Result<Vec<Step>>;
+    fn add_group(&self, group: &GroupVariant, facts: &Facts) -> anyhow::Result<Vec<Step>>;
 }

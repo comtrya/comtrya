@@ -13,7 +13,7 @@ use self::linux::LinuxUserProvider;
 mod macos;
 use self::macos::MacOSUserProvider;
 
-use crate::contexts::Contexts;
+use crate::contexts::Facts;
 
 /// The tool to create and change users with
 #[derive(JsonSchema, Clone, Debug, Serialize, Deserialize)]
@@ -81,7 +81,7 @@ fn check_add_to_group(user: &UserAddGroup) -> anyhow::Result<()> {
 /// A tool that creates and changes users
 pub trait UserProvider {
     /// Steps that create the user and add it to its groups
-    fn add_user(&self, user: &UserVariant, contexts: &Contexts) -> anyhow::Result<Vec<Step>>;
+    fn add_user(&self, user: &UserVariant, facts: &Facts) -> anyhow::Result<Vec<Step>>;
     /// Steps that add an existing user to groups
-    fn add_to_group(&self, user: &UserAddGroup, contexts: &Contexts) -> anyhow::Result<Vec<Step>>;
+    fn add_to_group(&self, user: &UserAddGroup, facts: &Facts) -> anyhow::Result<Vec<Step>>;
 }
