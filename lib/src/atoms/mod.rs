@@ -50,7 +50,7 @@ pub trait Atom: std::fmt::Display {
         String::from("")
     }
 
-    /// The exit code of the atom. Nothing sets it yet
+    /// The exit code of the atom, like a command's
     fn status_code(&self) -> i32 {
         0
     }
