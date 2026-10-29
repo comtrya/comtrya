@@ -27,6 +27,19 @@ pub fn get_privilege_provider(contexts: &Contexts) -> String {
         .unwrap_or_else(|| Privilege::Sudo.to_string())
 }
 
+/// Whether comtrya runs as root, by its uid: also under another name, like FreeBSD's `toor`,
+/// and without a passwd entry
+#[cfg(unix)]
+pub fn running_as_root() -> bool {
+    uzers::get_current_uid() == 0
+}
+
+/// Windows has no root
+#[cfg(not(unix))]
+pub fn running_as_root() -> bool {
+    false
+}
+
 #[cfg(test)]
 mod test {
     use super::*;

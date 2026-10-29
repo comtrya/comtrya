@@ -53,24 +53,17 @@ pub fn new_run_command(command: String) -> Exec {
 impl Exec {
     /// The program and arguments to run: prefixed with the privilege provider if needed
     fn elevate_if_required(&self) -> (String, Vec<String>) {
-        // Depending on the priviledged flag and who who the current user is
-        // we can determine if we need to prepend sudo to the command
+        self.command_line(utilities::running_as_root())
+    }
 
-        let privilege_provider = self.privilege_provider.clone();
-        let username = whoami::username().unwrap_or_else(|_| String::from("unknown"));
-
-        match (self.privileged, username.as_str()) {
-            // Hasn't requested priviledged, so never try to elevate
-            (false, _) => (self.command.clone(), self.arguments.clone()),
-
-            // Requested priviledged, but is already root
-            (true, "root") => (self.command.clone(), self.arguments.clone()),
-
-            // Requested priviledged, but is not root
-            (true, _) => (
-                privilege_provider,
-                [vec![self.command.clone()], self.arguments.clone()].concat(),
-            ),
+    /// The program and arguments to run, prefixed with the privilege provider when the command
+    /// is privileged and comtrya doesn't run `as_root` already
+    fn command_line(&self, as_root: bool) -> (String, Vec<String>) {
+        if self.privileged && !as_root {
+            let arguments = [vec![self.command.clone()], self.arguments.clone()].concat();
+            (self.privilege_provider.clone(), arguments)
+        } else {
+            (self.command.clone(), self.arguments.clone())
         }
     }
 
@@ -228,68 +221,50 @@ mod tests {
         assert_eq!(false, command_run.privileged);
     }
 
-    #[test]
-    fn elevate() {
+    /// `echo "Hello, world!"`, privileged with `provider` if there is one
+    fn hello(provider: Option<Privilege>) -> Exec {
         let mut command_run = new_run_command(String::from("echo"));
         command_run.arguments = vec![String::from("Hello, world!")];
-        let (command, args) = command_run.elevate_if_required();
-
-        assert_eq!(String::from("echo"), command);
-        assert_eq!(vec![String::from("Hello, world!")], args);
-
-        let mut command_run = new_run_command(String::from("echo"));
-        command_run.arguments = vec![String::from("Hello, world!")];
-        command_run.privileged = true;
-        command_run.privilege_provider = Privilege::Sudo.to_string();
-        let (command, args) = command_run.elevate_if_required();
-
-        assert_eq!(String::from("sudo"), command);
-        assert_eq!(
-            vec![String::from("echo"), String::from("Hello, world!")],
-            args
-        );
+        if let Some(provider) = provider {
+            command_run.privileged = true;
+            command_run.privilege_provider = provider.to_string();
+        }
+        command_run
     }
 
     #[test]
-    fn elevate_doas() {
-        let mut command_run = new_run_command(String::from("echo"));
-        command_run.arguments = vec![String::from("Hello, world!")];
-        let (command, args) = command_run.elevate_if_required();
-
-        assert_eq!(String::from("echo"), command);
-        assert_eq!(vec![String::from("Hello, world!")], args);
-
-        let mut command_run = new_run_command(String::from("echo"));
-        command_run.arguments = vec![String::from("Hello, world!")];
-        command_run.privileged = true;
-        command_run.privilege_provider = Privilege::Doas.to_string();
-        let (command, args) = command_run.elevate_if_required();
-
-        assert_eq!(String::from("doas"), command);
-        assert_eq!(
-            vec![String::from("echo"), String::from("Hello, world!")],
-            args
-        );
+    fn an_unprivileged_command_runs_as_it_is() {
+        for as_root in [false, true] {
+            assert_eq!(
+                (String::from("echo"), vec![String::from("Hello, world!")]),
+                hello(None).command_line(as_root)
+            );
+        }
     }
+
     #[test]
-    fn elevate_run0() {
-        let mut command_run = new_run_command(String::from("echo"));
-        command_run.arguments = vec![String::from("Hello, world!")];
-        let (command, args) = command_run.elevate_if_required();
+    fn a_privileged_command_runs_with_the_privilege_provider() {
+        for (provider, name) in [
+            (Privilege::Sudo, "sudo"),
+            (Privilege::Doas, "doas"),
+            (Privilege::Run0, "run0"),
+        ] {
+            assert_eq!(
+                (
+                    String::from(name),
+                    vec![String::from("echo"), String::from("Hello, world!")]
+                ),
+                hello(Some(provider)).command_line(false)
+            );
+        }
+    }
 
-        assert_eq!(String::from("echo"), command);
-        assert_eq!(vec![String::from("Hello, world!")], args);
-
-        let mut command_run = new_run_command(String::from("echo"));
-        command_run.arguments = vec![String::from("Hello, world!")];
-        command_run.privileged = true;
-        command_run.privilege_provider = Privilege::Run0.to_string();
-        let (command, args) = command_run.elevate_if_required();
-
-        assert_eq!(String::from("run0"), command);
+    /// Root is found by its uid, so also under another name or without a passwd entry
+    #[test]
+    fn a_privileged_command_runs_as_it_is_for_root() {
         assert_eq!(
-            vec![String::from("echo"), String::from("Hello, world!")],
-            args
+            (String::from("echo"), vec![String::from("Hello, world!")]),
+            hello(Some(Privilege::Sudo)).command_line(true)
         );
     }
 

@@ -168,9 +168,10 @@ impl PackageProviders {
             | os_info::Type::Artix
             | os_info::Type::CachyOS
             | os_info::Type::EndeavourOS
-            | os_info::Type::Manjaro => {
-                Self::for_arch(|command| which::which(command).is_ok(), running_as_root())
-            }
+            | os_info::Type::Manjaro => Self::for_arch(
+                |command| which::which(command).is_ok(),
+                crate::utilities::running_as_root(),
+            ),
             // BSD operating systems
             os_info::Type::DragonFly => PackageProviders::BsdPkg,
             os_info::Type::FreeBSD => PackageProviders::BsdPkg,
@@ -212,18 +213,6 @@ impl PackageProviders {
             PackageProviders::Yay
         }
     }
-}
-
-/// Whether comtrya runs as root, by its uid
-#[cfg(unix)]
-fn running_as_root() -> bool {
-    uzers::get_current_uid() == 0
-}
-
-/// Windows has no root
-#[cfg(not(unix))]
-fn running_as_root() -> bool {
-    false
 }
 
 /// The requested packages that `installed` doesn't find, in the order they were requested
