@@ -101,7 +101,7 @@ impl Action for BinaryGitHub {
             .map_err(|e| anyhow!("Failed to find a release: {e}"))?;
 
         let asset = best_asset(release.assets, &platform_terms())
-            .ok_or_else(|| anyhow!("Failed to find a downloadable asset"))?;
+            .ok_or_else(|| anyhow!("Failed to find a downloadable asset for this OS"))?;
         debug!("Downloading {:?}", asset.browser_download_url);
 
         Ok(vec![
@@ -148,7 +148,22 @@ fn platform_terms() -> Vec<String> {
     terms
 }
 
-/// The asset whose name contains the most `terms`. The first one wins a tie
+/// Words in asset names that point to an OS
+const OS_TERMS: &[&str] = &[
+    "linux", "darwin", "apple", "macos", "windows", "freebsd", "netbsd", "openbsd",
+];
+
+/// Whether `name` names an OS, but none of the OSes in `terms`, like `tool-linux` on Windows
+fn for_another_os(name: &str, terms: &[String]) -> bool {
+    let (ours, others): (Vec<&str>, Vec<&str>) = OS_TERMS
+        .iter()
+        .filter(|os| name.contains(**os))
+        .partition(|os| terms.iter().any(|term| term == *os));
+    ours.is_empty() && !others.is_empty()
+}
+
+/// The asset whose name contains the most `terms`, leaving out assets for another OS. The first
+/// one wins a tie
 fn best_asset(assets: Vec<ReleaseAsset>, terms: &[String]) -> Option<ReleaseAsset> {
     let score = |asset: &ReleaseAsset| {
         let name = asset.name.to_lowercase();
@@ -160,6 +175,10 @@ fn best_asset(assets: Vec<ReleaseAsset>, terms: &[String]) -> Option<ReleaseAsse
 
     let mut best: Option<(usize, ReleaseAsset)> = None;
     for asset in assets {
+        if for_another_os(&asset.name.to_lowercase(), terms) {
+            continue;
+        }
+
         let asset_score = score(&asset);
         if best
             .as_ref()
@@ -287,5 +306,19 @@ mod tests {
 
         assert_eq!("tool.zip", best.name);
         assert!(best_asset(vec![], &terms(&["linux"])).is_none());
+    }
+
+    #[test]
+    fn an_asset_for_another_os_is_never_picked() {
+        let windows = terms(&["windows", "x86_64", "unknown", "64"]);
+        let release = assets(&[
+            "tool-x86_64-unknown-linux-musl",
+            "tool-x86_64-pc-windows-msvc.exe",
+        ]);
+
+        let best = best_asset(release, &windows).unwrap();
+
+        assert_eq!("tool-x86_64-pc-windows-msvc.exe", best.name);
+        assert!(best_asset(assets(&["tool-linux"]), &windows).is_none());
     }
 }
