@@ -3,8 +3,10 @@
 use super::super::Atom;
 use crate::atoms::Outcome;
 use gix::interrupt;
+use gix::remote::fetch::Shallow;
 use gix::{progress::Discard, Url};
-use std::path::PathBuf;
+use std::num::NonZeroU32;
+use std::path::{Path, PathBuf};
 use tracing::instrument;
 
 /// Clones a repository, unless `directory` exists
@@ -48,23 +50,41 @@ impl Atom for Clone {
 
     #[instrument(name = "git.clone.execute", level = "info", skip(self))]
     fn execute(&mut self) -> anyhow::Result<()> {
-        unsafe {
-            interrupt::init_handler(1, || {})?;
-        };
-
-        std::fs::create_dir_all(&self.directory)?;
-
-        let mut prepare_clone = gix::prepare_clone(self.repository.clone(), &self.directory)?
-            .with_ref_name(self.reference.as_deref())?;
-        let (mut prepare_checkout, _) = prepare_clone
-            .fetch_then_checkout(gix::progress::Discard, &interrupt::IS_INTERRUPTED)?;
-
-        let (repo, _) = prepare_checkout.main_worktree(Discard, &interrupt::IS_INTERRUPTED)?;
-
-        let _ = repo
-            .find_default_remote(gix::remote::Direction::Fetch)
-            .expect("always present after clone")?;
-
-        Ok(())
+        clone_repository(
+            &self.repository,
+            &self.directory,
+            self.reference.as_deref(),
+            false,
+        )
     }
+}
+
+/// Clones `repository` into `directory`, with only the latest commit if `shallow`
+pub(crate) fn clone_repository(
+    repository: &Url,
+    directory: &Path,
+    reference: Option<&str>,
+    shallow: bool,
+) -> anyhow::Result<()> {
+    unsafe {
+        interrupt::init_handler(1, || {})?;
+    };
+
+    std::fs::create_dir_all(directory)?;
+
+    let mut prepare_clone =
+        gix::prepare_clone(repository.clone(), directory)?.with_ref_name(reference)?;
+    if shallow {
+        prepare_clone = prepare_clone.with_shallow(Shallow::DepthAtRemote(NonZeroU32::MIN));
+    }
+    let (mut prepare_checkout, _) =
+        prepare_clone.fetch_then_checkout(gix::progress::Discard, &interrupt::IS_INTERRUPTED)?;
+
+    let (repo, _) = prepare_checkout.main_worktree(Discard, &interrupt::IS_INTERRUPTED)?;
+
+    let _ = repo
+        .find_default_remote(gix::remote::Direction::Fetch)
+        .expect("always present after clone")?;
+
+    Ok(())
 }

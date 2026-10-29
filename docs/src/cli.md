@@ -37,7 +37,7 @@ comtrya -d https://github.com/rawkode/rawkode#main:dotfiles apply
 comtrya -d https://github.com/rawkode/rawkode#main:dotfiles apply -m dev.git
 ```
 
-The part after `#` is `<branch>:<path>`, and either can be left out, e.g. `#main` or `#:dotfiles`. Comtrya clones each repository and branch once into its cache and doesn't update the clone later. To get newer manifests, delete the clone; `comtrya contexts` shows where the cache is.
+The part after `#` is `<branch>:<path>`, and either can be left out, e.g. `#main` or `#:dotfiles`. Comtrya clones each repository and branch into its cache, and updates the clone on every run so that you always get the current manifests of the branch (or of the remote's default branch without `#<branch>`). Local changes in the clone are discarded. If the update fails, for example when you are offline, Comtrya warns and continues with the clone it already has. `comtrya contexts` shows where the cache is.
 
 ## Help menu
 

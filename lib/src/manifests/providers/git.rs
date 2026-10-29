@@ -1,12 +1,15 @@
-//! Manifests in git repositories. A repository is cloned into the cache once per branch, and not
-//! updated later
+//! Manifests in git repositories. A repository is cloned into the cache once per branch, and
+//! updated on every run, as far as the remote is reachable
 
 use super::{ManifestProvider, ManifestProviderError};
 
-use crate::atoms::{git::Clone, Atom};
+use crate::atoms::{
+    git::{clone_repository, Update},
+    Atom,
+};
 
 use std::path::PathBuf;
-use tracing::info;
+use tracing::{info, warn};
 
 /// Clones `https://`, `git://` and `ssh://` URLs
 #[derive(Debug)]
@@ -58,7 +61,10 @@ impl ManifestProvider for GitManifestProvider {
         let cache_path = git_cache_dir()
             .ok_or(ManifestProviderError::NoCacheDir)?
             .join(self.cache_name(&config));
-        if !cache_path.exists() {
+        Self::recover_interrupted_update(&cache_path);
+        if cache_path.exists() {
+            self.update_clone(&cache_path, &config);
+        } else {
             self.fetch_and_clone(&cache_path, &config)?;
         }
 
@@ -67,6 +73,41 @@ impl ManifestProvider for GitManifestProvider {
 }
 
 impl GitManifestProvider {
+    /// Puts the old clone back if an update was killed between moving it away and moving the
+    /// new one in place
+    fn recover_interrupted_update(cache_path: &std::path::Path) {
+        let replaced = Update::replaced_dir(cache_path);
+        if !cache_path.exists() && replaced.exists() {
+            if let Err(err) = std::fs::rename(&replaced, cache_path) {
+                warn!("Couldn't recover {}: {err}", replaced.display());
+            }
+        }
+    }
+
+    /// Brings the clone in `cache_path` to the remote's state. If that fails, say why and keep
+    /// the clone as it is: stale manifests are better than none when offline
+    fn update_clone(&self, cache_path: &std::path::Path, config: &GitConfig) {
+        info!("Updating cached manifests.");
+        let result = gix::url::parse(config.repository.as_str())
+            .map_err(anyhow::Error::from)
+            .and_then(|repository| {
+                Update {
+                    repository,
+                    directory: cache_path.to_path_buf(),
+                    reference: config.branch.clone(),
+                }
+                .execute()
+            });
+
+        if let Err(err) = result {
+            warn!(
+                "Couldn't update {}, using the cached clone in {}: {err:#}",
+                config.repository,
+                cache_path.display()
+            );
+        }
+    }
+
     /// Clones the repository into `cache_path`, at the branch of the location if it has one
     fn fetch_and_clone(
         &self,
@@ -86,17 +127,12 @@ impl GitManifestProvider {
             }
         })?;
 
-        let mut clone = Clone {
-            repository,
-            directory: cache_path.to_path_buf(),
-            reference: config.branch.clone(),
-        };
-        clone
-            .execute()
-            .map_err(|err| ManifestProviderError::Clone {
+        clone_repository(&repository, cache_path, config.branch.as_deref(), true).map_err(
+            |err| ManifestProviderError::Clone {
                 url: config.repository.clone(),
                 message: format!("{err:#}"),
-            })?;
+            },
+        )?;
 
         info!("Finished fetch and clone operation.");
 
@@ -319,5 +355,142 @@ mod tests {
             "githubcomcomtryacomtrya",
             provider.clean_git_url("https://github.com/comtrya/comtrya")
         );
+    }
+
+    /// Runs git in `dir` without the user's settings
+    #[cfg(unix)]
+    fn git_in(dir: &std::path::Path, args: &[&str]) {
+        let status = std::process::Command::new("git")
+            .env("GIT_CONFIG_GLOBAL", "/dev/null")
+            .env("GIT_CONFIG_NOSYSTEM", "1")
+            .args([
+                "-c",
+                "user.name=comtrya",
+                "-c",
+                "user.email=comtrya@example.com",
+            ])
+            .args(args)
+            .current_dir(dir)
+            .output()
+            .unwrap()
+            .status;
+        assert!(status.success(), "git {args:?}");
+    }
+
+    /// Commits a file `name` on `branch` of the repository in `dir`, and goes back to `main`
+    #[cfg(unix)]
+    fn commit_file(dir: &std::path::Path, branch: &str, name: &str) {
+        git_in(dir, &["checkout", "--quiet", branch]);
+        std::fs::write(dir.join(name), "actions: []\n").unwrap();
+        git_in(dir, &["add", "."]);
+        git_in(dir, &["commit", "--quiet", "-m", name]);
+        git_in(dir, &["checkout", "--quiet", "main"]);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_cached_clone_gets_new_commits_of_the_remote() {
+        let repository = repository();
+        let cache = tempfile::tempdir().unwrap();
+        let url = repository.path().display().to_string();
+        let manifests = clone(&url, cache.path()).unwrap();
+        assert!(!manifests.join("new.yaml").exists());
+
+        commit_file(repository.path(), "main", "new.yaml");
+        update(&url, cache.path());
+
+        assert!(manifests.join("new.yaml").exists());
+        assert!(manifests.join("main.yaml").exists());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_cached_clone_of_a_branch_gets_new_commits_of_the_branch() {
+        let repository = repository();
+        let cache = tempfile::tempdir().unwrap();
+        let location = format!("{}#other:sub", repository.path().display());
+        let manifests = clone(&location, cache.path()).unwrap();
+
+        commit_file(repository.path(), "other", "sub/new.yaml");
+        update(&location, cache.path());
+
+        assert!(manifests.join("new.yaml").exists());
+        assert!(manifests.join("other.yaml").exists());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn local_changes_and_removed_files_of_a_cached_clone_are_discarded() {
+        let repository = repository();
+        let cache = tempfile::tempdir().unwrap();
+        let url = repository.path().display().to_string();
+        let manifests = clone(&url, cache.path()).unwrap();
+        std::fs::write(manifests.join("main.yaml"), "changed\n").unwrap();
+        std::fs::write(manifests.join("local.yaml"), "local\n").unwrap();
+
+        update(&url, cache.path());
+
+        assert_eq!(
+            "actions: []\n",
+            std::fs::read_to_string(manifests.join("main.yaml")).unwrap()
+        );
+        assert!(!manifests.join("local.yaml").exists());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn the_cached_clone_is_used_when_the_remote_is_gone() {
+        let repository = repository();
+        let cache = tempfile::tempdir().unwrap();
+        let url = repository.path().display().to_string();
+        let manifests = clone(&url, cache.path()).unwrap();
+        drop(repository);
+
+        update(&url, cache.path());
+
+        assert!(manifests.join("main.yaml").exists());
+        let leftovers = std::fs::read_dir(cache.path()).unwrap().count();
+        assert_eq!(1, leftovers, "temporary directories are cleaned up");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn manifest_clones_have_only_the_latest_commit() {
+        let repository = repository();
+        commit_file(repository.path(), "main", "second.yaml");
+        let cache = tempfile::tempdir().unwrap();
+        // `file://` because git only does shallow clones over a real transport
+        let url = format!("file://{}", repository.path().display());
+        let manifests = clone(&url, cache.path()).unwrap();
+        assert!(manifests.join("second.yaml").exists());
+        assert!(manifests.join(".git/shallow").exists());
+
+        commit_file(repository.path(), "main", "third.yaml");
+        update(&url, cache.path());
+        assert!(manifests.join("third.yaml").exists());
+        assert!(manifests.join(".git/shallow").exists());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn an_update_killed_before_the_new_clone_was_moved_in_is_recovered() {
+        let cache = tempfile::tempdir().unwrap();
+        let clone = cache.path().join("clone");
+        let replaced = Update::replaced_dir(&clone);
+        std::fs::create_dir(&replaced).unwrap();
+        std::fs::write(replaced.join("main.yaml"), "actions: []\n").unwrap();
+
+        GitManifestProvider::recover_interrupted_update(&clone);
+
+        assert!(clone.join("main.yaml").exists());
+        assert!(!replaced.exists());
+    }
+
+    /// Updates the clone of `location` in `cache`, like `resolve` does for an existing clone
+    #[cfg(unix)]
+    fn update(location: &str, cache: &std::path::Path) {
+        let provider = GitManifestProvider;
+        let config = provider.parse_config_url(location);
+        provider.update_clone(&cache.join(provider.cache_name(&config)), &config);
     }
 }
