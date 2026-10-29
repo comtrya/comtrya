@@ -32,6 +32,8 @@ impl Action for PackageInstall {
         )
         .entered();
 
+        super::warn_ignored(&self.ignored_fields());
+
         if variant.file && !installs_local_files(&provider_type) {
             return Err(anyhow!(
                 "Package Provider, {}, isn't capable of local file installs. Skipping action.",

@@ -86,7 +86,7 @@ Some package manager providers can implement a `bootstrap` method that will auto
 | name       | string | no       | name of target package                                                             |
 | list       | list   | yes      | list of multiple packages                                                          |
 | provider   | string | yes      | Specify package provider                                                           |
-| repository | string | yes      | specific repository for a provider and package                                     |
+| repository | string | yes      | Ignored with a warning, add repositories with `package.repository`                 |
 | file       | bool   | yes      | Specify that package is a local package on the file system.                        |
 |            |        |          | Default value is `false`                                                           |
 
@@ -149,8 +149,8 @@ If you would like to have this feature supported on another package provider, pl
 |-------------|--------|----------|-----------------------------------------------------------|
 | url         | string | no       | URL of the signing key                                    |
 | name        | string | yes      | File name of the key, defaults to a hash of the URL      |
-| key         | string | yes      |                                                           |
-| fingerprint | string | yes      |                                                           |
+| key         | string | yes      | Ignored with a warning                                    |
+| fingerprint | string | yes      | Ignored with a warning, the key isn't checked against it  |
 
 ### apt (Debian, Ubuntu)
 
