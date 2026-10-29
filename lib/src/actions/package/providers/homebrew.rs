@@ -74,9 +74,11 @@ impl PackageProvider for Homebrew {
         let cellar = Path::new(&prefix).join("Cellar");
         let caskroom = Path::new(&prefix).join("Caskroom");
 
-        // Formulae are installed below the Cellar, casks below the Caskroom
+        // Formulae are installed below the Cellar, casks below the Caskroom, both by their name
+        // without the tap, like `terraform` for `hashicorp/tap/terraform`
         Ok(super::missing(package, |p| {
-            cellar.join(p).is_dir() || caskroom.join(p).is_dir()
+            let name = p.rsplit('/').next().unwrap_or(p);
+            cellar.join(name).is_dir() || caskroom.join(name).is_dir()
         }))
     }
 
@@ -131,5 +133,33 @@ mod tests {
         };
 
         assert_eq!(vec!["ripgrep"], homebrew.query(&package).unwrap());
+    }
+
+    #[test]
+    fn query_finds_formulae_from_taps_by_their_name() {
+        let prefix = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(prefix.path().join("Cellar/terraform")).unwrap();
+        std::fs::create_dir_all(prefix.path().join("Caskroom/firefox")).unwrap();
+        let homebrew = Homebrew {
+            runner: FakeRunner::new()
+                .answer(
+                    "brew --prefix",
+                    succeeds(&format!("{}\n", prefix.path().display())),
+                )
+                .shared(),
+        };
+        let package = PackageVariant {
+            list: vec![
+                String::from("hashicorp/tap/terraform"),
+                String::from("homebrew/cask/firefox"),
+                String::from("hashicorp/tap/vault"),
+            ],
+            ..Default::default()
+        };
+
+        assert_eq!(
+            vec!["hashicorp/tap/vault"],
+            homebrew.query(&package).unwrap()
+        );
     }
 }
