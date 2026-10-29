@@ -35,6 +35,8 @@ comtrya -d https://github.com/rawkode/rawkode#main:dotfiles apply
 comtrya -d https://github.com/rawkode/rawkode#main:dotfiles apply -m dev.git
 ```
 
+The part after `#` is `<branch>:<path>`, and either can be left out, e.g. `#main` or `#:dotfiles`. Comtrya clones each repository and branch once into its cache and doesn't update the clone later. To get newer manifests, delete the clone; `comtrya contexts` shows where the cache is.
+
 ## Help menu
 
 Comtrya provides a help menu that can be shown by running the following command in your terminal:

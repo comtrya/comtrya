@@ -1,12 +1,11 @@
-//! Manifests in git repositories. A repository is cloned into the cache once, and not updated
-//! later
+//! Manifests in git repositories. A repository is cloned into the cache once per branch, and not
+//! updated later
 
 use super::{ManifestProvider, ManifestProviderError};
 
-use gix;
-use gix::interrupt;
-use gix::progress::Discard;
+use crate::atoms::{git::Clone, Atom};
 
+use std::path::PathBuf;
 use tracing::info;
 
 /// Clones `https://`, `git://` and `ssh://` URLs
@@ -14,7 +13,7 @@ use tracing::info;
 pub struct GitManifestProvider;
 
 /// Directory where manifests fetched from git repositories are cloned to,
-/// one subdirectory per repository
+/// one subdirectory per repository and branch
 pub fn git_cache_dir() -> Option<std::path::PathBuf> {
     dirs::cache_dir().map(|dir| dir.join("comtrya").join("manifests").join("git"))
 }
@@ -24,10 +23,20 @@ pub fn git_cache_dir() -> Option<std::path::PathBuf> {
 pub(crate) struct GitConfig {
     /// The URL of the repository
     repository: String,
-    /// The branch. Parsed, but not used yet
+    /// The branch or tag to check out, the remote's `HEAD` if `None`
     branch: Option<String>,
-    /// The directory in the repository. Parsed, but not used yet
+    /// The directory of the manifests in the repository, its root if `None`
     path: Option<String>,
+}
+
+impl GitConfig {
+    /// Where the manifests are in the clone at `clone`: `path` in it, if there is one
+    fn manifest_dir(&self, clone: PathBuf) -> PathBuf {
+        match &self.path {
+            Some(path) => clone.join(path),
+            None => clone,
+        }
+    }
 }
 
 impl ManifestProvider for GitManifestProvider {
@@ -46,20 +55,19 @@ impl ManifestProvider for GitManifestProvider {
         url: &str,
     ) -> anyhow::Result<std::path::PathBuf, super::ManifestProviderError> {
         let config = self.parse_config_url(url);
-        let clean_url = self.clean_git_url(&config.repository);
         let cache_path = git_cache_dir()
             .ok_or(ManifestProviderError::NoCacheDir)?
-            .join(clean_url);
+            .join(self.cache_name(&config));
         if !cache_path.exists() {
             self.fetch_and_clone(&cache_path, &config)?;
         }
 
-        Ok(cache_path)
+        Ok(config.manifest_dir(cache_path))
     }
 }
 
 impl GitManifestProvider {
-    /// Clones the repository into `cache_path`
+    /// Clones the repository into `cache_path`, at the branch of the location if it has one
     fn fetch_and_clone(
         &self,
         cache_path: &std::path::Path,
@@ -71,28 +79,24 @@ impl GitManifestProvider {
             source,
         })?;
 
-        let url = gix::url::parse(config.repository.as_str()).map_err(|err| {
+        let repository = gix::url::parse(config.repository.as_str()).map_err(|err| {
             ManifestProviderError::InvalidUrl {
                 url: config.repository.clone(),
                 message: err.to_string(),
             }
         })?;
-        let clone_error = |message: String| ManifestProviderError::Clone {
-            url: config.repository.clone(),
-            message,
+
+        let mut clone = Clone {
+            repository,
+            directory: cache_path.to_path_buf(),
+            reference: config.branch.clone(),
         };
-
-        // SAFETY: called before any other thread could install a handler
-        unsafe { interrupt::init_handler(1, || {}) }
-            .map_err(|err| clone_error(format!("can't handle Ctrl-C: {err}")))?;
-
-        let (mut checkout, _) = gix::prepare_clone(url, cache_path)
-            .map_err(|err| clone_error(err.to_string()))?
-            .fetch_then_checkout(gix::progress::Discard, &interrupt::IS_INTERRUPTED)
-            .map_err(|err| clone_error(err.to_string()))?;
-        checkout
-            .main_worktree(Discard, &interrupt::IS_INTERRUPTED)
-            .map_err(|err| clone_error(err.to_string()))?;
+        clone
+            .execute()
+            .map_err(|err| ManifestProviderError::Clone {
+                url: config.repository.clone(),
+                message: format!("{err:#}"),
+            })?;
 
         info!("Finished fetch and clone operation.");
 
@@ -132,7 +136,17 @@ impl GitManifestProvider {
         }
     }
 
-    /// The name of the repository's directory in the cache
+    /// The name of the clone's directory in the cache: one per repository and branch
+    fn cache_name(&self, config: &GitConfig) -> String {
+        let repository = self.clean_git_url(&config.repository);
+        match &config.branch {
+            // Branch names may contain `/`, which would nest the directory
+            Some(branch) => format!("{repository}#{}", branch.replace(['/', '\\', ':'], "-")),
+            None => repository,
+        }
+    }
+
+    /// The repository URL as a single path segment
     fn clean_git_url(&self, uri: &str) -> String {
         uri.to_string()
             .replace("https", "")
@@ -214,6 +228,84 @@ mod tests {
             },
             provider.parse_config_url("https://github.com/comtrya/comtrya#main:")
         );
+    }
+
+    /// A repository with `main.yaml` on `main`, and `sub/other.yaml` on `other`
+    #[cfg(unix)]
+    fn repository() -> tempfile::TempDir {
+        let dir = tempfile::tempdir().unwrap();
+        let git = |args: &[&str]| {
+            let status = std::process::Command::new("git")
+                .args([
+                    "-c",
+                    "user.name=comtrya",
+                    "-c",
+                    "user.email=comtrya@example.com",
+                ])
+                .args(args)
+                .current_dir(dir.path())
+                .output()
+                .unwrap()
+                .status;
+            assert!(status.success(), "git {args:?}");
+        };
+
+        git(&["init", "--quiet", "--initial-branch", "main"]);
+        std::fs::write(dir.path().join("main.yaml"), "actions: []\n").unwrap();
+        git(&["add", "."]);
+        git(&["commit", "--quiet", "-m", "main"]);
+        git(&["checkout", "--quiet", "-b", "other"]);
+        std::fs::create_dir(dir.path().join("sub")).unwrap();
+        std::fs::write(dir.path().join("sub/other.yaml"), "actions: []\n").unwrap();
+        git(&["add", "."]);
+        git(&["commit", "--quiet", "-m", "other"]);
+        git(&["checkout", "--quiet", "main"]);
+        dir
+    }
+
+    /// Clones `location` like `resolve`, but into `cache`, and returns the manifest directory
+    #[cfg(unix)]
+    fn clone(location: &str, cache: &std::path::Path) -> Result<PathBuf, ManifestProviderError> {
+        let provider = GitManifestProvider;
+        let config = provider.parse_config_url(location);
+        let clone = cache.join(provider.cache_name(&config));
+        provider.fetch_and_clone(&clone, &config)?;
+        Ok(config.manifest_dir(clone))
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn the_branch_and_path_of_a_location_are_used() {
+        let repository = repository();
+        let cache = tempfile::tempdir().unwrap();
+        let url = repository.path().display().to_string();
+
+        let manifests = clone(&format!("{url}#other:sub"), cache.path()).unwrap();
+        assert!(manifests.join("other.yaml").exists(), "{manifests:?}");
+
+        let manifests = clone(&url, cache.path()).unwrap();
+        assert!(manifests.join("main.yaml").exists(), "{manifests:?}");
+        assert!(!manifests.join("sub").exists());
+    }
+
+    #[test]
+    fn each_branch_has_its_own_clone() {
+        let provider = GitManifestProvider;
+        let name = |location: &str| provider.cache_name(&provider.parse_config_url(location));
+
+        assert_eq!(
+            "githubcomcomtryacomtrya",
+            name("https://github.com/comtrya/comtrya")
+        );
+        assert_eq!(
+            name("https://github.com/comtrya/comtrya#:examples"),
+            name("https://github.com/comtrya/comtrya")
+        );
+        assert_ne!(
+            name("https://github.com/comtrya/comtrya#feat/x"),
+            name("https://github.com/comtrya/comtrya")
+        );
+        assert!(!name("https://github.com/comtrya/comtrya#feat/x").contains('/'));
     }
 
     #[test]
