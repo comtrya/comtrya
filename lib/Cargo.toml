@@ -51,7 +51,6 @@ gix = { version = "0.90.0", features = [
     "blocking-http-transport-reqwest-rust-tls",
     "blocking-network-client",
 ] }
-gix-protocol = "0.68.0"
 
 [target.'cfg(unix)'.dependencies]
 uzers = "0.12"
