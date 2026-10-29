@@ -17,6 +17,7 @@ pub struct PackageRepository {
     /// The repository. For apt `<uri> <suite> [<component>...]` or a `ppa:`, for Homebrew a
     /// tap, for dnf the URL of a `.repo` file
     #[serde(alias = "url")]
+    #[schemars(extend("x-aliases" = ["url"]))]
     pub name: String,
 
     /// The key the repository is signed with

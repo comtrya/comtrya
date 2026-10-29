@@ -15,6 +15,7 @@ use super::macos::MacOSDefault;
 use super::package::{PackageInstall, PackageRepository};
 use super::user::{add::UserAdd, add_group::UserAddGroup};
 use super::{Action, ConditionalVariantAction};
+use crate::manifests::schema_keys;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -49,6 +50,17 @@ macro_rules! actions {
             pub fn name(&self) -> &'static str {
                 match self {
                     $(Actions::$variant(_) => $name,)+
+                }
+            }
+
+            /// The keys the action called `name`, or an alias of it, reads: its fields and their
+            /// aliases, `where` and `variants`. `None` for an unknown action
+            pub fn known_keys(name: &str) -> Option<Vec<String>> {
+                match name {
+                    $($name $(| $first_alias $(| $alias)*)? => Some(schema_keys(
+                        schemars::schema_for!(ConditionalVariantAction<$action>),
+                    )),)+
+                    _ => None,
                 }
             }
 

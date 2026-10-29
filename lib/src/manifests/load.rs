@@ -17,7 +17,7 @@ use std::{
 };
 use tera::Tera;
 use thiserror::Error as ThisError;
-use tracing::{debug, error, span};
+use tracing::{debug, error, span, warn};
 
 /// Manifests that loaded, and the ones that didn't
 #[derive(Debug, Default)]
@@ -99,9 +99,14 @@ pub fn load_all(manifest_path: PathBuf, contexts: &Contexts) -> Loaded {
         .same_file_system(true)
         // Arbitrary for now, 9 "should" be enough?
         .max_depth(Some(9))
-        .filter_entry(|entry| {
-            !(entry.file_type().is_some_and(|ft| ft.is_dir())
-                && entry.file_name() == OsStr::new("files"))
+        .filter_entry({
+            // The config file next to the manifests isn't a manifest
+            let config = manifest_path.join("Comtrya.yaml");
+            move |entry| {
+                let files_dir = entry.file_type().is_some_and(|ft| ft.is_dir())
+                    && entry.file_name() == OsStr::new("files");
+                !files_dir && entry.path() != config
+            }
         })
         .build()
         // Don't walk directories
@@ -183,11 +188,25 @@ fn load_file(path: &Path, contexts: &Contexts) -> Result<Manifest, LoadErrorKind
         }
     };
 
-    let manifest = parse::<Manifest>(&rendered, path)
-        .map_err(|err| LoadErrorKind::Parse(format!("{err:#}")))?;
+    let unknown = unknown_keys(&rendered, path);
+    let manifest = parse::<Manifest>(&rendered, path).map_err(|err| {
+        // A misspelled required field is the likely cause
+        let hints: String = unknown.iter().map(|key| format!("; {key}")).collect();
+        LoadErrorKind::Parse(format!("{err:#}{hints}"))
+    })?;
     check_version(manifest.version)?;
+    for key in unknown {
+        warn!("{}: {key}", path.display());
+    }
 
     Ok(manifest)
+}
+
+/// The keys of the manifest nothing reads, like a misspelled field
+fn unknown_keys(rendered: &str, path: &Path) -> Vec<super::UnknownKey> {
+    parse::<serde_json::Value>(rendered, path)
+        .map(|manifest| super::unknown_keys(&manifest))
+        .unwrap_or_default()
 }
 
 /// Tera puts the useful part of a message into the error's sources
