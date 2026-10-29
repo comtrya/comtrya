@@ -33,7 +33,7 @@ pub struct Exec {
 /// What a run of the program returned
 #[derive(Default)]
 pub(crate) struct ExecStatus {
-    /// The exit code. Never set yet, so always 0
+    /// The exit code: 0 on success, 1 when a signal ended the program
     code: i32,
     /// The output, unless it went to `stdout_file`
     stdout: String,
@@ -118,6 +118,7 @@ impl Exec {
     /// Keeps the output, and fails with the exit code and stderr
     fn failed(&mut self, output: Output) -> anyhow::Result<()> {
         let code = output.status.code().unwrap_or(1);
+        self.status.code = code;
         self.status.stdout = String::from_utf8(output.stdout)?;
         self.status.stderr = String::from_utf8(output.stderr)?;
 
@@ -229,6 +230,10 @@ impl Atom for Exec {
 
     fn error_message(&self) -> String {
         self.status.stderr.clone()
+    }
+
+    fn status_code(&self) -> i32 {
+        self.status.code
     }
 }
 
@@ -352,6 +357,16 @@ mod tests {
         command_run.execute().expect_err("Command should fail");
 
         assert_eq!("before", std::fs::read_to_string(stdout_file).unwrap());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn the_exit_code_is_kept() {
+        let mut command_run = new_run_command(String::from("sh"));
+        command_run.arguments = vec![String::from("-c"), String::from("exit 3")];
+        command_run.execute().expect_err("Command should fail");
+
+        assert_eq!(3, command_run.status_code());
     }
 
     #[test]
