@@ -1,0 +1,104 @@
+# The same actions as in the YAML fixtures, written in TOML
+version = 1
+where = 'os.family == "unix"'
+depends = ["command", "./command"]
+labels = ["compat", "toml"]
+
+[[actions]]
+action = "command.run"
+command = "echo"
+args = ["one", "two words"]
+privileged = true
+dir = "/tmp/comtrya-compat"
+stdout = "out.log"
+[actions.env]
+GREETING = "hello"
+
+[[actions]]
+action = "cmd.run"
+command = "echo"
+sudo = true
+
+[[actions]]
+action = "file.copy"
+source = "config"
+target = "/tmp/comtrya-compat/config"
+chmod = 644
+template = false
+passphrase = "not-a-real-passphrase"
+process_with = ["cat", "-n"]
+owned_by_user = "ada"
+owned_by_group = "staff"
+
+[[actions]]
+action = "file.copy"
+from = "config"
+to = "/tmp/comtrya-compat/config-string"
+chmod = "0644"
+
+[[actions]]
+action = "file.download"
+from = "https://example.com/file.txt"
+to = "/tmp/comtrya-compat/file.txt"
+sha256 = "0000000000000000000000000000000000000000000000000000000000000000"
+
+[[actions]]
+action = "file.unarchive"
+from = "/tmp/comtrya-compat/archive.tar.gz"
+to = "/tmp/comtrya-compat/archive"
+force = false
+
+[[actions]]
+action = "dir.copy"
+from = "dir"
+to = "/tmp/comtrya-compat/dir/"
+
+[[actions]]
+action = "package.install"
+list = ["git", "curl"]
+provider = "apt"
+extra_args = ["--quiet"]
+
+[[actions]]
+action = "package.repo"
+url = "ppa:example/stable"
+provider = "apt"
+[actions.key]
+url = "https://example.com/key.asc"
+name = "example"
+
+[[actions]]
+action = "bin.gh"
+name = "tool"
+directory = "/tmp/comtrya-compat/bin"
+repository = "example/tool"
+version = "1.10"
+
+[[actions]]
+action = "user.add"
+username = "compat"
+group = ["compat"]
+shell = "/bin/sh"
+
+[[actions]]
+action = "macos.default"
+domain = "com.example.compat"
+key = "flag"
+kind = "bool"
+value = "true"
+
+# Variants in TOML
+[[actions]]
+action = "command.run"
+command = "echo"
+args = ["base"]
+where = 'os.name == "linux"'
+
+[[actions.variants]]
+where = 'os.name == "macos"'
+command = "printf"
+args = ["macos"]
+
+[[actions.variants]]
+command = "echo"
+args = ["without where"]

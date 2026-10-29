@@ -111,6 +111,8 @@ fn known_differences() -> Vec<(&'static str, &'static str)> {
         // 0.11.0 drops `.toml` from manifest names like `.yaml`, 0.10.0 kept it
         ("v1", "toml.command.toml"),
         ("v1", "toml.command"),
+        ("v1", "toml.everything.toml"),
+        ("v1", "toml.everything"),
         ("examples", "toml-examples.command.command.toml"),
         ("examples", "toml-examples.command.command"),
         // 0.11.0 doesn't load `Comtrya.yaml` next to the manifests as a manifest, 0.10.0 did
@@ -313,17 +315,27 @@ fn fixtures_cover_the_v1_rules() {
     let names: Vec<&str> = manifests.keys().map(String::as_str).collect();
 
     // main.yaml takes its directory's name, .toml is dropped from the name, depth 3 still loads,
-    // files/ is skipped, a broken template and a newer version drop the manifest, and a
-    // false `where` keeps it without rendering
+    // files/ is skipped, a broken template, a newer version, an unknown action, a missing
+    // field and a scalar of the wrong type (rejected/) drop the manifest, and a false `where`
+    // keeps it without rendering
     assert_eq!(
         vec![
             "aliases",
+            "commands",
             "deep.a.b.deep",
+            "files",
             "git-clone-reference",
+            "manifest-keys",
+            "manifest-minimal",
+            "manifest-where-false",
             "nested",
             "nested.other",
+            "packages",
+            "scalars",
+            "system",
             "templates",
             "toml.command",
+            "toml.everything",
             "variant-rules",
             "variants",
             "versioned",
@@ -399,4 +411,73 @@ fn fixtures_cover_the_v1_rules() {
     let clone = &manifests["git-clone-reference"]["actions"][0];
     assert_eq!("https://github.com/comtrya/comtrya", clone["repo_url"]);
     assert_eq!("v0.9.2", clone["reference"]);
+}
+
+/// Every `.yaml` fixture below `dir`, parsed as written, so aliases are still the spelling used
+fn raw_yaml_fixtures(dir: &Path) -> Vec<serde_yaml_ng::Value> {
+    let mut fixtures = vec![];
+    for entry in std::fs::read_dir(dir).unwrap() {
+        let path = entry.unwrap().path();
+        if path.is_dir() {
+            fixtures.extend(raw_yaml_fixtures(&path));
+        } else if path
+            .extension()
+            .is_some_and(|extension| extension == "yaml")
+        {
+            let text = std::fs::read_to_string(&path).unwrap();
+            fixtures.extend(serde_yaml_ng::from_str(&text));
+        }
+    }
+    fixtures
+}
+
+/// The keys of one action entry and of its variants, next to the action's spelling
+fn keys_of_action(action: &serde_yaml_ng::Value, used: &mut BTreeMap<String, Vec<String>>) {
+    let Some(name) = action["action"].as_str() else {
+        return;
+    };
+    let entries =
+        std::iter::once(action).chain(action["variants"].as_sequence().into_iter().flatten());
+    for entry in entries {
+        let keys = entry
+            .as_mapping()
+            .into_iter()
+            .flat_map(|entry| entry.keys());
+        used.entry(name.to_string())
+            .or_default()
+            .extend(keys.filter_map(|key| key.as_str().map(String::from)));
+    }
+}
+
+/// Without a fixture for an action, its spellings or its fields, a refactor could change what
+/// they mean unnoticed
+#[test]
+fn fixtures_use_every_action_name_alias_and_field() {
+    let mut used = BTreeMap::new();
+    for manifest in raw_yaml_fixtures(&manifest_dirs()[0]) {
+        for action in manifest["actions"].as_sequence().into_iter().flatten() {
+            keys_of_action(action, &mut used);
+        }
+    }
+
+    for (name, aliases) in comtrya_lib::actions::Actions::NAMES {
+        let spellings: Vec<&str> = std::iter::once(name)
+            .chain(aliases.iter())
+            .copied()
+            .collect();
+        for spelling in &spellings {
+            assert!(used.contains_key(*spelling), "no fixture uses `{spelling}`");
+        }
+
+        let used_keys: Vec<&String> = spellings
+            .iter()
+            .flat_map(|spelling| &used[*spelling])
+            .collect();
+        for key in comtrya_lib::actions::Actions::known_keys(name).unwrap() {
+            assert!(
+                used_keys.contains(&&key),
+                "no fixture of {name} uses its field `{key}`"
+            );
+        }
+    }
 }

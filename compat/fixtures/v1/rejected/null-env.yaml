@@ -1,0 +1,6 @@
+# A null isn't a string
+actions:
+  - action: command.run
+    command: echo
+    env:
+      A: null

@@ -1,0 +1,49 @@
+# `command.run` and its alias, with every field, as a plain action and as variants
+actions:
+  - action: command.run
+    command: echo
+    args: [one, "two words", ""]
+    privileged: true
+    dir: /tmp/comtrya-compat
+    env:
+      GREETING: hello
+      EMPTY: ""
+    stdout: out.log
+  # `cmd.run`, and `sudo` is the old name of `privileged`
+  - action: cmd.run
+    command: echo
+    args: []
+    sudo: true
+    dir: /tmp/comtrya-compat
+    env: {}
+    stdout: sudo.log
+  # Defaults for everything but `command`
+  - action: command.run
+    command: "true"
+  # Variants override fields of the action, and may leave out `where`
+  - action: command.run
+    command: echo
+    args: [base]
+    privileged: false
+    dir: /tmp/comtrya-compat
+    env:
+      WHO: base
+    stdout: base.log
+    where: os.name == "linux"
+    variants:
+      - where: os.name == "macos"
+        command: printf
+        args: ["%s", macos]
+        env:
+          WHO: macos
+      - where: os.family == "windows"
+        command: cmd
+        args: [/C, echo, windows]
+        privileged: true
+        stdout: windows.log
+      - where: os.name == "linux" && user.username == "root"
+        command: echo
+        sudo: true
+        dir: /root
+      - command: echo
+        args: [fallback without where]

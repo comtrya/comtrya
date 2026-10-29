@@ -1,0 +1,6 @@
+# 0.10.0 refuses `0o600`: the mode is written as digits
+actions:
+  - action: file.copy
+    from: a
+    to: /tmp/comtrya-compat/x
+    chmod: 0o600

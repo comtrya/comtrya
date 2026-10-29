@@ -1,0 +1,142 @@
+# Every `file.*` and `directory.*` action with all of its fields
+actions:
+  - action: file.copy
+    from: config
+    to: /tmp/comtrya-compat/config
+    chmod: 600
+    template: false
+    passphrase: not-a-real-passphrase
+    process_with: [cat, -n]
+    owned_by_user: ada
+    owned_by_group: staff
+  # `source` and `target` are the old names of `from` and `to`
+  - action: file.copy
+    source: config
+    target: /tmp/comtrya-compat/config-old-names
+    template: true
+  - action: file.chown
+    path: /tmp/comtrya-compat/config
+    user: ada
+    group: staff
+  - action: file.chown
+    path: /tmp/comtrya-compat/config
+  - action: file.download
+    from: https://example.com/file.txt
+    to: /tmp/comtrya-compat/file.txt
+    chmod: "0600"
+    template: false
+    owned_by_user: ada
+    owned_by_group: staff
+    sha256: 0000000000000000000000000000000000000000000000000000000000000000
+  - action: file.download
+    source: https://example.com/other.txt
+    target: /tmp/comtrya-compat/other.txt
+  # `file.link` takes `from`/`to` and `source`/`target`
+  - action: file.link
+    source: dotfile
+    target: /tmp/comtrya-compat/.dotfile
+    walk_dir: true
+  - action: file.link
+    from: dotdir
+    to: /tmp/comtrya-compat/.dotdir
+    walk_dir: false
+  - action: file.remove
+    target: /tmp/comtrya-compat/old-file
+  - action: file.unarchive
+    from: /tmp/comtrya-compat/archive.tar.gz
+    to: /tmp/comtrya-compat/archive
+    force: false
+  - action: file.unarchive
+    source: /tmp/comtrya-compat/archive.zip
+    target: /tmp/comtrya-compat/archive-zip
+    force: true
+  - action: directory.copy
+    from: dir
+    to: /tmp/comtrya-compat/dir/
+  - action: dir.copy
+    from: dir
+    to: /tmp/comtrya-compat/dir-copy
+  - action: directory.create
+    path: /tmp/comtrya-compat/created
+  - action: dir.create
+    path: /tmp/comtrya-compat/created-alias
+  - action: directory.remove
+    target: /tmp/comtrya-compat/removed
+  - action: dir.remove
+    target: /tmp/comtrya-compat/removed-alias
+  # Variants override the fields of a file action
+  - action: file.copy
+    from: config
+    to: /tmp/comtrya-compat/variant-config
+    chmod: 644
+    where: os.family == "unix"
+    variants:
+      - where: os.name == "macos"
+        from: config-macos
+        to: /tmp/comtrya-compat/variant-config
+        chmod: "0640"
+      - where: os.family == "windows"
+        source: config-windows
+        target: C:/Users/ada/compat-config
+        template: false
+      - from: config
+        to: /tmp/comtrya-compat/variant-without-where
+  - action: file.link
+    source: dotfile
+    target: /tmp/comtrya-compat/.variant
+    variants:
+      - where: os.name == "linux"
+        walk_dir: true
+  # The other actions with a `where` and variants
+  - action: directory.copy
+    from: dir
+    to: /tmp/comtrya-compat/variant-dir/
+    where: os.family == "unix"
+    variants:
+      - where: os.family == "windows"
+        from: dir
+        to: C:/compat/dir
+  - action: directory.create
+    path: /tmp/comtrya-compat/variant-created
+    where: os.family == "unix"
+    variants:
+      - where: os.name == "macos"
+        path: /tmp/comtrya-compat/variant-created-macos
+  - action: directory.remove
+    target: /tmp/comtrya-compat/variant-removed
+    where: os.family == "unix"
+    variants:
+      - target: /tmp/comtrya-compat/variant-removed-without-where
+  - action: file.chown
+    path: /tmp/comtrya-compat/variant-owned
+    user: ada
+    where: os.family == "unix"
+    variants:
+      - where: user.username == "root"
+        path: /tmp/comtrya-compat/variant-owned
+        user: root
+        group: wheel
+  - action: file.download
+    from: https://example.com/variant.txt
+    to: /tmp/comtrya-compat/variant.txt
+    where: os.family == "unix"
+    variants:
+      - where: os.family == "windows"
+        source: https://example.com/variant.txt
+        target: C:/compat/variant.txt
+        sha256: 0000000000000000000000000000000000000000000000000000000000000001
+  - action: file.remove
+    target: /tmp/comtrya-compat/variant-removed-file
+    where: os.family == "unix"
+    variants:
+      - where: os.family == "windows"
+        target: C:/compat/removed-file
+  - action: file.unarchive
+    from: /tmp/comtrya-compat/variant.tar.gz
+    to: /tmp/comtrya-compat/variant-archive
+    where: os.family == "unix"
+    variants:
+      - where: os.family == "windows"
+        from: C:/compat/variant.zip
+        to: C:/compat/variant-archive
+        force: true

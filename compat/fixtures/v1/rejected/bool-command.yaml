@@ -1,0 +1,4 @@
+# A YAML boolean isn't a string, so `command: true` is refused
+actions:
+  - action: command.run
+    command: true
