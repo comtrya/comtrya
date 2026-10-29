@@ -9,7 +9,6 @@ use crate::manifests::Manifest;
 use crate::steps::Step;
 use anyhow::anyhow;
 use std::ops::Deref;
-use tracing::debug;
 use tracing::span;
 
 /// The `package.install` action
@@ -33,6 +32,13 @@ impl Action for PackageInstall {
         )
         .entered();
 
+        if variant.file && !installs_local_files(&provider_type) {
+            return Err(anyhow!(
+                "Package Provider, {}, isn't capable of local file installs. Skipping action.",
+                provider.name()
+            ));
+        }
+
         let mut atoms: Vec<Step> = vec![];
 
         // If the provider isn't available, see if we can bootstrap it
@@ -42,21 +48,6 @@ impl Action for PackageInstall {
                     "Package Provider, {}, isn't available. Skipping action",
                     provider.name()
                 ));
-            }
-
-            if variant.file {
-                match provider_type {
-                    PackageProviders::BsdPkg => debug!("Will attempt to install from local file."),
-                    PackageProviders::Aptitude => {
-                        debug!("Will attempt to install from local file.")
-                    }
-                    _ => {
-                        return Err(anyhow!(
-                        "Package Provider, {}, isn't capabale of local file installs. Skipping action.",
-                        provider.name()
-                    ));
-                    }
-                }
             }
 
             atoms.append(&mut provider.bootstrap(context));
@@ -70,9 +61,34 @@ impl Action for PackageInstall {
     }
 }
 
+/// Whether the provider installs a package from a file given as `name`, for `file: true`
+fn installs_local_files(provider: &PackageProviders) -> bool {
+    matches!(
+        provider,
+        PackageProviders::BsdPkg | PackageProviders::Aptitude
+    )
+}
+
 #[cfg(test)]
 mod tests {
+    use super::*;
     use crate::actions::Actions;
+
+    #[test]
+    fn local_files_fail_with_a_provider_that_cant_install_them() {
+        let package = PackageInstall {
+            name: Some(String::from("/tmp/nano-8.1.pkg")),
+            provider: Some(PackageProviders::Homebrew),
+            file: true,
+            ..Default::default()
+        };
+
+        let Err(error) = package.plan(&Manifest::default(), &Contexts::default()) else {
+            panic!("homebrew can't install local files");
+        };
+
+        assert!(error.to_string().contains("local file"), "{error}");
+    }
 
     #[test]
     fn it_can_be_deserialized() {
