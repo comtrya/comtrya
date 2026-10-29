@@ -11,7 +11,7 @@ use std::{
     vec,
 };
 
-use tracing::{trace, warn};
+use tracing::{debug, trace};
 
 /// The arguments of `comtrya`
 #[derive(Parser, Debug, Default)]
@@ -103,7 +103,7 @@ pub(crate) fn load_config(args: &GlobalArgs) -> Result<Config> {
 
 /// Check the current working directory for a `Comtrya.yaml` file
 /// If that doesn't exist, we'll check the platforms config directory
-/// for comtrya/Comtrya.yaml
+/// for Comtrya.yaml. Relative `manifest_paths` are relative to the directory of the file
 ///
 /// # Arguments
 ///
@@ -135,11 +135,13 @@ pub fn lib_config(args: &GlobalArgs) -> anyhow::Result<Config> {
                     .with_context(|| "Found Comtrya.yaml, but couldn't deserialize the YAML.")?,
             };
 
-            // The existence of the config file allows an implicit manifests location of.
+            // Without `manifest_paths`, the manifests are next to the config file
+            let dir = config_dir(&config_path);
+            for path in &mut config.manifest_paths {
+                *path = relative_to(&dir, path);
+            }
             if config.manifest_paths.is_empty() {
-                if let Some(parent) = config_path.parent() {
-                    config.manifest_paths.push(parent.display().to_string());
-                }
+                config.manifest_paths.push(dir);
             }
 
             config
@@ -166,6 +168,23 @@ pub fn lib_config(args: &GlobalArgs) -> anyhow::Result<Config> {
     }
 
     Ok(config)
+}
+
+/// The directory of the config file at `config_path`: `.` for a bare file name
+fn config_dir(config_path: &Path) -> String {
+    match config_path.parent() {
+        Some(parent) if !parent.as_os_str().is_empty() => parent.display().to_string(),
+        _ => String::from("."),
+    }
+}
+
+/// An entry of `manifest_paths` in the config file in `dir`: a relative directory is relative to
+/// `dir`, URLs and absolute directories stay as they are
+fn relative_to(dir: &str, path: &str) -> String {
+    if path.contains("://") || Path::new(path).is_absolute() {
+        return path.to_string();
+    }
+    Path::new(dir).join(path).display().to_string()
 }
 
 /// Attempts to find the configuration file, either based on optional user input
@@ -214,7 +233,7 @@ fn find_configs(args: &GlobalArgs) -> Option<PathBuf> {
         let local_config = cwd.join("Comtrya.yaml");
 
         if local_config.is_file() {
-            warn!("Comtrya.yaml found in current working directory");
+            debug!("Comtrya.yaml found in current working directory");
             return Some(local_config);
         }
         trace!("No Comtrya.yaml found in current working directory");
@@ -225,7 +244,7 @@ fn find_configs(args: &GlobalArgs) -> Option<PathBuf> {
         let local_config = config_dir.join("Comtrya.yaml");
 
         if local_config.is_file() {
-            warn!("Comtrya.yaml found in users config directory");
+            debug!("Comtrya.yaml found in users config directory");
             return Some(local_config);
         }
         trace!("No Comtrya.yaml found in users config directory");
@@ -236,7 +255,7 @@ fn find_configs(args: &GlobalArgs) -> Option<PathBuf> {
 
 #[cfg(test)]
 mod tests {
-    use crate::config::{lib_config, GlobalArgs};
+    use crate::config::{config_dir, lib_config, GlobalArgs};
     use std::path::PathBuf;
 
     fn get_config_file() -> PathBuf {
@@ -273,5 +292,47 @@ mod tests {
 
         let result = lib_config(&args);
         assert!(result.is_ok());
+    }
+
+    /// Writes `yaml` as `Comtrya.yaml` into a new directory, and loads it
+    fn load(yaml: &str) -> (tempfile::TempDir, crate::config::Config) {
+        let dir = tempfile::tempdir().unwrap();
+        let config_path = dir.path().join("Comtrya.yaml");
+        std::fs::write(&config_path, yaml).unwrap();
+        let args = GlobalArgs {
+            config_path: Some(config_path.display().to_string()),
+            ..Default::default()
+        };
+
+        let config = lib_config(&args).unwrap();
+        (dir, config)
+    }
+
+    #[test]
+    fn relative_manifest_paths_are_relative_to_the_config_file() {
+        let (dir, config) = load("manifest_paths:\n  - manifests\n");
+
+        assert_eq!(
+            vec![dir.path().join("manifests").display().to_string()],
+            config.manifest_paths
+        );
+    }
+
+    #[test]
+    fn absolute_and_remote_manifest_paths_are_kept() {
+        let absolute = std::env::temp_dir().display().to_string();
+        let remote = "https://github.com/comtrya/comtrya#main:examples";
+        let (_dir, config) = load(&format!("manifest_paths:\n  - {absolute}\n  - {remote}\n"));
+
+        assert_eq!(vec![absolute, remote.to_string()], config.manifest_paths);
+    }
+
+    #[test]
+    fn a_config_file_without_a_directory_is_in_the_current_one() {
+        assert_eq!(".", config_dir(std::path::Path::new("Comtrya.yaml")));
+        assert_eq!(
+            "dotfiles",
+            config_dir(std::path::Path::new("dotfiles/Comtrya.yaml"))
+        );
     }
 }
