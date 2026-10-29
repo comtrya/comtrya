@@ -4,8 +4,8 @@ use super::GroupProvider;
 use crate::contexts::Contexts;
 use crate::steps::Step;
 use crate::{actions::group::GroupVariant, atoms::command::Exec, utilities};
+use anyhow::{bail, Context};
 use serde::{Deserialize, Serialize};
-use tracing::warn;
 use which::which;
 
 /// Creates groups with `dscl`
@@ -13,19 +13,11 @@ use which::which;
 pub struct MacOsGroupProvider {}
 
 impl GroupProvider for MacOsGroupProvider {
-    fn add_group(&self, group: &GroupVariant, contexts: &Contexts) -> Vec<Step> {
-        let cli = match which("dscl") {
-            Ok(c) => c,
-            Err(_) => {
-                warn!(message = "Could not get the proper group add tool");
-                return vec![];
-            }
-        };
-
+    fn add_group(&self, group: &GroupVariant, contexts: &Contexts) -> anyhow::Result<Vec<Step>> {
         if group.group_name.is_empty() {
-            warn!(message = "Unable to create group without a group name");
-            return vec![];
+            bail!("can't create a group without a group_name");
         }
+        let cli = which("dscl").context("can't find `dscl` to create groups with")?;
 
         let mut group_creation_string = String::from("/Groups/");
         group_creation_string.push_str(group.group_name.clone().as_str());
@@ -38,13 +30,13 @@ impl GroupProvider for MacOsGroupProvider {
 
         let privilege_provider = utilities::get_privilege_provider(contexts);
 
-        vec![Step::new(Exec {
+        Ok(vec![Step::new(Exec {
             command: cli.display().to_string(),
             arguments: args.into_iter().collect(),
             privileged: true,
             privilege_provider: privilege_provider.clone(),
             ..Default::default()
-        })]
+        })])
     }
 }
 
@@ -67,11 +59,11 @@ mod test {
             &contexts,
         );
 
-        assert_eq!(steps.len(), 1);
+        assert_eq!(steps.unwrap().len(), 1);
     }
 
     #[test]
-    fn test_add_group_no_group_name() {
+    fn test_add_group_no_group_name_fails() {
         let group_provider = MacOsGroupProvider {};
         let contexts = Contexts::default();
         let steps = group_provider.add_group(
@@ -82,6 +74,6 @@ mod test {
             &contexts,
         );
 
-        assert_eq!(steps.len(), 0);
+        assert!(steps.is_err());
     }
 }

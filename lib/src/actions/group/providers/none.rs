@@ -12,8 +12,8 @@ use tracing::warn;
 pub struct NoneGroupProvider {}
 
 impl GroupProvider for NoneGroupProvider {
-    fn add_group(&self, _group: &GroupVariant, _contexts: &Contexts) -> Vec<Step> {
+    fn add_group(&self, _group: &GroupVariant, _contexts: &Contexts) -> anyhow::Result<Vec<Step>> {
         warn!("This system does not have a provider for groups");
-        vec![]
+        Ok(vec![])
     }
 }

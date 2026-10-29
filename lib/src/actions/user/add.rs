@@ -26,10 +26,6 @@ impl Action for UserAdd {
 
         let mut atoms: Vec<Step> = vec![];
 
-        if variant.username.is_empty() {
-            return Ok(atoms);
-        }
-
         #[cfg(unix)]
         match uzers::get_user_by_name(&variant.username) {
             Some(_user) => debug!(message = "User already exists", username = ?variant.username),
