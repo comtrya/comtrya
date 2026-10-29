@@ -35,10 +35,29 @@ pub struct RepositoryKey {
     pub url: String,
     /// The file name of the key for apt, without `.asc`. Defaults to a hash of `url`
     pub name: Option<String>,
-    /// Not used yet
+    /// Ignored with a warning
     pub key: Option<String>,
-    /// Not used yet
+    /// Ignored with a warning. The key isn't checked against it
     pub fingerprint: Option<String>,
+}
+
+impl PackageRepository {
+    /// The fields of the key that are set but not used
+    pub(super) fn ignored_fields(&self) -> Vec<super::Ignored> {
+        let Some(key) = &self.key else {
+            return vec![];
+        };
+
+        let instead = "the key is downloaded from `key.url`";
+        [
+            ("key.key", key.key.is_some()),
+            ("key.fingerprint", key.fingerprint.is_some()),
+        ]
+        .into_iter()
+        .filter(|(_, set)| *set)
+        .map(|(field, _)| (field, instead))
+        .collect()
+    }
 }
 
 impl Action for PackageRepository {
@@ -57,6 +76,8 @@ impl Action for PackageRepository {
             provider = provider.name()
         )
         .entered();
+
+        super::warn_ignored(&self.ignored_fields());
 
         let mut atoms: Vec<Step> = vec![];
 
