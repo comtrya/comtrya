@@ -116,20 +116,26 @@ fn known_differences() -> Vec<(&'static str, &'static str)> {
     ]
 }
 
-/// Drops `null` fields, so a new optional field doesn't count as a difference.
-/// A field whose value turns into `null` still shows up as missing
+/// Drops `null` fields and empty objects, so a new optional field, or a removed one that was
+/// always empty, doesn't count as a difference. A field whose value turns into `null` still
+/// shows up as missing
 fn without_nulls(value: Value) -> Value {
     match value {
         Value::Object(fields) => Value::Object(
             fields
                 .into_iter()
-                .filter(|(_, value)| !value.is_null())
+                .filter(|(_, value)| !value.is_null() && !is_empty_object(value))
                 .map(|(key, value)| (key, without_nulls(value)))
                 .collect(),
         ),
         Value::Array(items) => Value::Array(items.into_iter().map(without_nulls).collect()),
         value => value,
     }
+}
+
+/// Whether `value` is `{}`
+fn is_empty_object(value: &Value) -> bool {
+    value.as_object().is_some_and(|fields| fields.is_empty())
 }
 
 fn current(dir: &Path, facts: &Value) -> BTreeMap<String, Value> {
