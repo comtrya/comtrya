@@ -18,6 +18,8 @@ comtrya -d ./ apply -m one,two,three
 comtrya -d ./manifests apply
 ```
 
+Without `-d`, the manifests are at `manifest_paths` from `Comtrya.yaml`, or next to `Comtrya.yaml` when it has none. Relative `manifest_paths` are relative to the directory of `Comtrya.yaml`, not to the current directory. A path given with `-d` is relative to the current directory.
+
 Please refer to the [commands](commands.md) section for more information about the usage of `apply`.
 
 ## Basic usage on remote manifests
