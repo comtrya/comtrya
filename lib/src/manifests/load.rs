@@ -188,8 +188,19 @@ fn load_file(path: &Path, contexts: &Contexts) -> Result<Manifest, LoadErrorKind
         }
     };
 
-    let unknown = unknown_keys(&rendered, path);
+    let generic = parse::<serde_json::Value>(&rendered, path).ok();
+    let unknown = generic
+        .as_ref()
+        .map(super::unknown_keys)
+        .unwrap_or_default();
     let manifest = parse::<Manifest>(&rendered, path).map_err(|err| {
+        let actions = generic
+            .as_ref()
+            .map(super::unknown_actions)
+            .unwrap_or_default();
+        if !actions.is_empty() {
+            return LoadErrorKind::Parse(actions.join("; "));
+        }
         // A misspelled required field is the likely cause
         let hints: String = unknown.iter().map(|key| format!("; {key}")).collect();
         LoadErrorKind::Parse(format!("{err:#}{hints}"))
@@ -200,13 +211,6 @@ fn load_file(path: &Path, contexts: &Contexts) -> Result<Manifest, LoadErrorKind
     }
 
     Ok(manifest)
-}
-
-/// The keys of the manifest nothing reads, like a misspelled field
-fn unknown_keys(rendered: &str, path: &Path) -> Vec<super::UnknownKey> {
-    parse::<serde_json::Value>(rendered, path)
-        .map(|manifest| super::unknown_keys(&manifest))
-        .unwrap_or_default()
 }
 
 /// Tera puts the useful part of a message into the error's sources

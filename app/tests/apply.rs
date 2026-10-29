@@ -544,6 +544,24 @@ fn a_misspelled_required_field_is_named_in_the_error() {
     assert!(log.contains("did you mean `path`?"), "{log}");
 }
 
+/// A misspelled action name fails loading, and the error names the closest action
+#[test]
+fn a_misspelled_action_name_suggests_the_closest_action() {
+    let f = Fixture::new();
+    f.manifest(
+        "app.yaml",
+        "actions:\n  - action: file.cpy\n    from: a\n    to: b\n",
+    );
+
+    let log = failure_log(&f, &["status"]);
+
+    assert!(
+        log.contains("unknown action `file.cpy` in action 1, did you mean `file.copy`?"),
+        "{log}"
+    );
+    assert!(!log.contains("expected one of"), "{log}");
+}
+
 #[test]
 fn user_directories_work_in_double_quoted_strings() {
     // On Windows, `C:\Users\...` in a double-quoted YAML string is an invalid escape
