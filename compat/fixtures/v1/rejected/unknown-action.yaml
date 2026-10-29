@@ -1,0 +1,4 @@
+# An unknown action drops the whole manifest
+actions:
+  - action: file.nope
+    path: /tmp/comtrya-compat/x

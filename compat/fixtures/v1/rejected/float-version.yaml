@@ -1,0 +1,7 @@
+# An unquoted `1.10` is a float, which isn't a string
+actions:
+  - action: bin.gh
+    name: tool
+    directory: /tmp/comtrya-compat/bin
+    repository: example/tool
+    version: 1.10

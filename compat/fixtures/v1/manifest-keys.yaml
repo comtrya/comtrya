@@ -1,0 +1,17 @@
+# The keys of a manifest: `version`, `where`, `depends` (also relative), `labels` and `actions`
+version: 1
+where: os.family == "unix" || os.family == "windows"
+depends:
+  - nested
+  - ./aliases
+  - ./nested/other
+  - ../outside
+labels:
+  - compat
+  - "yes"
+  - "1.10"
+  - with space
+actions:
+  - action: command.run
+    command: echo
+    args: [manifest keys]

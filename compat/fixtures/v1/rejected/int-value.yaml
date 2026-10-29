@@ -1,0 +1,7 @@
+# An unquoted number isn't a string
+actions:
+  - action: macos.default
+    domain: com.example.compat
+    key: int
+    kind: int
+    value: 10

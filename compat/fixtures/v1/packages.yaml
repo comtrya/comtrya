@@ -1,0 +1,104 @@
+# `package.install` and `package.repository` with every field and provider spelling
+actions:
+  - action: package.install
+    name: ripgrep
+    list: [fd, bat]
+    provider: homebrew
+    repository: homebrew/cask
+    key: https://example.com/key.asc
+    extra_args: [--quiet, --no-upgrade]
+    file: false
+  - action: package.installed
+    list: []
+    provider: apt
+    extra_args: []
+  - action: package.install
+    list: [curl]
+    provider: apt-get
+  - action: package.install
+    list: [curl]
+    provider: yum
+  - action: package.install
+    list: [curl]
+    provider: brew
+  - action: package.install
+    list: [curl]
+    provider: port
+  - action: package.install
+    list: [curl]
+    provider: snap
+  - action: package.install
+    list: [curl]
+    provider: aptitude
+  - action: package.install
+    list: [curl]
+    provider: bsdpkg
+  - action: package.install
+    list: [curl]
+    provider: dnf
+  - action: package.install
+    list: [curl]
+    provider: macports
+  - action: package.install
+    list: [curl]
+    provider: pkgin
+  - action: package.install
+    list: [curl]
+    provider: snapcraft
+  - action: package.install
+    list: [curl]
+    provider: yay
+  - action: package.install
+    list: [curl]
+    provider: paru
+  - action: package.install
+    list: [curl]
+    provider: winget
+  - action: package.install
+    list: [curl]
+    provider: xbps
+  - action: package.install
+    list: [curl]
+    provider: zypper
+  - action: package.install
+    name: /tmp/comtrya-compat/package.deb
+    file: true
+  - action: package.repository
+    name: deb https://example.com/apt stable main
+    provider: apt
+    key:
+      url: https://example.com/key.asc
+      name: example
+      key: not-a-real-key
+      fingerprint: 0000 0000 0000 0000
+  - action: package.repo
+    url: ppa:example/stable
+    provider: aptitude
+    key:
+      url: https://example.com/key.asc
+  - action: package.repository
+    name: homebrew/example
+  # Variants pick the package manager and package names per system
+  - action: package.install
+    list: [git]
+    provider: apt
+    where: os.family == "unix"
+    variants:
+      - where: os.distribution == "Arch Linux"
+        provider: pacman
+        list: [git, base-devel]
+        extra_args: [--needed]
+      - where: os.name == "macos"
+        provider: homebrew
+        name: git
+      - where: os.family == "windows"
+        provider: winget
+        list: [Git.Git]
+      - list: [git-core]
+  - action: package.repository
+    name: deb https://example.com/apt stable main
+    provider: apt
+    variants:
+      - where: os.name == "macos"
+        url: example/tap
+        provider: homebrew

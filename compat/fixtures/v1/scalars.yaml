@@ -1,0 +1,114 @@
+# YAML scalars that look like something else. `yes`/`no`/`on`/`off` are plain strings, and
+# `chmod` is an octal mode whether it is written as a number or as a string. What 0.10.0
+# refuses is in `rejected/`
+actions:
+  - action: file.copy
+    from: a
+    to: /tmp/comtrya-compat/chmod-0644
+    chmod: 0644
+  - action: file.copy
+    from: a
+    to: /tmp/comtrya-compat/chmod-644
+    chmod: 644
+  - action: file.copy
+    from: a
+    to: /tmp/comtrya-compat/chmod-string
+    chmod: "0644"
+  - action: file.copy
+    from: a
+    to: /tmp/comtrya-compat/chmod-string-short
+    chmod: "755"
+  - action: file.copy
+    from: a
+    to: /tmp/comtrya-compat/chmod-0
+    chmod: 0
+  - action: file.copy
+    from: a
+    to: /tmp/comtrya-compat/chmod-4755
+    chmod: 4755
+  - action: file.copy
+    from: a
+    to: /tmp/comtrya-compat/chmod-string-4755
+    chmod: "4755"
+  # Words YAML 1.1 reads as booleans stay strings in string fields
+  - action: command.run
+    command: yes
+    args: [yes, no, on, off, "true", "false", y, n, Yes, NO, On, OFF, "null", "~"]
+    env:
+      A: yes
+      B: no
+      C: on
+      D: off
+      E: "yes"
+  - action: command.run
+    command: "no"
+    args: ["1.10", "1.0", "010", "0x10", "1e3", "12:30", ".5", "1_000", "2024-01-01"]
+  - action: bin.gh
+    name: tool
+    directory: /tmp/comtrya-compat/bin
+    repository: example/tool
+    version: "1.10"
+  - action: bin.gh
+    name: tool
+    directory: /tmp/comtrya-compat/bin
+    repository: example/tool
+    version: v1.10.0
+  - action: bin.gh
+    name: tool
+    directory: /tmp/comtrya-compat/bin
+    repository: example/tool
+    version: yes
+  - action: macos.default
+    domain: com.example.compat
+    key: flag
+    kind: bool
+    value: yes
+  - action: macos.default
+    domain: com.example.compat
+    key: float
+    kind: float
+    value: "1.10"
+  - action: macos.default
+    domain: com.example.compat
+    key: off
+    kind: string
+    value: "off"
+  # Empty lists and objects
+  - action: package.install
+    list: []
+    extra_args: []
+  - action: command.run
+    command: echo
+    args: []
+    env: {}
+  # Multi-line strings
+  - action: command.run
+    command: sh
+    args:
+      - -c
+      - |
+        echo one
+        echo two
+      - >
+        folded
+        text
+
+      - |-
+        no trailing newline
+      - "quoted\nnewline"
+    env:
+      SCRIPT: |
+        line one
+          indented line two
+    dir: /tmp/comtrya-compat
+  # Quoting and special characters
+  - action: command.run
+    command: echo
+    args: ["#not a comment", 'single ''quoted''', "tab\tseparated", "unicode: äöü 日本語", "colon: inside", "- dash"]
+  # The where of an action is a string, however it is written
+  - action: command.run
+    command: echo
+    args: [multi-line where]
+    where: >-
+      os.name == "linux" ||
+      os.name == "macos"

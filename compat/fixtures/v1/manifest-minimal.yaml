@@ -1,0 +1,4 @@
+# Only what is needed: no actions, no version, empty lists
+depends: []
+labels: []
+actions: []

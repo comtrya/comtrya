@@ -1,0 +1,127 @@
+# Actions for users, groups, git, GitHub releases and macOS defaults
+actions:
+  - action: binary.github
+    name: comtrya
+    directory: /tmp/comtrya-compat/bin
+    repository: comtrya/comtrya
+    version: v0.10.0
+  - action: binary.gh
+    name: tool
+    directory: /tmp/comtrya-compat/bin
+    repository: example/tool
+  - action: bin.github
+    name: tool
+    directory: /tmp/comtrya-compat/bin
+    repository: example/tool
+    version: latest
+  - action: bin.gh
+    name: tool
+    directory: /tmp/comtrya-compat/bin
+    repository: example/tool
+    version: "1.10"
+  - action: git.clone
+    repo_url: https://example.com/repo.git
+    directory: /tmp/comtrya-compat/repo
+  - action: group.add
+    group_name: compat
+    provider: linux
+  - action: group.add
+    group_name: compat-mac
+    provider: macos
+  - action: group.add
+    group_name: compat-bsd
+    provider: freebsd
+  - action: group.add
+    group_name: compat-none
+    provider: none
+  - action: group.add
+    group_name: compat-default
+  - action: macos.default
+    domain: com.apple.dock
+    key: autohide
+    kind: bool
+    value: "true"
+  - action: user.add
+    username: compat
+    fullname: Compat User
+    home_dir: /tmp/comtrya-compat/home
+    shell: /bin/sh
+    group: [compat, wheel]
+    provider: linux
+  - action: user.add
+    username: compat-mac
+    provider: macos
+  - action: user.add
+    username: compat-bsd
+    provider: freebsd
+  - action: user.add
+    username: compat-none
+    provider: none
+  - action: user.add
+  - action: user.group
+    username: compat
+    group: [compat, docker]
+    provider: linux
+  - action: user.group
+    username: compat
+    group: []
+  # Variants override fields
+  - action: user.add
+    username: compat
+    shell: /bin/sh
+    where: os.family == "unix"
+    variants:
+      - where: os.name == "macos"
+        shell: /bin/zsh
+        provider: macos
+      - where: os.name == "linux"
+        group: [sudo]
+        provider: linux
+  - action: group.add
+    group_name: compat
+    variants:
+      - where: os.name == "macos"
+        provider: macos
+      - group_name: compat-fallback
+  - action: git.clone
+    repo_url: https://example.com/repo.git
+    directory: /tmp/comtrya-compat/repo
+    where: os.family == "unix"
+    variants:
+      - where: os.name == "macos"
+        repo_url: https://example.com/repo.git
+        directory: /tmp/comtrya-compat/repo-macos
+      - where: os.family == "windows"
+        repo_url: https://example.com/windows.git
+        directory: C:/compat/repo
+  - action: binary.github
+    name: comtrya
+    directory: /tmp/comtrya-compat/bin
+    repository: comtrya/comtrya
+    variants:
+      - where: os.name == "macos"
+        name: comtrya
+        directory: /tmp/comtrya-compat/bin
+        repository: comtrya/comtrya
+        version: v0.9.2
+  - action: macos.default
+    domain: com.apple.dock
+    key: autohide
+    kind: bool
+    value: "true"
+    where: os.name == "macos"
+    variants:
+      - where: user.username == "root"
+        domain: com.apple.dock
+        key: autohide
+        kind: bool
+        value: "false"
+  - action: user.group
+    username: compat
+    group: [compat]
+    where: os.family == "unix"
+    variants:
+      - where: os.name == "linux"
+        username: compat
+        group: [compat, sudo]
+        provider: linux

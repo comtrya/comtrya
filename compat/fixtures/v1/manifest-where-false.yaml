@@ -1,0 +1,7 @@
+# A manifest whose `where` is false on most systems
+where: os.name == "macos" && user.username != "root"
+depends: [commands]
+actions:
+  - action: command.run
+    command: echo
+    args: [macos only]

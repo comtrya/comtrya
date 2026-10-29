@@ -1,0 +1,4 @@
+# A missing required field drops the whole manifest
+actions:
+  - action: file.copy
+    from: a
