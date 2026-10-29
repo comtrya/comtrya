@@ -6,7 +6,7 @@ use super::super::Atom;
 use crate::utilities;
 use anyhow::{anyhow, Context};
 use std::path::{Path, PathBuf};
-use std::process::{Command, Output, Stdio};
+use std::process::{Command, Output};
 use tracing::debug;
 
 /// Runs a program, every time. Fails when the program exits with an error
@@ -131,36 +131,6 @@ impl Exec {
             stderr => Err(anyhow!("Command failed with exit code: {code}: {stderr}")),
         }
     }
-
-    /// Asks for the password up front with `--validate`, so the prompt is visible
-    fn elevate(&mut self) -> anyhow::Result<()> {
-        tracing::info!(
-            "Privilege elevation required to run `{} {}`. Validating privileges ...",
-            &self.command,
-            &self.arguments.join(" ")
-        );
-
-        let privilege_provider = utilities::get_binary_path(&self.privilege_provider)?;
-
-        match Command::new(privilege_provider)
-            .stdin(Stdio::inherit())
-            .stdout(Stdio::inherit())
-            .stderr(Stdio::inherit())
-            .arg("--validate")
-            .output()
-        {
-            Ok(Output { status, .. }) if status.success() => Ok(()),
-
-            Ok(Output { stderr, .. }) => Err(anyhow!(
-                "Command requires privilege escalation, but couldn't elevate privileges: {}",
-                String::from_utf8(stderr)?
-            )),
-
-            Err(err) => Err(anyhow!(
-                "Command requires privilege escalation, but couldn't elevate privileges: {err}"
-            )),
-        }
-    }
 }
 
 /// Writes the output of a command to `path`, creating its directory if needed
@@ -208,12 +178,6 @@ impl Atom for Exec {
         let command = self
             .find_binary(&command)
             .map_err(|_| anyhow!("Command `{command}` not found in path"))?;
-
-        // If we require root, we need to use sudo with inherited IO
-        // to ensure the user can respond if prompted for a password
-        if command.eq("doas") || command.eq("sudo") || command.eq("run0") {
-            self.elevate()?;
-        }
 
         let output = self.process(&command, &arguments).output()?;
 
