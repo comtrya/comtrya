@@ -235,7 +235,10 @@ mod tests {
     fn repository() -> tempfile::TempDir {
         let dir = tempfile::tempdir().unwrap();
         let git = |args: &[&str]| {
+            // Without the user's settings, like signing commits, which may wait for a passphrase
             let status = std::process::Command::new("git")
+                .env("GIT_CONFIG_GLOBAL", "/dev/null")
+                .env("GIT_CONFIG_NOSYSTEM", "1")
                 .args([
                     "-c",
                     "user.name=comtrya",
