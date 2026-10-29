@@ -6,8 +6,8 @@ use crate::atoms::command::Exec;
 use crate::contexts::Contexts;
 use crate::steps::Step;
 use crate::utilities;
+use anyhow::bail;
 use serde::{Deserialize, Serialize};
-use tracing::warn;
 
 /// Creates and changes users with `pw`
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -15,12 +15,11 @@ pub struct FreeBSDUserProvider {}
 
 impl UserProvider for FreeBSDUserProvider {
     fn add_user(&self, user: &UserVariant, contexts: &Contexts) -> anyhow::Result<Vec<Step>> {
-        let mut args: Vec<String> = vec![];
-
-        // is a username isn't provided, cant create a new user
         if user.username.is_empty() {
-            return Ok(vec![]);
+            bail!("can't create a user without a username");
         }
+
+        let mut args: Vec<String> = vec![];
 
         args.push(String::from("-n"));
         args.push(user.username.clone());
@@ -73,18 +72,9 @@ impl UserProvider for FreeBSDUserProvider {
     }
 
     fn add_to_group(&self, user: &UserAddGroup, contexts: &Contexts) -> anyhow::Result<Vec<Step>> {
+        super::check_add_to_group(user)?;
+
         let mut steps: Vec<Step> = vec![];
-
-        if user.group.is_empty() {
-            warn!(message = "No Groups listed to add user to");
-            return Ok(steps);
-        }
-
-        if user.username.is_empty() {
-            warn!(message = "No user specified to add to group(s)");
-            return Ok(steps);
-        }
-
         let privilege_provider = utilities::get_privilege_provider(contexts);
 
         for group in user.group.iter() {
@@ -134,7 +124,7 @@ mod test {
     }
 
     #[test]
-    fn test_add_user_no_username() {
+    fn test_add_user_no_username_fails() {
         let user_provider = FreeBSDUserProvider {};
         let contexts = Contexts::default();
         let steps = user_provider.add_user(
@@ -149,7 +139,7 @@ mod test {
             &contexts,
         );
 
-        assert_eq!(steps.unwrap().len(), 0);
+        assert!(steps.is_err());
     }
 
     #[test]

@@ -7,8 +7,8 @@ use crate::{
     actions::user::add_group::UserAddGroup, actions::user::UserVariant, atoms::command::Exec,
     utilities,
 };
+use anyhow::{bail, Context};
 use serde::{Deserialize, Serialize};
-use tracing::warn;
 use which::which;
 
 /// Creates users with `useradd` and changes them with `usermod`
@@ -17,20 +17,12 @@ pub struct LinuxUserProvider {}
 
 impl UserProvider for LinuxUserProvider {
     fn add_user(&self, user: &UserVariant, contexts: &Contexts) -> anyhow::Result<Vec<Step>> {
-        let mut args: Vec<String> = vec![];
-        let cli = match which("useradd") {
-            Ok(c) => c,
-            Err(_) => {
-                warn!(message = "Could not get the proper user add tool");
-                return Ok(vec![]);
-            }
-        };
-
-        // is a user name isn't provided, cant create a new user
         if user.username.is_empty() {
-            warn!(message = "Unable to create user without a username");
-            return Ok(vec![]);
+            bail!("can't create a user without a username");
         }
+        let cli = which("useradd").context("can't find `useradd` to create users with")?;
+
+        let mut args: Vec<String> = vec![];
 
         args.push(user.username.clone());
 
@@ -75,23 +67,8 @@ impl UserProvider for LinuxUserProvider {
     }
 
     fn add_to_group(&self, user: &UserAddGroup, contexts: &Contexts) -> anyhow::Result<Vec<Step>> {
-        let cli = match which("usermod") {
-            Ok(c) => c,
-            Err(_) => {
-                warn!(message = "Could not get the proper user add tool");
-                return Ok(vec![]);
-            }
-        };
-
-        if user.group.is_empty() {
-            warn!(message = "No groups listed to add user to");
-            return Ok(vec![]);
-        }
-
-        if user.username.is_empty() {
-            warn!(message = "No user specified to add to group(s)");
-            return Ok(vec![]);
-        }
+        super::check_add_to_group(user)?;
+        let cli = which("usermod").context("can't find `usermod` to add users to groups with")?;
 
         let privilege_provider = utilities::get_privilege_provider(contexts);
 
@@ -143,7 +120,7 @@ mod test {
     }
 
     #[test]
-    fn test_add_user_no_username() {
+    fn test_add_user_no_username_fails() {
         let user_provider = LinuxUserProvider {};
         let contexts = Contexts::default();
         let steps = user_provider.add_user(
@@ -158,7 +135,7 @@ mod test {
             &contexts,
         );
 
-        assert_eq!(steps.unwrap().len(), 0);
+        assert!(steps.is_err());
     }
 
     #[test]

@@ -69,6 +69,6 @@ impl Default for GroupProviders {
 
 /// A tool that creates groups
 pub trait GroupProvider {
-    /// Steps that create the group. None, with a warning, if the tool or the name is missing
-    fn add_group(&self, group: &GroupVariant, contexts: &Contexts) -> Vec<Step>;
+    /// Steps that create the group. Fails if the tool or the name is missing
+    fn add_group(&self, group: &GroupVariant, contexts: &Contexts) -> anyhow::Result<Vec<Step>>;
 }

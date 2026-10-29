@@ -4,29 +4,28 @@ use super::GroupProvider;
 use crate::contexts::Contexts;
 use crate::steps::Step;
 use crate::{actions::group::GroupVariant, atoms::command::Exec, utilities};
+use anyhow::bail;
 use serde::{Deserialize, Serialize};
-use tracing::warn;
 
 /// Creates groups with `pw groupadd`
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct FreeBSDGroupProvider {}
 
 impl GroupProvider for FreeBSDGroupProvider {
-    fn add_group(&self, group: &GroupVariant, contexts: &Contexts) -> Vec<Step> {
+    fn add_group(&self, group: &GroupVariant, contexts: &Contexts) -> anyhow::Result<Vec<Step>> {
         if group.group_name.is_empty() {
-            warn!(message = "Unable to create group without a group name");
-            return vec![];
+            bail!("can't create a group without a group_name");
         }
 
         let privilege_provider = utilities::get_privilege_provider(contexts);
 
-        vec![Step::new(Exec {
+        Ok(vec![Step::new(Exec {
             command: String::from("/usr/bin/pw"),
             arguments: vec![String::from("groupadd"), group.group_name.clone()],
             privileged: true,
             privilege_provider: privilege_provider.clone(),
             ..Default::default()
-        })]
+        })])
     }
 }
 
@@ -49,11 +48,11 @@ mod test {
             &contexts,
         );
 
-        assert_eq!(steps.len(), 1);
+        assert_eq!(steps.unwrap().len(), 1);
     }
 
     #[test]
-    fn test_add_group_no_group_name() {
+    fn test_add_group_no_group_name_fails() {
         let group_provider = FreeBSDGroupProvider {};
         let contexts = Contexts::default();
         let steps = group_provider.add_group(
@@ -64,6 +63,6 @@ mod test {
             &contexts,
         );
 
-        assert_eq!(steps.len(), 0);
+        assert!(steps.is_err());
     }
 }

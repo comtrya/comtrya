@@ -23,7 +23,7 @@ impl Action for GroupAdd {
 
         let mut atoms: Vec<Step> = vec![];
 
-        atoms.append(&mut provider.add_group(&variant, contexts));
+        atoms.append(&mut provider.add_group(&variant, contexts)?);
 
         Ok(atoms)
     }

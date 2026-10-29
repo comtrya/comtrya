@@ -6,8 +6,8 @@ use crate::atoms::command::Exec;
 use crate::contexts::Contexts;
 use crate::steps::Step;
 use crate::utilities;
+use anyhow::{bail, Context};
 use serde::{Deserialize, Serialize};
-use tracing::warn;
 use which::which;
 
 /// Creates and changes users with `dscl`
@@ -16,20 +16,12 @@ pub struct MacOSUserProvider {}
 
 impl UserProvider for MacOSUserProvider {
     fn add_user(&self, user: &UserVariant, contexts: &Contexts) -> anyhow::Result<Vec<Step>> {
-        let mut args: Vec<String> = vec![];
-        let cli = match which("dscl") {
-            Ok(c) => c,
-            Err(_) => {
-                warn!(message = "Could not find proper user add tool");
-                return Ok(vec![]);
-            }
-        };
-
-        // is a user name isn't provided, cant create a new user
         if user.username.is_empty() {
-            warn!("Unable to create user without a username");
-            return Ok(vec![]);
+            bail!("can't create a user without a username");
         }
+        let cli = which("dscl").context("can't find `dscl` to create users with")?;
+
+        let mut args: Vec<String> = vec![];
 
         let mut username = String::from("/Users/");
         username.push_str(user.username.clone().as_str());
@@ -45,7 +37,7 @@ impl UserProvider for MacOSUserProvider {
 
         if !user.fullname.is_empty() {
             args.push(String::from("RealName"));
-            args.push(String::from("\"{user.fullename}\""));
+            args.push(user.fullname.clone());
         }
 
         let privilege_provider = utilities::get_privilege_provider(contexts);
@@ -73,23 +65,8 @@ impl UserProvider for MacOSUserProvider {
     }
 
     fn add_to_group(&self, user: &UserAddGroup, contexts: &Contexts) -> anyhow::Result<Vec<Step>> {
-        let cli = match which("dscl") {
-            Ok(c) => c,
-            Err(_) => {
-                warn!(message = "Could not find the dscl tool");
-                return Ok(vec![]);
-            }
-        };
-
-        if user.group.is_empty() {
-            warn!(message = "No groups listed to add user to");
-            return Ok(vec![]);
-        }
-
-        if user.username.is_empty() {
-            warn!(message = "No user specified to add to group(s)");
-            return Ok(vec![]);
-        }
+        super::check_add_to_group(user)?;
+        let cli = which("dscl").context("can't find `dscl` to add users to groups with")?;
 
         let privilege_provider = utilities::get_privilege_provider(contexts);
 
@@ -143,11 +120,17 @@ mod test {
             &contexts,
         );
 
-        assert_eq!(steps.unwrap().len(), 1);
+        let steps = steps.unwrap();
+        assert_eq!(steps.len(), 1);
+        assert!(
+            steps[0].atom.to_string().contains("RealName Test User"),
+            "{}",
+            steps[0].atom
+        );
     }
 
     #[test]
-    fn test_add_user_no_username() {
+    fn test_add_user_no_username_fails() {
         let user_provider = MacOSUserProvider {};
         let contexts = Contexts::default();
         let steps = user_provider.add_user(
@@ -162,7 +145,7 @@ mod test {
             &contexts,
         );
 
-        assert_eq!(steps.unwrap().len(), 0);
+        assert!(steps.is_err());
     }
 
     #[test]

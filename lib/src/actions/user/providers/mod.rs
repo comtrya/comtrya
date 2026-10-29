@@ -67,6 +67,17 @@ impl Default for UserProviders {
     }
 }
 
+/// Fails if `user` has no username or no groups to add it to
+fn check_add_to_group(user: &UserAddGroup) -> anyhow::Result<()> {
+    if user.username.is_empty() {
+        anyhow::bail!("can't add a user without a username to groups");
+    }
+    if user.group.is_empty() {
+        anyhow::bail!("no groups to add {} to", user.username);
+    }
+    Ok(())
+}
+
 /// A tool that creates and changes users
 pub trait UserProvider {
     /// Steps that create the user and add it to its groups
