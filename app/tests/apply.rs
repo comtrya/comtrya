@@ -495,6 +495,32 @@ fn files_directories_are_not_loaded_as_manifests() {
     assert!(!status.contains("files"), "{status}");
 }
 
+/// `directory.copy` copies the contents of `from` into `to` on every platform, never `from` itself
+#[test]
+fn directory_copy_copies_the_contents_into_to() {
+    let f = Fixture::new();
+    let to = f.out("copied");
+    f.manifest(
+        "app/main.yaml",
+        &format!(
+            "actions:\n  - action: directory.copy\n    from: dotfiles\n    to: '{}'\n",
+            to.display()
+        ),
+    )
+    .manifest("app/files/dotfiles/top.txt", "top")
+    .manifest("app/files/dotfiles/nested/deep.txt", "deep");
+    std::fs::create_dir_all(&to).unwrap();
+    std::fs::write(to.join("mine.txt"), "mine").unwrap();
+
+    f.run(&["apply"]);
+
+    let read = |path: &str| std::fs::read_to_string(to.join(path)).unwrap();
+    assert_eq!("top", read("top.txt"));
+    assert_eq!("deep", read("nested/deep.txt"));
+    assert_eq!("mine", read("mine.txt"));
+    assert!(!to.join("dotfiles").exists());
+}
+
 /// Everything comtrya printed
 fn output_log(assert: Assert) -> String {
     let output = assert.get_output();

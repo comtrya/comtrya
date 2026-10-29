@@ -295,13 +295,19 @@ actions:
 
 ## directory.copy
 
-Copies a directory on the filesystem to another location.
+Copies the contents of a directory into another directory, the same on all platforms. After the action, `to` holds everything `from` holds:
+`to` and its subdirectories are created if missing, files with the same path are overwritten and other files in `to` are left alone.
+A trailing `/` on `to` makes no difference.
+On unix, symlinks inside `from` are copied as symlinks; on Windows the file they point to is copied.
+
+Before 0.11.0, unix copied the directory itself to `<to>/<name>` unless `to` ended with `/`.
+To keep that, put the name into `to`.
 
 | Key    | Type   | Optional | Description           |
 |:-------|:-------|:---------|:----------------------|
 | action | string | no       | `directory.copy`      |
 | from   | string | no       | source directory      |
-| to     | string | no       | destination directory |
+| to     | string | no       | directory the contents of `from` are copied into |
 
 
 ### Example
