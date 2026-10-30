@@ -1,5 +1,8 @@
 //! `comtrya apply` and `comtrya status`
 
+/// Showing the events of a run
+mod log;
+
 use super::ComtryaCommand;
 use crate::Runtime;
 use clap::Parser;
@@ -108,6 +111,7 @@ impl ComtryaCommand for Apply {
                 manifests: &self.manifests,
                 dry_run: self.dry_run,
                 label: self.label.as_deref(),
+                observer: &log::Log::new(self.dry_run),
             },
         )
         .into_result()

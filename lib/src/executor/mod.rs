@@ -1,18 +1,21 @@
 //! Applies manifests: dependencies before the manifests that need them, each manifest's actions
 //! in order, and each action's steps that are needed
 
+/// What the executor tells about a run
+mod event;
 /// The manifests and their dependencies as a graph
 mod graph;
 /// Walking the graph and running the steps
 mod run;
 
 use crate::{actions::PlanCx, manifests::Loaded};
+pub use event::{Event, Ignore, Observer, Skip, StepSkip};
 use graph::ManifestGraph;
 use run::Run;
 use std::path::Path;
 
 /// What to run, and how
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Copy)]
 pub struct Options<'a> {
     /// Only these manifests, with their dependencies. All of them if empty
     pub manifests: &'a [String],
@@ -20,6 +23,20 @@ pub struct Options<'a> {
     pub dry_run: bool,
     /// Only manifests with this label
     pub label: Option<&'a str>,
+    /// Receives what happens, see [`Event`]
+    pub observer: &'a dyn Observer,
+}
+
+impl Default for Options<'_> {
+    /// All manifests, for real, and nobody hears about it
+    fn default() -> Self {
+        Self {
+            manifests: &[],
+            dry_run: false,
+            label: None,
+            observer: &Ignore,
+        }
+    }
 }
 
 /// What a run did
@@ -49,7 +66,7 @@ impl Report {
 pub fn run(loaded: Loaded, manifest_dir: &Path, cx: PlanCx, options: &Options) -> Report {
     let graph = ManifestGraph::build(loaded, manifest_dir);
 
-    let mut run = Run::new(&graph, cx, options.dry_run, options.label);
+    let mut run = Run::new(&graph, cx, options);
     run.all(graph.run_order(options.manifests));
     run.finish()
 }
@@ -117,5 +134,53 @@ mod tests {
 
         assert_eq!(Report::default(), report);
         assert!(!dir.path().join("app").exists());
+    }
+
+    /// A short name for each event, to compare the order they come in
+    fn name(event: &Event) -> String {
+        match event {
+            Event::ManifestStarted { name } => format!("start {name}"),
+            Event::ManifestSkipped(Skip::DependencyFailed) => String::from("skip: dependency"),
+            Event::ManifestSkipped(_) => String::from("skip"),
+            Event::ManifestDone { failed } => format!("done, failed: {failed}"),
+            Event::ActionStarted { action } => format!("action {action}"),
+            Event::ActionDone { summary } => format!("action done: {}", summary.is_some()),
+            Event::StepChange(_) => String::from("change"),
+            _ => String::from("other"),
+        }
+    }
+
+    #[test]
+    fn events_tell_what_happens_in_order() {
+        let dir = tempfile::tempdir().unwrap();
+        let loaded = Loaded {
+            manifests: HashMap::from([manifest("app", &["broken"], &dir.path().join("app"))]),
+            errors: vec![broken("broken")],
+        };
+        let loaded_ok = Loaded {
+            manifests: HashMap::from([manifest("ok", &[], &dir.path().join("ok"))]),
+            errors: vec![],
+        };
+        let events = std::cell::RefCell::new(vec![]);
+        let record = |event: &Event| events.borrow_mut().push(name(event));
+        let options = Options {
+            observer: &record,
+            ..Default::default()
+        };
+
+        run(loaded, dir.path(), PlanCx::empty(), &options);
+        run(loaded_ok, dir.path(), PlanCx::empty(), &options);
+
+        assert_eq!(
+            vec![
+                "start app",
+                "skip: dependency",
+                "start ok",
+                "action directory.create",
+                "action done: true",
+                "done, failed: false",
+            ],
+            events.into_inner()
+        );
     }
 }
