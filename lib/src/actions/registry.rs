@@ -17,7 +17,7 @@ use super::user::{add::UserAdd, add_group::UserAddGroup};
 use super::{Action, ConditionalVariantAction};
 use crate::manifests::schema_keys;
 use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 
 /// Defines [`Actions`] from a table of `Variant(Type) = "name", aliases: ["alias", …];`.
 /// Every variant gets its name and aliases as its doc comment, which the JSON schema shows
@@ -26,8 +26,9 @@ macro_rules! actions {
         $variant:ident($action:ty) = $name:literal
             $(, aliases: [$first_alias:literal $(, $alias:literal)*])?;
     )+) => {
-        /// Every action, by its name in manifests
-        #[derive(JsonSchema, Clone, Debug, Serialize, Deserialize)]
+        /// Every action, by its name in manifests. Read by hand, see the `parse` module; the
+        /// serde attributes are for writing it and the schema
+        #[derive(JsonSchema, Clone, Debug, Serialize)]
         #[serde(tag = "action")]
         pub enum Actions {
             $(
@@ -60,6 +61,20 @@ macro_rules! actions {
                     $($name $(| $first_alias $(| $alias)*)? => Some(schema_keys(
                         schemars::schema_for!(ConditionalVariantAction<$action>),
                     )),)+
+                    _ => None,
+                }
+            }
+
+            /// Reads the action called `name`, or an alias of it, from its keys without
+            /// `action`. `None` for an unknown action
+            pub(super) fn parse(
+                name: &str,
+                fields: serde_yaml_ng::Mapping,
+            ) -> Option<Result<Self, serde_yaml_ng::Error>> {
+                match name {
+                    $($name $(| $first_alias $(| $alias)*)? => Some(
+                        ConditionalVariantAction::<$action>::from_fields(fields).map(Actions::$variant),
+                    ),)+
                     _ => None,
                 }
             }
@@ -122,14 +137,14 @@ mod tests {
     #[test]
     fn every_name_and_alias_is_the_action() {
         let unknown = parse("file.nope").unwrap_err().to_string();
-        assert!(unknown.contains("unknown variant"), "{unknown}");
+        assert!(unknown.contains("unknown action"), "{unknown}");
 
         for (name, aliases) in Actions::NAMES {
             for spelling in std::iter::once(name).chain(aliases.iter()) {
                 // Required fields are missing, but the error must be about them, not the name
                 if let Err(err) = parse(spelling) {
                     assert!(
-                        !err.to_string().contains("unknown variant"),
+                        !err.to_string().contains("unknown action"),
                         "{spelling}: {err}"
                     );
                 }

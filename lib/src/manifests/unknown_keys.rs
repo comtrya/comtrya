@@ -1,6 +1,6 @@
 //! Keys in a manifest that nothing reads. Manifest format 1 ignores them, so a typo like
 //! `form:` instead of `from:` silently does nothing. They are warned about instead, with the
-//! known key that's closest. The same goes for an action name nothing implements
+//! known key that's closest
 
 use super::Manifest;
 use crate::actions::Actions;
@@ -96,36 +96,9 @@ fn unknown_in(object: &Value, known: &[String], at: &str) -> Vec<UnknownKey> {
         .collect()
 }
 
-/// The names of the actions that don't exist in `manifest`, a whole parsed manifest file,
-/// with the closest known name if one is close. Serde's own error lists every action
-pub fn unknown_actions(manifest: &Value) -> Vec<String> {
-    let actions = manifest.get("actions").and_then(Value::as_array);
-    let names = || {
-        Actions::NAMES
-            .iter()
-            .flat_map(|(name, aliases)| std::iter::once(*name).chain(aliases.iter().copied()))
-    };
-
-    let mut unknown = vec![];
-    for (index, action) in actions.into_iter().flatten().enumerate() {
-        let Some(name) = action.get("action").and_then(Value::as_str) else {
-            continue;
-        };
-        if names().any(|known| known == name) {
-            continue;
-        }
-        let mut message = format!("unknown action `{name}` in action {}", index + 1);
-        if let Some(closest) = closest(name, names()) {
-            message.push_str(&format!(", did you mean `{closest}`?"));
-        }
-        unknown.push(message);
-    }
-    unknown
-}
-
 /// The known word with the fewest typos from `key`, if it has at most two and isn't a
 /// completely different word
-fn closest<'a>(key: &str, known: impl IntoIterator<Item = &'a str>) -> Option<String> {
+pub(crate) fn closest<'a>(key: &str, known: impl IntoIterator<Item = &'a str>) -> Option<String> {
     known
         .into_iter()
         .map(|candidate| (strsim::damerau_levenshtein(key, candidate), candidate))
@@ -146,43 +119,6 @@ mod tests {
             .iter()
             .map(ToString::to_string)
             .collect::<Vec<_>>()
-    }
-
-    /// The unknown action messages of a YAML manifest
-    fn unknown_action_names(yaml: &str) -> Vec<String> {
-        unknown_actions(&serde_yaml_ng::from_str(yaml).unwrap())
-    }
-
-    #[test]
-    fn a_misspelled_action_name_suggests_the_closest_action() {
-        let yaml = "actions:\n  - action: directory.create\n    path: a\n  - action: file.cpy\n";
-
-        assert_eq!(
-            vec!["unknown action `file.cpy` in action 2, did you mean `file.copy`?"],
-            unknown_action_names(yaml)
-        );
-    }
-
-    #[test]
-    fn an_action_name_that_is_nothing_like_an_action_has_no_suggestion() {
-        let yaml = "actions:\n  - action: frobnicate\n";
-
-        assert_eq!(
-            vec!["unknown action `frobnicate` in action 1"],
-            unknown_action_names(yaml)
-        );
-    }
-
-    #[test]
-    fn action_names_and_aliases_are_not_unknown() {
-        let names: Vec<String> = Actions::NAMES
-            .iter()
-            .flat_map(|(name, aliases)| std::iter::once(name).chain(aliases.iter()))
-            .map(|name| format!("  - action: {name}\n"))
-            .collect();
-        let yaml = format!("actions:\n{}", names.concat());
-
-        assert_eq!(Vec::<String>::new(), unknown_action_names(&yaml));
     }
 
     #[test]

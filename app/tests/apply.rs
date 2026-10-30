@@ -582,7 +582,7 @@ fn a_misspelled_action_name_suggests_the_closest_action() {
     let log = failure_log(&f, &["status"]);
 
     assert!(
-        log.contains("unknown action `file.cpy` in action 1, did you mean `file.copy`?"),
+        log.contains("actions[0]: unknown action `file.cpy`, did you mean `file.copy`?"),
         "{log}"
     );
     assert!(!log.contains("expected one of"), "{log}");

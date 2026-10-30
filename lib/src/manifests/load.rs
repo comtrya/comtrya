@@ -194,13 +194,6 @@ fn load_file(path: &Path, contexts: &Contexts) -> Result<Manifest, LoadErrorKind
         .map(super::unknown_keys)
         .unwrap_or_default();
     let manifest = parse::<Manifest>(&rendered, path).map_err(|err| {
-        let actions = generic
-            .as_ref()
-            .map(super::unknown_actions)
-            .unwrap_or_default();
-        if !actions.is_empty() {
-            return LoadErrorKind::Parse(actions.join("; "));
-        }
         // A misspelled required field is the likely cause
         let hints: String = unknown.iter().map(|key| format!("; {key}")).collect();
         LoadErrorKind::Parse(format!("{err:#}{hints}"))
