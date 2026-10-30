@@ -5,12 +5,16 @@
 pub mod command;
 /// Creating and removing directories
 pub mod directory;
+/// Why atoms fail
+mod error;
 /// Writing, linking, and changing files
 pub mod file;
 /// Cloning repositories
 pub mod git;
 /// Downloading files
 pub mod http;
+
+pub use error::{BoxError, Error, Result};
 
 use crate::contexts::privilege::Privilege;
 use serde::{Deserialize, Serialize};
@@ -141,7 +145,7 @@ impl Atom {
     }
 
     /// Whether this atom needs to run. An error means it can't
-    pub fn check(&self) -> anyhow::Result<Check> {
+    pub fn check(&self) -> Result<Check> {
         self.change().check()
     }
 
@@ -171,7 +175,7 @@ impl Atom {
     }
 
     /// Makes the change
-    pub fn execute(&self) -> anyhow::Result<Output> {
+    pub fn execute(&self) -> Result<Output> {
         self.change().execute_with_output()
     }
 
@@ -183,10 +187,12 @@ impl Atom {
 
     /// The atom that makes this change as root, through `privilege` (`sudo`, `doas`, `run0`).
     /// Only programs can be run that way, until the privileged helper (#502) runs any atom
-    pub fn elevated(self, privilege: &Privilege) -> anyhow::Result<Atom> {
+    pub fn elevated(self, privilege: &Privilege) -> Result<Atom> {
         match self {
             Atom::Exec(exec) => Ok(Atom::Exec(exec.elevated(privilege))),
-            atom => anyhow::bail!("{atom}: only programs can run as root for now"),
+            atom => Err(Error::NotElevatable {
+                atom: atom.to_string(),
+            }),
         }
     }
 }
@@ -235,14 +241,14 @@ atom_from!(Echo(Echo));
 /// What every atom does. [`Atom`] calls it on the atom inside
 trait Change: std::fmt::Display {
     /// Whether this atom needs to run. An error means it can't
-    fn check(&self) -> anyhow::Result<Check>;
+    fn check(&self) -> Result<Check>;
 
     /// Makes the change
-    fn execute(&self) -> anyhow::Result<()>;
+    fn execute(&self) -> Result<()>;
 
     /// Makes the change and returns what the finalizers look at. Atoms that run programs
     /// return their output
-    fn execute_with_output(&self) -> anyhow::Result<Output> {
+    fn execute_with_output(&self) -> Result<Output> {
         self.execute().map(|()| Output::default())
     }
 
@@ -259,15 +265,15 @@ pub struct Echo(pub &'static str);
 
 #[cfg(test)]
 impl Change for Echo {
-    fn check(&self) -> anyhow::Result<Check> {
+    fn check(&self) -> Result<Check> {
         Ok(Check::Drift)
     }
 
-    fn execute(&self) -> anyhow::Result<()> {
+    fn execute(&self) -> Result<()> {
         Ok(())
     }
 
-    fn execute_with_output(&self) -> anyhow::Result<Output> {
+    fn execute_with_output(&self) -> Result<Output> {
         Ok(Output {
             stdout: self.0.to_string(),
             stderr: String::new(),

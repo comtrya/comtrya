@@ -1,11 +1,9 @@
 //! Removes a file
 
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
-use anyhow::{bail, Context};
-
-use crate::atoms::{Change, Check};
+use crate::atoms::{Change, Check, Error, Result};
 
 /// Removes a file. Not a directory
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -21,27 +19,34 @@ impl std::fmt::Display for Remove {
 }
 
 impl Change for Remove {
-    fn check(&self) -> anyhow::Result<Check> {
+    fn check(&self) -> Result<Check> {
         if !self.target.exists() {
             return Ok(Check::InSync);
         }
         if !self.target.is_file() {
-            bail!("{} isn't a file", self.target.display());
+            return Err(Error::NotA {
+                path: self.target.clone(),
+                kind: "file",
+            });
         }
 
-        let parent = self
-            .target
-            .parent()
-            .with_context(|| format!("{} has no parent directory", self.target.display()))?;
-        if parent.metadata()?.permissions().readonly() {
-            bail!("no permission to remove {}", self.target.display());
+        // A relative `name` has the parent ``
+        let parent = match self.target.parent() {
+            Some(parent) if !parent.as_os_str().is_empty() => parent,
+            _ => Path::new("."),
+        };
+        let metadata = parent.metadata().map_err(Error::io("read", parent))?;
+        if metadata.permissions().readonly() {
+            return Err(Error::ReadOnly {
+                path: self.target.clone(),
+            });
         }
 
         Ok(Check::Drift)
     }
 
-    fn execute(&self) -> anyhow::Result<()> {
-        std::fs::remove_file(&self.target)?;
+    fn execute(&self) -> Result<()> {
+        std::fs::remove_file(&self.target).map_err(Error::io("remove", &self.target))?;
         Ok(())
     }
 }

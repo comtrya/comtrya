@@ -1,10 +1,9 @@
 //! Creates a symlink
 
-use crate::atoms::Check;
+use crate::atoms::{Check, Error, Result};
 use serde::{Deserialize, Serialize};
 
 use super::super::Change;
-use anyhow::bail;
 use std::path::{Path, PathBuf};
 
 /// Links `target` to `source`. Replaces symlinks that point elsewhere or are broken, but
@@ -29,7 +28,7 @@ impl std::fmt::Display for Link {
 }
 
 impl Change for Link {
-    fn check(&self) -> anyhow::Result<Check> {
+    fn check(&self) -> Result<Check> {
         if let Some(pending) = Check::needs(&self.source) {
             return Ok(pending);
         }
@@ -39,15 +38,18 @@ impl Change for Link {
         let metadata = match std::fs::symlink_metadata(&self.target) {
             Ok(metadata) => metadata,
             Err(err) if err.kind() == std::io::ErrorKind::NotFound => return Ok(Check::Drift),
-            Err(err) => return Err(err.into()),
+            Err(err) => return Err(Error::io("read", &self.target)(err)),
         };
 
         // A link can be replaced, anything else would be lost
         if !metadata.file_type().is_symlink() {
-            bail!("{} already exists and isn't a link", self.target.display());
+            return Err(Error::NotA {
+                path: self.target.clone(),
+                kind: "link",
+            });
         }
 
-        let link = std::fs::read_link(&self.target)?;
+        let link = std::fs::read_link(&self.target).map_err(Error::io("read", &self.target))?;
 
         let source = if cfg!(target_os = "windows") {
             const PREFIX: &str = r"\\?\";
@@ -61,33 +63,37 @@ impl Change for Link {
     }
 
     #[cfg(unix)]
-    fn execute(&self) -> anyhow::Result<()> {
+    fn execute(&self) -> Result<()> {
         remove_existing_link(&self.target)?;
-        std::os::unix::fs::symlink(&self.source, &self.target)?;
+        std::os::unix::fs::symlink(&self.source, &self.target)
+            .map_err(Error::io("create the link", &self.target))?;
 
         Ok(())
     }
 
     #[cfg(windows)]
-    fn execute(&self) -> anyhow::Result<()> {
+    fn execute(&self) -> Result<()> {
         remove_existing_link(&self.target)?;
-        if self.source.is_dir() {
-            std::os::windows::fs::symlink_dir(&self.source, &self.target)?;
+        let linked = if self.source.is_dir() {
+            std::os::windows::fs::symlink_dir(&self.source, &self.target)
         } else {
-            std::os::windows::fs::symlink_file(&self.source, &self.target)?;
-        }
+            std::os::windows::fs::symlink_file(&self.source, &self.target)
+        };
+        linked.map_err(Error::io("create the link", &self.target))?;
 
         Ok(())
     }
 }
 
 /// Removes `path` if it is a symlink (broken or pointing elsewhere), so it can be relinked.
-/// Regular files and directories are never touched, `plan()` refuses to run for those.
-fn remove_existing_link(path: &Path) -> std::io::Result<()> {
+/// Regular files and directories are never touched, `check()` refuses to run for those.
+fn remove_existing_link(path: &Path) -> Result<()> {
     match std::fs::symlink_metadata(path) {
         Ok(metadata) if metadata.file_type().is_symlink() => {
             // On Windows, a directory symlink must be removed with `remove_dir`
-            std::fs::remove_file(path).or_else(|_| std::fs::remove_dir(path))
+            std::fs::remove_file(path)
+                .or_else(|_| std::fs::remove_dir(path))
+                .map_err(Error::io("remove the old link", path))
         }
         _ => Ok(()),
     }
@@ -127,8 +133,8 @@ mod tests {
             }
             Err(e) => {
                 #[cfg(windows)]
-                if let Some(os_err) = e.downcast_ref::<std::io::Error>() {
-                    if os_err.raw_os_error() == Some(1314) {
+                if let Error::Io { source, .. } = &e {
+                    if source.raw_os_error() == Some(1314) {
                         // "A required privilege is not held by the client"
                         // Symlinks on Windows require Developer Mode or Admin rights
                         println!("Skipping link test execution due to missing privileges (OS Error 1314).");

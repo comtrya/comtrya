@@ -1,10 +1,9 @@
 //! Writes the contents of a file
 
-use crate::atoms::Check;
+use crate::atoms::{Check, Error, Result};
 use serde::{Deserialize, Serialize};
 
 use super::super::Change;
-use anyhow::Context;
 use similar::TextDiff;
 use std::path::PathBuf;
 
@@ -30,21 +29,20 @@ impl std::fmt::Display for SetContents {
 }
 
 impl Change for SetContents {
-    fn check(&self) -> anyhow::Result<Check> {
+    fn check(&self) -> Result<Check> {
         // If the file doesn't exist, assume it's because
         // another atom is going to provide it.
         if !self.path.exists() {
             return Ok(Check::Drift);
         }
 
-        let contents = std::fs::read(&self.path)
-            .with_context(|| format!("can't read {}", self.path.display()))?;
+        let contents = std::fs::read(&self.path).map_err(Error::io("read", &self.path))?;
 
         Ok(Check::drift_if(!contents.eq(&self.contents)))
     }
 
-    fn execute(&self) -> anyhow::Result<()> {
-        std::fs::write(&self.path, &self.contents)?;
+    fn execute(&self) -> Result<()> {
+        std::fs::write(&self.path, &self.contents).map_err(Error::io("write", &self.path))?;
 
         Ok(())
     }

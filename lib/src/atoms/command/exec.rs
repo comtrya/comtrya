@@ -1,12 +1,11 @@
 //! Runs a program and returns its output
 
-use crate::atoms::{Check, Output};
+use crate::atoms::{Check, Error, Output, Result};
 use serde::{Deserialize, Serialize};
 
 use super::super::Change;
 use crate::contexts::privilege::Privilege;
 use crate::utilities;
-use anyhow::{anyhow, Context};
 use std::path::{Path, PathBuf};
 use std::process::{self, Command};
 use tracing::debug;
@@ -73,8 +72,8 @@ impl Exec {
     }
 
     /// The output for the finalizers. Stdout goes to `stdout_file` instead, if there is one
-    fn succeeded(&self, output: process::Output) -> anyhow::Result<Output> {
-        let stderr = String::from_utf8(output.stderr)?;
+    fn succeeded(&self, output: process::Output) -> Result<Output> {
+        let stderr = String::from_utf8_lossy(&output.stderr).into_owned();
 
         if let Some(stdout_file) = &self.stdout_file {
             write_stdout(stdout_file, &output.stdout)?;
@@ -84,36 +83,35 @@ impl Exec {
             });
         }
 
-        let stdout = String::from_utf8(output.stdout)?;
+        let stdout = String::from_utf8_lossy(&output.stdout).into_owned();
         debug!("stdout: {stdout}");
 
         Ok(Output { stdout, stderr })
     }
 
     /// Fails with the exit code (1 when a signal ended the program) and stderr
-    fn failed(&self, output: process::Output) -> anyhow::Result<Output> {
+    fn failed(&self, output: process::Output) -> Result<Output> {
         let code = output.status.code().unwrap_or(1);
-        let stdout = String::from_utf8(output.stdout)?;
-        let stderr = String::from_utf8(output.stderr)?;
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let stderr = String::from_utf8_lossy(&output.stderr);
 
         debug!("exit code: {code}");
         debug!("stdout: {stdout}");
         debug!("stderr: {stderr}");
 
-        match stderr.trim() {
-            "" => Err(anyhow!("Command failed with exit code: {code}")),
-            stderr => Err(anyhow!("Command failed with exit code: {code}: {stderr}")),
-        }
+        Err(Error::CommandFailed {
+            code,
+            stderr: stderr.trim().to_string(),
+        })
     }
 }
 
 /// Writes the output of a command to `path`, creating its directory if needed
-fn write_stdout(path: &Path, stdout: &[u8]) -> anyhow::Result<()> {
+fn write_stdout(path: &Path, stdout: &[u8]) -> Result<()> {
     if let Some(parent) = path.parent() {
-        std::fs::create_dir_all(parent)?;
+        std::fs::create_dir_all(parent).map_err(Error::io("create the directory", parent))?;
     }
-    std::fs::write(path, stdout)
-        .with_context(|| format!("Failed to write stdout to {}", path.display()))?;
+    std::fs::write(path, stdout).map_err(Error::io("write stdout to", path))?;
 
     debug!("stdout written to {}", path.display());
 
@@ -132,20 +130,26 @@ impl std::fmt::Display for Exec {
 }
 
 impl Change for Exec {
-    fn check(&self) -> anyhow::Result<Check> {
+    fn check(&self) -> Result<Check> {
         Ok(Check::Drift)
     }
 
-    fn execute(&self) -> anyhow::Result<()> {
+    fn execute(&self) -> Result<()> {
         self.execute_with_output().map(|_| ())
     }
 
-    fn execute_with_output(&self) -> anyhow::Result<Output> {
+    fn execute_with_output(&self) -> Result<Output> {
         let command = self
             .find_binary(&self.command)
-            .map_err(|_| anyhow!("Command `{}` not found in path", self.command))?;
+            .map_err(|_| Error::CommandNotFound(self.command.clone()))?;
 
-        let output = self.process(&command, &self.arguments).output()?;
+        let output = self
+            .process(&command, &self.arguments)
+            .output()
+            .map_err(|source| Error::Spawn {
+                command: command.clone(),
+                source,
+            })?;
 
         if output.status.success() {
             self.succeeded(output)
@@ -302,5 +306,16 @@ mod tests {
 
         assert_eq!("found", std::fs::read_to_string(stdout_file).unwrap());
         assert!(std::env::var("PATH").is_ok());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn output_that_isnt_utf8_doesnt_fail_the_command() {
+        let mut command_run = new_run_command(String::from("printf"));
+        command_run.arguments = vec![String::from("a\\377b")];
+
+        let output = command_run.execute_with_output().unwrap();
+
+        assert_eq!("a\u{FFFD}b", output.stdout);
     }
 }

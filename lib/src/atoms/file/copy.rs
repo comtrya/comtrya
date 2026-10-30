@@ -1,7 +1,6 @@
 //! Copies a file over another one
 
-use crate::atoms::Check;
-use anyhow::bail;
+use crate::atoms::{Check, Error, Result};
 use serde::{Deserialize, Serialize};
 
 use super::super::Change;
@@ -28,19 +27,22 @@ impl std::fmt::Display for Copy {
 }
 
 impl Change for Copy {
-    fn check(&self) -> anyhow::Result<Check> {
+    fn check(&self) -> Result<Check> {
         if let Some(pending) = Check::needs(&self.from).or_else(|| Check::needs(&self.to)) {
             return Ok(pending);
         }
         if !self.to.is_file() {
-            bail!("{} isn't a file", self.to.display());
+            return Err(Error::NotA {
+                path: self.to.clone(),
+                kind: "file",
+            });
         }
 
         Ok(Check::drift_if(!same_contents(&self.from, &self.to)))
     }
 
-    fn execute(&self) -> anyhow::Result<()> {
-        std::fs::copy(&self.from, &self.to)?;
+    fn execute(&self) -> Result<()> {
+        std::fs::copy(&self.from, &self.to).map_err(Error::io("copy onto", &self.to))?;
 
         Ok(())
     }

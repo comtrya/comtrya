@@ -97,6 +97,8 @@ impl GitManifestProvider {
                     reference: config.branch.clone(),
                 })
                 .execute()
+                .map(|_| ())
+                .map_err(anyhow::Error::from)
             });
 
         if let Err(err) = result {
@@ -130,7 +132,7 @@ impl GitManifestProvider {
         clone_repository(&repository, cache_path, config.branch.as_deref(), true).map_err(
             |err| ManifestProviderError::Clone {
                 url: config.repository.clone(),
-                message: format!("{err:#}"),
+                message: format!("{:#}", anyhow::Error::from(err)),
             },
         )?;
 

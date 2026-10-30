@@ -3,9 +3,7 @@
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
-use anyhow::bail;
-
-use crate::atoms::{Change, Check};
+use crate::atoms::{Change, Check, Error, Result};
 
 /// Removes an empty directory
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -25,22 +23,31 @@ impl std::fmt::Display for Remove {
 }
 
 impl Change for Remove {
-    fn check(&self) -> anyhow::Result<Check> {
+    fn check(&self) -> Result<Check> {
         if !self.target.exists() {
             return Ok(Check::InSync);
         }
         if !self.target.is_dir() {
-            bail!("{} isn't a directory", self.target.display());
+            return Err(Error::NotA {
+                path: self.target.clone(),
+                kind: "directory",
+            });
         }
-        if self.target.read_dir()?.next().is_some() {
-            bail!("{} isn't empty", self.target.display());
+        let mut entries = self
+            .target
+            .read_dir()
+            .map_err(Error::io("read", &self.target))?;
+        if entries.next().is_some() {
+            return Err(Error::NotEmpty {
+                path: self.target.clone(),
+            });
         }
 
         Ok(Check::Drift)
     }
 
-    fn execute(&self) -> anyhow::Result<()> {
-        std::fs::remove_dir(&self.target)?;
+    fn execute(&self) -> Result<()> {
+        std::fs::remove_dir(&self.target).map_err(Error::io("remove", &self.target))?;
         Ok(())
     }
 }

@@ -1,6 +1,6 @@
 //! Creates an empty file
 
-use crate::atoms::Check;
+use crate::atoms::{Check, Error, Result};
 use serde::{Deserialize, Serialize};
 
 use super::super::Change;
@@ -20,12 +20,12 @@ impl std::fmt::Display for Create {
 }
 
 impl Change for Create {
-    fn check(&self) -> anyhow::Result<Check> {
+    fn check(&self) -> Result<Check> {
         Ok(Check::drift_if(!self.path.exists()))
     }
 
-    fn execute(&self) -> anyhow::Result<()> {
-        std::fs::File::create(&self.path)?;
+    fn execute(&self) -> Result<()> {
+        std::fs::File::create(&self.path).map_err(Error::io("create", &self.path))?;
 
         Ok(())
     }
@@ -75,5 +75,19 @@ mod tests {
 
         assert!(file_create.execute().is_ok());
         assert_eq!(Check::InSync, file_create.check().unwrap());
+    }
+
+    #[test]
+    fn an_error_names_the_file() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("missing-dir/file");
+
+        let error = Create { path: path.clone() }.execute().unwrap_err();
+
+        assert_eq!(
+            format!("can't create {}", path.display()),
+            error.to_string()
+        );
+        assert!(matches!(error, Error::Io { .. }));
     }
 }

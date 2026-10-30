@@ -1,11 +1,10 @@
 //! Downloads a file
 
-use crate::atoms::Check;
+use crate::atoms::{Check, Error, Result};
 use serde::{Deserialize, Serialize};
 
 use super::super::Change;
 use crate::utilities::sha256 as digest;
-use anyhow::anyhow;
 use std::io::Write;
 use std::{fs::File, path::PathBuf};
 
@@ -27,7 +26,7 @@ impl std::fmt::Display for Download {
 }
 
 impl Change for Download {
-    fn check(&self) -> anyhow::Result<Check> {
+    fn check(&self) -> Result<Check> {
         let differs = match (&self.sha256, std::fs::read(&self.to)) {
             (_, Err(_)) => true,
             // Download again if the file doesn't match, e.g. after the URL and hash were updated
@@ -38,23 +37,30 @@ impl Change for Download {
         Ok(Check::drift_if(differs))
     }
 
-    fn execute(&self) -> anyhow::Result<()> {
-        let response = reqwest::blocking::get(&self.url)?.error_for_status()?;
-        let content = response.bytes()?;
+    fn execute(&self) -> Result<()> {
+        let content = reqwest::blocking::get(&self.url)
+            .and_then(|response| response.error_for_status())
+            .and_then(|response| response.bytes())
+            .map_err(|source| Error::Download {
+                url: self.url.clone(),
+                source,
+            })?;
 
         // Check before writing, so a bad download never replaces the existing file
         if let Some(expected) = &self.sha256 {
             let actual = digest(content.as_ref());
             if actual != *expected {
-                return Err(anyhow!(
-                    "SHA-256 of {} doesn't match: expected {expected}, got {actual}",
-                    self.url
-                ));
+                return Err(Error::Checksum {
+                    url: self.url.clone(),
+                    expected: expected.clone(),
+                    actual,
+                });
             }
         }
 
-        let mut file = File::create(&self.to)?;
-        file.write_all(&content)?;
+        File::create(&self.to)
+            .and_then(|mut file| file.write_all(&content))
+            .map_err(Error::io("write", &self.to))?;
 
         Ok(())
     }
@@ -160,8 +166,9 @@ mod tests {
         let to = dir.path().join("file");
         let atom = atom(serve(404, b"not found"), to.clone(), None);
 
-        let err = atom.execute().unwrap_err().to_string();
+        let err = format!("{:#}", anyhow::Error::from(atom.execute().unwrap_err()));
 
+        assert!(err.starts_with("can't download http://"), "{err}");
         assert!(err.contains("404"), "{err}");
         assert!(!to.exists());
     }
