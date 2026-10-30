@@ -37,9 +37,41 @@ impl Atom for Copy {
     }
 
     fn execute(&mut self) -> anyhow::Result<()> {
+        refuse_copy_into_itself(&self.from, &self.to)?;
         copy_contents(&self.from, &self.to)?;
 
         Ok(())
+    }
+}
+
+/// Fails when `to` is `from` or inside it, like `cp`: copying would never end, or copy files
+/// onto themselves
+fn refuse_copy_into_itself(from: &Path, to: &Path) -> anyhow::Result<()> {
+    let from_canonical = from.canonicalize()?;
+
+    if canonicalize_missing(to)?.starts_with(&from_canonical) {
+        anyhow::bail!(
+            "cannot copy the directory {} into itself ({})",
+            from.display(),
+            to.display()
+        );
+    }
+
+    Ok(())
+}
+
+/// Like [`Path::canonicalize`], but `path` and its parents don't have to exist: the missing end
+/// is appended to the canonical part that exists
+fn canonicalize_missing(path: &Path) -> std::io::Result<PathBuf> {
+    let path = std::path::absolute(path)?;
+
+    if let Ok(canonical) = path.canonicalize() {
+        return Ok(canonical);
+    }
+
+    match (path.parent(), path.file_name()) {
+        (Some(parent), Some(name)) => Ok(canonicalize_missing(parent)?.join(name)),
+        _ => path.canonicalize(),
     }
 }
 
@@ -161,6 +193,70 @@ mod tests {
 
         assert_eq!("a", read(to.join("a.txt")));
         assert_eq!("mine", read(to.join("sub").join("mine.txt")));
+    }
+
+    #[test]
+    fn it_refuses_to_copy_into_a_directory_inside_from() {
+        let (_dir, from, _to) = source();
+        let inside = from.join("sub").join("backup");
+
+        let error = Copy {
+            from: from.clone(),
+            to: inside.clone(),
+        }
+        .execute()
+        .unwrap_err();
+
+        assert!(error.to_string().contains("into itself"), "{error}");
+        assert_eq!(false, inside.exists());
+    }
+
+    #[test]
+    fn it_refuses_to_copy_a_directory_onto_itself() {
+        let (_dir, from, _to) = source();
+        let same = from.join("sub").join("..");
+
+        let error = Copy {
+            from: from.clone(),
+            to: same,
+        }
+        .execute()
+        .unwrap_err();
+
+        assert!(error.to_string().contains("into itself"), "{error}");
+        assert_eq!("a", read(from.join("a.txt")));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn it_refuses_a_to_that_reaches_into_from_through_a_symlink() {
+        let (dir, from, _to) = source();
+        let alias = dir.path().join("alias");
+        std::os::unix::fs::symlink(&from, &alias).unwrap();
+
+        let error = Copy {
+            from,
+            to: alias.join("sub").join("backup"),
+        }
+        .execute()
+        .unwrap_err();
+
+        assert!(error.to_string().contains("into itself"), "{error}");
+    }
+
+    #[test]
+    fn it_copies_into_a_sibling_whose_name_starts_like_from() {
+        let (_dir, from, _to) = source();
+        let sibling = from.with_file_name("from-backup");
+
+        Copy {
+            from,
+            to: sibling.clone(),
+        }
+        .execute()
+        .unwrap();
+
+        assert_eq!("a", read(sibling.join("a.txt")));
     }
 
     #[cfg(unix)]
