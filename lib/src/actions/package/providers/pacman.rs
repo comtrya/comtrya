@@ -64,16 +64,17 @@ impl PackageProvider for Pacman {
             return Ok(vec![]);
         }
 
+        // The executor runs the step before it plans the next action, which reads the list again
+        self.runner.forget();
         Ok(vec![install_step(package, need_installed)])
     }
 }
 
-/// The requested packages that pacman doesn't list as installed. The AUR helpers use it too
+/// The requested packages that pacman doesn't list as installed. The AUR helpers use it too.
+/// The list is the same for every package, so the shared runner reads it once per run
 pub(super) fn missing(runner: &dyn Runner, package: &PackageVariant) -> Result<Vec<String>> {
-    // `pacman -Qq` prints the installed ones and fails for the others, so ignore the status
-    let command = CommandSpec::new("pacman")
-        .args(["-Q", "-q"])
-        .args(package.packages());
+    // A failing `pacman -Qq` lists nothing, then everything is installed with `--needed`
+    let command = CommandSpec::new("pacman").args(["-Q", "-q"]);
     let installed: HashSet<String> =
         String::from_utf8_lossy(&super::query(runner, &command)?.stdout)
             .lines()
@@ -106,17 +107,14 @@ fn install_step(package: &PackageVariant, packages: Vec<String>) -> Step {
 mod test {
     use super::*;
     use crate::actions::package::providers::PackageProviders;
-    use crate::runner::fake::{fails, FakeRunner};
+    use crate::runner::fake::{succeeds, FakeRunner};
+    use crate::runner::Cached;
     use pretty_assertions::assert_eq;
 
     #[test]
     fn query_returns_the_packages_that_are_not_installed() {
-        // pacman prints the installed ones, and fails because of the others
         let runner = FakeRunner::new()
-            .answer(
-                "pacman -Q -q git ripgrep",
-                fails("git\n", "error: package 'ripgrep' was not found\n"),
-            )
+            .answer("pacman -Q -q", succeeds("git\nvim\n"))
             .shared();
         let pacman = Pacman {
             runner: runner.clone(),
@@ -127,7 +125,53 @@ mod test {
         };
 
         assert_eq!(vec!["ripgrep"], pacman.query(&package).unwrap());
-        assert_eq!(vec!["pacman -Q -q git ripgrep"], runner.calls());
+        assert_eq!(vec!["pacman -Q -q"], runner.calls());
+    }
+
+    #[test]
+    fn two_actions_read_the_installed_packages_once() {
+        let fake = FakeRunner::new()
+            .answer("pacman -Q -q", succeeds("git\nripgrep\n"))
+            .shared();
+        let pacman = Pacman {
+            runner: Arc::new(Cached::new(fake.clone())),
+        };
+
+        for name in ["git", "ripgrep"] {
+            let package = PackageVariant {
+                name: Some(String::from(name)),
+                ..Default::default()
+            };
+            assert!(pacman
+                .install(&package, &Facts::default())
+                .unwrap()
+                .is_empty());
+        }
+
+        assert_eq!(vec!["pacman -Q -q"], fake.calls());
+    }
+
+    #[test]
+    fn packages_are_read_again_after_an_install() {
+        let fake = FakeRunner::new()
+            .answer("pacman -Q -q", succeeds("git\n"))
+            .shared();
+        let pacman = Pacman {
+            runner: Arc::new(Cached::new(fake.clone())),
+        };
+        let package = PackageVariant {
+            name: Some(String::from("ripgrep")),
+            ..Default::default()
+        };
+
+        // The executor runs the install before it plans the next action
+        assert_eq!(
+            1,
+            pacman.install(&package, &Facts::default()).unwrap().len()
+        );
+        pacman.query(&package).unwrap();
+
+        assert_eq!(vec!["pacman -Q -q", "pacman -Q -q"], fake.calls());
     }
 
     #[test]

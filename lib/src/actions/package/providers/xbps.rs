@@ -87,6 +87,8 @@ impl PackageProvider for Xbps {
         if need_installed.is_empty() {
             return Ok(vec![]);
         }
+        // The executor runs the step before it plans the next action, which reads the list again
+        self.runner.forget();
 
         Ok(vec![Step::new(Exec {
             command: String::from("xbps-install"),
