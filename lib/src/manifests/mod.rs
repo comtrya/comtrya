@@ -5,7 +5,7 @@ mod load;
 pub use load::{load, load_all, LoadError, LoadErrorKind, Loaded};
 /// Keys nothing reads, warned about while loading
 mod unknown_keys;
-pub(crate) use unknown_keys::{schema_keys, unknown_actions, unknown_keys};
+pub(crate) use unknown_keys::{closest, schema_keys, unknown_keys};
 /// Finding the directory with the manifests
 mod providers;
 use crate::actions::Actions;

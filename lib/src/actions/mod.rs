@@ -10,6 +10,8 @@ mod group;
 mod macos;
 mod package;
 pub use package::PackageProviders;
+/// Reading actions from manifests
+mod parse;
 mod registry;
 pub use registry::Actions;
 mod user;
@@ -34,8 +36,9 @@ fn warn_ignored(ignored: &[Ignored]) {
     }
 }
 
-/// An action with its `where` condition and its variants, see [`ConditionalVariantAction::select`]
-#[derive(JsonSchema, Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Default)]
+/// An action with its `where` condition and its variants, see [`ConditionalVariantAction::select`].
+/// Read by hand, see the `parse` module; the serde attributes are for writing it and the schema
+#[derive(JsonSchema, Clone, Debug, PartialEq, Eq, Serialize, Default)]
 pub struct ConditionalVariantAction<T> {
     /// The action's own fields
     #[serde(flatten)]
@@ -51,7 +54,7 @@ pub struct ConditionalVariantAction<T> {
 }
 
 /// Another version of an action, used instead of it when its `where` is true
-#[derive(JsonSchema, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(JsonSchema, Clone, Debug, PartialEq, Eq, Serialize)]
 pub struct Variant<T> {
     /// The fields of this version
     #[serde(flatten)]
