@@ -207,7 +207,7 @@ impl<'a> Run<'a> {
                 false
             }
             Err(err) => {
-                warn!("Skipping {step}: {err:#}");
+                warn!("Skipping {step}: {:#}", anyhow::Error::from(err));
                 false
             }
         }
@@ -242,7 +242,7 @@ impl<'a> Run<'a> {
         {
             Ok(output) => output,
             Err(err) => {
-                error!("{step} failed: {err:#}");
+                error!("{step} failed: {:#}", anyhow::Error::from(err));
                 return false;
             }
         };

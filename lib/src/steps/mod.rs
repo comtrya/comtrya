@@ -1,6 +1,6 @@
 //! Steps: the atoms an action plans, with the checks around them
 
-use crate::atoms::{Atom, Output, RunAs};
+use crate::atoms::{self, Atom, Output, RunAs};
 use crate::contexts::privilege::Privilege;
 use crate::steps::finalizers::FlowControl;
 use crate::utilities;
@@ -43,12 +43,12 @@ impl Step {
 
     /// The atom to execute: a root step runs through `privilege`, unless comtrya runs as root
     /// already
-    pub fn atom_to_run(&self, privilege: &Privilege) -> anyhow::Result<Atom> {
+    pub fn atom_to_run(&self, privilege: &Privilege) -> atoms::Result<Atom> {
         self.atom_to_run_with(privilege, utilities::running_as_root())
     }
 
     /// [`Step::atom_to_run`], with whether comtrya runs as root
-    fn atom_to_run_with(&self, privilege: &Privilege, as_root: bool) -> anyhow::Result<Atom> {
+    fn atom_to_run_with(&self, privilege: &Privilege, as_root: bool) -> atoms::Result<Atom> {
         match self.run_as {
             RunAs::Root if !as_root => self.atom.clone().elevated(privilege),
             _ => Ok(self.atom.clone()),

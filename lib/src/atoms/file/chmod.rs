@@ -1,6 +1,6 @@
 //! Sets the permissions of a file
 
-use crate::atoms::Check;
+use crate::atoms::{Check, Result};
 use serde::{Deserialize, Serialize};
 
 use super::super::Change;
@@ -27,11 +27,11 @@ impl std::fmt::Display for Chmod {
 }
 
 #[cfg(unix)]
-use {anyhow::Context, std::os::unix::prelude::PermissionsExt};
+use {crate::atoms::Error, std::os::unix::prelude::PermissionsExt};
 
 #[cfg(unix)]
 impl Change for Chmod {
-    fn check(&self) -> anyhow::Result<Check> {
+    fn check(&self) -> Result<Check> {
         // If the file doesn't exist, assume it's because
         // another atom is going to provide it.
         if !self.path.exists() {
@@ -39,7 +39,7 @@ impl Change for Chmod {
         }
 
         let metadata = std::fs::metadata(&self.path)
-            .with_context(|| format!("can't read the permissions of {}", self.path.display()))?;
+            .map_err(Error::io("read the permissions of", &self.path))?;
 
         // We expect permissions to come through as if the user was using chmod themselves.
         // This means we support 644/755 decimal syntax. We need to add 0o100000 to support
@@ -50,11 +50,12 @@ impl Change for Chmod {
         ))
     }
 
-    fn execute(&self) -> anyhow::Result<()> {
+    fn execute(&self) -> Result<()> {
         std::fs::set_permissions(
             self.path.as_path(),
             std::fs::Permissions::from_mode(self.mode),
-        )?;
+        )
+        .map_err(Error::io("set the permissions of", &self.path))?;
 
         Ok(())
     }
@@ -73,12 +74,12 @@ impl Change for Chmod {
 
 #[cfg(not(unix))]
 impl Change for Chmod {
-    fn check(&self) -> anyhow::Result<Check> {
+    fn check(&self) -> Result<Check> {
         // Never run
         Ok(Check::InSync)
     }
 
-    fn execute(&self) -> anyhow::Result<()> {
+    fn execute(&self) -> Result<()> {
         Ok(())
     }
 }

@@ -1,6 +1,6 @@
 //! Sets the owner and group of a file
 
-use crate::atoms::Check;
+use crate::atoms::{Check, Result};
 use serde::{Deserialize, Serialize};
 
 use super::super::Change;
@@ -30,38 +30,35 @@ impl std::fmt::Display for Chown {
 }
 
 #[cfg(unix)]
-use std::os::unix::prelude::MetadataExt;
-
-#[cfg(unix)]
-use anyhow::{anyhow, Context};
+use {crate::atoms::Error, std::os::unix::prelude::MetadataExt};
 
 #[cfg(unix)]
 impl Change for Chown {
-    fn check(&self) -> anyhow::Result<Check> {
+    fn check(&self) -> Result<Check> {
         // If the file doesn't exist, assume it's because
         // another atom is going to provide it.
         if !self.path.exists() {
             return Ok(Check::Drift);
         }
 
-        let metadata = std::fs::metadata(&self.path)
-            .with_context(|| format!("can't read the owner of {}", self.path.display()))?;
+        let metadata =
+            std::fs::metadata(&self.path).map_err(Error::io("read the owner of", &self.path))?;
         let owner = uzers::get_user_by_name(&self.owner)
-            .ok_or_else(|| anyhow!("user {} doesn't exist", self.owner))?;
+            .ok_or_else(|| Error::UnknownUser(self.owner.clone()))?;
         let group = uzers::get_group_by_name(&self.group)
-            .ok_or_else(|| anyhow!("group {} doesn't exist", self.group))?;
+            .ok_or_else(|| Error::UnknownGroup(self.group.clone()))?;
 
         Ok(Check::drift_if(
             metadata.uid() != owner.uid() || metadata.gid() != group.gid(),
         ))
     }
 
-    fn execute(&self) -> anyhow::Result<()> {
+    fn execute(&self) -> Result<()> {
         let uid = match self.owner.as_str() {
             "" => None,
             owner => Some(
                 uzers::get_user_by_name(owner)
-                    .ok_or_else(|| anyhow!("user {owner} doesn't exist"))?
+                    .ok_or_else(|| Error::UnknownUser(owner.to_string()))?
                     .uid(),
             ),
         };
@@ -70,12 +67,13 @@ impl Change for Chown {
             "" => None,
             group => Some(
                 uzers::get_group_by_name(group)
-                    .ok_or_else(|| anyhow!("group {group} doesn't exist"))?
+                    .ok_or_else(|| Error::UnknownGroup(group.to_string()))?
                     .gid(),
             ),
         };
 
-        std::os::unix::fs::chown(&self.path, uid, gid)?;
+        std::os::unix::fs::chown(&self.path, uid, gid)
+            .map_err(Error::io("change the owner of", &self.path))?;
 
         Ok(())
     }
@@ -83,12 +81,12 @@ impl Change for Chown {
 
 #[cfg(not(unix))]
 impl Change for Chown {
-    fn check(&self) -> anyhow::Result<Check> {
+    fn check(&self) -> Result<Check> {
         // Never run
         Ok(Check::InSync)
     }
 
-    fn execute(&self) -> anyhow::Result<()> {
+    fn execute(&self) -> Result<()> {
         Ok(())
     }
 }

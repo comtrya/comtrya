@@ -2,7 +2,7 @@
 
 use super::super::Change;
 use super::clone_repository;
-use crate::atoms::Check;
+use crate::atoms::{Check, Error, Result};
 use gix::Url;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
@@ -44,9 +44,11 @@ fn sibling(directory: &Path, suffix: &str) -> PathBuf {
 }
 
 /// Removes `path` if it exists
-fn remove_dir_if_exists(path: &Path) -> std::io::Result<()> {
+fn remove_dir_if_exists(path: &Path) -> Result<()> {
     match std::fs::remove_dir_all(path) {
-        Err(err) if err.kind() != std::io::ErrorKind::NotFound => Err(err),
+        Err(err) if err.kind() != std::io::ErrorKind::NotFound => {
+            Err(Error::io("remove", path)(err))
+        }
         _ => Ok(()),
     }
 }
@@ -59,13 +61,15 @@ impl Update {
 
     /// Puts the clone in `fresh` in place of the one in `directory`, restoring the old one
     /// if that fails
-    fn replace_with(&self, fresh: &Path) -> anyhow::Result<()> {
+    fn replace_with(&self, fresh: &Path) -> Result<()> {
         let old = Self::replaced_dir(&self.directory);
+        let replace = Error::io("replace", &self.directory);
         remove_dir_if_exists(&old)?;
-        std::fs::rename(&self.directory, &old)?;
+        std::fs::rename(&self.directory, &old).map_err(Error::io("move away", &self.directory))?;
         if let Err(err) = std::fs::rename(fresh, &self.directory) {
-            std::fs::rename(&old, &self.directory)?;
-            return Err(err.into());
+            std::fs::rename(&old, &self.directory)
+                .map_err(Error::io("restore", &self.directory))?;
+            return Err(replace(err));
         }
 
         // The update is done, a leftover old clone is only waste
@@ -76,12 +80,12 @@ impl Update {
 
 impl Change for Update {
     #[instrument(name = "git.update.plan", level = "info", skip(self))]
-    fn check(&self) -> anyhow::Result<Check> {
+    fn check(&self) -> Result<Check> {
         Ok(Check::drift_if(self.directory.exists()))
     }
 
     #[instrument(name = "git.update.execute", level = "info", skip(self))]
-    fn execute(&self) -> anyhow::Result<()> {
+    fn execute(&self) -> Result<()> {
         let fresh = sibling(&self.directory, ".updating");
         remove_dir_if_exists(&fresh)?;
 

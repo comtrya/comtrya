@@ -1,6 +1,6 @@
 //! Copies the contents of a directory into another one
 
-use crate::atoms::Check;
+use crate::atoms::{Check, Error, Result};
 use serde::{Deserialize, Serialize};
 
 use super::super::Change;
@@ -31,11 +31,11 @@ impl std::fmt::Display for Copy {
 
 impl Change for Copy {
     /// Always runs: comparing every file would cost about as much as copying them
-    fn check(&self) -> anyhow::Result<Check> {
+    fn check(&self) -> Result<Check> {
         Ok(Check::Drift)
     }
 
-    fn execute(&self) -> anyhow::Result<()> {
+    fn execute(&self) -> Result<()> {
         refuse_copy_into_itself(&self.from, &self.to)?;
         copy_contents(&self.from, &self.to)?;
 
@@ -45,15 +45,15 @@ impl Change for Copy {
 
 /// Fails when `to` is `from` or inside it, like `cp`: copying would never end, or copy files
 /// onto themselves
-fn refuse_copy_into_itself(from: &Path, to: &Path) -> anyhow::Result<()> {
-    let from_canonical = from.canonicalize()?;
+fn refuse_copy_into_itself(from: &Path, to: &Path) -> Result<()> {
+    let from_canonical = from.canonicalize().map_err(Error::io("read", from))?;
+    let to_canonical = canonicalize_missing(to).map_err(Error::io("read", to))?;
 
-    if canonicalize_missing(to)?.starts_with(&from_canonical) {
-        anyhow::bail!(
-            "cannot copy the directory {} into itself ({})",
-            from.display(),
-            to.display()
-        );
+    if to_canonical.starts_with(&from_canonical) {
+        return Err(Error::CopyIntoItself {
+            from: from.to_path_buf(),
+            to: to.to_path_buf(),
+        });
     }
 
     Ok(())
@@ -75,11 +75,11 @@ fn canonicalize_missing(path: &Path) -> std::io::Result<PathBuf> {
 }
 
 /// Copies everything in `from` into `to`, creating `to` and the subdirectories as needed
-fn copy_contents(from: &Path, to: &Path) -> std::io::Result<()> {
-    std::fs::create_dir_all(to)?;
+fn copy_contents(from: &Path, to: &Path) -> Result<()> {
+    std::fs::create_dir_all(to).map_err(Error::io("create the directory", to))?;
 
-    for entry in std::fs::read_dir(from)? {
-        let entry = entry?;
+    for entry in std::fs::read_dir(from).map_err(Error::io("read", from))? {
+        let entry = entry.map_err(Error::io("read", from))?;
         copy_entry(&entry.path(), &to.join(entry.file_name()), &entry)?;
     }
 
@@ -87,9 +87,13 @@ fn copy_contents(from: &Path, to: &Path) -> std::io::Result<()> {
 }
 
 /// Copies one directory entry: subdirectories recursively, symlinks as symlinks on unix
-fn copy_entry(from: &Path, to: &Path, entry: &std::fs::DirEntry) -> std::io::Result<()> {
+fn copy_entry(from: &Path, to: &Path, entry: &std::fs::DirEntry) -> Result<()> {
     #[cfg(unix)]
-    if entry.file_type()?.is_symlink() {
+    if entry
+        .file_type()
+        .map_err(Error::io("read", from))?
+        .is_symlink()
+    {
         return copy_symlink(from, to);
     }
     #[cfg(not(unix))]
@@ -98,20 +102,22 @@ fn copy_entry(from: &Path, to: &Path, entry: &std::fs::DirEntry) -> std::io::Res
     if from.is_dir() {
         copy_contents(from, to)
     } else {
-        std::fs::copy(from, to).map(|_| ())
+        std::fs::copy(from, to)
+            .map(|_| ())
+            .map_err(Error::io("copy onto", to))
     }
 }
 
 /// Recreates the symlink `from` at `to`, replacing whatever symlink or file is there
 #[cfg(unix)]
-fn copy_symlink(from: &Path, to: &Path) -> std::io::Result<()> {
-    let target = std::fs::read_link(from)?;
+fn copy_symlink(from: &Path, to: &Path) -> Result<()> {
+    let target = std::fs::read_link(from).map_err(Error::io("read", from))?;
 
     if to.symlink_metadata().is_ok_and(|meta| !meta.is_dir()) {
-        std::fs::remove_file(to)?;
+        std::fs::remove_file(to).map_err(Error::io("replace", to))?;
     }
 
-    std::os::unix::fs::symlink(target, to)
+    std::os::unix::fs::symlink(target, to).map_err(Error::io("create the link", to))
 }
 
 #[cfg(test)]

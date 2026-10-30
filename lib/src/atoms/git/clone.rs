@@ -1,7 +1,7 @@
 //! Clones a repository
 
 use super::super::Change;
-use crate::atoms::Check;
+use crate::atoms::{BoxError, Check, Error, Result};
 use gix::interrupt;
 use gix::remote::fetch::Shallow;
 use gix::{progress::Discard, Url};
@@ -43,12 +43,12 @@ impl std::fmt::Display for Clone {
 
 impl Change for Clone {
     #[instrument(name = "git.clone.plan", level = "info", skip(self))]
-    fn check(&self) -> anyhow::Result<Check> {
+    fn check(&self) -> Result<Check> {
         Ok(Check::drift_if(!self.directory.exists()))
     }
 
     #[instrument(name = "git.clone.execute", level = "info", skip(self))]
-    fn execute(&self) -> anyhow::Result<()> {
+    fn execute(&self) -> Result<()> {
         clone_repository(
             &self.repository,
             &self.directory,
@@ -64,12 +64,26 @@ pub(crate) fn clone_repository(
     directory: &Path,
     reference: Option<&str>,
     shallow: bool,
-) -> anyhow::Result<()> {
+) -> Result<()> {
+    std::fs::create_dir_all(directory).map_err(Error::io("create the directory", directory))?;
+
+    fetch_and_check_out(repository, directory, reference, shallow).map_err(|source| Error::Git {
+        doing: "clone",
+        repository: repository.to_bstring().to_string(),
+        source,
+    })
+}
+
+/// The gix part of [`clone_repository`]
+fn fetch_and_check_out(
+    repository: &Url,
+    directory: &Path,
+    reference: Option<&str>,
+    shallow: bool,
+) -> std::result::Result<(), BoxError> {
     unsafe {
         interrupt::init_handler(1, || {})?;
     };
-
-    std::fs::create_dir_all(directory)?;
 
     let mut prepare_clone =
         gix::prepare_clone(repository.clone(), directory)?.with_ref_name(reference)?;

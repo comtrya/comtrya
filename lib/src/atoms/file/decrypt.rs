@@ -1,12 +1,11 @@
 //! Decrypts age-encrypted contents into a file
 
-use crate::atoms::Check;
+use crate::atoms::{BoxError, Check, Error, Result};
 use serde::{Deserialize, Serialize};
 
 use super::super::Change;
 use age::armor::ArmoredReader;
 use age::secrecy::SecretString;
-use anyhow::Context;
 use std::io::Read;
 use std::path::PathBuf;
 
@@ -32,7 +31,7 @@ impl std::fmt::Display for Decrypt {
 }
 
 impl Change for Decrypt {
-    fn check(&self) -> anyhow::Result<Check> {
+    fn check(&self) -> Result<Check> {
         // If the file doesn't exist, assume it's because
         // another atom is going to provide it.
         if !self.path.exists() {
@@ -40,26 +39,33 @@ impl Change for Decrypt {
         }
 
         // Fails early for a wrong passphrase
-        decrypt(&self.passphrase, &self.encrypted_content)
-            .with_context(|| format!("can't decrypt {}", self.path.display()))?;
+        self.decrypted()?;
 
         Ok(Check::Drift)
     }
 
-    fn execute(&self) -> anyhow::Result<()> {
-        let decrypted_content = decrypt(&self.passphrase, &self.encrypted_content)?;
-
-        std::fs::write(&self.path, decrypted_content)?;
+    fn execute(&self) -> Result<()> {
+        std::fs::write(&self.path, self.decrypted()?).map_err(Error::io("write", &self.path))?;
 
         Ok(())
     }
 }
 
+impl Decrypt {
+    /// The contents decrypted
+    fn decrypted(&self) -> Result<Vec<u8>> {
+        decrypt(&self.passphrase, &self.encrypted_content).map_err(|source| Error::Decrypt {
+            path: self.path.clone(),
+            source,
+        })
+    }
+}
+
 /// Decrypts armored age contents with a passphrase
-fn decrypt(passphrase: &str, encrypted_content: &[u8]) -> anyhow::Result<Vec<u8>> {
+fn decrypt(passphrase: &str, encrypted_content: &[u8]) -> std::result::Result<Vec<u8>, BoxError> {
     let decryptor = age::Decryptor::new(ArmoredReader::new(encrypted_content))?;
     if !decryptor.is_scrypt() {
-        return Err(anyhow::anyhow!("Cannot create passphrase decryptor!"));
+        return Err("the contents aren't encrypted with a passphrase".into());
     }
 
     let mut decrypted = vec![];

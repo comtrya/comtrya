@@ -1,6 +1,6 @@
 //! Creates a directory
 
-use crate::atoms::Check;
+use crate::atoms::{Check, Error, Result};
 use serde::{Deserialize, Serialize};
 
 use super::super::Change;
@@ -24,12 +24,13 @@ impl std::fmt::Display for Create {
 }
 
 impl Change for Create {
-    fn check(&self) -> anyhow::Result<Check> {
+    fn check(&self) -> Result<Check> {
         Ok(Check::drift_if(!self.path.exists()))
     }
 
-    fn execute(&self) -> anyhow::Result<()> {
-        std::fs::create_dir_all(&self.path)?;
+    fn execute(&self) -> Result<()> {
+        std::fs::create_dir_all(&self.path)
+            .map_err(Error::io("create the directory", &self.path))?;
 
         Ok(())
     }

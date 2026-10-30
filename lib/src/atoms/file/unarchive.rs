@@ -6,7 +6,7 @@ use std::{fs::File, path::PathBuf};
 use flate2::read::GzDecoder;
 use tar::Archive;
 
-use crate::atoms::{Change, Check};
+use crate::atoms::{Change, Check, Error, Result};
 
 /// Unpacks a `.tar.gz` archive into a directory
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -21,7 +21,7 @@ pub struct Unarchive {
 
 impl Change for Unarchive {
     // Determine if this atom needs to run
-    fn check(&self) -> anyhow::Result<Check> {
+    fn check(&self) -> Result<Check> {
         if self.dest.exists() && !self.force {
             return Ok(Check::InSync);
         }
@@ -30,11 +30,12 @@ impl Change for Unarchive {
     }
 
     // Apply new to old
-    fn execute(&self) -> anyhow::Result<()> {
-        let tar_gz = File::open(&self.origin)?;
-        let tar = GzDecoder::new(tar_gz);
-        let mut archive = Archive::new(tar);
-        archive.unpack(&self.dest)?;
+    fn execute(&self) -> Result<()> {
+        let tar_gz = File::open(&self.origin).map_err(Error::io("open", &self.origin))?;
+        let mut archive = Archive::new(GzDecoder::new(tar_gz));
+        archive
+            .unpack(&self.dest)
+            .map_err(Error::io("unpack into", &self.dest))?;
         Ok(())
     }
 }
