@@ -57,10 +57,16 @@ macro_rules! actions {
             /// The keys the action called `name`, or an alias of it, reads: its fields and their
             /// aliases, `where` and `variants`. `None` for an unknown action
             pub fn known_keys(name: &str) -> Option<Vec<String>> {
+                Self::schema(name).map(schema_keys)
+            }
+
+            /// The JSON schema of the action called `name`, or an alias of it, with the
+            /// objects its fields can hold in `$defs`. `None` for an unknown action
+            pub fn schema(name: &str) -> Option<schemars::Schema> {
                 match name {
-                    $($name $(| $first_alias $(| $alias)*)? => Some(schema_keys(
+                    $($name $(| $first_alias $(| $alias)*)? => Some(
                         schemars::schema_for!(ConditionalVariantAction<$action>),
-                    )),)+
+                    ),)+
                     _ => None,
                 }
             }
