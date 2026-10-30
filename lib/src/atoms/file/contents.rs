@@ -1,12 +1,12 @@
 //! Writes the contents of a file
 
-use crate::atoms::Outcome;
+use crate::atoms::Check;
 use serde::{Deserialize, Serialize};
 
 use super::super::Change;
+use anyhow::Context;
 use similar::TextDiff;
 use std::path::PathBuf;
-use tracing::error;
 
 /// Writes the contents of a file, when they differ
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -30,35 +30,17 @@ impl std::fmt::Display for SetContents {
 }
 
 impl Change for SetContents {
-    fn plan(&self) -> anyhow::Result<Outcome> {
+    fn check(&self) -> anyhow::Result<Check> {
         // If the file doesn't exist, assume it's because
         // another atom is going to provide it.
         if !self.path.exists() {
-            return Ok(Outcome {
-                side_effects: vec![],
-                should_run: true,
-            });
+            return Ok(Check::Drift);
         }
 
-        let contents = match std::fs::read(&self.path) {
-            Ok(contents) => contents,
-            Err(error) => {
-                error!(
-                    "Failed to read contents of {} for diff because {:?}. Skipping",
-                    error, self.path
-                );
+        let contents = std::fs::read(&self.path)
+            .with_context(|| format!("can't read {}", self.path.display()))?;
 
-                return Ok(Outcome {
-                    side_effects: vec![],
-                    should_run: false,
-                });
-            }
-        };
-
-        Ok(Outcome {
-            side_effects: vec![],
-            should_run: !contents.eq(&self.contents),
-        })
+        Ok(Check::drift_if(!contents.eq(&self.contents)))
     }
 
     fn execute(&self) -> anyhow::Result<()> {
@@ -128,7 +110,7 @@ mod tests {
             redact: false,
         };
 
-        assert_eq!(false, file_contents.plan().unwrap().should_run);
+        assert_eq!(Check::InSync, file_contents.check().unwrap());
 
         let file_contents = SetContents {
             path: file.path().to_path_buf(),
@@ -136,9 +118,9 @@ mod tests {
             redact: false,
         };
 
-        assert_eq!(true, file_contents.plan().unwrap().should_run);
-        assert_eq!(true, file_contents.execute().is_ok());
-        assert_eq!(false, file_contents.plan().unwrap().should_run);
+        assert_eq!(Check::Drift, file_contents.check().unwrap());
+        assert!(file_contents.execute().is_ok());
+        assert_eq!(Check::InSync, file_contents.check().unwrap());
     }
 
     fn set_contents(path: &std::path::Path, contents: &[u8], redact: bool) -> SetContents {

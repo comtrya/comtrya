@@ -1,11 +1,11 @@
 //! Copies a file over another one
 
-use crate::atoms::Outcome;
+use crate::atoms::Check;
+use anyhow::bail;
 use serde::{Deserialize, Serialize};
 
 use super::super::Change;
 use std::path::PathBuf;
-use tracing::error;
 
 /// Copies a file over an existing file, when their contents differ. No action uses it
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -28,20 +28,15 @@ impl std::fmt::Display for Copy {
 }
 
 impl Change for Copy {
-    fn plan(&self) -> anyhow::Result<Outcome> {
+    fn check(&self) -> anyhow::Result<Check> {
+        if let Some(pending) = Check::needs(&self.from).or_else(|| Check::needs(&self.to)) {
+            return Ok(pending);
+        }
         if !self.to.is_file() {
-            error!("Cannot plan: target isn't a file: {}", self.to.display());
-
-            return Ok(Outcome {
-                side_effects: vec![],
-                should_run: false,
-            });
+            bail!("{} isn't a file", self.to.display());
         }
 
-        Ok(Outcome {
-            side_effects: vec![],
-            should_run: !same_contents(&self.from, &self.to),
-        })
+        Ok(Check::drift_if(!same_contents(&self.from, &self.to)))
     }
 
     fn execute(&self) -> anyhow::Result<()> {
@@ -94,14 +89,14 @@ mod tests {
             to: to_file.path().to_path_buf(),
         };
 
-        assert_eq!(true, file_copy.plan().unwrap().should_run);
+        assert_eq!(Check::Drift, file_copy.check().unwrap());
 
         let file_copy = Copy {
             from: from_file.path().to_path_buf(),
             to: from_file.path().to_path_buf(),
         };
 
-        assert_eq!(false, file_copy.plan().unwrap().should_run);
+        assert_eq!(Check::InSync, file_copy.check().unwrap());
     }
 
     #[test]
@@ -138,9 +133,9 @@ mod tests {
             to: to_file.path().to_path_buf(),
         };
 
-        assert_eq!(true, file_copy.plan().unwrap().should_run);
-        assert_eq!(true, file_copy.execute().is_ok());
-        assert_eq!(false, file_copy.plan().unwrap().should_run);
+        assert_eq!(Check::Drift, file_copy.check().unwrap());
+        assert!(file_copy.execute().is_ok());
+        assert_eq!(Check::InSync, file_copy.check().unwrap());
     }
 
     #[test]
@@ -166,6 +161,26 @@ mod tests {
             to: to.path().to_path_buf(),
         };
 
-        assert_eq!(false, file_copy.plan().unwrap().should_run);
+        assert!(file_copy.check().is_err());
+    }
+
+    #[test]
+    fn a_missing_file_is_pending() {
+        let dir = tempfile::tempdir().unwrap();
+        let existing = tempfile::NamedTempFile::new().unwrap();
+        let missing = dir.path().join("missing");
+
+        let from_missing = Copy {
+            from: missing.clone(),
+            to: existing.path().to_path_buf(),
+        };
+        let to_missing = Copy {
+            from: existing.path().to_path_buf(),
+            to: missing.clone(),
+        };
+
+        let pending = Check::Pending { needs: missing };
+        assert_eq!(pending, from_missing.check().unwrap());
+        assert_eq!(pending, to_missing.check().unwrap());
     }
 }

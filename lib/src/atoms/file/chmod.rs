@@ -1,6 +1,6 @@
 //! Sets the permissions of a file
 
-use crate::atoms::Outcome;
+use crate::atoms::Check;
 use serde::{Deserialize, Serialize};
 
 use super::super::Change;
@@ -27,44 +27,27 @@ impl std::fmt::Display for Chmod {
 }
 
 #[cfg(unix)]
-use {std::os::unix::prelude::PermissionsExt, tracing::error};
+use {anyhow::Context, std::os::unix::prelude::PermissionsExt};
 
 #[cfg(unix)]
 impl Change for Chmod {
-    fn plan(&self) -> anyhow::Result<Outcome> {
+    fn check(&self) -> anyhow::Result<Check> {
         // If the file doesn't exist, assume it's because
         // another atom is going to provide it.
         if !self.path.exists() {
-            return Ok(Outcome {
-                side_effects: vec![],
-                should_run: true,
-            });
+            return Ok(Check::Drift);
         }
 
-        let metadata = match std::fs::metadata(&self.path) {
-            Ok(m) => m,
-            Err(err) => {
-                error!(
-                    "Couldn't get metadata for {}, rejecting atom: {}",
-                    &self.path.display(),
-                    err.to_string()
-                );
-
-                return Ok(Outcome {
-                    side_effects: vec![],
-                    should_run: false,
-                });
-            }
-        };
+        let metadata = std::fs::metadata(&self.path)
+            .with_context(|| format!("can't read the permissions of {}", self.path.display()))?;
 
         // We expect permissions to come through as if the user was using chmod themselves.
         // This means we support 644/755 decimal syntax. We need to add 0o100000 to support
         // the part of chmod they don't often type.
-        Ok(Outcome {
-            side_effects: vec![],
-            should_run: std::fs::Permissions::from_mode(0o100000 + self.mode).mode()
+        Ok(Check::drift_if(
+            std::fs::Permissions::from_mode(0o100000 + self.mode).mode()
                 != metadata.permissions().mode(),
-        })
+        ))
     }
 
     fn execute(&self) -> anyhow::Result<()> {
@@ -90,12 +73,9 @@ impl Change for Chmod {
 
 #[cfg(not(unix))]
 impl Change for Chmod {
-    fn plan(&self) -> anyhow::Result<Outcome> {
+    fn check(&self) -> anyhow::Result<Check> {
         // Never run
-        Ok(Outcome {
-            side_effects: vec![],
-            should_run: false,
-        })
+        Ok(Check::InSync)
     }
 
     fn execute(&self) -> anyhow::Result<()> {
@@ -141,14 +121,14 @@ mod tests {
             mode: 0o644,
         };
 
-        assert_eq!(false, file_chmod.plan().unwrap().should_run);
+        assert_eq!(Check::InSync, file_chmod.check().unwrap());
 
         let file_chmod = Chmod {
             path: temp_dir.path().join("644"),
             mode: 0o640,
         };
 
-        assert_eq!(true, file_chmod.plan().unwrap().should_run);
+        assert_eq!(Check::Drift, file_chmod.check().unwrap());
     }
 
     #[test]
@@ -183,16 +163,16 @@ mod tests {
             mode: 0o644,
         };
 
-        assert_eq!(false, file_chmod.plan().unwrap().should_run);
+        assert_eq!(Check::InSync, file_chmod.check().unwrap());
 
         let file_chmod = Chmod {
             path: temp_dir.path().join("644"),
             mode: 0o640,
         };
 
-        assert_eq!(true, file_chmod.plan().unwrap().should_run);
-        assert_eq!(true, file_chmod.execute().is_ok());
-        assert_eq!(false, file_chmod.plan().unwrap().should_run);
+        assert_eq!(Check::Drift, file_chmod.check().unwrap());
+        assert!(file_chmod.execute().is_ok());
+        assert_eq!(Check::InSync, file_chmod.check().unwrap());
     }
 
     #[test]

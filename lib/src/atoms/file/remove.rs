@@ -3,9 +3,9 @@
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
-use tracing::error;
+use anyhow::{bail, Context};
 
-use crate::atoms::{Change, Outcome};
+use crate::atoms::{Change, Check};
 
 /// Removes a file. Not a directory
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -21,52 +21,23 @@ impl std::fmt::Display for Remove {
 }
 
 impl Change for Remove {
-    fn plan(&self) -> anyhow::Result<crate::atoms::Outcome> {
+    fn check(&self) -> anyhow::Result<Check> {
+        if !self.target.exists() {
+            return Ok(Check::InSync);
+        }
         if !self.target.is_file() {
-            error!(
-                "Cannot plan: target isn`t a file: {}",
-                self.target.display()
-            );
-
-            return Ok(Outcome {
-                side_effects: vec![],
-                should_run: false,
-            });
+            bail!("{} isn't a file", self.target.display());
         }
 
-        let metadata = self.target.parent().map(|p| p.metadata());
+        let parent = self
+            .target
+            .parent()
+            .with_context(|| format!("{} has no parent directory", self.target.display()))?;
+        if parent.metadata()?.permissions().readonly() {
+            bail!("no permission to remove {}", self.target.display());
+        }
 
-        match metadata {
-            Some(v) => {
-                if v?.permissions().readonly() {
-                    error!(
-                        "Cannot plan: Dont have permission to delete {}",
-                        self.target.display()
-                    );
-
-                    return Ok(Outcome {
-                        side_effects: vec![],
-                        should_run: false,
-                    });
-                }
-            }
-            None => {
-                error!(
-                    "Cannot plan: Failed to get parent directory of file: {}",
-                    self.target.display()
-                );
-
-                return Ok(Outcome {
-                    side_effects: vec![],
-                    should_run: false,
-                });
-            }
-        };
-
-        Ok(Outcome {
-            side_effects: vec![],
-            should_run: true,
-        })
+        Ok(Check::Drift)
     }
 
     fn execute(&self) -> anyhow::Result<()> {
@@ -94,7 +65,7 @@ mod tests {
             target: target_file.path().to_path_buf(),
         };
 
-        assert_eq!(true, file_remove.plan().unwrap().should_run)
+        assert_eq!(Check::Drift, file_remove.check().unwrap())
     }
 
     #[test]
@@ -111,8 +82,28 @@ mod tests {
             target: target_file.path().to_path_buf(),
         };
 
-        assert_eq!(true, file_remove.plan().unwrap().should_run);
-        assert_eq!(true, file_remove.execute().is_ok());
-        assert_eq!(false, file_remove.plan().unwrap().should_run)
+        assert_eq!(Check::Drift, file_remove.check().unwrap());
+        assert!(file_remove.execute().is_ok());
+        assert_eq!(Check::InSync, file_remove.check().unwrap())
+    }
+
+    #[test]
+    fn a_missing_file_is_in_sync() {
+        let dir = tempfile::tempdir().unwrap();
+        let file_remove = Remove {
+            target: dir.path().join("gone"),
+        };
+
+        assert_eq!(Check::InSync, file_remove.check().unwrap());
+    }
+
+    #[test]
+    fn a_directory_is_not_removed() {
+        let dir = tempfile::tempdir().unwrap();
+        let file_remove = Remove {
+            target: dir.path().to_path_buf(),
+        };
+
+        assert!(file_remove.check().is_err());
     }
 }

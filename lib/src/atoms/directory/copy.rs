@@ -1,6 +1,6 @@
 //! Copies the contents of a directory into another one
 
-use crate::atoms::Outcome;
+use crate::atoms::Check;
 use serde::{Deserialize, Serialize};
 
 use super::super::Change;
@@ -31,11 +31,8 @@ impl std::fmt::Display for Copy {
 
 impl Change for Copy {
     /// Always runs: comparing every file would cost about as much as copying them
-    fn plan(&self) -> anyhow::Result<Outcome> {
-        Ok(Outcome {
-            side_effects: vec![],
-            should_run: true,
-        })
+    fn check(&self) -> anyhow::Result<Check> {
+        Ok(Check::Drift)
     }
 
     fn execute(&self) -> anyhow::Result<()> {
@@ -143,7 +140,7 @@ mod tests {
     #[test]
     fn it_always_runs() {
         let (_dir, from, to) = source();
-        assert_eq!(true, Copy { from, to }.plan().unwrap().should_run);
+        assert_eq!(Check::Drift, Copy { from, to }.check().unwrap());
     }
 
     #[test]

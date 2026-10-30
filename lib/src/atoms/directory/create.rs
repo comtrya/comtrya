@@ -1,6 +1,6 @@
 //! Creates a directory
 
-use crate::atoms::Outcome;
+use crate::atoms::Check;
 use serde::{Deserialize, Serialize};
 
 use super::super::Change;
@@ -24,11 +24,8 @@ impl std::fmt::Display for Create {
 }
 
 impl Change for Create {
-    fn plan(&self) -> anyhow::Result<Outcome> {
-        Ok(Outcome {
-            side_effects: vec![],
-            should_run: !self.path.exists(),
-        })
+    fn check(&self) -> anyhow::Result<Check> {
+        Ok(Check::drift_if(!self.path.exists()))
     }
 
     fn execute(&self) -> anyhow::Result<()> {
@@ -50,11 +47,11 @@ mod tests {
         let atom = Create {
             path: std::path::PathBuf::from("/some-random-path"),
         };
-        assert_eq!(true, atom.plan().unwrap().should_run);
+        assert_eq!(Check::Drift, atom.check().unwrap());
 
         let temp = temp_dir();
         let atom = Create { path: temp };
-        assert_eq!(false, atom.plan().unwrap().should_run);
+        assert_eq!(Check::InSync, atom.check().unwrap());
     }
 
     #[test]
@@ -73,8 +70,8 @@ mod tests {
 
         assert_eq!(false, temp_dir.path().join("create-me").exists());
 
-        assert_eq!(true, atom.execute().is_ok());
-        assert_eq!(false, atom.plan().unwrap().should_run);
+        assert!(atom.execute().is_ok());
+        assert_eq!(Check::InSync, atom.check().unwrap());
 
         assert_eq!(true, temp_dir.path().join("create-me").is_dir());
     }

@@ -1,14 +1,14 @@
 //! Decrypts age-encrypted contents into a file
 
-use crate::atoms::Outcome;
+use crate::atoms::Check;
 use serde::{Deserialize, Serialize};
 
 use super::super::Change;
 use age::armor::ArmoredReader;
 use age::secrecy::SecretString;
+use anyhow::Context;
 use std::io::Read;
 use std::path::PathBuf;
-use tracing::error;
 
 /// Writes decrypted contents to a file, every time. Skipped if they can't be decrypted
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -32,35 +32,18 @@ impl std::fmt::Display for Decrypt {
 }
 
 impl Change for Decrypt {
-    fn plan(&self) -> anyhow::Result<Outcome> {
+    fn check(&self) -> anyhow::Result<Check> {
         // If the file doesn't exist, assume it's because
         // another atom is going to provide it.
         if !self.path.exists() {
-            return Ok(Outcome {
-                side_effects: vec![],
-                should_run: true,
-            });
+            return Ok(Check::Drift);
         }
 
-        // Decrypting file with provided passphrase makes plan work
-        match decrypt(&self.passphrase, &self.encrypted_content) {
-            Ok(_) => Ok(Outcome {
-                side_effects: vec![],
-                should_run: true,
-            }),
-            Err(err) => {
-                error!(
-                    "Cannot decrypt file {} because {:?}. Skipping.",
-                    self.path.display(),
-                    err
-                );
+        // Fails early for a wrong passphrase
+        decrypt(&self.passphrase, &self.encrypted_content)
+            .with_context(|| format!("can't decrypt {}", self.path.display()))?;
 
-                Ok(Outcome {
-                    side_effects: vec![],
-                    should_run: false,
-                })
-            }
-        }
+        Ok(Check::Drift)
     }
 
     fn execute(&self) -> anyhow::Result<()> {
@@ -115,7 +98,7 @@ mod tests {
         };
 
         // plan
-        assert_eq!(true, decrypt.plan().unwrap().should_run);
+        assert_eq!(Check::Drift, decrypt.check().unwrap());
 
         // prepare another atom
         let another_decrypt = Decrypt {
@@ -125,7 +108,7 @@ mod tests {
         };
 
         // plan
-        assert_eq!(false, another_decrypt.plan().unwrap().should_run);
+        assert!(another_decrypt.check().is_err());
 
         Ok(())
     }
@@ -149,7 +132,7 @@ mod tests {
         };
 
         // plan, execute
-        assert_eq!(true, decrypt.plan().unwrap().should_run);
+        assert_eq!(Check::Drift, decrypt.check().unwrap());
         assert_eq!(true, decrypt.execute().is_ok());
 
         Ok(())
