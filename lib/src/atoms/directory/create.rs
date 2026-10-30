@@ -48,7 +48,7 @@ mod tests {
         let atom = Create {
             path: std::path::PathBuf::from("/some-random-path"),
         };
-        assert_eq!(Check::Drift, atom.check().unwrap());
+        assert_eq!(Check::Drift(None), atom.check().unwrap());
 
         let temp = temp_dir();
         let atom = Create { path: temp };

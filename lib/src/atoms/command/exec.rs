@@ -131,7 +131,7 @@ impl std::fmt::Display for Exec {
 
 impl Change for Exec {
     fn check(&self) -> Result<Check> {
-        Ok(Check::Drift)
+        Ok(Check::Drift(None))
     }
 
     fn execute(&self) -> Result<()> {

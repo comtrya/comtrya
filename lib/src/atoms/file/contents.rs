@@ -33,12 +33,15 @@ impl Change for SetContents {
         // If the file doesn't exist, assume it's because
         // another atom is going to provide it.
         if !self.path.exists() {
-            return Ok(Check::Drift);
+            let change = format!("{} will be created", self.path.display());
+            return Ok(Check::Drift(Some(change)));
         }
 
-        let contents = std::fs::read(&self.path).map_err(Error::io("read", &self.path))?;
+        let current = std::fs::read(&self.path).map_err(Error::io("read", &self.path))?;
 
-        Ok(Check::drift_if(!contents.eq(&self.contents)))
+        Ok(Check::drift_if_with(current != self.contents, || {
+            Some(self.describe(&current))
+        }))
     }
 
     fn execute(&self) -> Result<()> {
@@ -46,31 +49,25 @@ impl Change for SetContents {
 
         Ok(())
     }
+}
 
-    fn describe_change(&self) -> Option<String> {
+impl SetContents {
+    /// How the file changes from its `current` contents: a diff, unless that would show secrets
+    /// or binary data
+    fn describe(&self, current: &[u8]) -> String {
         let path = self.path.display();
 
-        if !self.path.exists() {
-            return Some(format!("{path} will be created"));
-        }
-
         if self.redact {
-            return Some(format!(
-                "Contents of {path} change (not shown, they may contain secrets)"
-            ));
+            return format!("Contents of {path} change (not shown, they may contain secrets)");
         }
-
-        let Ok(current) = std::fs::read(&self.path) else {
-            return Some(format!("Contents of {path} change"));
-        };
 
         // Also a file that was just created by an earlier atom
         if current.is_empty() {
-            return Some(format!("Contents of {path} are written"));
+            return format!("Contents of {path} are written");
         }
 
         match (
-            std::str::from_utf8(&current),
+            std::str::from_utf8(current),
             std::str::from_utf8(&self.contents),
         ) {
             (Ok(current), Ok(new)) => {
@@ -80,9 +77,9 @@ impl Change for SetContents {
                     .header("current", "new")
                     .to_string();
 
-                Some(format!("Contents of {path} change:\n{}", diff.trim_end()))
+                format!("Contents of {path} change:\n{}", diff.trim_end())
             }
-            _ => Some(format!("Binary contents of {path} change")),
+            _ => format!("Binary contents of {path} change"),
         }
     }
 }
@@ -116,7 +113,7 @@ mod tests {
             redact: false,
         };
 
-        assert_eq!(Check::Drift, file_contents.check().unwrap());
+        assert!(matches!(file_contents.check().unwrap(), Check::Drift(_)));
         assert!(file_contents.execute().is_ok());
         assert_eq!(Check::InSync, file_contents.check().unwrap());
     }
@@ -135,7 +132,9 @@ mod tests {
         let path = dir.path().join("new");
 
         let change = set_contents(&path, b"secret", false)
-            .describe_change()
+            .check()
+            .unwrap()
+            .change()
             .unwrap();
 
         assert!(change.ends_with("will be created"), "{change}");
@@ -147,7 +146,9 @@ mod tests {
         let file = tempfile::NamedTempFile::new().unwrap();
 
         let change = set_contents(file.path(), b"secret", false)
-            .describe_change()
+            .check()
+            .unwrap()
+            .change()
             .unwrap();
 
         assert!(change.ends_with("are written"), "{change}");
@@ -159,7 +160,9 @@ mod tests {
         std::fs::write(file.path(), "one\ntwo\nthree\n").unwrap();
 
         let change = set_contents(file.path(), b"one\n2\nthree\n", false)
-            .describe_change()
+            .check()
+            .unwrap()
+            .change()
             .unwrap();
 
         assert!(change.contains("@@"), "{change}");
@@ -174,7 +177,9 @@ mod tests {
         std::fs::write(file.path(), "old-secret\n").unwrap();
 
         let change = set_contents(file.path(), b"new-secret\n", true)
-            .describe_change()
+            .check()
+            .unwrap()
+            .change()
             .unwrap();
 
         assert!(!change.contains("secret\n"), "{change}");
@@ -187,7 +192,9 @@ mod tests {
         std::fs::write(file.path(), [0xff, 0xfe, 0x00]).unwrap();
 
         let change = set_contents(file.path(), b"text\n", false)
-            .describe_change()
+            .check()
+            .unwrap()
+            .change()
             .unwrap();
 
         assert!(change.starts_with("Binary contents of"), "{change}");

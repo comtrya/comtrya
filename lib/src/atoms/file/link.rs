@@ -37,7 +37,9 @@ impl Change for Link {
         // `symlink_metadata` doesn't follow links, so a broken symlink still counts as existing.
         let metadata = match std::fs::symlink_metadata(&self.target) {
             Ok(metadata) => metadata,
-            Err(err) if err.kind() == std::io::ErrorKind::NotFound => return Ok(Check::Drift),
+            Err(err) if err.kind() == std::io::ErrorKind::NotFound => {
+                return Ok(Check::Drift(None))
+            }
             Err(err) => return Err(Error::io("read", &self.target)(err)),
         };
 
@@ -126,7 +128,7 @@ mod tests {
             target: from_dir.path().join("symlink"),
             source: to_file.path().to_path_buf(),
         };
-        assert_eq!(Check::Drift, atom.check().unwrap());
+        assert_eq!(Check::Drift(None), atom.check().unwrap());
         match atom.execute() {
             Ok(_) => {
                 assert_eq!(Check::InSync, atom.check().unwrap());
@@ -159,7 +161,7 @@ mod tests {
             source: source.clone(),
             target: target.clone(),
         };
-        assert_eq!(Check::Drift, atom.check().unwrap());
+        assert_eq!(Check::Drift(None), atom.check().unwrap());
         atom.execute().unwrap();
 
         assert_eq!(source, std::fs::read_link(&target).unwrap());
@@ -181,7 +183,7 @@ mod tests {
             source: source.clone(),
             target: target.clone(),
         };
-        assert_eq!(Check::Drift, atom.check().unwrap());
+        assert_eq!(Check::Drift(None), atom.check().unwrap());
         atom.execute().unwrap();
 
         assert_eq!(source, std::fs::read_link(&target).unwrap());

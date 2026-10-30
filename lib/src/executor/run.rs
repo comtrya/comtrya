@@ -15,6 +15,9 @@ use std::{
 };
 use tracing::{debug, error, info, span, warn};
 
+/// What a step changes, like a diff, if its atom can say more than its name
+type Change = Option<String>;
+
 /// One `comtrya apply`: walks the graph and remembers which manifests failed
 pub(super) struct Run<'a> {
     /// The manifests and their dependencies
@@ -173,11 +176,11 @@ impl<'a> Run<'a> {
         let mut ran_any = false;
         let mut successful = true;
         for step in steps {
-            if !self.is_needed(&step) {
+            let Some(change) = self.needed_change(&step) else {
                 continue;
-            }
+            };
             ran_any = true;
-            if !self.run_step(step) {
+            if !self.run_step(step, change) {
                 successful = false;
                 break;
             }
@@ -191,24 +194,25 @@ impl<'a> Run<'a> {
         successful
     }
 
-    /// Whether a step has to run: its initializers allow it, and its atom finds something to
-    /// change. An atom that can't tell, or can't run, is skipped with a warning
-    fn is_needed(&self, step: &Step) -> bool {
+    /// `Some` if a step has to run: its initializers allow it, and its atom finds something to
+    /// change. Inside is what it changes, if the atom can say. An atom that can't tell, or
+    /// can't run, is skipped with a warning
+    fn needed_change(&self, step: &Step) -> Option<Change> {
         if !step.do_initializers_allow_us_to_run() {
-            return false;
+            return None;
         }
 
         match step.atom.check() {
-            Ok(Check::InSync) => false,
-            Ok(Check::Drift) => true,
-            Ok(Check::Pending { needs }) if self.will_exist(&needs) => true,
+            Ok(Check::InSync) => None,
+            Ok(Check::Drift(change)) => Some(change),
+            Ok(Check::Pending { needs }) if self.will_exist(&needs) => Some(None),
             Ok(Check::Pending { needs }) => {
                 warn!("Skipping {step}: {} doesn't exist", needs.display());
-                false
+                None
             }
             Err(err) => {
                 warn!("Skipping {step}: {:#}", anyhow::Error::from(err));
-                false
+                None
             }
         }
     }
@@ -221,8 +225,8 @@ impl<'a> Run<'a> {
     }
 
     /// Shows what the step changes and, unless this is a dry run, runs it. False if it failed
-    fn run_step(&mut self, step: Step) -> bool {
-        if let Some(change) = step.atom.describe_change() {
+    fn run_step(&mut self, step: Step, change: Change) -> bool {
+        if let Some(change) = change {
             if self.dry_run {
                 info!("{change}");
             } else {

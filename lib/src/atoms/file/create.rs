@@ -42,7 +42,7 @@ mod tests {
             path: std::path::PathBuf::from("some-random-path"),
         };
 
-        assert_eq!(Check::Drift, file_create.check().unwrap());
+        assert_eq!(Check::Drift(None), file_create.check().unwrap());
 
         let temp_file = match tempfile::NamedTempFile::new() {
             std::result::Result::Ok(file) => file,

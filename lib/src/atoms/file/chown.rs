@@ -38,7 +38,7 @@ impl Change for Chown {
         // If the file doesn't exist, assume it's because
         // another atom is going to provide it.
         if !self.path.exists() {
-            return Ok(Check::Drift);
+            return Ok(Check::Drift(None));
         }
 
         let metadata =
@@ -134,7 +134,7 @@ mod tests {
             group: String::from("daemon"),
         };
 
-        assert_eq!(Check::Drift, file_chown.check().unwrap());
+        assert_eq!(Check::Drift(None), file_chown.check().unwrap());
 
         let file_chown = Chown {
             path: temp_file.path().to_path_buf(),
@@ -142,7 +142,7 @@ mod tests {
             group,
         };
 
-        assert_eq!(Check::Drift, file_chown.check().unwrap());
+        assert_eq!(Check::Drift(None), file_chown.check().unwrap());
 
         let file_chown = Chown {
             path: temp_file.path().to_path_buf(),
@@ -150,7 +150,7 @@ mod tests {
             group: String::from("daemon"),
         };
 
-        assert_eq!(Check::Drift, file_chown.check().unwrap());
+        assert_eq!(Check::Drift(None), file_chown.check().unwrap());
     }
 
     #[test]

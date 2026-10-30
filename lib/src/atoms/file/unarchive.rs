@@ -26,7 +26,7 @@ impl Change for Unarchive {
             return Ok(Check::InSync);
         }
 
-        Ok(Check::needs(&self.origin).unwrap_or(Check::Drift))
+        Ok(Check::needs(&self.origin).unwrap_or(Check::Drift(None)))
     }
 
     // Apply new to old
@@ -86,6 +86,6 @@ mod tests {
         };
 
         assert_eq!(Check::InSync, atom(false).check().unwrap());
-        assert_eq!(Check::Drift, atom(true).check().unwrap());
+        assert_eq!(Check::Drift(None), atom(true).check().unwrap());
     }
 }

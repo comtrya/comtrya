@@ -115,7 +115,7 @@ mod tests {
         let to = dir.path().join("file");
         let atom = atom(serve(200, BODY), to.clone(), Some(&digest(BODY)));
 
-        assert_eq!(Check::Drift, atom.check().unwrap());
+        assert_eq!(Check::Drift(None), atom.check().unwrap());
         atom.execute().unwrap();
 
         assert_eq!(BODY, std::fs::read(&to).unwrap().as_slice());
@@ -146,7 +146,7 @@ mod tests {
         std::fs::write(&to, "outdated").unwrap();
         let atom = atom(serve(200, BODY), to.clone(), Some(&digest(BODY)));
 
-        assert_eq!(Check::Drift, atom.check().unwrap());
+        assert_eq!(Check::Drift(None), atom.check().unwrap());
         atom.execute().unwrap();
 
         assert_eq!(BODY, std::fs::read(&to).unwrap().as_slice());
@@ -188,7 +188,7 @@ mod tests {
             sha256: None,
         };
 
-        assert_eq!(Check::Drift, atom.check().unwrap());
+        assert_eq!(Check::Drift(None), atom.check().unwrap());
 
         let result = atom.execute();
         assert!(result.is_ok());
