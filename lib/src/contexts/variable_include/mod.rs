@@ -1,5 +1,5 @@
 use std::collections::{BTreeMap, HashMap};
-use std::sync::{mpsc, Arc};
+use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use anyhow::Result;
@@ -7,6 +7,8 @@ use reqwest::Url;
 
 use crate::config::Config;
 use crate::runner::SystemRunner;
+use crate::runtime;
+use tokio::task::JoinHandle;
 use tracing::warn;
 
 pub mod dns;
@@ -29,8 +31,9 @@ pub fn gather(config: &Config) -> BTreeMap<String, String> {
     gather_with(&sources, TIMEOUT, read)
 }
 
-/// Reads every source with `read` in its own thread and merges the variables in the order of
-/// `sources`, so a later source overrides an earlier one, as before they were read at once
+/// Reads every source with `read` on the runtime's blocking pool and merges the variables in
+/// the order of `sources`, so a later source overrides an earlier one, as before they were read
+/// at once
 fn gather_with(
     sources: &[String],
     timeout: Duration,
@@ -44,44 +47,37 @@ fn gather_with(
         .map(|source| (source, spawn_read(source, &read)))
         .collect();
 
-    let mut variables = BTreeMap::new();
-    for (source, receiver) in pending {
-        let waited = receiver.recv_timeout(deadline.saturating_duration_since(Instant::now()));
-
-        match waited {
-            Ok(Ok(values)) => variables.extend(values),
-            Ok(Err(err)) => {
-                warn!("Can't read the variables of {source} in include_variables: {err}")
-            }
-            Err(mpsc::RecvTimeoutError::Timeout) => warn!(
-                "Left out the variables of {source} in include_variables: no answer within {}s",
-                timeout.as_secs()
-            ),
-            Err(mpsc::RecvTimeoutError::Disconnected) => {
-                warn!("Can't read the variables of {source} in include_variables: it crashed")
+    runtime::block_on(async {
+        let mut variables = BTreeMap::new();
+        for (source, task) in pending {
+            match tokio::time::timeout_at(deadline.into(), task).await {
+                Ok(Ok(Ok(values))) => variables.extend(values),
+                Ok(Ok(Err(err))) => {
+                    warn!("Can't read the variables of {source} in include_variables: {err}")
+                }
+                Ok(Err(_)) => {
+                    warn!("Can't read the variables of {source} in include_variables: it crashed")
+                }
+                Err(_) => warn!(
+                    "Left out the variables of {source} in include_variables: no answer within {}s",
+                    timeout.as_secs()
+                ),
             }
         }
-    }
-
-    variables
+        variables
+    })
 }
 
-/// Reads `source` in a new thread. The thread isn't joined: one that never answers is left
-/// behind and ends with comtrya
+/// Reads `source` on the blocking pool. A task that never answers is left behind and ends with
+/// comtrya
 fn spawn_read(
     source: &str,
     read: &Arc<impl Fn(&str) -> Result<Values> + Send + Sync + 'static>,
-) -> mpsc::Receiver<Result<Values>> {
-    let (sender, receiver) = mpsc::channel();
+) -> JoinHandle<Result<Values>> {
     let source = source.to_string();
     let read = Arc::clone(read);
 
-    std::thread::spawn(move || {
-        // The receiver is gone after a timeout, nobody needs the answer then
-        let _ = sender.send(read(&source));
-    });
-
-    receiver
+    runtime::spawn_blocking(move || read(&source))
 }
 
 /// Reads the variables of one `include_variables` source
