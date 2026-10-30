@@ -21,6 +21,8 @@ Adds a group to the system.
 | action     | string | no       | `group.add`          |
 | group_name | string | no       | name of group to add |
 
+The action fails when `group_name` is empty or the tool (`groupadd`, `dscl` or `pw`) isn't installed.
+
 
 ### Example
 

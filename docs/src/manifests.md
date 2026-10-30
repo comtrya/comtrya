@@ -44,10 +44,16 @@ Comtrya warns about keys it doesn't read, like a misspelled field, and names the
 WARN dev.yaml: `ags` in action 1 (command.run) is ignored, did you mean `args`?
 ```
 
-The manifest still runs without them. When the misspelled key is a required one, the manifest can't be loaded, and the error names the likely typo. A misspelled action name fails loading the same way, naming the closest action:
+Keys inside a field that holds an object, like `key` of `package.repository`, and keys in variants are checked too:
 
 ```
-unknown action `file.cpy` in action 1, did you mean `file.copy`?
+WARN repo.yaml: `ulr` in `key` of action 1 (package.repository) is ignored, did you mean `url`?
+```
+
+The manifest still runs without them. When the misspelled key is a required one, the manifest can't be loaded, and the error names the likely typo. A misspelled action name fails loading the same way, naming the closest action. Load errors give the action's position (counted from 0) and line:
+
+```
+actions[0]: unknown action `file.cpy`, did you mean `file.copy`? at line 2 column 5
 ```
 
 A `Comtrya.yaml` in the manifest directory is the config, not a manifest.

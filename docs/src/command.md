@@ -16,6 +16,8 @@ This is the most basic, but yet powerful action as it can be used to run anythin
 | env        | HashMap<string, string> | yes      | key and values for scoped environment variables |
 | stdout     | string                  | yes      | file to write the command's output to           |
 
+The command's output is logged line by line while it runs, visible with `-v`. Its stdin is empty, so a command that asks a question gets an end of file instead of waiting. A command that fails stops its action with its exit code and what it wrote to stderr, e.g. `Command failed with exit code: 1: …`; one ended by a signal says so, e.g. `Command was killed by signal 9`.
+
 ### Scoped environment variables
 
 Sometimes, environment variables are needed to run a command or set of commands. `env` sets environment variables for the command of a single `command.run` action only; comtrya's own environment and later actions don't see them. A `PATH` in `env` is also where comtrya looks for the command. Multiple environment variables are supported.
