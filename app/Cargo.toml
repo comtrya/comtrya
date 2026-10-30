@@ -30,5 +30,6 @@ ctrlc = "3.5.2"
 [dev-dependencies]
 assert_cmd = "2.1"
 predicates = "3.1"
+serde_json = "1.0"
 tempfile = "3.26"
 walkdir = "2.5.0"

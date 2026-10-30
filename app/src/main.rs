@@ -43,6 +43,7 @@ pub(crate) fn execute(runtime: Runtime) -> anyhow::Result<()> {
         Commands::Version(version) => version.execute(&runtime),
         Commands::Contexts(contexts) => contexts.execute(&runtime),
         Commands::GenCompletions(gen_completions) => gen_completions.execute(&runtime),
+        Commands::Helper => unreachable!("the helper runs before the runtime is built"),
     }
 }
 
@@ -74,6 +75,14 @@ fn configure_tracing(args: &GlobalArgs) {
 
 fn main() -> anyhow::Result<()> {
     let args = GlobalArgs::parse();
+    if let Commands::Helper = args.command {
+        // It answers on stdout, so nothing else may write there, not even the log. It reads no
+        // configuration and gathers no facts: it runs as root and only does what it's sent
+        return Ok(comtrya_lib::helper::serve(
+            io::stdin().lock(),
+            io::stdout().lock(),
+        )?);
+    }
     configure_tracing(&args);
 
     let config = match config::load_config(&args) {

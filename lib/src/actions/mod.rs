@@ -27,6 +27,12 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use tracing::{error, warn};
 
+/// For `skip_serializing_if`: a flag that's off isn't written, like in manifests from before it
+/// existed
+fn is_false(flag: &bool) -> bool {
+    !flag
+}
+
 /// A field that a manifest sets but comtrya doesn't use, and what to do instead
 type Ignored = (&'static str, &'static str);
 
@@ -87,10 +93,15 @@ where
     }
 
     fn plan(&self, manifest: &Manifest, cx: &PlanCx) -> Result<Vec<Step>> {
-        match self.select(cx.contexts)? {
-            Some(action) => action.plan(manifest, cx),
-            None => Ok(vec![]),
+        let Some(action) = self.select(cx.contexts)? else {
+            return Ok(vec![]);
+        };
+
+        let steps = action.plan(manifest, cx)?;
+        if !action.privileged() {
+            return Ok(steps);
         }
+        Ok(steps.into_iter().map(Step::as_root).collect())
     }
 }
 
@@ -161,6 +172,11 @@ pub trait Action {
     }
     /// The steps that bring the system to what the action asks for. Doesn't change the system
     fn plan(&self, manifest: &Manifest, cx: &PlanCx) -> Result<Vec<Step>>;
+
+    /// Whether all of its steps run as root, see `privileged` on the file and directory actions
+    fn privileged(&self) -> bool {
+        false
+    }
 }
 
 /// What actions plan with: the typed facts about this machine, and the contexts that templates
@@ -338,6 +354,29 @@ actions:
         #[test]
         fn a_broken_action_where_is_an_error() {
             assert!(action(Some("os.name =="), &[]).select(&linux()).is_err());
+        }
+    }
+
+    #[test]
+    fn a_privileged_action_plans_root_steps() {
+        use crate::actions::PlanCx;
+        use crate::atoms::RunAs;
+
+        let dir = tempfile::tempdir().unwrap();
+        for key in ["privileged", "sudo"] {
+            let yaml = format!(
+                "- action: directory.create\n  path: '{}'\n  {key}: true\n",
+                dir.path().join("new").display()
+            );
+            let actions: Vec<Actions> = serde_yaml_ng::from_str(&yaml).unwrap();
+
+            let steps = actions[0]
+                .inner_ref()
+                .plan(&Manifest::default(), &PlanCx::empty())
+                .unwrap();
+
+            assert!(!steps.is_empty());
+            assert!(steps.iter().all(|step| step.run_as == RunAs::Root), "{key}");
         }
     }
 }

@@ -52,6 +52,15 @@ pub struct FileCopy {
     /// The group of the file, on unix. Needs `owned_by_user` too
     #[serde(rename = "owned_by_group")]
     pub owner_group: Option<String>,
+    /// Make the change as root, in the privileged helper that the privilege provider (like
+    /// sudo) starts once per run, unless comtrya runs as root
+    #[serde(
+        default,
+        alias = "sudo",
+        skip_serializing_if = "crate::actions::is_false"
+    )]
+    #[schemars(extend("x-aliases" = ["sudo"]))]
+    pub privileged: bool,
 }
 
 /// Files aren't templates unless `template` says so
@@ -110,6 +119,10 @@ impl FileCopy {
 impl FileAction for FileCopy {}
 
 impl Action for FileCopy {
+    fn privileged(&self) -> bool {
+        self.privileged
+    }
+
     fn summarize(&self) -> String {
         format!("Copy file from {} to {}", self.from, self.to)
     }

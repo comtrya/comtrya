@@ -24,6 +24,15 @@ pub struct FileUnarchive {
     /// Unpack again when `to` exists already. On by default; when off, an existing `to` is left
     /// alone
     pub force: Option<bool>,
+    /// Make the change as root, in the privileged helper that the privilege provider (like
+    /// sudo) starts once per run, unless comtrya runs as root
+    #[serde(
+        default,
+        alias = "sudo",
+        skip_serializing_if = "crate::actions::is_false"
+    )]
+    #[schemars(extend("x-aliases" = ["sudo"]))]
+    pub privileged: bool,
 }
 
 impl FileUnarchive {}
@@ -31,6 +40,10 @@ impl FileUnarchive {}
 impl FileAction for FileUnarchive {}
 
 impl Action for FileUnarchive {
+    fn privileged(&self) -> bool {
+        self.privileged
+    }
+
     fn summarize(&self) -> String {
         format!("Unarchiving file {} to {}", self.from, self.to)
     }

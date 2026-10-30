@@ -47,6 +47,18 @@ impl Step {
         self.atom_to_run_with(privilege, utilities::running_as_root())
     }
 
+    /// Whether the atom has to run in the privileged helper: a root step that isn't a program,
+    /// unless comtrya runs as root already. Programs run through the privilege provider, see
+    /// [`Step::atom_to_run`]
+    pub fn needs_helper(&self) -> bool {
+        self.needs_helper_with(utilities::running_as_root())
+    }
+
+    /// [`Step::needs_helper`], with whether comtrya runs as root
+    fn needs_helper_with(&self, as_root: bool) -> bool {
+        self.run_as == RunAs::Root && !as_root && !matches!(self.atom, Atom::Exec(_))
+    }
+
     /// [`Step::atom_to_run`], with whether comtrya runs as root
     fn atom_to_run_with(&self, privilege: &Privilege, as_root: bool) -> atoms::Result<Atom> {
         match self.run_as {
@@ -425,5 +437,21 @@ mod tests {
             "CommandExec with: echo hi (as root)",
             root_echo().to_string()
         );
+    }
+
+    #[test]
+    fn only_root_steps_that_arent_programs_need_the_helper() {
+        let root_file = Step::new(crate::atoms::file::Create {
+            path: "/etc/x".into(),
+        })
+        .as_root();
+
+        assert!(root_file.needs_helper_with(false));
+        assert!(!root_file.needs_helper_with(true));
+        assert!(!root_echo().needs_helper_with(false));
+        assert!(!Step::new(crate::atoms::file::Create {
+            path: "/tmp/x".into()
+        })
+        .needs_helper_with(false));
     }
 }

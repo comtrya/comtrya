@@ -13,9 +13,22 @@ use std::path::PathBuf;
 pub struct DirectoryCreate {
     /// The directory to create
     pub path: String,
+    /// Make the change as root, in the privileged helper that the privilege provider (like
+    /// sudo) starts once per run, unless comtrya runs as root
+    #[serde(
+        default,
+        alias = "sudo",
+        skip_serializing_if = "crate::actions::is_false"
+    )]
+    #[schemars(extend("x-aliases" = ["sudo"]))]
+    pub privileged: bool,
 }
 
 impl Action for DirectoryCreate {
+    fn privileged(&self) -> bool {
+        self.privileged
+    }
+
     fn summarize(&self) -> String {
         format!("Creating directory {}", self.path)
     }

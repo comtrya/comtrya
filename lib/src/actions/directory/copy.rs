@@ -16,6 +16,15 @@ pub struct DirectoryCopy {
     /// The directory the contents of `from` are copied into, on every platform. Files with the
     /// same path are overwritten, other files in it are kept. A trailing `/` makes no difference
     pub to: String,
+    /// Make the change as root, in the privileged helper that the privilege provider (like
+    /// sudo) starts once per run, unless comtrya runs as root
+    #[serde(
+        default,
+        alias = "sudo",
+        skip_serializing_if = "crate::actions::is_false"
+    )]
+    #[schemars(extend("x-aliases" = ["sudo"]))]
+    pub privileged: bool,
 }
 
 impl DirectoryCopy {}
@@ -23,6 +32,10 @@ impl DirectoryCopy {}
 impl DirectoryAction for DirectoryCopy {}
 
 impl Action for DirectoryCopy {
+    fn privileged(&self) -> bool {
+        self.privileged
+    }
+
     fn summarize(&self) -> String {
         format!("Copying {} to {}", self.from, self.to)
     }
@@ -63,6 +76,7 @@ mod tests {
         let action = DirectoryCopy {
             from: String::from("mydir"),
             to: String::from("/some/where/"),
+            ..Default::default()
         };
 
         let steps = action.plan(&manifest, &PlanCx::empty()).unwrap();

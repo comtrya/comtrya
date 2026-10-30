@@ -65,6 +65,10 @@ pub enum Commands {
     ///  - fish: ```comtrya gen-completions fish | source```
     #[command(long_about, verbatim_doc_comment)]
     GenCompletions(commands::GenCompletions),
+
+    /// Runs atoms as root for `comtrya apply`, which starts it through the privilege provider
+    #[command(name = "__helper", hide = true)]
+    Helper,
 }
 
 impl Default for Commands {

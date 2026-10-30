@@ -137,12 +137,16 @@ pub enum Error {
         stderr: String,
     },
 
-    /// Only programs can run as root until the privileged helper (#502) runs any atom
-    #[error("{atom}: only programs can run as root for now")]
+    /// Only programs can be run through sudo, other atoms run as root in the privileged helper
+    #[error("{atom}: only programs can run through the privilege provider")]
     NotElevatable {
         /// The atom, as it's shown
         atom: String,
     },
+
+    /// The privileged helper failed to run an atom, or quit
+    #[error("as root: {0}")]
+    AsRoot(String),
 }
 
 /// The result of an atom
