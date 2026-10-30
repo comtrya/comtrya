@@ -1,6 +1,10 @@
 //! Runs the manifests of a [`ManifestGraph`]: each manifest's actions, each action's steps.
 
-use super::{graph::ManifestGraph, Report};
+use super::{
+    event::{Event, Observer, Skip, StepSkip},
+    graph::ManifestGraph,
+    Options, Report,
+};
 use crate::{
     actions::{Action, PlanCx},
     atoms::Check,
@@ -13,7 +17,6 @@ use std::{
     collections::HashSet,
     path::{Path, PathBuf},
 };
-use tracing::{debug, error, info, span, warn};
 
 /// What a step changes, like a diff, if its atom can say more than its name
 type Change = Option<String>;
@@ -28,6 +31,8 @@ pub(super) struct Run<'a> {
     dry_run: bool,
     /// Only manifests with this label run
     label: Option<&'a str>,
+    /// Receives what happens
+    observer: &'a dyn Observer,
     /// Manifests that failed, or were skipped because a dependency failed
     failed: HashSet<NodeIndex>,
     /// What the steps of a dry run would have made so far. A later step that needs one of
@@ -37,17 +42,13 @@ pub(super) struct Run<'a> {
 
 impl<'a> Run<'a> {
     /// A run that hasn't visited any manifest yet
-    pub(super) fn new(
-        graph: &'a ManifestGraph,
-        cx: PlanCx<'a>,
-        dry_run: bool,
-        label: Option<&'a str>,
-    ) -> Self {
+    pub(super) fn new(graph: &'a ManifestGraph, cx: PlanCx<'a>, options: &Options<'a>) -> Self {
         Run {
             graph,
             cx,
-            dry_run,
-            label,
+            dry_run: options.dry_run,
+            label: options.label,
+            observer: options.observer,
             failed: graph.broken.clone(),
             produced: vec![],
         }
@@ -83,10 +84,11 @@ impl<'a> Run<'a> {
             return;
         }
 
-        let _span = span!(tracing::Level::INFO, "", manifest = name).entered();
+        self.observer.on(&Event::ManifestStarted { name });
 
         if self.graph.depends_on_any(node, &self.failed) {
-            warn!("Skipping manifest, because a dependency failed");
+            self.observer
+                .on(&Event::ManifestSkipped(Skip::DependencyFailed));
             self.failed.insert(node);
             return;
         }
@@ -95,12 +97,11 @@ impl<'a> Run<'a> {
             return;
         }
 
-        if !self.run_actions(manifest) {
-            error!("Failed");
+        let failed = !self.run_actions(manifest);
+        if failed {
             self.failed.insert(node);
-        } else if !self.dry_run {
-            info!("Completed");
         }
+        self.observer.on(&Event::ManifestDone { failed });
     }
 
     /// Whether the manifest has the label of `--label`, if one was given
@@ -111,7 +112,8 @@ impl<'a> Run<'a> {
 
         let has_label = manifest.labels.iter().any(|l| l == label);
         if !has_label {
-            info!(message = "Skipping manifest, label not found", label);
+            self.observer
+                .on(&Event::ManifestSkipped(Skip::LabelMissing(label)));
         }
         has_label
     }
@@ -123,21 +125,24 @@ impl<'a> Run<'a> {
             return true;
         };
 
-        let allowed = match evaluate_condition(condition, self.cx.contexts) {
+        match evaluate_condition(condition, self.cx.contexts) {
             Ok(result) => {
-                debug!("Result of 'where' condition '{condition}' -> '{result}'");
+                self.observer
+                    .on(&Event::WhereEvaluated { condition, result });
+                if !result {
+                    self.observer.on(&Event::ManifestSkipped(Skip::WhereFalse));
+                }
                 result
             }
-            Err(err) => {
-                warn!("'where' condition '{condition}' failed: {err}");
+            Err(error) => {
+                let skip = Skip::WhereFailed {
+                    condition,
+                    error: &error,
+                };
+                self.observer.on(&Event::ManifestSkipped(skip));
                 false
             }
-        };
-
-        if !allowed {
-            info!("Skip manifest, because 'where' conditions were false!");
         }
-        allowed
     }
 
     /// Runs the manifest's actions in order, false if any failed.
@@ -148,7 +153,8 @@ impl<'a> Run<'a> {
         let mut successful = true;
 
         for action in &manifest.actions {
-            let _span = span!(tracing::Level::INFO, "", %action).entered();
+            let shown = action.to_string();
+            self.observer.on(&Event::ActionStarted { action: &shown });
 
             if !self.run_action(manifest, action.inner_ref()) {
                 successful = false;
@@ -165,8 +171,8 @@ impl<'a> Run<'a> {
     fn run_action(&mut self, manifest: &Manifest, action: &dyn Action) -> bool {
         let steps = match action.plan(manifest, &self.cx) {
             Ok(steps) => steps,
-            Err(err) => {
-                error!("Action failed to get plan: {:#}", anyhow::Error::from(err));
+            Err(error) => {
+                self.observer.on(&Event::ActionPlanFailed(&error));
                 return false;
             }
         };
@@ -186,11 +192,8 @@ impl<'a> Run<'a> {
             }
         }
 
-        if !ran_any {
-            info!("nothing to be done to reconcile action");
-            return true;
-        }
-        info!("{}", action.summarize());
+        let summary = ran_any.then(|| action.summarize());
+        self.observer.on(&Event::ActionDone { summary });
         successful
     }
 
@@ -207,14 +210,19 @@ impl<'a> Run<'a> {
             Ok(Check::Drift(change)) => Some(change),
             Ok(Check::Pending { needs }) if self.will_exist(&needs) => Some(None),
             Ok(Check::Pending { needs }) => {
-                warn!("Skipping {step}: {} doesn't exist", needs.display());
+                self.skipped(step, StepSkip::Missing(&needs));
                 None
             }
-            Err(err) => {
-                warn!("Skipping {step}: {:#}", anyhow::Error::from(err));
+            Err(error) => {
+                self.skipped(step, StepSkip::CheckFailed(&error));
                 None
             }
         }
+    }
+
+    /// Tells that `step` doesn't run
+    fn skipped(&self, step: &Step, reason: StepSkip) {
+        self.observer.on(&Event::StepSkipped { step, reason });
     }
 
     /// Whether an earlier step of this dry run would have made `path`, or a directory it's in
@@ -227,11 +235,7 @@ impl<'a> Run<'a> {
     /// Shows what the step changes and, unless this is a dry run, runs it. False if it failed
     fn run_step(&mut self, step: Step, change: Change) -> bool {
         if let Some(change) = change {
-            if self.dry_run {
-                info!("{change}");
-            } else {
-                debug!("{change}");
-            }
+            self.observer.on(&Event::StepChange(&change));
         }
 
         if self.dry_run {
@@ -245,14 +249,17 @@ impl<'a> Run<'a> {
             .and_then(|atom| atom.execute())
         {
             Ok(output) => output,
-            Err(err) => {
-                error!("{step} failed: {:#}", anyhow::Error::from(err));
+            Err(error) => {
+                self.observer.on(&Event::StepFailed {
+                    step: &step,
+                    error: &error,
+                });
                 return false;
             }
         };
 
         if !step.do_finalizers_allow_us_to_continue(&output) {
-            error!("Finalizers won't allow us to continue with this action");
+            self.observer.on(&Event::FinalizersFailed);
             return false;
         }
 
