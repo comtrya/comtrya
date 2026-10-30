@@ -2,23 +2,25 @@
 
 use super::UserProvider;
 use crate::actions::user::{add_group::UserAddGroup, UserVariant};
+use crate::actions::{find, Error, Result};
 use crate::atoms::command::Exec;
 use crate::contexts::Facts;
 use crate::steps::Step;
-use anyhow::{bail, Context};
 use serde::{Deserialize, Serialize};
-use which::which;
 
 /// Creates and changes users with `dscl`
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct MacOSUserProvider {}
 
 impl UserProvider for MacOSUserProvider {
-    fn add_user(&self, user: &UserVariant, facts: &Facts) -> anyhow::Result<Vec<Step>> {
+    fn add_user(&self, user: &UserVariant, facts: &Facts) -> Result<Vec<Step>> {
         if user.username.is_empty() {
-            bail!("can't create a user without a username");
+            return Err(Error::Missing {
+                action: "user.add",
+                field: "username",
+            });
         }
-        let cli = which("dscl").context("can't find `dscl` to create users with")?;
+        let cli = find("dscl")?;
 
         let mut args: Vec<String> = vec![];
 
@@ -60,9 +62,9 @@ impl UserProvider for MacOSUserProvider {
         Ok(steps)
     }
 
-    fn add_to_group(&self, user: &UserAddGroup, _facts: &Facts) -> anyhow::Result<Vec<Step>> {
+    fn add_to_group(&self, user: &UserAddGroup, _facts: &Facts) -> Result<Vec<Step>> {
         super::check_add_to_group(user)?;
-        let cli = which("dscl").context("can't find `dscl` to add users to groups with")?;
+        let cli = find("dscl")?;
 
         let mut steps: Vec<Step> = vec![];
 

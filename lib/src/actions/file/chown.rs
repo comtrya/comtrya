@@ -1,6 +1,6 @@
 //! `file.chown`. Not supported on Windows
 
-use crate::actions::Action;
+use crate::actions::{Action, Result};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -33,7 +33,7 @@ impl Action for FileChown {
         &self,
         _: &crate::manifests::Manifest,
         _: &crate::actions::PlanCx,
-    ) -> anyhow::Result<Vec<crate::steps::Step>> {
+    ) -> Result<Vec<crate::steps::Step>> {
         tracing::warn!("This action is not supported on windows.");
         Ok(vec![])
     }
@@ -43,9 +43,9 @@ impl Action for FileChown {
         &self,
         _: &crate::manifests::Manifest,
         _: &crate::actions::PlanCx,
-    ) -> anyhow::Result<Vec<crate::steps::Step>> {
+    ) -> Result<Vec<crate::steps::Step>> {
         Ok(vec![crate::steps::Step::new(Chown {
-            path: self.path.clone().parse()?,
+            path: self.path.clone().into(),
             owner: self.user.clone().unwrap_or_default(),
             group: self.group.clone().unwrap_or_default(),
         })])

@@ -2,6 +2,7 @@
 
 use super::PackageProvider;
 use crate::actions::package::repository::PackageRepository;
+use crate::actions::Result;
 use crate::contexts::Facts;
 use crate::runner::{self, CommandSpec, Runner};
 use crate::steps::Step;
@@ -70,15 +71,15 @@ impl PackageProvider for Winget {
         true
     }
 
-    fn add_repository(&self, _: &PackageRepository, _facts: &Facts) -> anyhow::Result<Vec<Step>> {
+    fn add_repository(&self, _: &PackageRepository, _facts: &Facts) -> Result<Vec<Step>> {
         Ok(vec![])
     }
 
-    fn query(&self, package: &PackageVariant) -> anyhow::Result<Vec<String>> {
+    fn query(&self, package: &PackageVariant) -> Result<Vec<String>> {
         Ok(super::missing(package, |p| self.is_installed(p)))
     }
 
-    fn install(&self, package: &PackageVariant, _facts: &Facts) -> anyhow::Result<Vec<Step>> {
+    fn install(&self, package: &PackageVariant, _facts: &Facts) -> Result<Vec<Step>> {
         // does not require privilege escalation
 
         let need_installed = self.query(package)?;

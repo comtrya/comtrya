@@ -3,11 +3,11 @@
 
 use super::{pacman, PackageProvider};
 use crate::actions::package::{repository::PackageRepository, PackageVariant};
+use crate::actions::{Error, Result};
 use crate::atoms::command::Exec;
 use crate::contexts::Facts;
 use crate::runner::{self, Runner};
 use crate::steps::Step;
-use anyhow::anyhow;
 use std::sync::Arc;
 use tracing::warn;
 use which::which;
@@ -129,16 +129,16 @@ impl PackageProvider for AurHelper {
         false
     }
 
-    fn add_repository(&self, _: &PackageRepository, _facts: &Facts) -> anyhow::Result<Vec<Step>> {
+    fn add_repository(&self, _: &PackageRepository, _facts: &Facts) -> Result<Vec<Step>> {
         Ok(vec![])
     }
 
     /// pacman knows the AUR packages too, once they are installed
-    fn query(&self, package: &PackageVariant) -> anyhow::Result<Vec<String>> {
+    fn query(&self, package: &PackageVariant) -> Result<Vec<String>> {
         pacman::missing(self.runner.as_ref(), package)
     }
 
-    fn install(&self, package: &PackageVariant, facts: &Facts) -> anyhow::Result<Vec<Step>> {
+    fn install(&self, package: &PackageVariant, facts: &Facts) -> Result<Vec<Step>> {
         refuse_root(self.helper.command, facts)?;
 
         let need_installed = self.query(package)?;
@@ -160,11 +160,11 @@ impl PackageProvider for AurHelper {
 }
 
 /// AUR helpers (`makepkg`) refuse to run as root, with an error that doesn't say what to do
-fn refuse_root(provider: &str, facts: &Facts) -> anyhow::Result<()> {
+fn refuse_root(provider: &str, facts: &Facts) -> Result<()> {
     if facts.user.id == 0 {
-        return Err(anyhow!(
-            "{provider} can't run as root. Run comtrya as a normal user, it asks for sudo where needed, or use `provider: pacman` for packages from the official repositories"
-        ));
+        return Err(Error::AsRoot {
+            provider: provider.to_string(),
+        });
     }
 
     Ok(())

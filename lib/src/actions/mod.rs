@@ -4,6 +4,8 @@
 mod binary;
 mod command;
 mod directory;
+mod error;
+pub use error::{Error, Result};
 mod file;
 mod git;
 mod group;
@@ -21,7 +23,6 @@ use crate::{
     manifests::Manifest,
     steps::Step,
 };
-use anyhow::anyhow;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use tracing::{error, warn};
@@ -34,6 +35,11 @@ fn warn_ignored(ignored: &[Ignored]) {
     for (field, instead) in ignored {
         warn!("`{field}` is ignored, {instead}");
     }
+}
+
+/// The full path of `program` in `PATH`
+fn find(program: &str) -> Result<std::path::PathBuf> {
+    which::which(program).map_err(|_| crate::atoms::Error::CommandNotFound(program.into()).into())
 }
 
 /// An action with its `where` condition and its variants, see [`ConditionalVariantAction::select`].
@@ -80,7 +86,7 @@ where
         self.action.summarize()
     }
 
-    fn plan(&self, manifest: &Manifest, cx: &PlanCx) -> Result<Vec<Step>, anyhow::Error> {
+    fn plan(&self, manifest: &Manifest, cx: &PlanCx) -> Result<Vec<Step>> {
         match self.select(cx.contexts)? {
             Some(action) => action.plan(manifest, cx),
             None => Ok(vec![]),
@@ -95,7 +101,7 @@ impl<T> ConditionalVariantAction<T> {
     /// - A variant applies even when the action's own `where` is false
     /// - A variant without `where` never applies
     /// - A variant's `where` that can't be evaluated counts as false, the action's is an error
-    pub fn select(&self, contexts: &Contexts) -> anyhow::Result<Option<&T>> {
+    pub fn select(&self, contexts: &Contexts) -> Result<Option<&T>> {
         let variant = self.variants.iter().find(|variant| {
             variant.condition.as_ref().is_some_and(|condition| {
                 evaluate_condition(condition, contexts).unwrap_or_else(|error| {
@@ -116,7 +122,10 @@ impl<T> ConditionalVariantAction<T> {
         match evaluate_condition(condition, contexts) {
             Ok(true) => Ok(Some(&self.action)),
             Ok(false) => Ok(None),
-            Err(error) => Err(anyhow!("Failed execution condition for action: {error}")),
+            Err(error) => Err(Error::Condition {
+                condition: condition.clone(),
+                source: error.into(),
+            }),
         }
     }
 }
@@ -151,7 +160,7 @@ pub trait Action {
         "not found action summarize".to_string()
     }
     /// The steps that bring the system to what the action asks for. Doesn't change the system
-    fn plan(&self, manifest: &Manifest, cx: &PlanCx) -> anyhow::Result<Vec<Step>>;
+    fn plan(&self, manifest: &Manifest, cx: &PlanCx) -> Result<Vec<Step>>;
 }
 
 /// What actions plan with: the typed facts about this machine, and the contexts that templates

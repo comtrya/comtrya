@@ -2,6 +2,7 @@
 
 // mod freebsd;
 // use self::freebsd::FreeBSDUserProvider;
+use crate::actions::Result;
 use crate::steps::Step;
 mod none;
 use self::{freebsd::FreeBSDGroupProvider, none::NoneGroupProvider};
@@ -70,5 +71,5 @@ impl Default for GroupProviders {
 /// A tool that creates groups
 pub trait GroupProvider {
     /// Steps that create the group. Fails if the tool or the name is missing
-    fn add_group(&self, group: &GroupVariant, facts: &Facts) -> anyhow::Result<Vec<Step>>;
+    fn add_group(&self, group: &GroupVariant, facts: &Facts) -> Result<Vec<Step>>;
 }

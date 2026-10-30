@@ -2,6 +2,7 @@
 
 use super::PackageProvider;
 use crate::actions::package::repository::PackageRepository;
+use crate::actions::Result;
 use crate::contexts::Facts;
 use crate::runner::{self, CommandSpec, Runner};
 use crate::steps::Step;
@@ -51,11 +52,7 @@ impl PackageProvider for Homebrew {
         false
     }
 
-    fn add_repository(
-        &self,
-        repository: &PackageRepository,
-        _facts: &Facts,
-    ) -> anyhow::Result<Vec<Step>> {
+    fn add_repository(&self, repository: &PackageRepository, _facts: &Facts) -> Result<Vec<Step>> {
         Ok(vec![Step::new(Exec {
             command: String::from("brew"),
             arguments: vec![String::from("tap"), repository.name.clone()],
@@ -63,13 +60,9 @@ impl PackageProvider for Homebrew {
         })])
     }
 
-    fn query(&self, package: &PackageVariant) -> anyhow::Result<Vec<String>> {
-        let prefix = String::from_utf8(
-            self.runner
-                .run(&CommandSpec::new("brew").arg("--prefix"))?
-                .stdout,
-        )?
-        .replace(['\n', '\r'], "");
+    fn query(&self, package: &PackageVariant) -> Result<Vec<String>> {
+        let output = super::query(&*self.runner, &CommandSpec::new("brew").arg("--prefix"))?;
+        let prefix = String::from_utf8_lossy(&output.stdout).replace(['\n', '\r'], "");
 
         let cellar = Path::new(&prefix).join("Cellar");
         let caskroom = Path::new(&prefix).join("Caskroom");
@@ -82,7 +75,7 @@ impl PackageProvider for Homebrew {
         }))
     }
 
-    fn install(&self, package: &PackageVariant, _facts: &Facts) -> anyhow::Result<Vec<Step>> {
+    fn install(&self, package: &PackageVariant, _facts: &Facts) -> Result<Vec<Step>> {
         // Does not require privilege escalation
 
         let need_installed = self.query(package)?;

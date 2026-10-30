@@ -1,11 +1,9 @@
 //! `package.repository`: adds a package repository, and its signing key, to a package manager
 
 use super::providers::PackageProviders;
-use crate::actions::Action;
-use crate::actions::PlanCx;
+use crate::actions::{Action, Error, PlanCx, Result};
 use crate::manifests::Manifest;
 use crate::steps::Step;
-use anyhow::anyhow;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::ops::Deref;
@@ -66,7 +64,7 @@ impl Action for PackageRepository {
         format!("Adding repository {}", self.name)
     }
 
-    fn plan(&self, _manifest: &Manifest, cx: &PlanCx) -> anyhow::Result<Vec<Step>> {
+    fn plan(&self, _manifest: &Manifest, cx: &PlanCx) -> Result<Vec<Step>> {
         let box_provider =
             PackageProviders::resolve(self.provider.as_ref(), cx.facts)?.get_provider();
         let provider = box_provider.deref();
@@ -85,10 +83,9 @@ impl Action for PackageRepository {
         // If the provider isn't available, see if we can bootstrap it
         if !provider.available() {
             if provider.bootstrap(cx.facts).is_empty() {
-                return Err(anyhow!(
-                    "Package Provider, {}, isn't available. Skipping action",
-                    provider.name()
-                ));
+                return Err(Error::ProviderUnavailable {
+                    provider: provider.name().to_string(),
+                });
             }
 
             atoms.append(&mut provider.bootstrap(cx.facts));

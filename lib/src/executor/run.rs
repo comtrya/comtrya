@@ -163,7 +163,7 @@ impl<'a> Run<'a> {
         let steps = match action.plan(manifest, &self.cx) {
             Ok(steps) => steps,
             Err(err) => {
-                error!("Action failed to get plan: {err:#}");
+                error!("Action failed to get plan: {:#}", anyhow::Error::from(err));
                 return false;
             }
         };

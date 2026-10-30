@@ -2,8 +2,7 @@
 
 use super::Group;
 use super::GroupVariant;
-use crate::actions::Action;
-use crate::actions::PlanCx;
+use crate::actions::{Action, PlanCx, Result};
 use crate::manifests::Manifest;
 use crate::steps::Step;
 use std::ops::Deref;
@@ -16,7 +15,7 @@ impl Action for GroupAdd {
         format!("Creating group {}", self.group_name)
     }
 
-    fn plan(&self, _manifest: &Manifest, cx: &PlanCx) -> anyhow::Result<Vec<Step>> {
+    fn plan(&self, _manifest: &Manifest, cx: &PlanCx) -> Result<Vec<Step>> {
         let variant: GroupVariant = self.into();
         let box_provider = variant.provider.clone().get_provider();
         let provider = box_provider.deref();

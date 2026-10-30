@@ -1,12 +1,11 @@
 //! `file.link`: symlinks to files in the manifest's `files` directory
 
 use super::FileAction;
-use crate::actions::{Action, PlanCx};
+use crate::actions::{Action, Error, PlanCx, Result};
 use crate::manifests::Manifest;
 use crate::steps::initializers::FileExists;
 use crate::steps::initializers::FlowControl::Ensure;
 use crate::steps::Step;
-use anyhow::anyhow;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
@@ -40,19 +39,25 @@ fn walk_dir_default() -> bool {
 
 impl FileLink {
     /// `source`, or the old `from`
-    fn source(&self) -> anyhow::Result<&str> {
+    fn source(&self) -> Result<&str> {
         self.source
             .as_deref()
             .or(self.from.as_deref())
-            .ok_or_else(|| anyhow!("file.link needs `source`"))
+            .ok_or(Error::Missing {
+                action: "file.link",
+                field: "source",
+            })
     }
 
     /// `target`, or the old `to`
-    fn target(&self) -> anyhow::Result<&str> {
+    fn target(&self) -> Result<&str> {
         self.target
             .as_deref()
             .or(self.to.as_deref())
-            .ok_or_else(|| anyhow!("file.link needs `target`"))
+            .ok_or(Error::Missing {
+                action: "file.link",
+                field: "target",
+            })
     }
 
     /// Creates the directory of the link, and the link, if `from` exists
@@ -117,7 +122,7 @@ impl Action for FileLink {
         )
     }
 
-    fn plan(&self, manifest: &Manifest, _: &PlanCx) -> anyhow::Result<Vec<Step>> {
+    fn plan(&self, manifest: &Manifest, _: &PlanCx) -> Result<Vec<Step>> {
         let from: PathBuf = self.resolve(manifest, self.source()?)?;
 
         let to = PathBuf::from(self.target()?);

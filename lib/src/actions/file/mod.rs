@@ -8,67 +8,53 @@ pub mod link;
 pub mod remove;
 pub mod unarchive;
 
-use crate::actions::Action;
+use crate::actions::{Action, Error, Result};
+use crate::atoms;
 use crate::atoms::directory::Create as DirCreate;
 use crate::manifests::Manifest;
 use crate::steps::Step;
-use anyhow::{anyhow, Result};
 use normpath::PathExt;
 use schemars::JsonSchema;
-use serde::{de::Error, Deserialize, Deserializer};
+use serde::{de::Error as _, Deserialize, Deserializer};
 use std::path::{Path, PathBuf};
 
 /// Actions that read files from the manifest's `files` directory
 pub trait FileAction: Action {
     /// `path` below the manifest's `files` directory, which must exist
-    fn resolve(&self, manifest: &Manifest, path: &str) -> anyhow::Result<PathBuf> {
-        Ok(manifest
-            .root_dir
-            .clone()
-            .ok_or_else(|| anyhow!("Failed because manifest has no root_dir"))?
-            .join("files")
-            .join(path)
-            .normalize()
-            .map_err(|e| {
-                anyhow!(
-                    "Resolution of {} failed in manifest {} because {}",
-                    path,
-                    manifest
-                        .name
-                        .as_ref()
-                        .unwrap_or(&"cannot extract manifest name".to_string()),
-                    e
-                )
-            })?
-            .as_path()
-            .to_path_buf())
+    fn resolve(&self, manifest: &Manifest, path: &str) -> Result<PathBuf> {
+        let path = files_dir(manifest, path)?.join(path);
+
+        path.normalize()
+            .map(|path| path.into_path_buf())
+            .map_err(|_| Error::NotFound(path))
     }
 
     /// The contents of `path` below the manifest's `files` directory
     fn load(&self, manifest: &Manifest, path: &str) -> Result<Vec<u8>> {
-        use std::io::ErrorKind;
-        let file_path = manifest
-            .root_dir
-            .as_ref()
-            .ok_or_else(|| anyhow::anyhow!("Cannot extract root dir"))?
-            .join("files")
-            .join(path);
+        let path = files_dir(manifest, path)?.join(path);
 
-        std::fs::read(file_path.clone()).map_err(|e| match e.kind() {
-            ErrorKind::NotFound => anyhow!(
-                "Failed because {} was not found",
-                file_path.to_string_lossy()
-            ),
-            _ => anyhow!("Failed because {e}"),
+        std::fs::read(&path).map_err(|err| match err.kind() {
+            std::io::ErrorKind::NotFound => Error::NotFound(path),
+            _ => atoms::Error::io("read", &path)(err).into(),
         })
     }
 }
 
+/// The manifest's `files` directory, to find `path` in
+fn files_dir(manifest: &Manifest, path: &str) -> Result<PathBuf> {
+    manifest
+        .root_dir
+        .as_ref()
+        .map(|root_dir| root_dir.join("files"))
+        .ok_or_else(|| Error::NoManifestDir(path.to_string()))
+}
+
 /// Creates the directory that `path` will be written to
 fn create_parent(path: &Path) -> Result<Step> {
-    let parent = path
-        .parent()
-        .ok_or_else(|| anyhow!("Failed to get parent directory of path: {}", path.display()))?;
+    let parent = path.parent().ok_or_else(|| Error::Invalid {
+        field: "to",
+        problem: format!("{} has no parent directory", path.display()),
+    })?;
 
     Ok(Step::new(DirCreate {
         path: parent.into(),
@@ -103,7 +89,7 @@ pub(crate) enum OctalMode {
 }
 
 /// Reads `chmod` as octal, whether it's written as a number or a string
-fn from_octal<'de, D>(deserializer: D) -> Result<u32, D::Error>
+fn from_octal<'de, D>(deserializer: D) -> std::result::Result<u32, D::Error>
 where
     D: Deserializer<'de>,
 {

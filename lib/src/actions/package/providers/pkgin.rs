@@ -2,6 +2,7 @@
 
 use super::PackageProvider;
 use crate::actions::package::repository::PackageRepository;
+use crate::actions::Result;
 use crate::contexts::Facts;
 use crate::steps::finalizers::FlowControl::StopIf;
 use crate::steps::finalizers::OutputContains;
@@ -41,18 +42,18 @@ impl PackageProvider for Pkgin {
         false
     }
 
-    fn add_repository(&self, _: &PackageRepository, _facts: &Facts) -> anyhow::Result<Vec<Step>> {
+    fn add_repository(&self, _: &PackageRepository, _facts: &Facts) -> Result<Vec<Step>> {
         Ok(vec![])
     }
 
     // TODO: Handle query pkgs with pkgin search
-    fn query(&self, package: &PackageVariant) -> anyhow::Result<Vec<String>> {
+    fn query(&self, package: &PackageVariant) -> Result<Vec<String>> {
         // Install all packages for now, don't get smart about which
         // already are
         Ok(package.packages())
     }
 
-    fn install(&self, package: &PackageVariant, _facts: &Facts) -> anyhow::Result<Vec<Step>> {
+    fn install(&self, package: &PackageVariant, _facts: &Facts) -> Result<Vec<Step>> {
         Ok(vec![
             Step::new(Exec {
                 command: String::from("/usr/pkg/bin/pkgin"),

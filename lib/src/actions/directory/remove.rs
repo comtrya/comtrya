@@ -1,5 +1,6 @@
 //! `directory.remove`
 
+use crate::actions::Result;
 use std::path::PathBuf;
 
 use crate::atoms::directory::Remove as RemoveDirAtom;
@@ -30,7 +31,7 @@ impl Action for DirectoryRemove {
         &self,
         _manifest: &crate::manifests::Manifest,
         _context: &crate::actions::PlanCx,
-    ) -> anyhow::Result<Vec<crate::steps::Step>> {
+    ) -> Result<Vec<crate::steps::Step>> {
         let path = PathBuf::from(&self.target);
 
         let steps = vec![Step::new(RemoveDirAtom { target: path })];

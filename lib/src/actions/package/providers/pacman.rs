@@ -2,6 +2,7 @@
 
 use super::PackageProvider;
 use crate::actions::package::{repository::PackageRepository, PackageVariant};
+use crate::actions::Result;
 use crate::atoms::command::Exec;
 use crate::contexts::Facts;
 use crate::runner::{self, CommandSpec, Runner};
@@ -49,19 +50,15 @@ impl PackageProvider for Pacman {
         false
     }
 
-    fn add_repository(
-        &self,
-        _repository: &PackageRepository,
-        _facts: &Facts,
-    ) -> anyhow::Result<Vec<Step>> {
+    fn add_repository(&self, _repository: &PackageRepository, _facts: &Facts) -> Result<Vec<Step>> {
         Ok(vec![])
     }
 
-    fn query(&self, package: &PackageVariant) -> anyhow::Result<Vec<String>> {
+    fn query(&self, package: &PackageVariant) -> Result<Vec<String>> {
         missing(self.runner.as_ref(), package)
     }
 
-    fn install(&self, package: &PackageVariant, _facts: &Facts) -> anyhow::Result<Vec<Step>> {
+    fn install(&self, package: &PackageVariant, _facts: &Facts) -> Result<Vec<Step>> {
         let need_installed = self.query(package)?;
         if need_installed.is_empty() {
             return Ok(vec![]);
@@ -72,18 +69,16 @@ impl PackageProvider for Pacman {
 }
 
 /// The requested packages that pacman doesn't list as installed. The AUR helpers use it too
-pub(super) fn missing(
-    runner: &dyn Runner,
-    package: &PackageVariant,
-) -> anyhow::Result<Vec<String>> {
+pub(super) fn missing(runner: &dyn Runner, package: &PackageVariant) -> Result<Vec<String>> {
     // `pacman -Qq` prints the installed ones and fails for the others, so ignore the status
     let command = CommandSpec::new("pacman")
         .args(["-Q", "-q"])
         .args(package.packages());
-    let installed: HashSet<String> = String::from_utf8(runner.run(&command)?.stdout)?
-        .lines()
-        .map(String::from)
-        .collect();
+    let installed: HashSet<String> =
+        String::from_utf8_lossy(&super::query(runner, &command)?.stdout)
+            .lines()
+            .map(String::from)
+            .collect();
 
     Ok(super::missing(package, |p| installed.contains(p)))
 }

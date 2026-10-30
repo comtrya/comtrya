@@ -1,23 +1,25 @@
 //! `dscl` on macOS
 
 use super::GroupProvider;
+use crate::actions::{find, Error, Result};
 use crate::contexts::Facts;
 use crate::steps::Step;
 use crate::{actions::group::GroupVariant, atoms::command::Exec};
-use anyhow::{bail, Context};
 use serde::{Deserialize, Serialize};
-use which::which;
 
 /// Creates groups with `dscl`
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct MacOsGroupProvider {}
 
 impl GroupProvider for MacOsGroupProvider {
-    fn add_group(&self, group: &GroupVariant, _facts: &Facts) -> anyhow::Result<Vec<Step>> {
+    fn add_group(&self, group: &GroupVariant, _facts: &Facts) -> Result<Vec<Step>> {
         if group.group_name.is_empty() {
-            bail!("can't create a group without a group_name");
+            return Err(Error::Missing {
+                action: "group.add",
+                field: "group_name",
+            });
         }
-        let cli = which("dscl").context("can't find `dscl` to create groups with")?;
+        let cli = find("dscl")?;
 
         let mut group_creation_string = String::from("/Groups/");
         group_creation_string.push_str(group.group_name.clone().as_str());

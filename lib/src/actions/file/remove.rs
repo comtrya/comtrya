@@ -1,5 +1,6 @@
 //! `file.remove`
 
+use crate::actions::Result;
 use std::path::PathBuf;
 
 use schemars::JsonSchema;
@@ -29,7 +30,7 @@ impl Action for FileRemove {
         &self,
         _: &crate::manifests::Manifest,
         _: &crate::actions::PlanCx,
-    ) -> anyhow::Result<Vec<crate::steps::Step>> {
+    ) -> Result<Vec<crate::steps::Step>> {
         use crate::atoms::file::Remove as RemoveFile;
 
         let path = PathBuf::from(&self.target);

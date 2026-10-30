@@ -1,7 +1,7 @@
 //! `file.download`
 
 use super::{change_owner, create_parent, default_chmod, from_octal, FileAction, OctalMode};
-use crate::actions::{Action, Ignored, PlanCx};
+use crate::actions::{Action, Error, Ignored, PlanCx, Result};
 use crate::atoms::file::Chmod;
 use crate::atoms::http::Download;
 use crate::manifests::Manifest;
@@ -61,16 +61,17 @@ impl FileDownload {
     }
 
     /// `sha256` in lowercase, or an error if it isn't 64 hex characters
-    fn sha256(&self) -> anyhow::Result<Option<String>> {
+    fn sha256(&self) -> Result<Option<String>> {
         let Some(sha256) = &self.sha256 else {
             return Ok(None);
         };
 
         let sha256 = sha256.trim().to_lowercase();
         if sha256.len() != 64 || !sha256.chars().all(|c| c.is_ascii_hexdigit()) {
-            return Err(anyhow::anyhow!(
-                "sha256 must be 64 hex characters, got '{sha256}'"
-            ));
+            return Err(Error::Invalid {
+                field: "sha256",
+                problem: format!("must be 64 hex characters, got '{sha256}'"),
+            });
         }
 
         Ok(Some(sha256))
@@ -84,7 +85,7 @@ impl Action for FileDownload {
         format!("Downloading file {} to {}", self.from, self.to)
     }
 
-    fn plan(&self, _manifest: &Manifest, _context: &PlanCx) -> anyhow::Result<Vec<Step>> {
+    fn plan(&self, _manifest: &Manifest, _context: &PlanCx) -> Result<Vec<Step>> {
         crate::actions::warn_ignored(&self.ignored_fields());
         let sha256 = self.sha256()?;
         let path = PathBuf::from(&self.to);

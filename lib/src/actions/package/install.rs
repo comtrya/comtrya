@@ -3,11 +3,9 @@
 use super::providers::PackageProviders;
 use super::Package;
 use super::PackageVariant;
-use crate::actions::Action;
-use crate::actions::PlanCx;
+use crate::actions::{Action, Error, PlanCx, Result};
 use crate::manifests::Manifest;
 use crate::steps::Step;
-use anyhow::anyhow;
 use std::ops::Deref;
 use tracing::span;
 
@@ -19,7 +17,7 @@ impl Action for PackageInstall {
         "Installing packages".to_string()
     }
 
-    fn plan(&self, _manifest: &Manifest, cx: &PlanCx) -> anyhow::Result<Vec<Step>> {
+    fn plan(&self, _manifest: &Manifest, cx: &PlanCx) -> Result<Vec<Step>> {
         let variant: PackageVariant = self.into();
         let provider_type = PackageProviders::resolve(variant.provider.as_ref(), cx.facts)?;
         let box_provider = provider_type.clone().get_provider();
@@ -35,10 +33,9 @@ impl Action for PackageInstall {
         crate::actions::warn_ignored(&self.ignored_fields());
 
         if variant.file && !installs_local_files(&provider_type) {
-            return Err(anyhow!(
-                "Package Provider, {}, isn't capable of local file installs. Skipping action.",
-                provider.name()
-            ));
+            return Err(Error::NoLocalInstall {
+                provider: provider.name().to_string(),
+            });
         }
 
         let mut atoms: Vec<Step> = vec![];
@@ -46,10 +43,9 @@ impl Action for PackageInstall {
         // If the provider isn't available, see if we can bootstrap it
         if !provider.available() {
             if provider.bootstrap(cx.facts).is_empty() {
-                return Err(anyhow!(
-                    "Package Provider, {}, isn't available. Skipping action",
-                    provider.name()
-                ));
+                return Err(Error::ProviderUnavailable {
+                    provider: provider.name().to_string(),
+                });
             }
 
             atoms.append(&mut provider.bootstrap(cx.facts));

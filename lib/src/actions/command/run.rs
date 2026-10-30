@@ -1,6 +1,6 @@
 //! `command.run`: runs a program, every time
 
-use crate::actions::PlanCx;
+use crate::actions::{PlanCx, Result};
 use crate::steps::Step;
 use crate::{actions::Action, manifests::Manifest};
 use schemars::JsonSchema;
@@ -68,7 +68,7 @@ impl Action for RunCommand {
         format!("Running {} command", self.command)
     }
 
-    fn plan(&self, _: &Manifest, _: &PlanCx) -> anyhow::Result<Vec<Step>> {
+    fn plan(&self, _: &Manifest, _: &PlanCx) -> Result<Vec<Step>> {
         use crate::atoms::command::Exec;
 
         let step = Step::new(Exec {

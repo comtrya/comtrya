@@ -3,11 +3,11 @@
 use super::PackageProvider;
 use crate::actions::package::repository::PackageRepository;
 use crate::actions::package::PackageVariant;
+use crate::actions::{Error, Result};
 use crate::atoms::command::Exec;
 use crate::contexts::Facts;
 use crate::runner::{self, CommandSpec, Runner};
 use crate::steps::Step;
-use anyhow::anyhow;
 use std::collections::HashSet;
 use std::sync::Arc;
 use tracing::warn;
@@ -63,25 +63,26 @@ impl PackageProvider for Xbps {
         false
     }
 
-    fn add_repository(&self, _: &PackageRepository, _facts: &Facts) -> anyhow::Result<Vec<Step>> {
+    fn add_repository(&self, _: &PackageRepository, _facts: &Facts) -> Result<Vec<Step>> {
         Ok(vec![])
     }
 
-    fn query(&self, package: &PackageVariant) -> anyhow::Result<Vec<String>> {
-        let output = self.runner.run(&CommandSpec::new("xbps-query").arg("-l"))?;
+    fn query(&self, package: &PackageVariant) -> Result<Vec<String>> {
+        let command = CommandSpec::new("xbps-query").arg("-l");
+        let output = super::query(&*self.runner, &command)?;
         if !output.success {
-            return Err(anyhow!(
-                "xbps-query -l failed: {}",
-                String::from_utf8_lossy(&output.stderr).trim()
-            ));
+            return Err(Error::Query {
+                command: command.to_string(),
+                source: String::from_utf8_lossy(&output.stderr).trim().into(),
+            });
         }
-        let list = String::from_utf8(output.stdout)?;
+        let list = String::from_utf8_lossy(&output.stdout);
         let installed = installed_packages(&list);
 
         Ok(super::missing(package, |p| installed.contains(p)))
     }
 
-    fn install(&self, package: &PackageVariant, _facts: &Facts) -> anyhow::Result<Vec<Step>> {
+    fn install(&self, package: &PackageVariant, _facts: &Facts) -> Result<Vec<Step>> {
         let need_installed = self.query(package)?;
         if need_installed.is_empty() {
             return Ok(vec![]);
@@ -174,7 +175,13 @@ uu half-installed-1.0_1               Unpacked, but not configured
             ..Default::default()
         };
 
-        let error = xbps.query(&package).unwrap_err();
-        assert!(error.to_string().contains("can't open pkgdb"), "{error}");
+        let error = format!(
+            "{:#}",
+            anyhow::Error::from(xbps.query(&package).unwrap_err())
+        );
+        assert_eq!(
+            "can't list the installed packages with `xbps-query -l`: ERROR: can't open pkgdb",
+            error
+        );
     }
 }

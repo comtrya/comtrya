@@ -2,6 +2,7 @@
 
 mod freebsd;
 use self::freebsd::FreeBSDUserProvider;
+use crate::actions::{Error, Result};
 use crate::steps::Step;
 mod none;
 use self::none::NoneUserProvider;
@@ -68,12 +69,18 @@ impl Default for UserProviders {
 }
 
 /// Fails if `user` has no username or no groups to add it to
-fn check_add_to_group(user: &UserAddGroup) -> anyhow::Result<()> {
+fn check_add_to_group(user: &UserAddGroup) -> Result<()> {
     if user.username.is_empty() {
-        anyhow::bail!("can't add a user without a username to groups");
+        return Err(Error::Missing {
+            action: "user.group",
+            field: "username",
+        });
     }
     if user.group.is_empty() {
-        anyhow::bail!("no groups to add {} to", user.username);
+        return Err(Error::Missing {
+            action: "user.group",
+            field: "group",
+        });
     }
     Ok(())
 }
@@ -81,7 +88,7 @@ fn check_add_to_group(user: &UserAddGroup) -> anyhow::Result<()> {
 /// A tool that creates and changes users
 pub trait UserProvider {
     /// Steps that create the user and add it to its groups
-    fn add_user(&self, user: &UserVariant, facts: &Facts) -> anyhow::Result<Vec<Step>>;
+    fn add_user(&self, user: &UserVariant, facts: &Facts) -> Result<Vec<Step>>;
     /// Steps that add an existing user to groups
-    fn add_to_group(&self, user: &UserAddGroup, facts: &Facts) -> anyhow::Result<Vec<Step>>;
+    fn add_to_group(&self, user: &UserAddGroup, facts: &Facts) -> Result<Vec<Step>>;
 }
