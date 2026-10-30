@@ -67,6 +67,7 @@ fn chain(error: &dyn std::error::Error) -> String {
 impl Observer for Log {
     fn on(&self, event: &Event) {
         match event {
+            Event::ManifestBroken { reason } => error!("{reason}"),
             Event::ManifestStarted { name } => {
                 self.enter(tracing::info_span!("", manifest = name));
             }

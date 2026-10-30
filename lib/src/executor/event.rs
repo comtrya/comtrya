@@ -8,6 +8,12 @@ use std::path::Path;
 /// the events of an action between its [`Event::ActionStarted`] and its
 /// [`Event::ActionPlanFailed`] or [`Event::ActionDone`]
 pub enum Event<'a> {
+    /// A manifest of the run can't run at all: it can't be loaded, or it depends on a manifest
+    /// that doesn't exist. Its dependents are skipped
+    ManifestBroken {
+        /// Why
+        reason: &'a str,
+    },
     /// A manifest starts
     ManifestStarted {
         /// Its name
