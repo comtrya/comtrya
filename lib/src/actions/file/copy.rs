@@ -2,13 +2,13 @@
 //! decrypted or piped through a command
 
 use super::{change_owner, create_parent, default_chmod, from_octal, FileAction, OctalMode};
-use crate::actions::{Action, PlanCx};
+use crate::actions::{Action, Error, PlanCx, Result};
 use crate::atoms::file::{Chmod, Create, Decrypt, SetContents};
+use crate::atoms::{self, BoxError};
 use crate::contexts::{to_tera, Contexts};
 use crate::manifests::Manifest;
 use crate::steps::Step;
 use crate::tera_functions::register_functions;
-use anyhow::anyhow;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::error::Error as StdError;
@@ -61,10 +61,8 @@ fn default_template() -> bool {
 
 impl FileCopy {
     /// The source file, piped through `process_with` and rendered as a template if asked for
-    fn contents(&self, manifest: &Manifest, contexts: &Contexts) -> anyhow::Result<Vec<u8>> {
-        let contents = self
-            .load(manifest, &self.from)
-            .map_err(|err| anyhow!("Failed to get contents for FileCopy action: {err}"))?;
+    fn contents(&self, manifest: &Manifest, contexts: &Contexts) -> Result<Vec<u8>> {
+        let contents = self.load(manifest, &self.from)?;
 
         let contents = match &self.process_with {
             Some(command) => process(command, contents)?,
@@ -72,7 +70,10 @@ impl FileCopy {
         };
 
         if self.template {
-            render(&contents, contexts)
+            render(&contents, contexts).map_err(|source| Error::Template {
+                path: PathBuf::from(&self.from),
+                source,
+            })
         } else {
             Ok(contents)
         }
@@ -113,11 +114,13 @@ impl Action for FileCopy {
         format!("Copy file from {} to {}", self.from, self.to)
     }
 
-    fn plan(&self, manifest: &Manifest, cx: &PlanCx) -> anyhow::Result<Vec<Step>> {
+    fn plan(&self, manifest: &Manifest, cx: &PlanCx) -> Result<Vec<Step>> {
         if self.passphrase.is_some() && self.process_with.is_some() {
-            return Err(anyhow!(
-                "FileCopy can use either passphrase or process_with, not both"
-            ));
+            return Err(Error::Conflict {
+                action: "file.copy",
+                first: "passphrase",
+                second: "process_with",
+            });
         }
 
         let contents = self.contents(manifest, cx.contexts)?;
@@ -139,31 +142,40 @@ impl Action for FileCopy {
 }
 
 /// Renders `contents` as a Tera template with the contexts
-fn render(contents: &[u8], contexts: &Contexts) -> anyhow::Result<Vec<u8>> {
+fn render(contents: &[u8], contexts: &Contexts) -> std::result::Result<Vec<u8>, BoxError> {
     let mut tera = Tera::default();
     register_functions(&mut tera);
 
     let rendered = tera
         .render_str(std::str::from_utf8(contents)?, &to_tera(contexts))
-        .map_err(|err| {
-            // Tera's own message only says that rendering failed, the source says why
-            let reason = err
-                .source()
-                .map_or(err.to_string(), |source| source.to_string());
-            anyhow!("Failed to render contents for FileCopy action: {reason}")
-        })?;
+        // Tera's own message only says that rendering failed, the source says why
+        .map_err(|err| err.source().map_or(err.to_string(), ToString::to_string))?;
 
     Ok(rendered.into_bytes())
 }
 
 /// Runs `command` with `input` on stdin and returns its stdout
-fn process(command: &[String], input: Vec<u8>) -> anyhow::Result<Vec<u8>> {
+fn process(command: &[String], input: Vec<u8>) -> Result<Vec<u8>> {
+    let (program, args) = command.split_first().ok_or_else(|| Error::Invalid {
+        field: "process_with",
+        problem: String::from("needs at least a program to run"),
+    })?;
+
+    run(program, args, input).map_err(|source| Error::ProcessWith {
+        command: command.join(" "),
+        source,
+    })
+}
+
+/// Runs `program` with `input` on stdin and returns its stdout
+fn run(program: &str, args: &[String], input: Vec<u8>) -> atoms::Result<Vec<u8>> {
     use std::io::Write;
     use std::process::{Command, Stdio};
 
-    let (program, args) = command
-        .split_first()
-        .ok_or_else(|| anyhow!("process_with needs at least a program to run"))?;
+    let spawn_error = |source| atoms::Error::Spawn {
+        command: program.to_string(),
+        source,
+    };
 
     let mut child = Command::new(program)
         .args(args)
@@ -171,25 +183,22 @@ fn process(command: &[String], input: Vec<u8>) -> anyhow::Result<Vec<u8>> {
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()
-        .map_err(|err| anyhow!("process_with could not run `{program}`: {err}"))?;
+        .map_err(spawn_error)?;
 
     // Write from a separate thread, so a command that writes before it has read
     // all of its input can't block on a full pipe
     let mut stdin = child.stdin.take().expect("stdin is piped");
     let writer = std::thread::spawn(move || stdin.write_all(&input));
 
-    let output = child.wait_with_output()?;
+    let output = child.wait_with_output().map_err(spawn_error)?;
     // A command may exit without reading all of its input, which is fine
     let _ = writer.join();
 
     if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        return Err(anyhow!(
-            "process_with `{}` failed with {}: {}",
-            command.join(" "),
-            output.status,
-            stderr.trim()
-        ));
+        return Err(atoms::Error::CommandFailed {
+            code: output.status.code().unwrap_or(1),
+            stderr: String::from_utf8_lossy(&output.stderr).trim().to_string(),
+        });
     }
 
     Ok(output.stdout)
@@ -355,8 +364,11 @@ mod tests {
             String::from("-c"),
             String::from("echo bad key >&2; exit 2"),
         ];
-        let err = super::process(&command, vec![]).unwrap_err().to_string();
-        assert!(err.contains("bad key"), "{err}");
+        let err = format!(
+            "{:#}",
+            anyhow::Error::from(super::process(&command, vec![]).unwrap_err())
+        );
+        assert!(err.ends_with("exit code: 2: bad key"), "{err}");
     }
 
     fn copy(from: &str, to: &str) -> super::FileCopy {
@@ -393,10 +405,7 @@ mod tests {
         assert_eq!(b"hi ferris".to_vec(), rendered);
 
         let err = super::render(b"{{ nope }}", &contexts).unwrap_err();
-        assert!(
-            err.to_string().contains("Failed to render contents"),
-            "{err}"
-        );
+        assert!(err.to_string().contains("nope"), "{err}");
     }
 
     #[test]
@@ -420,5 +429,27 @@ mod tests {
 
         // create the directory and the file, chmod, write, and chown on unix only
         assert_eq!(if cfg!(unix) { 5 } else { 4 }, steps.len());
+    }
+
+    #[test]
+    fn a_missing_source_is_named() {
+        use crate::actions::Action;
+
+        let dir = tempfile::tempdir().unwrap();
+        let manifest = crate::manifests::Manifest {
+            root_dir: Some(dir.path().to_path_buf()),
+            ..Default::default()
+        };
+
+        let err = copy("nope", "out")
+            .plan(&manifest, &crate::actions::PlanCx::empty())
+            .err()
+            .expect("plan must fail");
+
+        let missing = dir.path().join("files").join("nope");
+        assert_eq!(
+            format!("{} doesn't exist", missing.display()),
+            err.to_string()
+        );
     }
 }

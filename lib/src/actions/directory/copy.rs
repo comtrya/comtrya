@@ -1,8 +1,7 @@
 //! `directory.copy`: copies the contents of a directory into another one
 
 use super::DirectoryAction;
-use crate::actions::Action;
-use crate::actions::PlanCx;
+use crate::actions::{Action, PlanCx, Result};
 use crate::steps::Step;
 use crate::{atoms::directory::Copy, manifests::Manifest};
 use schemars::JsonSchema;
@@ -28,7 +27,7 @@ impl Action for DirectoryCopy {
         format!("Copying {} to {}", self.from, self.to)
     }
 
-    fn plan(&self, manifest: &Manifest, _context: &PlanCx) -> anyhow::Result<Vec<Step>> {
+    fn plan(&self, manifest: &Manifest, _context: &PlanCx) -> Result<Vec<Step>> {
         Ok(vec![Step::new(Copy {
             from: self.resolve(manifest, &self.from)?,
             to: PathBuf::from(&self.to),

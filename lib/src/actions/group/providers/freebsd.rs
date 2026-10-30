@@ -1,10 +1,10 @@
 //! `pw groupadd` on FreeBSD
 
 use super::GroupProvider;
+use crate::actions::{Error, Result};
 use crate::contexts::Facts;
 use crate::steps::Step;
 use crate::{actions::group::GroupVariant, atoms::command::Exec};
-use anyhow::bail;
 use serde::{Deserialize, Serialize};
 
 /// Creates groups with `pw groupadd`
@@ -12,9 +12,12 @@ use serde::{Deserialize, Serialize};
 pub struct FreeBSDGroupProvider {}
 
 impl GroupProvider for FreeBSDGroupProvider {
-    fn add_group(&self, group: &GroupVariant, _facts: &Facts) -> anyhow::Result<Vec<Step>> {
+    fn add_group(&self, group: &GroupVariant, _facts: &Facts) -> Result<Vec<Step>> {
         if group.group_name.is_empty() {
-            bail!("can't create a group without a group_name");
+            return Err(Error::Missing {
+                action: "group.add",
+                field: "group_name",
+            });
         }
 
         Ok(vec![Step::new(Exec {

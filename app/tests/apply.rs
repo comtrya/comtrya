@@ -366,7 +366,7 @@ fn dry_run_fails_when_an_action_cant_be_planned() {
     let output = f.run_failing(&["apply", "--dry-run"]).get_output().clone();
     let log = String::from_utf8_lossy(&output.stdout) + String::from_utf8_lossy(&output.stderr);
 
-    assert!(log.contains("zshrc was not found"), "{log}");
+    assert!(log.contains("zshrc doesn't exist"), "{log}");
     assert!(log.contains("1 manifest(s) failed"), "{log}");
     assert!(!f.created("valid"));
 }
@@ -392,8 +392,8 @@ fn dry_run_reports_every_action_that_cant_be_planned() {
         .clone();
     let stdout = String::from_utf8_lossy(&stdout);
 
-    assert!(stdout.contains("zshrc was not found"), "{stdout}");
-    assert!(stdout.contains("bashrc was not found"), "{stdout}");
+    assert!(stdout.contains("zshrc doesn't exist"), "{stdout}");
+    assert!(stdout.contains("bashrc doesn't exist"), "{stdout}");
 }
 
 #[test]
@@ -449,7 +449,7 @@ fn a_missing_directory_copy_source_is_reported() {
 
     let log = failure_log(&f, &["apply"]);
 
-    assert!(log.contains("nope was not found"), "{log}");
+    assert!(log.contains("nope doesn't exist"), "{log}");
 }
 
 #[test]
@@ -622,7 +622,7 @@ fn a_missing_source_file_is_reported() {
 
     let error = stdout
         .lines()
-        .find(|line| line.contains("zshrc was not found"))
+        .find(|line| line.contains("zshrc doesn't exist"))
         .unwrap_or_else(|| panic!("missing file not named in:\n{stdout}"));
     assert!(error.contains("ERROR"), "{error}");
     assert!(!String::from_utf8_lossy(&output.stderr).contains("panicked"));
@@ -983,7 +983,10 @@ fn package_provider_can_be_configured() {
 
     let output = f.run_failing(&["apply"]).get_output().clone();
     let log = String::from_utf8_lossy(&output.stdout) + String::from_utf8_lossy(&output.stderr);
-    assert!(log.contains("Zypper, isn't available"), "{log}");
+    assert!(
+        log.contains("package provider Zypper isn't available"),
+        "{log}"
+    );
 
     f.manifest(
         "configured.yaml",
@@ -992,7 +995,10 @@ fn package_provider_can_be_configured() {
 
     let output = f.run_failing(&["apply"]).get_output().clone();
     let log = String::from_utf8_lossy(&output.stdout) + String::from_utf8_lossy(&output.stderr);
-    assert!(log.contains("Xbps, isn't available"), "{log}");
+    assert!(
+        log.contains("package provider Xbps isn't available"),
+        "{log}"
+    );
     assert!(!log.contains("Zypper"), "{log}");
 
     // `package` is reserved in Rhai, so the context is `packages`

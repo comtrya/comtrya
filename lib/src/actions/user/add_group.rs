@@ -1,8 +1,7 @@
 //! `user.group`: adds an existing user to groups
 
 use super::providers::UserProviders;
-use crate::actions::Action;
-use crate::actions::PlanCx;
+use crate::actions::{Action, PlanCx, Result};
 use crate::manifests::Manifest;
 use crate::steps::Step;
 use schemars::JsonSchema;
@@ -35,7 +34,7 @@ impl Action for UserAddGroup {
         )
     }
 
-    fn plan(&self, _manifest: &Manifest, cx: &PlanCx) -> anyhow::Result<Vec<Step>> {
+    fn plan(&self, _manifest: &Manifest, cx: &PlanCx) -> Result<Vec<Step>> {
         let box_provider = self.provider.clone().get_provider();
         let provider = box_provider.deref();
 

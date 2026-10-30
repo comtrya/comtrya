@@ -6,11 +6,11 @@ use crate::actions::package::{
     repository::{PackageRepository, RepositoryKey},
     PackageVariant,
 };
+use crate::actions::{Error, Result};
 use crate::atoms::command::Exec;
 use crate::contexts::Facts;
 use crate::steps::Step;
 use crate::utilities;
-use anyhow::anyhow;
 use serde::{Deserialize, Serialize};
 use tracing::warn;
 use which::which;
@@ -78,7 +78,7 @@ struct DebRepository<'a> {
 
 impl<'a> DebRepository<'a> {
     /// Splits the one-line format, and fails without a URI and a suite
-    fn parse(name: &'a str) -> anyhow::Result<Self> {
+    fn parse(name: &'a str) -> Result<Self> {
         let mut parts = name.split_whitespace();
 
         match (parts.next(), parts.next()) {
@@ -87,9 +87,10 @@ impl<'a> DebRepository<'a> {
                 suite,
                 components: parts.collect(),
             }),
-            _ => Err(anyhow!(
-                "Invalid apt repository '{name}', expected '<uri> <suite> [<component>...]'"
-            )),
+            _ => Err(Error::Invalid {
+                field: "name",
+                problem: format!("must be '<uri> <suite> [<component>...]', got '{name}'"),
+            }),
         }
     }
 
@@ -162,11 +163,7 @@ impl PackageProvider for Aptitude {
                 .is_ok_and(|contents| contents == deb.deb822(signed_by.as_deref()))
     }
 
-    fn add_repository(
-        &self,
-        repository: &PackageRepository,
-        _facts: &Facts,
-    ) -> anyhow::Result<Vec<Step>> {
+    fn add_repository(&self, repository: &PackageRepository, _facts: &Facts) -> Result<Vec<Step>> {
         let mut steps: Vec<Step> = vec![];
 
         // PPAs only exist on Ubuntu, which still ships add-apt-repository
@@ -226,11 +223,11 @@ impl PackageProvider for Aptitude {
         Ok(steps)
     }
 
-    fn query(&self, package: &PackageVariant) -> anyhow::Result<Vec<String>> {
+    fn query(&self, package: &PackageVariant) -> Result<Vec<String>> {
         Ok(package.packages())
     }
 
-    fn install(&self, package: &PackageVariant, _facts: &Facts) -> anyhow::Result<Vec<Step>> {
+    fn install(&self, package: &PackageVariant, _facts: &Facts) -> Result<Vec<Step>> {
         Ok(vec![self.privileged_exec(
             "apt",
             [String::from("install"), String::from("--yes")]

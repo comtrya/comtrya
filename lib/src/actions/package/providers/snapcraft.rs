@@ -2,6 +2,7 @@
 
 use super::PackageProvider;
 use crate::actions::package::repository::PackageRepository;
+use crate::actions::Result;
 use crate::contexts::Facts;
 use crate::steps::Step;
 use crate::{actions::package::PackageVariant, atoms::command::Exec};
@@ -46,19 +47,15 @@ impl PackageProvider for Snapcraft {
         false
     }
 
-    fn add_repository(
-        &self,
-        _package: &PackageRepository,
-        _facts: &Facts,
-    ) -> anyhow::Result<Vec<Step>> {
+    fn add_repository(&self, _package: &PackageRepository, _facts: &Facts) -> Result<Vec<Step>> {
         Ok(vec![])
     }
 
-    fn query(&self, package: &PackageVariant) -> anyhow::Result<Vec<String>> {
+    fn query(&self, package: &PackageVariant) -> Result<Vec<String>> {
         Ok(package.packages())
     }
 
-    fn install(&self, package: &PackageVariant, _facts: &Facts) -> anyhow::Result<Vec<Step>> {
+    fn install(&self, package: &PackageVariant, _facts: &Facts) -> Result<Vec<Step>> {
         Ok(vec![Step::new(Exec {
             command: String::from("snap"),
             arguments: vec![String::from("install"), String::from("--yes")]

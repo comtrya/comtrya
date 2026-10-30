@@ -1,6 +1,6 @@
 //! `directory.create`
 
-use crate::actions::{Action, PlanCx};
+use crate::actions::{Action, PlanCx, Result};
 use crate::atoms::directory::Create as DirectoryCreateAtom;
 use crate::manifests::Manifest;
 use crate::steps::Step;
@@ -20,7 +20,7 @@ impl Action for DirectoryCreate {
         format!("Creating directory {}", self.path)
     }
 
-    fn plan(&self, _: &Manifest, _context: &PlanCx) -> anyhow::Result<Vec<Step>> {
+    fn plan(&self, _: &Manifest, _context: &PlanCx) -> Result<Vec<Step>> {
         Ok(vec![Step::new(DirectoryCreateAtom {
             path: PathBuf::from(&self.path),
         })])

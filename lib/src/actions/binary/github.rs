@@ -1,12 +1,10 @@
 //! `binary.github`
 
-use crate::actions::Action;
-use crate::actions::PlanCx;
+use crate::actions::{Action, Error, PlanCx, Result};
 use crate::atoms::file::Chmod;
 use crate::atoms::http::Download;
 use crate::manifests::Manifest;
 use crate::steps::Step;
-use anyhow::anyhow;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
@@ -52,7 +50,7 @@ fn fetch_release(
     owner: &str,
     repo: &str,
     version: Option<&str>,
-) -> anyhow::Result<Release> {
+) -> reqwest::Result<Release> {
     let url = match version {
         None | Some("latest") => format!("{api}/repos/{owner}/{repo}/releases/latest"),
         Some(tag) => format!("{api}/repos/{owner}/{repo}/releases/tags/{tag}"),
@@ -66,7 +64,7 @@ fn fetch_release(
         request = request.bearer_auth(token);
     }
 
-    Ok(request.send()?.error_for_status()?.json()?)
+    request.send()?.error_for_status()?.json()
 }
 
 impl BinaryGitHub {
@@ -84,24 +82,32 @@ impl Action for BinaryGitHub {
         )
     }
 
-    fn plan(&self, _: &Manifest, _: &PlanCx) -> anyhow::Result<Vec<Step>> {
+    fn plan(&self, _: &Manifest, _: &PlanCx) -> Result<Vec<Step>> {
         // Don't need to do anything if something already exists at the path
         if self.path().exists() {
             return Ok(vec![]);
         };
 
-        let (owner, repo) = self.repository.split_once('/').ok_or_else(|| {
-            anyhow!(
-                "Failed to parse repository name: {}",
-                self.repository.as_str()
-            )
-        })?;
+        let (owner, repo) = self
+            .repository
+            .split_once('/')
+            .ok_or_else(|| Error::Invalid {
+                field: "repository",
+                problem: format!("must be `owner/repo`, got '{}'", self.repository),
+            })?;
 
-        let release = fetch_release(GITHUB_API, owner, repo, self.version.as_deref())
-            .map_err(|e| anyhow!("Failed to find a release: {e}"))?;
+        let release =
+            fetch_release(GITHUB_API, owner, repo, self.version.as_deref()).map_err(|source| {
+                Error::Release {
+                    repository: self.repository.clone(),
+                    source,
+                }
+            })?;
 
-        let asset = best_asset(release.assets, &platform_terms())
-            .ok_or_else(|| anyhow!("Failed to find a downloadable asset for this OS"))?;
+        let asset =
+            best_asset(release.assets, &platform_terms()).ok_or_else(|| Error::NoAsset {
+                repository: self.repository.clone(),
+            })?;
         debug!("Downloading {:?}", asset.browser_download_url);
 
         Ok(vec![

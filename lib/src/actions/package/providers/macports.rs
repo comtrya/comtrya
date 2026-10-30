@@ -2,6 +2,7 @@
 
 use super::PackageProvider;
 use crate::actions::package::repository::PackageRepository;
+use crate::actions::Result;
 use crate::contexts::Facts;
 use crate::steps::Step;
 use crate::{actions::package::PackageVariant, atoms::command::Exec};
@@ -39,19 +40,15 @@ impl PackageProvider for Macports {
         false
     }
 
-    fn add_repository(
-        &self,
-        _repository: &PackageRepository,
-        _facts: &Facts,
-    ) -> anyhow::Result<Vec<Step>> {
+    fn add_repository(&self, _repository: &PackageRepository, _facts: &Facts) -> Result<Vec<Step>> {
         Ok(vec![])
     }
 
-    fn query(&self, _package: &PackageVariant) -> anyhow::Result<Vec<String>> {
+    fn query(&self, _package: &PackageVariant) -> Result<Vec<String>> {
         Ok(vec![])
     }
 
-    fn install(&self, package: &PackageVariant, _facts: &Facts) -> anyhow::Result<Vec<Step>> {
+    fn install(&self, package: &PackageVariant, _facts: &Facts) -> Result<Vec<Step>> {
         let cli = match which("port") {
             Ok(c) => c,
             Err(_) => {

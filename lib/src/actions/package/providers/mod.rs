@@ -3,6 +3,7 @@
 
 mod aptitude;
 use self::aptitude::Aptitude;
+use crate::actions::{Error, Result};
 mod aur;
 use self::aur::AurHelper;
 use crate::steps::Step;
@@ -28,7 +29,7 @@ mod zypper;
 use self::zypper::Zypper;
 use super::{repository::PackageRepository, PackageVariant};
 use crate::contexts::Facts;
-use anyhow::anyhow;
+use crate::runner::{CommandOutput, CommandSpec, Runner};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use tracing::{debug, trace};
@@ -130,15 +131,12 @@ impl PackageProviders {
 
     /// The provider an action uses: its own `provider`, else the one in the facts
     /// (`package_provider` in `Comtrya.yaml`, else the default for this OS)
-    pub fn resolve(provider: Option<&PackageProviders>, facts: &Facts) -> anyhow::Result<Self> {
+    pub fn resolve(provider: Option<&PackageProviders>, facts: &Facts) -> Result<Self> {
         provider
             .cloned()
             .or_else(|| facts.package_provider.clone())
-            .ok_or_else(|| {
-                anyhow!(
-                    "There is no default package provider for {}. Set `provider` on the action, or `package_provider` in Comtrya.yaml",
-                    os_info::get().os_type()
-                )
+            .ok_or_else(|| Error::NoPackageProvider {
+                os: os_info::get().os_type().to_string(),
             })
     }
 
@@ -201,6 +199,15 @@ impl PackageProviders {
     }
 }
 
+/// Runs `command` to see what's installed, and returns what it printed. Fails only if it can't
+/// be started, its exit code is up to the caller
+fn query(runner: &dyn Runner, command: &CommandSpec) -> Result<CommandOutput> {
+    runner.run(command).map_err(|source| Error::Query {
+        command: command.to_string(),
+        source: source.into(),
+    })
+}
+
 /// The requested packages that `installed` doesn't find, in the order they were requested
 fn missing(package: &PackageVariant, installed: impl Fn(&str) -> bool) -> Vec<String> {
     package
@@ -230,16 +237,12 @@ pub trait PackageProvider {
     /// Whether the repository is set up already, so nothing needs to be done
     fn has_repository(&self, package: &PackageRepository) -> bool;
     /// Steps that add the repository and its key
-    fn add_repository(
-        &self,
-        package: &PackageRepository,
-        facts: &Facts,
-    ) -> anyhow::Result<Vec<Step>>;
+    fn add_repository(&self, package: &PackageRepository, facts: &Facts) -> Result<Vec<Step>>;
     /// The requested packages that aren't installed. Providers that can't tell return all of
     /// them
-    fn query(&self, package: &PackageVariant) -> anyhow::Result<Vec<String>>;
+    fn query(&self, package: &PackageVariant) -> Result<Vec<String>>;
     /// Steps that install the packages that are missing
-    fn install(&self, package: &PackageVariant, facts: &Facts) -> anyhow::Result<Vec<Step>>;
+    fn install(&self, package: &PackageVariant, facts: &Facts) -> Result<Vec<Step>>;
 }
 
 #[cfg(test)]

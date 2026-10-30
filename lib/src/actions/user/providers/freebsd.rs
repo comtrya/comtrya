@@ -2,10 +2,10 @@
 
 use super::UserProvider;
 use crate::actions::user::{add_group::UserAddGroup, UserVariant};
+use crate::actions::{Error, Result};
 use crate::atoms::command::Exec;
 use crate::contexts::Facts;
 use crate::steps::Step;
-use anyhow::bail;
 use serde::{Deserialize, Serialize};
 
 /// Creates and changes users with `pw`
@@ -13,9 +13,12 @@ use serde::{Deserialize, Serialize};
 pub struct FreeBSDUserProvider {}
 
 impl UserProvider for FreeBSDUserProvider {
-    fn add_user(&self, user: &UserVariant, facts: &Facts) -> anyhow::Result<Vec<Step>> {
+    fn add_user(&self, user: &UserVariant, facts: &Facts) -> Result<Vec<Step>> {
         if user.username.is_empty() {
-            bail!("can't create a user without a username");
+            return Err(Error::Missing {
+                action: "user.add",
+                field: "username",
+            });
         }
 
         let mut args: Vec<String> = vec![];
@@ -67,7 +70,7 @@ impl UserProvider for FreeBSDUserProvider {
         Ok(steps)
     }
 
-    fn add_to_group(&self, user: &UserAddGroup, _facts: &Facts) -> anyhow::Result<Vec<Step>> {
+    fn add_to_group(&self, user: &UserAddGroup, _facts: &Facts) -> Result<Vec<Step>> {
         super::check_add_to_group(user)?;
 
         let mut steps: Vec<Step> = vec![];
