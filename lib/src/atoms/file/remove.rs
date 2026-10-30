@@ -42,7 +42,7 @@ impl Change for Remove {
             });
         }
 
-        Ok(Check::Drift)
+        Ok(Check::Drift(None))
     }
 
     fn execute(&self) -> Result<()> {
@@ -70,7 +70,7 @@ mod tests {
             target: target_file.path().to_path_buf(),
         };
 
-        assert_eq!(Check::Drift, file_remove.check().unwrap())
+        assert_eq!(Check::Drift(None), file_remove.check().unwrap())
     }
 
     #[test]
@@ -87,7 +87,7 @@ mod tests {
             target: target_file.path().to_path_buf(),
         };
 
-        assert_eq!(Check::Drift, file_remove.check().unwrap());
+        assert_eq!(Check::Drift(None), file_remove.check().unwrap());
         assert!(file_remove.execute().is_ok());
         assert_eq!(Check::InSync, file_remove.check().unwrap())
     }

@@ -35,13 +35,13 @@ impl Change for Decrypt {
         // If the file doesn't exist, assume it's because
         // another atom is going to provide it.
         if !self.path.exists() {
-            return Ok(Check::Drift);
+            return Ok(Check::Drift(None));
         }
 
         // Fails early for a wrong passphrase
         self.decrypted()?;
 
-        Ok(Check::Drift)
+        Ok(Check::Drift(None))
     }
 
     fn execute(&self) -> Result<()> {
@@ -104,7 +104,7 @@ mod tests {
         };
 
         // plan
-        assert_eq!(Check::Drift, decrypt.check().unwrap());
+        assert_eq!(Check::Drift(None), decrypt.check().unwrap());
 
         // prepare another atom
         let another_decrypt = Decrypt {
@@ -138,7 +138,7 @@ mod tests {
         };
 
         // plan, execute
-        assert_eq!(Check::Drift, decrypt.check().unwrap());
+        assert_eq!(Check::Drift(None), decrypt.check().unwrap());
         assert_eq!(true, decrypt.execute().is_ok());
 
         Ok(())

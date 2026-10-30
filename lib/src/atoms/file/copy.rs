@@ -91,7 +91,7 @@ mod tests {
             to: to_file.path().to_path_buf(),
         };
 
-        assert_eq!(Check::Drift, file_copy.check().unwrap());
+        assert_eq!(Check::Drift(None), file_copy.check().unwrap());
 
         let file_copy = Copy {
             from: from_file.path().to_path_buf(),
@@ -135,7 +135,7 @@ mod tests {
             to: to_file.path().to_path_buf(),
         };
 
-        assert_eq!(Check::Drift, file_copy.check().unwrap());
+        assert_eq!(Check::Drift(None), file_copy.check().unwrap());
         assert!(file_copy.execute().is_ok());
         assert_eq!(Check::InSync, file_copy.check().unwrap());
     }

@@ -43,7 +43,7 @@ impl Change for Remove {
             });
         }
 
-        Ok(Check::Drift)
+        Ok(Check::Drift(None))
     }
 
     fn execute(&self) -> Result<()> {
@@ -67,7 +67,7 @@ mod tests {
         let atom = Remove {
             target: temp.clone(),
         };
-        assert_eq!(Check::Drift, atom.check().unwrap());
+        assert_eq!(Check::Drift(None), atom.check().unwrap());
 
         let file_path = temp.join("my-temporary-note.txt");
         let mut file = File::create(&file_path).unwrap();

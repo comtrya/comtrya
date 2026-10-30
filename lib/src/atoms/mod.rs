@@ -36,8 +36,9 @@ pub enum RunAs {
 pub enum Check {
     /// The system is as the atom wants it, nothing to do
     InSync,
-    /// The system differs, the atom has to run
-    Drift,
+    /// The system differs, the atom has to run. With what it changes, e.g. a diff of a file's
+    /// contents, if the atom can say more than its name
+    Drift(Option<String>),
     /// The atom needs a path that doesn't exist. A dry run goes on if an earlier step makes it,
     /// like a download for an archive that's unpacked next (#128). Otherwise the atom can't run
     Pending {
@@ -49,10 +50,25 @@ pub enum Check {
 impl Check {
     /// [`Check::Drift`] if the system `differs`, otherwise [`Check::InSync`]
     pub fn drift_if(differs: bool) -> Check {
+        Check::drift_if_with(differs, || None)
+    }
+
+    /// [`Check::Drift`] with what `describe` says if the system `differs`, otherwise
+    /// [`Check::InSync`]. `describe` only runs when it differs
+    pub fn drift_if_with(differs: bool, describe: impl FnOnce() -> Option<String>) -> Check {
         if differs {
-            Check::Drift
+            Check::Drift(describe())
         } else {
             Check::InSync
+        }
+    }
+
+    /// What a [`Check::Drift`] changes, for tests. Panics on anything else
+    #[cfg(test)]
+    pub fn change(self) -> Option<String> {
+        match self {
+            Check::Drift(change) => change,
+            other => panic!("expected a drift, got {other:?}"),
         }
     }
 
@@ -179,12 +195,6 @@ impl Atom {
         self.change().execute_with_output()
     }
 
-    /// What `execute` would change, e.g. a diff of a file's contents. Only asked for atoms that
-    /// need to run
-    pub fn describe_change(&self) -> Option<String> {
-        self.change().describe_change()
-    }
-
     /// The atom that makes this change as root, through `privilege` (`sudo`, `doas`, `run0`).
     /// Only programs can be run that way, until the privileged helper (#502) runs any atom
     pub fn elevated(self, privilege: &Privilege) -> Result<Atom> {
@@ -251,11 +261,6 @@ trait Change: std::fmt::Display {
     fn execute_with_output(&self) -> Result<Output> {
         self.execute().map(|()| Output::default())
     }
-
-    /// What `execute` would change, e.g. a diff of a file's contents
-    fn describe_change(&self) -> Option<String> {
-        None
-    }
 }
 
 /// Does nothing, and has its text as output. For tests
@@ -266,7 +271,7 @@ pub struct Echo(pub &'static str);
 #[cfg(test)]
 impl Change for Echo {
     fn check(&self) -> Result<Check> {
-        Ok(Check::Drift)
+        Ok(Check::Drift(None))
     }
 
     fn execute(&self) -> Result<()> {

@@ -32,7 +32,7 @@ impl std::fmt::Display for Copy {
 impl Change for Copy {
     /// Always runs: comparing every file would cost about as much as copying them
     fn check(&self) -> Result<Check> {
-        Ok(Check::Drift)
+        Ok(Check::Drift(None))
     }
 
     fn execute(&self) -> Result<()> {
@@ -146,7 +146,7 @@ mod tests {
     #[test]
     fn it_always_runs() {
         let (_dir, from, to) = source();
-        assert_eq!(Check::Drift, Copy { from, to }.check().unwrap());
+        assert_eq!(Check::Drift(None), Copy { from, to }.check().unwrap());
     }
 
     #[test]

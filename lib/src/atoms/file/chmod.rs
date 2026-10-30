@@ -33,9 +33,9 @@ use {crate::atoms::Error, std::os::unix::prelude::PermissionsExt};
 impl Change for Chmod {
     fn check(&self) -> Result<Check> {
         // If the file doesn't exist, assume it's because
-        // another atom is going to provide it.
+        // another atom is going to provide it. That atom describes the new file
         if !self.path.exists() {
-            return Ok(Check::Drift);
+            return Ok(Check::Drift(None));
         }
 
         let metadata = std::fs::metadata(&self.path)
@@ -44,10 +44,17 @@ impl Change for Chmod {
         // We expect permissions to come through as if the user was using chmod themselves.
         // This means we support 644/755 decimal syntax. We need to add 0o100000 to support
         // the part of chmod they don't often type.
-        Ok(Check::drift_if(
-            std::fs::Permissions::from_mode(0o100000 + self.mode).mode()
-                != metadata.permissions().mode(),
-        ))
+        let differs = std::fs::Permissions::from_mode(0o100000 + self.mode).mode()
+            != metadata.permissions().mode();
+
+        Ok(Check::drift_if_with(differs, || {
+            Some(format!(
+                "Permissions of {} change from {:o} to {:o}",
+                self.path.display(),
+                metadata.permissions().mode() & 0o7777,
+                self.mode
+            ))
+        }))
     }
 
     fn execute(&self) -> Result<()> {
@@ -58,17 +65,6 @@ impl Change for Chmod {
         .map_err(Error::io("set the permissions of", &self.path))?;
 
         Ok(())
-    }
-
-    fn describe_change(&self) -> Option<String> {
-        // A new file is described by the atom that creates it
-        let current = std::fs::metadata(&self.path).ok()?.permissions().mode() & 0o7777;
-
-        Some(format!(
-            "Permissions of {} change from {current:o} to {:o}",
-            self.path.display(),
-            self.mode
-        ))
     }
 }
 
@@ -129,7 +125,7 @@ mod tests {
             mode: 0o640,
         };
 
-        assert_eq!(Check::Drift, file_chmod.check().unwrap());
+        assert!(matches!(file_chmod.check().unwrap(), Check::Drift(_)));
     }
 
     #[test]
@@ -171,7 +167,7 @@ mod tests {
             mode: 0o640,
         };
 
-        assert_eq!(Check::Drift, file_chmod.check().unwrap());
+        assert!(matches!(file_chmod.check().unwrap(), Check::Drift(_)));
         assert!(file_chmod.execute().is_ok());
         assert_eq!(Check::InSync, file_chmod.check().unwrap());
     }
@@ -187,7 +183,9 @@ mod tests {
         };
 
         assert!(chmod
-            .describe_change()
+            .check()
+            .unwrap()
+            .change()
             .unwrap()
             .ends_with("change from 644 to 600"));
     }
