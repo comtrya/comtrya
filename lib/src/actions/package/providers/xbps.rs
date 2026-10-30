@@ -7,7 +7,6 @@ use crate::atoms::command::Exec;
 use crate::contexts::Facts;
 use crate::runner::{self, CommandSpec, Runner};
 use crate::steps::Step;
-use crate::utilities;
 use anyhow::anyhow;
 use std::collections::HashSet;
 use std::sync::Arc;
@@ -82,13 +81,11 @@ impl PackageProvider for Xbps {
         Ok(super::missing(package, |p| installed.contains(p)))
     }
 
-    fn install(&self, package: &PackageVariant, facts: &Facts) -> anyhow::Result<Vec<Step>> {
+    fn install(&self, package: &PackageVariant, _facts: &Facts) -> anyhow::Result<Vec<Step>> {
         let need_installed = self.query(package)?;
         if need_installed.is_empty() {
             return Ok(vec![]);
         }
-
-        let privilege_provider = utilities::get_privilege_provider(facts);
 
         Ok(vec![Step::new(Exec {
             command: String::from("xbps-install"),
@@ -102,10 +99,9 @@ impl PackageProvider for Xbps {
                 need_installed,
             ]
             .concat(),
-            privileged: true,
-            privilege_provider: privilege_provider.clone(),
             ..Default::default()
-        })])
+        })
+        .as_root()])
     }
 }
 

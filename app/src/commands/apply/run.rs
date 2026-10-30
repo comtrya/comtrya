@@ -188,10 +188,13 @@ impl<'a> Run<'a> {
             return true;
         }
 
-        let output = match step.atom.execute() {
+        let output = match step
+            .atom_to_run(&self.cx.facts.privilege)
+            .and_then(|atom| atom.execute())
+        {
             Ok(output) => output,
             Err(err) => {
-                error!("{} failed: {err:#}", step.atom);
+                error!("{step} failed: {err:#}");
                 return false;
             }
         };
@@ -215,7 +218,7 @@ fn is_needed(step: &Step) -> bool {
     match step.atom.plan() {
         Ok(outcome) => outcome.should_run,
         Err(err) => {
-            warn!("Skipping {}: {err:#}", step.atom);
+            warn!("Skipping {step}: {err:#}");
             false
         }
     }

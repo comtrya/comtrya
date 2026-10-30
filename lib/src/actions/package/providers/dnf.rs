@@ -6,7 +6,6 @@ use crate::actions::package::{repository::PackageRepository, PackageVariant};
 use crate::atoms::command::Exec;
 use crate::contexts::Facts;
 use crate::steps::Step;
-use crate::utilities;
 use serde::{Deserialize, Serialize};
 use tracing::warn;
 use which::which;
@@ -30,9 +29,7 @@ impl PackageProvider for Dnf {
         }
     }
 
-    fn bootstrap(&self, facts: &Facts) -> Vec<Step> {
-        let privilege_provider = utilities::get_privilege_provider(facts);
-
+    fn bootstrap(&self, _facts: &Facts) -> Vec<Step> {
         vec![Step::new(Exec {
             command: String::from("yum"),
             arguments: vec![
@@ -40,10 +37,9 @@ impl PackageProvider for Dnf {
                 String::from("--assumeyes"),
                 String::from("dnf"),
             ],
-            privileged: true,
-            privilege_provider: privilege_provider.clone(),
             ..Default::default()
-        })]
+        })
+        .as_root()]
     }
 
     fn has_repository(&self, _: &PackageRepository) -> bool {
@@ -53,20 +49,17 @@ impl PackageProvider for Dnf {
     fn add_repository(
         &self,
         repository: &PackageRepository,
-        facts: &Facts,
+        _facts: &Facts,
     ) -> anyhow::Result<Vec<Step>> {
         let mut steps: Vec<Step> = vec![];
-
-        let privilege_provider = utilities::get_privilege_provider(facts);
 
         if let Some(key) = repository.key.clone() {
             steps.extend(vec![Step::new(Exec {
                 command: String::from("rpm"),
                 arguments: vec![String::from("--import"), key.url],
-                privileged: true,
-                privilege_provider: privilege_provider.clone(),
                 ..Default::default()
-            })]);
+            })
+            .as_root()]);
         }
 
         steps.extend(vec![
@@ -78,10 +71,9 @@ impl PackageProvider for Dnf {
                     String::from("--add-repo"),
                     repository.name.clone(),
                 ],
-                privileged: true,
-                privilege_provider: privilege_provider.clone(),
                 ..Default::default()
-            }),
+            })
+            .as_root(),
             Step::new(Exec {
                 command: String::from("dnf"),
                 arguments: vec![
@@ -89,10 +81,9 @@ impl PackageProvider for Dnf {
                     String::from("--assumeyes"),
                     String::from("--refresh"),
                 ],
-                privileged: true,
-                privilege_provider: privilege_provider.clone(),
                 ..Default::default()
-            }),
+            })
+            .as_root(),
         ]);
 
         Ok(steps)
@@ -102,9 +93,7 @@ impl PackageProvider for Dnf {
         Ok(package.packages())
     }
 
-    fn install(&self, package: &PackageVariant, facts: &Facts) -> anyhow::Result<Vec<Step>> {
-        let privilege_provider = utilities::get_privilege_provider(facts);
-
+    fn install(&self, package: &PackageVariant, _facts: &Facts) -> anyhow::Result<Vec<Step>> {
         Ok(vec![Step::new(Exec {
             command: String::from("dnf"),
             arguments: vec![
@@ -116,10 +105,9 @@ impl PackageProvider for Dnf {
             .chain(package.extra_args.clone())
             .chain(self.query(package)?)
             .collect(),
-            privileged: true,
-            privilege_provider: privilege_provider.clone(),
             ..Default::default()
-        })])
+        })
+        .as_root()])
     }
 }
 

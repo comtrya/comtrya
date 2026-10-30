@@ -5,7 +5,6 @@ use crate::contexts::Facts;
 use crate::steps::Step;
 use crate::{
     actions::user::add_group::UserAddGroup, actions::user::UserVariant, atoms::command::Exec,
-    utilities,
 };
 use anyhow::{bail, Context};
 use serde::{Deserialize, Serialize};
@@ -42,15 +41,12 @@ impl UserProvider for LinuxUserProvider {
             args.push(user.fullname.clone());
         }
 
-        let privilege_provider = utilities::get_privilege_provider(facts);
-
         let mut steps: Vec<Step> = vec![Step::new(Exec {
             command: cli.display().to_string(),
             arguments: vec![].into_iter().chain(args.clone()).collect(),
-            privileged: true,
-            privilege_provider: privilege_provider.clone(),
             ..Default::default()
-        })];
+        })
+        .as_root()];
 
         if !user.group.is_empty() {
             let user_groups = UserAddGroup {
@@ -66,27 +62,26 @@ impl UserProvider for LinuxUserProvider {
         Ok(steps)
     }
 
-    fn add_to_group(&self, user: &UserAddGroup, facts: &Facts) -> anyhow::Result<Vec<Step>> {
+    fn add_to_group(&self, user: &UserAddGroup, _facts: &Facts) -> anyhow::Result<Vec<Step>> {
         super::check_add_to_group(user)?;
         let cli = which("usermod").context("can't find `usermod` to add users to groups with")?;
-
-        let privilege_provider = utilities::get_privilege_provider(facts);
 
         let mut steps: Vec<Step> = vec![];
 
         for group in user.group.iter() {
-            steps.push(Step::new(Exec {
-                command: cli.display().to_string(),
-                arguments: vec![
-                    String::from("-a"),
-                    String::from("-G"),
-                    String::from(group),
-                    user.username.clone(),
-                ],
-                privileged: true,
-                privilege_provider: privilege_provider.clone(),
-                ..Default::default()
-            }));
+            steps.push(
+                Step::new(Exec {
+                    command: cli.display().to_string(),
+                    arguments: vec![
+                        String::from("-a"),
+                        String::from("-G"),
+                        String::from(group),
+                        user.username.clone(),
+                    ],
+                    ..Default::default()
+                })
+                .as_root(),
+            );
         }
 
         Ok(steps)

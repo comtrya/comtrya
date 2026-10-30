@@ -5,7 +5,6 @@ use crate::actions::package::{repository::PackageRepository, PackageVariant};
 use crate::atoms::command::Exec;
 use crate::contexts::Facts;
 use crate::steps::Step;
-use crate::utilities;
 use serde::{Deserialize, Serialize};
 use tracing::warn;
 use which::which;
@@ -49,9 +48,7 @@ impl PackageProvider for Zypper {
         Ok(package.packages())
     }
 
-    fn install(&self, package: &PackageVariant, facts: &Facts) -> anyhow::Result<Vec<Step>> {
-        let privilege_provider = utilities::get_privilege_provider(facts);
-
+    fn install(&self, package: &PackageVariant, _facts: &Facts) -> anyhow::Result<Vec<Step>> {
         Ok(vec![Step::new(Exec {
             command: String::from("zypper"),
             arguments: vec![String::from("install"), String::from("-y")]
@@ -59,10 +56,9 @@ impl PackageProvider for Zypper {
                 .chain(package.extra_args.clone())
                 .chain(package.packages())
                 .collect(),
-            privileged: true,
-            privilege_provider: privilege_provider.clone(),
             ..Default::default()
-        })])
+        })
+        .as_root()])
     }
 }
 

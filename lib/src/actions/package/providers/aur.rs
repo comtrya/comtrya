@@ -7,7 +7,6 @@ use crate::atoms::command::Exec;
 use crate::contexts::Facts;
 use crate::runner::{self, Runner};
 use crate::steps::Step;
-use crate::utilities;
 use anyhow::anyhow;
 use std::sync::Arc;
 use tracing::warn;
@@ -77,7 +76,7 @@ impl AurHelper {
     }
 
     /// Builds the helper from its AUR sources, after installing what `makepkg` needs
-    fn build_from_aur(&self, facts: &Facts) -> Vec<Step> {
+    fn build_from_aur(&self) -> Vec<Step> {
         let command = self.helper.command;
         let build_dir = format!("/tmp/{command}");
 
@@ -85,10 +84,9 @@ impl AurHelper {
             Step::new(Exec {
                 command: String::from("pacman"),
                 arguments: strings(&["-S", "--needed", "--noconfirm", "base-devel", "git"]),
-                privileged: true,
-                privilege_provider: utilities::get_privilege_provider(facts),
                 ..Default::default()
-            }),
+            })
+            .as_root(),
             Step::new(Exec {
                 command: String::from("git"),
                 arguments: vec![
@@ -123,8 +121,8 @@ impl PackageProvider for AurHelper {
         }
     }
 
-    fn bootstrap(&self, facts: &Facts) -> Vec<Step> {
-        self.build_from_aur(facts)
+    fn bootstrap(&self, _facts: &Facts) -> Vec<Step> {
+        self.build_from_aur()
     }
 
     fn has_repository(&self, _: &PackageRepository) -> bool {
@@ -245,8 +243,8 @@ mod tests {
 
             assert_eq!(1, steps.len());
             assert_eq!(
-                format!("CommandExec with: privileged=false: {expected}"),
-                steps[0].atom.to_string()
+                format!("CommandExec with: {expected}"),
+                steps[0].to_string()
             );
         }
     }
@@ -265,10 +263,11 @@ mod tests {
     #[test]
     fn bootstrap_builds_the_helper_from_the_aur() {
         let steps = AurHelper::paru().bootstrap(&Facts::default());
-        let commands: Vec<String> = steps.iter().map(|step| step.atom.to_string()).collect();
+        let commands: Vec<String> = steps.iter().map(|step| step.to_string()).collect();
 
+        // Only pacman runs as root: makepkg refuses to
         assert_eq!(3, commands.len());
-        assert!(commands[0].ends_with("pacman -S --needed --noconfirm base-devel git"));
+        assert!(commands[0].ends_with("pacman -S --needed --noconfirm base-devel git (as root)"));
         assert!(commands[1].ends_with("git clone https://aur.archlinux.org/paru.git /tmp/paru"));
         assert!(commands[2].ends_with("makepkg -si --noconfirm"));
     }
