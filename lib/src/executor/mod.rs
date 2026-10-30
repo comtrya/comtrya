@@ -12,7 +12,7 @@ use crate::{actions::PlanCx, manifests::Loaded};
 pub use event::{Event, Ignore, Observer, Skip, StepSkip};
 use graph::ManifestGraph;
 use run::Run;
-use std::path::Path;
+use std::{path::Path, sync::atomic::AtomicBool};
 
 /// What to run, and how
 #[derive(Clone, Copy)]
@@ -25,6 +25,9 @@ pub struct Options<'a> {
     pub label: Option<&'a str>,
     /// Receives what happens, see [`Event`]
     pub observer: &'a dyn Observer,
+    /// When this becomes true, e.g. on Ctrl-C, the step that's running finishes and nothing
+    /// starts after it
+    pub cancel: Option<&'a AtomicBool>,
 }
 
 impl Default for Options<'_> {
@@ -35,6 +38,7 @@ impl Default for Options<'_> {
             dry_run: false,
             label: None,
             observer: &Ignore,
+            cancel: None,
         }
     }
 }
@@ -45,11 +49,16 @@ pub struct Report {
     /// The manifests that failed, couldn't be loaded, or were skipped because a dependency
     /// failed, by name
     pub failed: Vec<String>,
+    /// Whether the run stopped early, see [`Options::cancel`]
+    pub cancelled: bool,
 }
 
 impl Report {
-    /// An error if any manifest failed
+    /// An error if any manifest failed, or the run was cancelled
     pub fn into_result(self) -> anyhow::Result<()> {
+        if self.cancelled {
+            return Err(anyhow::anyhow!("Cancelled"));
+        }
         if self.failed.is_empty() {
             return Ok(());
         }
@@ -146,6 +155,7 @@ mod tests {
             Event::ActionStarted { action } => format!("action {action}"),
             Event::ActionDone { summary } => format!("action done: {}", summary.is_some()),
             Event::StepChange(_) => String::from("change"),
+            Event::Cancelled => String::from("cancelled"),
             _ => String::from("other"),
         }
     }
@@ -182,5 +192,66 @@ mod tests {
             ],
             events.into_inner()
         );
+    }
+
+    #[test]
+    fn a_cancel_stops_before_the_next_step() {
+        let dir = tempfile::tempdir().unwrap();
+        let loaded = Loaded {
+            manifests: HashMap::from([manifest("app", &[], &dir.path().join("app"))]),
+            errors: vec![],
+        };
+        let cancel = AtomicBool::new(false);
+        let events = std::cell::RefCell::new(vec![]);
+        // Ctrl-C while the action plans, right before its step would run
+        let record = |event: &Event| {
+            if let Event::ActionStarted { .. } = event {
+                cancel.store(true, std::sync::atomic::Ordering::Relaxed);
+            }
+            events.borrow_mut().push(name(event));
+        };
+        let options = Options {
+            observer: &record,
+            cancel: Some(&cancel),
+            ..Default::default()
+        };
+
+        let report = run(loaded, dir.path(), PlanCx::empty(), &options);
+
+        assert!(report.cancelled);
+        assert!(!dir.path().join("app").exists());
+        assert!(events.borrow().contains(&String::from("cancelled")));
+        assert!(report.into_result().is_err());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn lines_a_program_prints_are_events() {
+        let dir = tempfile::tempdir().unwrap();
+        let yaml = "actions:\n  - action: command.run\n    command: sh\n    args: [-c, 'echo one; echo two >&2']\n";
+        let manifest = Manifest {
+            name: Some(String::from("echo")),
+            ..serde_yaml_ng::from_str(yaml).unwrap()
+        };
+        let loaded = Loaded {
+            manifests: HashMap::from([(String::from("echo"), manifest)]),
+            errors: vec![],
+        };
+        let lines = std::cell::RefCell::new(vec![]);
+        let record = |event: &Event| {
+            if let Event::StepOutput { stream, line } = event {
+                lines.borrow_mut().push(format!("{stream:?} {line}"));
+            }
+        };
+        let options = Options {
+            observer: &record,
+            ..Default::default()
+        };
+
+        run(loaded, dir.path(), PlanCx::empty(), &options);
+
+        let mut lines = lines.into_inner();
+        lines.sort();
+        assert_eq!(vec!["Stderr two", "Stdout one"], lines);
     }
 }

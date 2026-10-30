@@ -7,7 +7,7 @@ use super::{
 };
 use crate::{
     actions::{Action, PlanCx},
-    atoms::Check,
+    atoms::{self, command::Stream, Atom, Check, Output},
     contexts::evaluate_condition,
     manifests::Manifest,
     steps::Step,
@@ -16,6 +16,10 @@ use petgraph::graph::NodeIndex;
 use std::{
     collections::HashSet,
     path::{Path, PathBuf},
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        mpsc,
+    },
 };
 
 /// What a step changes, like a diff, if its atom can say more than its name
@@ -33,6 +37,10 @@ pub(super) struct Run<'a> {
     label: Option<&'a str>,
     /// Receives what happens
     observer: &'a dyn Observer,
+    /// Set when the run should stop, see [`Options::cancel`]
+    cancel: Option<&'a AtomicBool>,
+    /// Whether the run stopped because of `cancel`
+    cancelled: bool,
     /// Manifests that failed, or were skipped because a dependency failed
     failed: HashSet<NodeIndex>,
     /// What the steps of a dry run would have made so far. A later step that needs one of
@@ -49,6 +57,8 @@ impl<'a> Run<'a> {
             dry_run: options.dry_run,
             label: options.label,
             observer: options.observer,
+            cancel: options.cancel,
+            cancelled: false,
             failed: graph.broken.clone(),
             produced: vec![],
         }
@@ -70,7 +80,10 @@ impl<'a> Run<'a> {
             .collect();
         failed.sort();
 
-        Report { failed }
+        Report {
+            failed,
+            cancelled: self.cancelled,
+        }
     }
 
     /// Runs one manifest, unless it's the root, failed already, or something skips it
@@ -80,7 +93,7 @@ impl<'a> Run<'a> {
         let Some(name) = manifest.name.as_deref() else {
             return;
         };
-        if self.failed.contains(&node) {
+        if self.failed.contains(&node) || self.stops() {
             return;
         }
 
@@ -153,6 +166,9 @@ impl<'a> Run<'a> {
         let mut successful = true;
 
         for action in &manifest.actions {
+            if self.stops() {
+                return false;
+            }
             let shown = action.to_string();
             self.observer.on(&Event::ActionStarted { action: &shown });
 
@@ -182,6 +198,10 @@ impl<'a> Run<'a> {
         let mut ran_any = false;
         let mut successful = true;
         for step in steps {
+            if self.stops() {
+                successful = false;
+                break;
+            }
             let Some(change) = self.needed_change(&step) else {
                 continue;
             };
@@ -220,6 +240,18 @@ impl<'a> Run<'a> {
         }
     }
 
+    /// Whether the run should stop. Tells it once, the first time
+    fn stops(&mut self) -> bool {
+        let asked = self
+            .cancel
+            .is_some_and(|cancel| cancel.load(Ordering::Relaxed));
+        if asked && !self.cancelled {
+            self.cancelled = true;
+            self.observer.on(&Event::Cancelled);
+        }
+        asked
+    }
+
     /// Tells that `step` doesn't run
     fn skipped(&self, step: &Step, reason: StepSkip) {
         self.observer.on(&Event::StepSkipped { step, reason });
@@ -246,7 +278,7 @@ impl<'a> Run<'a> {
 
         let output = match step
             .atom_to_run(&self.cx.facts.privilege)
-            .and_then(|atom| atom.execute())
+            .and_then(|atom| self.execute(&atom))
         {
             Ok(output) => output,
             Err(error) => {
@@ -264,5 +296,32 @@ impl<'a> Run<'a> {
         }
 
         true
+    }
+
+    /// Runs `atom`, and tells each line its program prints while it runs. The atom runs in its
+    /// own thread, so the lines reach the observer here, in the spans of the manifest and the
+    /// action
+    fn execute(&self, atom: &Atom) -> atoms::Result<Output> {
+        let (sender, lines) = mpsc::channel::<(Stream, String)>();
+
+        std::thread::scope(|scope| {
+            let running = scope.spawn(move || {
+                atom.execute_with_lines(&move |stream, line| {
+                    // The receiver lives until the atom is done
+                    let _ = sender.send((stream, line.to_string()));
+                })
+            });
+
+            for (stream, line) in lines {
+                self.observer.on(&Event::StepOutput {
+                    stream,
+                    line: &line,
+                });
+            }
+
+            running
+                .join()
+                .unwrap_or_else(|panic| std::panic::resume_unwind(panic))
+        })
     }
 }

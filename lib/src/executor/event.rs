@@ -1,6 +1,6 @@
 //! What the executor tells about a run, for the command line to show
 
-use crate::{actions, atoms, steps::Step};
+use crate::{actions, atoms, atoms::command::Stream, steps::Step};
 use std::path::Path;
 
 /// Something that happened in a run. The events of a manifest come between its
@@ -44,6 +44,13 @@ pub enum Event<'a> {
     /// What a step changes, like a diff, if its atom can say more than its name. In a dry run,
     /// this is the change it would make
     StepChange(&'a str),
+    /// A line that the program of a step printed, while it runs
+    StepOutput {
+        /// Where it printed it
+        stream: Stream,
+        /// The line, without its line break
+        line: &'a str,
+    },
     /// A step failed, the action stops
     StepFailed {
         /// The step
@@ -53,6 +60,9 @@ pub enum Event<'a> {
     },
     /// A step's finalizers stop the action
     FinalizersFailed,
+    /// The run was asked to stop, e.g. with Ctrl-C. The step that's running finishes, nothing
+    /// starts after it
+    Cancelled,
     /// The action ran its steps that are needed, or stopped at one that failed. It ends here
     ActionDone {
         /// What the action did, `None` if no step was needed

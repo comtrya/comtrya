@@ -1,6 +1,9 @@
 //! Shows the events of a run as log lines, inside a span for the manifest and one for the action
 
-use comtrya_lib::executor::{Event, Observer, Skip, StepSkip};
+use comtrya_lib::{
+    atoms::command::Stream,
+    executor::{Event, Observer, Skip, StepSkip},
+};
 use std::cell::RefCell;
 use tracing::{debug, error, info, span::EnteredSpan, warn};
 
@@ -98,12 +101,21 @@ impl Observer for Log {
             },
             Event::StepChange(change) if self.dry_run => info!("{change}"),
             Event::StepChange(change) => debug!("{change}"),
+            Event::StepOutput {
+                stream: Stream::Stdout,
+                line,
+            } => debug!("stdout: {line}"),
+            Event::StepOutput {
+                stream: Stream::Stderr,
+                line,
+            } => debug!("stderr: {line}"),
             Event::StepFailed { step, error } => {
                 error!("{step} failed: {}", chain(*error))
             }
             Event::FinalizersFailed => {
                 error!("Finalizers won't allow us to continue with this action")
             }
+            Event::Cancelled => warn!("Cancelled, nothing else runs"),
             Event::ActionDone { summary } => {
                 match summary {
                     Some(summary) => info!("{summary}"),
