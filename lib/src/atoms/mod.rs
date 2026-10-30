@@ -223,6 +223,15 @@ impl Atom {
         self.change().execute_with_output()
     }
 
+    /// Makes the change like [`Atom::execute`], and passes each line a program prints to
+    /// `on_line` while it runs
+    pub fn execute_with_lines(&self, on_line: command::OnLine) -> Result<Output> {
+        match self {
+            Atom::Exec(exec) => exec.execute_with_lines(on_line),
+            atom => atom.execute(),
+        }
+    }
+
     /// The atom that makes this change as root, through `privilege` (`sudo`, `doas`, `run0`).
     /// Only programs can be run that way, until the privileged helper (#502) runs any atom
     pub fn elevated(self, privilege: &Privilege) -> Result<Atom> {

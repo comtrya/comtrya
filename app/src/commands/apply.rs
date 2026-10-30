@@ -14,7 +14,8 @@ use comtrya_lib::{
 };
 use std::ops::Deref;
 use std::path::PathBuf;
-use tracing::{error, instrument, trace};
+use std::sync::atomic::{AtomicBool, Ordering};
+use tracing::{error, instrument, trace, warn};
 
 /// The arguments of `comtrya apply` and `comtrya status`
 #[derive(Parser, Debug)]
@@ -97,6 +98,24 @@ impl Apply {
     }
 }
 
+/// Set by the first Ctrl-C: the step that's running finishes, nothing starts after it. A
+/// second Ctrl-C quits at once
+fn stop_on_ctrl_c() -> &'static AtomicBool {
+    static STOP: AtomicBool = AtomicBool::new(false);
+
+    let handled = ctrlc::set_handler(|| {
+        if STOP.swap(true, Ordering::Relaxed) {
+            std::process::exit(130);
+        }
+        warn!("Stopping after the current step, press Ctrl-C again to quit now");
+    });
+    if let Err(err) = handled {
+        warn!("Ctrl-C quits at once: {err}");
+    }
+
+    &STOP
+}
+
 impl ComtryaCommand for Apply {
     /// Loads the manifests, and runs the selected ones with their dependencies first
     #[instrument(skip(self, runtime))]
@@ -112,6 +131,7 @@ impl ComtryaCommand for Apply {
                 dry_run: self.dry_run,
                 label: self.label.as_deref(),
                 observer: &log::Log::new(self.dry_run),
+                cancel: Some(stop_on_ctrl_c()),
             },
         )
         .into_result()
