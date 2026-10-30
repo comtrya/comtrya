@@ -4,6 +4,7 @@ use crate::actions::{Action, Error, PlanCx, Result};
 use crate::atoms::file::Chmod;
 use crate::atoms::http::Download;
 use crate::manifests::Manifest;
+use crate::runtime;
 use crate::steps::Step;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -56,7 +57,7 @@ fn fetch_release(
         Some(tag) => format!("{api}/repos/{owner}/{repo}/releases/tags/{tag}"),
     };
 
-    let mut request = reqwest::blocking::Client::new()
+    let mut request = reqwest::Client::new()
         .get(&url)
         .header("Accept", "application/vnd.github+json")
         .header("User-Agent", concat!("comtrya/", env!("CARGO_PKG_VERSION")));
@@ -64,7 +65,7 @@ fn fetch_release(
         request = request.bearer_auth(token);
     }
 
-    request.send()?.error_for_status()?.json()
+    runtime::block_on(async { request.send().await?.error_for_status()?.json().await })
 }
 
 impl BinaryGitHub {

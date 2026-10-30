@@ -8,7 +8,8 @@ use hickory_resolver::net::runtime::TokioRuntimeProvider;
 use hickory_resolver::proto::rr::RData;
 use hickory_resolver::Resolver;
 use reqwest::Url;
-use tokio::runtime::Runtime;
+
+use crate::runtime;
 
 /// Reads the TXT records of the host as `key=value`, using Google's DNS. Records without `=`
 /// are left out
@@ -23,8 +24,7 @@ pub fn txt_record_values(url: &Url, contexts: &mut HashMap<String, String>) -> R
         .host_str()
         .ok_or_else(|| anyhow::anyhow!("Failed to parse host"))?;
 
-    let rt = Runtime::new()?;
-    let records = rt.block_on(resolver.txt_lookup(host))?;
+    let records = runtime::block_on(resolver.txt_lookup(host))?;
 
     for record in records.answers() {
         let RData::TXT(txt) = &record.data else {

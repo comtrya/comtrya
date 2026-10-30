@@ -21,7 +21,6 @@ os_info = { version = "3.14", features = ["schemars"] }
 petgraph = "0.8"
 regex = "1.12"
 reqwest = { version = "0.13", default-features = false, features = [
-    "blocking",
     "json",
     "rustls",
 ] }
@@ -33,7 +32,7 @@ serde_yaml_ng = "0.10"
 strsim = "0.11"
 sha2 = "0.10"
 similar = "3.2"
-tokio = "1.49"
+tokio = { version = "1.49", features = ["rt-multi-thread", "time"] }
 toml = "1.0"
 # Tera 2 changes the template language used in manifests (e.g. `get_env` was removed,
 # undefined variables error). Stay on 1.x until a deliberate migration; see .github/dependabot.yml.

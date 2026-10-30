@@ -1,6 +1,7 @@
 //! Downloads a file
 
 use crate::atoms::{Check, Error, Result};
+use crate::runtime;
 use serde::{Deserialize, Serialize};
 
 use super::super::Change;
@@ -38,17 +39,14 @@ impl Change for Download {
     }
 
     fn execute(&self) -> Result<()> {
-        let content = reqwest::blocking::get(&self.url)
-            .and_then(|response| response.error_for_status())
-            .and_then(|response| response.bytes())
-            .map_err(|source| Error::Download {
-                url: self.url.clone(),
-                source,
-            })?;
+        let content = runtime::block_on(fetch(&self.url)).map_err(|source| Error::Download {
+            url: self.url.clone(),
+            source,
+        })?;
 
         // Check before writing, so a bad download never replaces the existing file
         if let Some(expected) = &self.sha256 {
-            let actual = digest(content.as_ref());
+            let actual = digest(&content);
             if actual != *expected {
                 return Err(Error::Checksum {
                     url: self.url.clone(),
@@ -64,6 +62,12 @@ impl Change for Download {
 
         Ok(())
     }
+}
+
+/// The body of `url`, or an error if the server answers with one
+async fn fetch(url: &str) -> reqwest::Result<Vec<u8>> {
+    let response = reqwest::get(url).await?.error_for_status()?;
+    Ok(response.bytes().await?.into())
 }
 
 #[cfg(test)]
