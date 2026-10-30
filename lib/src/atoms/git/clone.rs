@@ -1,18 +1,20 @@
 //! Clones a repository
 
-use super::super::Atom;
+use super::super::Change;
 use crate::atoms::Outcome;
 use gix::interrupt;
 use gix::remote::fetch::Shallow;
 use gix::{progress::Discard, Url};
+use serde::{Deserialize, Serialize};
 use std::num::NonZeroU32;
 use std::path::{Path, PathBuf};
 use tracing::instrument;
 
 /// Clones a repository, unless `directory` exists
-#[derive(Default)]
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct Clone {
     /// The URL of the repository
+    #[serde(with = "super::url_as_string")]
     pub repository: Url,
     /// Where to clone it to
     pub directory: PathBuf,
@@ -39,7 +41,7 @@ impl std::fmt::Display for Clone {
     }
 }
 
-impl Atom for Clone {
+impl Change for Clone {
     #[instrument(name = "git.clone.plan", level = "info", skip(self))]
     fn plan(&self) -> anyhow::Result<Outcome> {
         Ok(Outcome {
@@ -49,7 +51,7 @@ impl Atom for Clone {
     }
 
     #[instrument(name = "git.clone.execute", level = "info", skip(self))]
-    fn execute(&mut self) -> anyhow::Result<()> {
+    fn execute(&self) -> anyhow::Result<()> {
         clone_repository(
             &self.repository,
             &self.directory,

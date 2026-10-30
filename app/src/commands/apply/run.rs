@@ -175,7 +175,7 @@ impl<'a> Run<'a> {
     }
 
     /// Shows what the step changes and, unless this is a dry run, runs it. False if it failed
-    fn run_step(&self, mut step: Step) -> bool {
+    fn run_step(&self, step: Step) -> bool {
         if let Some(change) = step.atom.describe_change() {
             if self.dry_run {
                 info!("{change}");
@@ -188,12 +188,15 @@ impl<'a> Run<'a> {
             return true;
         }
 
-        if let Err(err) = step.atom.execute() {
-            error!("{} failed: {err:#}", step.atom);
-            return false;
-        }
+        let output = match step.atom.execute() {
+            Ok(output) => output,
+            Err(err) => {
+                error!("{} failed: {err:#}", step.atom);
+                return false;
+            }
+        };
 
-        if !step.do_finalizers_allow_us_to_continue() {
+        if !step.do_finalizers_allow_us_to_continue(&output) {
             error!("Finalizers won't allow us to continue with this action");
             return false;
         }

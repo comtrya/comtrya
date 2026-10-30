@@ -1,21 +1,16 @@
 //! Creates an empty file
 
 use crate::atoms::Outcome;
+use serde::{Deserialize, Serialize};
 
-use super::super::Atom;
-use super::FileAtom;
+use super::super::Change;
 use std::path::PathBuf;
 
 /// Creates an empty file, unless it exists
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Create {
     /// The file to create
     pub path: PathBuf,
-}
-
-impl FileAtom for Create {
-    fn get_path(&self) -> &PathBuf {
-        &self.path
-    }
 }
 
 impl std::fmt::Display for Create {
@@ -24,7 +19,7 @@ impl std::fmt::Display for Create {
     }
 }
 
-impl Atom for Create {
+impl Change for Create {
     fn plan(&self) -> anyhow::Result<Outcome> {
         Ok(Outcome {
             side_effects: vec![],
@@ -32,7 +27,7 @@ impl Atom for Create {
         })
     }
 
-    fn execute(&mut self) -> anyhow::Result<()> {
+    fn execute(&self) -> anyhow::Result<()> {
         std::fs::File::create(&self.path)?;
 
         Ok(())
@@ -77,7 +72,7 @@ mod tests {
             }
         };
 
-        let mut file_create = Create {
+        let file_create = Create {
             path: temp_dir.path().join("create-me"),
         };
 

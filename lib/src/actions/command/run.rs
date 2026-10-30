@@ -82,7 +82,6 @@ impl Action for RunCommand {
             stdout_file: self.stdout_file(),
             // Only for the command, comtrya's own environment stays as it is
             environment: self.env.clone().into_iter().collect(),
-            ..Default::default()
         })])
     }
 }

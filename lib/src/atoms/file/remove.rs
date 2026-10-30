@@ -1,23 +1,17 @@
 //! Removes a file
 
+use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
 use tracing::error;
 
-use crate::atoms::{Atom, Outcome};
-
-use super::FileAtom;
+use crate::atoms::{Change, Outcome};
 
 /// Removes a file. Not a directory
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Remove {
     /// The file to remove
     pub target: PathBuf,
-}
-
-impl FileAtom for Remove {
-    fn get_path(&self) -> &std::path::PathBuf {
-        &self.target
-    }
 }
 
 impl std::fmt::Display for Remove {
@@ -26,7 +20,7 @@ impl std::fmt::Display for Remove {
     }
 }
 
-impl Atom for Remove {
+impl Change for Remove {
     fn plan(&self) -> anyhow::Result<crate::atoms::Outcome> {
         if !self.target.is_file() {
             error!(
@@ -75,7 +69,7 @@ impl Atom for Remove {
         })
     }
 
-    fn execute(&mut self) -> anyhow::Result<()> {
+    fn execute(&self) -> anyhow::Result<()> {
         std::fs::remove_file(&self.target)?;
         Ok(())
     }
@@ -113,7 +107,7 @@ mod tests {
             }
         };
 
-        let mut file_remove = Remove {
+        let file_remove = Remove {
             target: target_file.path().to_path_buf(),
         };
 

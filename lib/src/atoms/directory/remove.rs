@@ -1,12 +1,14 @@
 //! Removes a directory
 
+use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
 use tracing::error;
 
-use crate::atoms::{Atom, Outcome};
+use crate::atoms::{Change, Outcome};
 
 /// Removes an empty directory
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Remove {
     /// The directory to remove
     pub target: PathBuf,
@@ -22,7 +24,7 @@ impl std::fmt::Display for Remove {
     }
 }
 
-impl Atom for Remove {
+impl Change for Remove {
     fn plan(&self) -> anyhow::Result<Outcome> {
         let path_to_dir = PathBuf::from(&self.target);
 
@@ -57,7 +59,7 @@ impl Atom for Remove {
         })
     }
 
-    fn execute(&mut self) -> anyhow::Result<()> {
+    fn execute(&self) -> anyhow::Result<()> {
         std::fs::remove_dir(&self.target)?;
         Ok(())
     }
@@ -109,7 +111,7 @@ mod tests {
 
         assert_eq!(true, path.exists());
 
-        let mut atom = Remove {
+        let atom = Remove {
             target: temp_dir.path().to_path_buf(),
         };
 

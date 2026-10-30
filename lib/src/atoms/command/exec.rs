@@ -1,16 +1,17 @@
 //! Runs a program, with the privilege provider if needed, and keeps its output
 
-use crate::atoms::Outcome;
+use crate::atoms::{Outcome, Output};
+use serde::{Deserialize, Serialize};
 
-use super::super::Atom;
+use super::super::Change;
 use crate::utilities;
 use anyhow::{anyhow, Context};
 use std::path::{Path, PathBuf};
-use std::process::{Command, Output};
+use std::process::{self, Command};
 use tracing::debug;
 
 /// Runs a program, every time. Fails when the program exits with an error
-#[derive(Default)]
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct Exec {
     /// The program to run, found in `PATH`
     pub command: String,
@@ -26,19 +27,6 @@ pub struct Exec {
     pub privilege_provider: String,
     /// Writes stdout to this file instead of logging it
     pub stdout_file: Option<PathBuf>,
-    /// What the last run returned
-    pub(crate) status: ExecStatus,
-}
-
-/// What a run of the program returned
-#[derive(Default)]
-pub(crate) struct ExecStatus {
-    /// The exit code: 0 on success, 1 when a signal ended the program
-    code: i32,
-    /// The output, unless it went to `stdout_file`
-    stdout: String,
-    /// The error output
-    stderr: String,
 }
 
 /// Runs `command` without arguments
@@ -94,32 +82,35 @@ impl Exec {
         process
     }
 
-    /// Keeps stderr, and writes stdout to `stdout_file` or keeps it for `output_string`
-    fn succeeded(&mut self, output: Output) -> anyhow::Result<()> {
-        self.status.stderr = String::from_utf8(output.stderr)?;
+    /// The output for the finalizers. Stdout goes to `stdout_file` instead, if there is one
+    fn succeeded(&self, output: process::Output) -> anyhow::Result<Output> {
+        let stderr = String::from_utf8(output.stderr)?;
 
         if let Some(stdout_file) = &self.stdout_file {
-            return write_stdout(stdout_file, &output.stdout);
+            write_stdout(stdout_file, &output.stdout)?;
+            return Ok(Output {
+                stdout: String::new(),
+                stderr,
+            });
         }
 
-        self.status.stdout = String::from_utf8(output.stdout)?;
-        debug!("stdout: {}", &self.status.stdout);
+        let stdout = String::from_utf8(output.stdout)?;
+        debug!("stdout: {stdout}");
 
-        Ok(())
+        Ok(Output { stdout, stderr })
     }
 
-    /// Keeps the output, and fails with the exit code and stderr
-    fn failed(&mut self, output: Output) -> anyhow::Result<()> {
+    /// Fails with the exit code (1 when a signal ended the program) and stderr
+    fn failed(&self, output: process::Output) -> anyhow::Result<Output> {
         let code = output.status.code().unwrap_or(1);
-        self.status.code = code;
-        self.status.stdout = String::from_utf8(output.stdout)?;
-        self.status.stderr = String::from_utf8(output.stderr)?;
+        let stdout = String::from_utf8(output.stdout)?;
+        let stderr = String::from_utf8(output.stderr)?;
 
-        debug!("exit code: {}", &self.status.code);
-        debug!("stdout: {}", &self.status.stdout);
-        debug!("stderr: {}", &self.status.stderr);
+        debug!("exit code: {code}");
+        debug!("stdout: {stdout}");
+        debug!("stderr: {stderr}");
 
-        match self.status.stderr.trim() {
+        match stderr.trim() {
             "" => Err(anyhow!("Command failed with exit code: {code}")),
             stderr => Err(anyhow!("Command failed with exit code: {code}: {stderr}")),
         }
@@ -151,7 +142,7 @@ impl std::fmt::Display for Exec {
     }
 }
 
-impl Atom for Exec {
+impl Change for Exec {
     fn plan(&self) -> anyhow::Result<Outcome> {
         Ok(Outcome {
             // Commands may have side-effects, but none that can be "known"
@@ -165,7 +156,11 @@ impl Atom for Exec {
         })
     }
 
-    fn execute(&mut self) -> anyhow::Result<()> {
+    fn execute(&self) -> anyhow::Result<()> {
+        self.execute_with_output().map(|_| ())
+    }
+
+    fn execute_with_output(&self) -> anyhow::Result<Output> {
         let (command, arguments) = self.elevate_if_required();
 
         let command = self
@@ -179,18 +174,6 @@ impl Atom for Exec {
         } else {
             self.failed(output)
         }
-    }
-
-    fn output_string(&self) -> String {
-        self.status.stdout.clone()
-    }
-
-    fn error_message(&self) -> String {
-        self.status.stderr.clone()
-    }
-
-    fn status_code(&self) -> i32 {
-        self.status.code
     }
 }
 
@@ -277,10 +260,10 @@ mod tests {
         let mut command_run = new_run_command(String::from("echo"));
         command_run.arguments = vec![String::from("hello")];
         command_run.stdout_file = Some(stdout_file.clone());
-        command_run.execute().unwrap();
+        let output = command_run.execute_with_output().unwrap();
 
         assert_eq!("hello\n", std::fs::read_to_string(stdout_file).unwrap());
-        assert_eq!("", command_run.output_string());
+        assert_eq!("", output.stdout);
     }
 
     #[cfg(unix)]
@@ -300,17 +283,29 @@ mod tests {
 
     #[cfg(unix)]
     #[test]
-    fn the_exit_code_is_kept() {
+    fn the_error_has_the_exit_code() {
         let mut command_run = new_run_command(String::from("sh"));
         command_run.arguments = vec![String::from("-c"), String::from("exit 3")];
-        command_run.execute().expect_err("Command should fail");
+        let error = command_run.execute().expect_err("Command should fail");
 
-        assert_eq!(3, command_run.status_code());
+        assert_eq!("Command failed with exit code: 3", error.to_string());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn the_output_is_returned() {
+        let mut command_run = new_run_command(String::from("echo"));
+        command_run.arguments = vec![String::from("hello")];
+
+        assert_eq!(
+            "hello",
+            command_run.execute_with_output().unwrap().stdout.trim()
+        );
     }
 
     #[test]
     fn error_propagation() {
-        let mut command_run = new_run_command(String::from("non-existant-command"));
+        let command_run = new_run_command(String::from("non-existant-command"));
         command_run.execute().expect_err("Command should fail");
     }
 

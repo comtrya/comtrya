@@ -1,25 +1,20 @@
 //! Creates a symlink
 
 use crate::atoms::Outcome;
+use serde::{Deserialize, Serialize};
 
-use super::super::Atom;
-use super::FileAtom;
+use super::super::Change;
 use std::path::{Path, PathBuf};
 use tracing::{error, warn};
 
 /// Links `target` to `source`. Replaces symlinks that point elsewhere or are broken, but
 /// never files or directories
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Link {
     /// What the link points to. Must exist
     pub source: PathBuf,
     /// Where the link is created
     pub target: PathBuf,
-}
-
-impl FileAtom for Link {
-    fn get_path(&self) -> &PathBuf {
-        &self.source
-    }
 }
 
 impl std::fmt::Display for Link {
@@ -33,7 +28,7 @@ impl std::fmt::Display for Link {
     }
 }
 
-impl Atom for Link {
+impl Change for Link {
     fn plan(&self) -> anyhow::Result<Outcome> {
         // First, ensure source exists and can be linked to
         if !self.source.exists() {
@@ -93,7 +88,7 @@ impl Atom for Link {
     }
 
     #[cfg(unix)]
-    fn execute(&mut self) -> anyhow::Result<()> {
+    fn execute(&self) -> anyhow::Result<()> {
         remove_existing_link(&self.target)?;
         std::os::unix::fs::symlink(&self.source, &self.target)?;
 
@@ -101,7 +96,7 @@ impl Atom for Link {
     }
 
     #[cfg(windows)]
-    fn execute(&mut self) -> anyhow::Result<()> {
+    fn execute(&self) -> anyhow::Result<()> {
         remove_existing_link(&self.target)?;
         if self.source.is_dir() {
             std::os::windows::fs::symlink_dir(&self.source, &self.target)?;
@@ -148,7 +143,7 @@ mod tests {
             }
         };
 
-        let mut atom = Link {
+        let atom = Link {
             target: from_dir.path().join("symlink"),
             source: to_file.path().to_path_buf(),
         };
@@ -181,7 +176,7 @@ mod tests {
         let target = dir.path().join("target");
         std::os::unix::fs::symlink(dir.path().join("moved-away"), &target).unwrap();
 
-        let mut atom = Link {
+        let atom = Link {
             source: source.clone(),
             target: target.clone(),
         };
@@ -203,7 +198,7 @@ mod tests {
         let target = dir.path().join("target");
         std::os::unix::fs::symlink(&other, &target).unwrap();
 
-        let mut atom = Link {
+        let atom = Link {
             source: source.clone(),
             target: target.clone(),
         };

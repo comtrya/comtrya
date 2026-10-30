@@ -1,16 +1,16 @@
 //! Sets the owner and group of a file
 
 use crate::atoms::Outcome;
+use serde::{Deserialize, Serialize};
 
-use super::super::Atom;
-use super::FileAtom;
+use super::super::Change;
 use std::path::PathBuf;
 
 #[cfg(unix)]
 use tracing::error;
 
 /// Sets the owner and group of a file, when they differ. Skipped if either doesn't exist
-#[derive(Debug)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Chown {
     /// The file
     pub path: PathBuf,
@@ -18,12 +18,6 @@ pub struct Chown {
     pub owner: String,
     /// The name of the new group
     pub group: String,
-}
-
-impl FileAtom for Chown {
-    fn get_path(&self) -> &PathBuf {
-        &self.path
-    }
 }
 
 impl std::fmt::Display for Chown {
@@ -45,7 +39,7 @@ use std::os::unix::prelude::MetadataExt;
 use anyhow::anyhow;
 
 #[cfg(unix)]
-impl Atom for Chown {
+impl Change for Chown {
     fn plan(&self) -> anyhow::Result<Outcome> {
         // If the file doesn't exist, assume it's because
         // another atom is going to provide it.
@@ -128,7 +122,7 @@ impl Atom for Chown {
         })
     }
 
-    fn execute(&mut self) -> anyhow::Result<()> {
+    fn execute(&self) -> anyhow::Result<()> {
         let uid = match self.owner.as_str() {
             "" => None,
             owner => Some(
@@ -154,7 +148,7 @@ impl Atom for Chown {
 }
 
 #[cfg(not(unix))]
-impl Atom for Chown {
+impl Change for Chown {
     fn plan(&self) -> anyhow::Result<Outcome> {
         // Never run
         Ok(Outcome {
@@ -163,7 +157,7 @@ impl Atom for Chown {
         })
     }
 
-    fn execute(&mut self) -> anyhow::Result<()> {
+    fn execute(&self) -> anyhow::Result<()> {
         Ok(())
     }
 }
@@ -244,14 +238,14 @@ mod tests {
         let temp_file = tempfile::NamedTempFile::new().unwrap();
 
         // Changing to the owner it already has needs no privileges
-        let mut file_chown = Chown {
+        let file_chown = Chown {
             path: temp_file.path().to_path_buf(),
             owner: user,
             group,
         };
         file_chown.execute().unwrap();
 
-        let mut file_chown = Chown {
+        let file_chown = Chown {
             path: temp_file.path().to_path_buf(),
             owner: String::from("comtrya-no-such-user"),
             group: String::new(),
