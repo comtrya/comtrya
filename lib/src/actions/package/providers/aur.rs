@@ -145,6 +145,8 @@ impl PackageProvider for AurHelper {
         if need_installed.is_empty() {
             return Ok(vec![]);
         }
+        // The executor runs the step before it plans the next action, which reads the list again
+        self.runner.forget();
 
         Ok(vec![Step::new(Exec {
             command: String::from(self.helper.command),
@@ -179,7 +181,7 @@ fn strings(args: &[&str]) -> Vec<String> {
 mod tests {
     use super::*;
     use crate::contexts::user::UserFacts;
-    use crate::runner::fake::{fails, succeeds, FakeRunner};
+    use crate::runner::fake::{succeeds, FakeRunner};
     use pretty_assertions::assert_eq;
 
     fn with_runner(helper: &'static Helper, runner: FakeRunner) -> AurHelper {
@@ -209,10 +211,7 @@ mod tests {
     #[test]
     fn query_asks_pacman_what_is_installed() {
         let runner = FakeRunner::new()
-            .answer(
-                "pacman -Q -q git yay-bin",
-                fails("git\n", "error: package 'yay-bin' was not found\n"),
-            )
+            .answer("pacman -Q -q", succeeds("git\nvim\n"))
             .shared();
         let yay = AurHelper {
             helper: &YAY,
@@ -223,7 +222,7 @@ mod tests {
             vec!["yay-bin"],
             yay.query(&package(&["git", "yay-bin"])).unwrap()
         );
-        assert_eq!(vec!["pacman -Q -q git yay-bin"], runner.calls());
+        assert_eq!(vec!["pacman -Q -q"], runner.calls());
     }
 
     #[test]
@@ -232,10 +231,7 @@ mod tests {
             (&YAY, "yay -S --noconfirm yay-bin"),
             (&PARU, "paru -Sq --batchinstall --needed --noconfirm --noprogressbar --skipreview --sudoloop --useask yay-bin"),
         ] {
-            let runner = FakeRunner::new().answer(
-                "pacman -Q -q git yay-bin",
-                fails("git\n", "error: package 'yay-bin' was not found\n"),
-            );
+            let runner = FakeRunner::new().answer("pacman -Q -q", succeeds("git\n"));
 
             let steps = with_runner(helper, runner)
                 .install(&package(&["git", "yay-bin"]), &user_facts(1000))
@@ -251,7 +247,7 @@ mod tests {
 
     #[test]
     fn install_does_nothing_when_everything_is_installed() {
-        let runner = FakeRunner::new().answer("pacman -Q -q git", succeeds("git\n"));
+        let runner = FakeRunner::new().answer("pacman -Q -q", succeeds("git\n"));
 
         let steps = with_runner(&PARU, runner)
             .install(&package(&["git"]), &user_facts(1000))

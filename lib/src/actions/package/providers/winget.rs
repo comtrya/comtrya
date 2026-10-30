@@ -86,6 +86,8 @@ impl PackageProvider for Winget {
         if need_installed.is_empty() {
             return Ok(vec![]);
         }
+        // The executor runs the steps before it plans the next action, which asks again
+        self.runner.forget();
 
         Ok(need_installed
             .iter()

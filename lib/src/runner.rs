@@ -1,6 +1,10 @@
 //! Runs read-only commands, and fakes them in tests
 
-use std::{fmt, io, sync::Arc};
+use std::{
+    collections::HashMap,
+    fmt, io,
+    sync::{Arc, LazyLock, Mutex},
+};
 
 /// A command that only reads the system, like asking a package manager what's installed.
 /// Commands that change the system are atoms, see [`crate::atoms::command::Exec`]
@@ -63,6 +67,10 @@ pub struct CommandOutput {
 pub trait Runner: Send + Sync {
     /// Runs `command` and waits for it. Fails only if it can't be started
     fn run(&self, command: &CommandSpec) -> io::Result<CommandOutput>;
+
+    /// Forgets remembered answers, after something changed the system. Only [`Cached`]
+    /// remembers any
+    fn forget(&self) {}
 }
 
 /// Runs commands on this machine
@@ -83,9 +91,49 @@ impl Runner for SystemRunner {
     }
 }
 
-/// The [`SystemRunner`], shared
+/// Remembers the answers of another runner, so each command runs once until [`Runner::forget`].
+/// Failures to start a command aren't remembered
+pub struct Cached {
+    /// The runner that runs the commands
+    inner: Arc<dyn Runner>,
+    /// The answers by command line
+    answers: Mutex<HashMap<String, CommandOutput>>,
+}
+
+impl Cached {
+    /// Remembers the answers of `inner`
+    pub fn new(inner: Arc<dyn Runner>) -> Self {
+        Self {
+            inner,
+            answers: Mutex::default(),
+        }
+    }
+}
+
+impl Runner for Cached {
+    fn run(&self, command: &CommandSpec) -> io::Result<CommandOutput> {
+        let line = command.to_string();
+        if let Some(output) = self.answers.lock().unwrap().get(&line) {
+            return Ok(output.clone());
+        }
+
+        let output = self.inner.run(command)?;
+        self.answers.lock().unwrap().insert(line, output.clone());
+        Ok(output)
+    }
+
+    fn forget(&self) {
+        self.answers.lock().unwrap().clear();
+    }
+}
+
+/// The [`SystemRunner`], shared by the whole run, so a package manager is asked once what's
+/// installed until a step installs something
 pub fn system() -> Arc<dyn Runner> {
-    Arc::new(SystemRunner)
+    static SYSTEM: LazyLock<Arc<Cached>> =
+        LazyLock::new(|| Arc::new(Cached::new(Arc::new(SystemRunner))));
+
+    SYSTEM.clone()
 }
 
 /// A runner that answers from a script, for tests
@@ -177,6 +225,23 @@ mod tests {
         assert!(!output.success);
         assert_eq!(b"out\n".to_vec(), output.stdout);
         assert_eq!(b"err\n".to_vec(), output.stderr);
+    }
+
+    #[test]
+    fn cached_runs_each_command_once_until_it_forgets() {
+        let fake = fake::FakeRunner::new()
+            .answer("pacman -Q -q", fake::succeeds("git\n"))
+            .shared();
+        let cached = Cached::new(fake.clone());
+        let command = CommandSpec::new("pacman").args(["-Q", "-q"]);
+
+        cached.run(&command).unwrap();
+        cached.run(&command).unwrap();
+        cached.forget();
+        let output = cached.run(&command).unwrap();
+
+        assert_eq!(b"git\n".to_vec(), output.stdout);
+        assert_eq!(vec!["pacman -Q -q", "pacman -Q -q"], fake.calls());
     }
 
     #[test]
