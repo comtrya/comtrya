@@ -3,7 +3,8 @@
 use super::{
     event::{Event, Observer, Skip, StepSkip},
     graph::ManifestGraph,
-    Options, Report,
+    locks::Locks,
+    schedule, Options, Report,
 };
 use crate::helper::Helper;
 use crate::{
@@ -19,14 +20,15 @@ use std::{
     path::{Path, PathBuf},
     sync::{
         atomic::{AtomicBool, Ordering},
-        mpsc,
+        mpsc, Mutex,
     },
 };
 
 /// What a step changes, like a diff, if its atom can say more than its name
 type Change = Option<String>;
 
-/// One `comtrya apply`: walks the graph and remembers which manifests failed
+/// One `comtrya apply`: walks the graph and remembers which manifests failed. Shared by the
+/// threads of `--jobs`, so what changes during the run is behind a lock or atomic
 pub(super) struct Run<'a> {
     /// The manifests and their dependencies
     graph: &'a ManifestGraph,
@@ -36,19 +38,24 @@ pub(super) struct Run<'a> {
     dry_run: bool,
     /// Only manifests with this label run
     label: Option<&'a str>,
+    /// How many manifests may run at once, see [`Options::jobs`]
+    jobs: usize,
     /// Receives what happens
     observer: &'a dyn Observer,
     /// Set when the run should stop, see [`Options::cancel`]
     cancel: Option<&'a AtomicBool>,
     /// Whether the run stopped because of `cancel`
-    cancelled: bool,
-    /// Runs the root steps that aren't programs, started on first use
-    helper: Helper,
+    cancelled: AtomicBool,
+    /// Runs the root steps that aren't programs, started on first use. Shared by the jobs, one
+    /// helper per run
+    helper: Mutex<Helper>,
     /// Manifests that failed, or were skipped because a dependency failed
-    failed: HashSet<NodeIndex>,
+    failed: Mutex<HashSet<NodeIndex>>,
     /// What the steps of a dry run would have made so far. A later step that needs one of
     /// these paths would find it in a real run
-    produced: Vec<PathBuf>,
+    produced: Mutex<Vec<PathBuf>>,
+    /// What the running steps use, so steps of manifests that run at once take turns
+    locks: Locks,
 }
 
 impl<'a> Run<'a> {
@@ -59,26 +66,29 @@ impl<'a> Run<'a> {
             cx,
             dry_run: options.dry_run,
             label: options.label,
+            jobs: options.jobs(),
             observer: options.observer,
             cancel: options.cancel,
-            cancelled: false,
-            helper: Helper::new(cx.facts.privilege.clone()),
-            failed: graph.broken.clone(),
-            produced: vec![],
+            cancelled: AtomicBool::new(false),
+            helper: Mutex::new(Helper::new(cx.facts.privilege.clone())),
+            failed: Mutex::new(graph.broken.clone()),
+            produced: Mutex::new(vec![]),
+            locks: Locks::default(),
         }
     }
 
-    /// Runs the manifests in `order`, see [`ManifestGraph::run_order`]
-    pub(super) fn all(&mut self, order: Vec<NodeIndex>) {
-        for node in order {
-            self.visit(node);
-        }
+    /// Runs the manifests in `order`, see [`ManifestGraph::run_order`]. Several at once with
+    /// `--jobs`, each after its dependencies
+    pub(super) fn all(&self, order: Vec<NodeIndex>) {
+        schedule::visit_all(self.graph, order, self.jobs, |node| self.visit(node));
     }
 
     /// What the run did
     pub(super) fn finish(self) -> Report {
         let mut failed: Vec<String> = self
             .failed
+            .into_inner()
+            .expect("no manifest panicked while it noted a failure")
             .iter()
             .filter_map(|&node| self.graph.dag[node].name.clone())
             .collect();
@@ -86,27 +96,27 @@ impl<'a> Run<'a> {
 
         Report {
             failed,
-            cancelled: self.cancelled,
+            cancelled: self.cancelled.into_inner(),
         }
     }
 
     /// Runs one manifest, unless it's the root, failed already, or something skips it
-    fn visit(&mut self, node: NodeIndex) {
+    fn visit(&self, node: NodeIndex) {
         let manifest = &self.graph.dag[node];
         // The root has no name. Failed manifests were reported already
         let Some(name) = manifest.name.as_deref() else {
             return;
         };
-        if self.failed.contains(&node) || self.stops() {
+        if self.failed().contains(&node) || self.stops() {
             return;
         }
 
         self.observer.on(&Event::ManifestStarted { name });
 
-        if self.graph.depends_on_any(node, &self.failed) {
+        if self.graph.depends_on_any(node, &self.failed()) {
             self.observer
                 .on(&Event::ManifestSkipped(Skip::DependencyFailed));
-            self.failed.insert(node);
+            self.failed().insert(node);
             return;
         }
 
@@ -116,9 +126,16 @@ impl<'a> Run<'a> {
 
         let failed = !self.run_actions(manifest);
         if failed {
-            self.failed.insert(node);
+            self.failed().insert(node);
         }
         self.observer.on(&Event::ManifestDone { failed });
+    }
+
+    /// The manifests that failed so far
+    fn failed(&self) -> std::sync::MutexGuard<'_, HashSet<NodeIndex>> {
+        self.failed
+            .lock()
+            .expect("no manifest panicked while it noted a failure")
     }
 
     /// Whether the manifest has the label of `--label`, if one was given
@@ -166,7 +183,7 @@ impl<'a> Run<'a> {
     ///
     /// Later actions usually build on earlier ones, so a failure stops the manifest. A dry run
     /// changes nothing, so it goes on and reports every action that can't be planned.
-    fn run_actions(&mut self, manifest: &Manifest) -> bool {
+    fn run_actions(&self, manifest: &Manifest) -> bool {
         let mut successful = true;
 
         for action in &manifest.actions {
@@ -188,7 +205,7 @@ impl<'a> Run<'a> {
     }
 
     /// Plans one action and runs the steps that are needed, false if it failed
-    fn run_action(&mut self, manifest: &Manifest, action: &dyn Action) -> bool {
+    fn run_action(&self, manifest: &Manifest, action: &dyn Action) -> bool {
         let steps = match action.plan(manifest, &self.cx) {
             Ok(steps) => steps,
             Err(error) => {
@@ -245,12 +262,11 @@ impl<'a> Run<'a> {
     }
 
     /// Whether the run should stop. Tells it once, the first time
-    fn stops(&mut self) -> bool {
+    fn stops(&self) -> bool {
         let asked = self
             .cancel
             .is_some_and(|cancel| cancel.load(Ordering::Relaxed));
-        if asked && !self.cancelled {
-            self.cancelled = true;
+        if asked && !self.cancelled.swap(true, Ordering::Relaxed) {
             self.observer.on(&Event::Cancelled);
         }
         asked
@@ -264,22 +280,27 @@ impl<'a> Run<'a> {
     /// Whether an earlier step of this dry run would have made `path`, or a directory it's in
     fn will_exist(&self, path: &Path) -> bool {
         self.produced
+            .lock()
+            .expect("no step panicked while it noted a path")
             .iter()
             .any(|produced| path.starts_with(produced))
     }
 
     /// Shows what the step changes and, unless this is a dry run, runs it. False if it failed
-    fn run_step(&mut self, step: Step, change: Change) -> bool {
+    fn run_step(&self, step: Step, change: Change) -> bool {
         if let Some(change) = change {
             self.observer.on(&Event::StepChange(&change));
         }
 
         if self.dry_run {
             self.produced
+                .lock()
+                .expect("no step panicked while it noted a path")
                 .extend(step.atom.produces().map(Path::to_path_buf));
             return true;
         }
 
+        let _lock = self.locks.lock(step.resources());
         let output = match self.run_atom(&step) {
             Ok(output) => output,
             Err(error) => {
@@ -328,9 +349,13 @@ impl<'a> Run<'a> {
 
     /// Runs the step's atom: in the privileged helper if it needs root and isn't a program,
     /// otherwise here, through the privilege provider for a root program
-    fn run_atom(&mut self, step: &Step) -> atoms::Result<Output> {
+    fn run_atom(&self, step: &Step) -> atoms::Result<Output> {
         if step.needs_helper() {
-            return self.helper.run(&step.atom);
+            return self
+                .helper
+                .lock()
+                .expect("no step panicked while it used the helper")
+                .run(&step.atom);
         }
         step.atom_to_run(&self.cx.facts.privilege)
             .and_then(|atom| self.execute(&atom))

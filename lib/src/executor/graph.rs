@@ -131,9 +131,13 @@ impl ManifestGraph {
 
     /// Whether any manifest that `node` depends on is in `failed`
     pub(super) fn depends_on_any(&self, node: NodeIndex, failed: &HashSet<NodeIndex>) -> bool {
-        self.dag
-            .neighbors(node)
+        self.dependencies(node)
             .any(|dependency| failed.contains(&dependency))
+    }
+
+    /// The manifests that `node` depends on. For the root, all of them
+    pub(super) fn dependencies(&self, node: NodeIndex) -> impl Iterator<Item = NodeIndex> + '_ {
+        self.dag.neighbors(node)
     }
 }
 

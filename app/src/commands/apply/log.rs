@@ -1,4 +1,7 @@
-//! Shows the events of a run as log lines, inside a span for the manifest and one for the action
+//! Shows the events of a run as log lines, inside a span for the manifest and one for the action.
+//! With `--jobs`, each manifest runs in a thread of its own, and tracing's spans belong to a
+//! thread, so each thread keeps its own spans: every line names its manifest and action, also
+//! when lines of several manifests come between each other
 
 use comtrya_lib::{
     atoms::command::Stream,
@@ -7,31 +10,31 @@ use comtrya_lib::{
 use std::cell::RefCell;
 use tracing::{debug, error, info, span::EnteredSpan, warn};
 
+thread_local! {
+    /// The spans of the manifest and the action that run in this thread, innermost last
+    static SPANS: RefCell<Vec<EnteredSpan>> = const { RefCell::new(vec![]) };
+}
+
 /// Logs each event of a run with tracing
 pub(super) struct Log {
     /// A dry run shows what steps would change, a real run only with `-v`
     dry_run: bool,
-    /// The spans of the manifest and the action that are running, innermost last
-    spans: RefCell<Vec<EnteredSpan>>,
 }
 
 impl Log {
     /// Logs a run, a dry run if `dry_run`
     pub(super) fn new(dry_run: bool) -> Self {
-        Self {
-            dry_run,
-            spans: RefCell::new(vec![]),
-        }
+        Self { dry_run }
     }
 
-    /// Lines after this one belong to `span`, until [`Log::leave`]
+    /// Lines of this thread after this one belong to `span`, until [`Log::leave`]
     fn enter(&self, span: tracing::Span) {
-        self.spans.borrow_mut().push(span.entered());
+        SPANS.with_borrow_mut(|spans| spans.push(span.entered()));
     }
 
-    /// Ends the innermost span
+    /// Ends the innermost span of this thread
     fn leave(&self) {
-        self.spans.borrow_mut().pop();
+        SPANS.with_borrow_mut(|spans| spans.pop());
     }
 
     /// Why a manifest is skipped
