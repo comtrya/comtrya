@@ -1,15 +1,15 @@
 //! Unpacks `.tar.gz` archives
 
+use serde::{Deserialize, Serialize};
 use std::{fs::File, path::PathBuf};
 
 use flate2::read::GzDecoder;
 use tar::Archive;
 
-use crate::atoms::{Atom, Outcome};
-
-use super::FileAtom;
+use crate::atoms::{Change, Outcome};
 
 /// Unpacks a `.tar.gz` archive into a directory
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Unarchive {
     /// The archive
     pub origin: PathBuf,
@@ -19,13 +19,7 @@ pub struct Unarchive {
     pub force: bool,
 }
 
-impl FileAtom for Unarchive {
-    fn get_path(&self) -> &PathBuf {
-        &self.origin
-    }
-}
-
-impl Atom for Unarchive {
+impl Change for Unarchive {
     // Determine if this atom needs to run
     fn plan(&self) -> anyhow::Result<Outcome> {
         if self.dest.exists() {
@@ -48,7 +42,7 @@ impl Atom for Unarchive {
     }
 
     // Apply new to old
-    fn execute(&mut self) -> anyhow::Result<()> {
+    fn execute(&self) -> anyhow::Result<()> {
         let tar_gz = File::open(&self.origin)?;
         let tar = GzDecoder::new(tar_gz);
         let mut archive = Archive::new(tar);

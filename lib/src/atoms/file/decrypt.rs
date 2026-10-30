@@ -1,9 +1,9 @@
 //! Decrypts age-encrypted contents into a file
 
 use crate::atoms::Outcome;
+use serde::{Deserialize, Serialize};
 
-use super::super::Atom;
-use super::FileAtom;
+use super::super::Change;
 use age::armor::ArmoredReader;
 use age::secrecy::SecretString;
 use std::io::Read;
@@ -11,6 +11,7 @@ use std::path::PathBuf;
 use tracing::error;
 
 /// Writes decrypted contents to a file, every time. Skipped if they can't be decrypted
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Decrypt {
     /// The contents, encrypted with an age passphrase and ASCII armored
     pub encrypted_content: Vec<u8>,
@@ -18,12 +19,6 @@ pub struct Decrypt {
     pub passphrase: String,
     /// The file to write
     pub path: PathBuf,
-}
-
-impl FileAtom for Decrypt {
-    fn get_path(&self) -> &PathBuf {
-        &self.path
-    }
 }
 
 impl std::fmt::Display for Decrypt {
@@ -36,7 +31,7 @@ impl std::fmt::Display for Decrypt {
     }
 }
 
-impl Atom for Decrypt {
+impl Change for Decrypt {
     fn plan(&self) -> anyhow::Result<Outcome> {
         // If the file doesn't exist, assume it's because
         // another atom is going to provide it.
@@ -68,7 +63,7 @@ impl Atom for Decrypt {
         }
     }
 
-    fn execute(&mut self) -> anyhow::Result<()> {
+    fn execute(&self) -> anyhow::Result<()> {
         let decrypted_content = decrypt(&self.passphrase, &self.encrypted_content)?;
 
         std::fs::write(&self.path, decrypted_content)?;
@@ -147,7 +142,7 @@ mod tests {
         file.reopen()?;
         file.write_all(&encrypted_content)?;
 
-        let mut decrypt = Decrypt {
+        let decrypt = Decrypt {
             encrypted_content: encrypted_content.to_owned(),
             path: file.path().to_path_buf(),
             passphrase,

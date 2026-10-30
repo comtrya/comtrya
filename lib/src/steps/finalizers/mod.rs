@@ -1,6 +1,6 @@
 //! Finalizers: checks after an atom ran, which can stop the rest of the action
 
-use crate::atoms::Atom;
+use crate::atoms::Output;
 
 mod output_contains;
 
@@ -18,7 +18,7 @@ pub enum FlowControl {
 /// A check after an atom ran, which can end the action
 pub trait Finalizer {
     /// The answer, from what the atom returned
-    fn finalize(&self, atom: &dyn Atom) -> anyhow::Result<bool>;
+    fn finalize(&self, output: &Output) -> anyhow::Result<bool>;
 }
 
 /// Finalizers for tests
@@ -31,7 +31,7 @@ pub mod test {
     pub struct EchoFinalizer(pub bool);
 
     impl Finalizer for EchoFinalizer {
-        fn finalize(&self, _atom: &dyn Atom) -> anyhow::Result<bool> {
+        fn finalize(&self, _output: &Output) -> anyhow::Result<bool> {
             Ok(self.0)
         }
     }
@@ -40,7 +40,7 @@ pub mod test {
     pub struct ErrorFinalizer();
 
     impl Finalizer for ErrorFinalizer {
-        fn finalize(&self, _atom: &dyn Atom) -> anyhow::Result<bool> {
+        fn finalize(&self, _output: &Output) -> anyhow::Result<bool> {
             Err(anyhow!("ErrorFinalizer"))
         }
     }

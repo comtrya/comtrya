@@ -1,14 +1,16 @@
 //! Copies the contents of a directory into another one
 
 use crate::atoms::Outcome;
+use serde::{Deserialize, Serialize};
 
-use super::super::Atom;
+use super::super::Change;
 use std::path::{Path, PathBuf};
 
 /// Copies the contents of a directory into another one, recursively.
 ///
 /// `to` is created if missing. Files that exist in both are overwritten, files only in `to` are
 /// kept. Symlinks are recreated as symlinks on unix; elsewhere the file they point to is copied.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Copy {
     /// The directory whose contents are copied
     pub from: PathBuf,
@@ -27,7 +29,7 @@ impl std::fmt::Display for Copy {
     }
 }
 
-impl Atom for Copy {
+impl Change for Copy {
     /// Always runs: comparing every file would cost about as much as copying them
     fn plan(&self) -> anyhow::Result<Outcome> {
         Ok(Outcome {
@@ -36,7 +38,7 @@ impl Atom for Copy {
         })
     }
 
-    fn execute(&mut self) -> anyhow::Result<()> {
+    fn execute(&self) -> anyhow::Result<()> {
         refuse_copy_into_itself(&self.from, &self.to)?;
         copy_contents(&self.from, &self.to)?;
 

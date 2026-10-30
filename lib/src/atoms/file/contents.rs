@@ -1,14 +1,15 @@
 //! Writes the contents of a file
 
 use crate::atoms::Outcome;
+use serde::{Deserialize, Serialize};
 
-use super::super::Atom;
-use super::FileAtom;
+use super::super::Change;
 use similar::TextDiff;
 use std::path::PathBuf;
 use tracing::error;
 
 /// Writes the contents of a file, when they differ
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct SetContents {
     /// The file
     pub path: PathBuf,
@@ -16,12 +17,6 @@ pub struct SetContents {
     pub contents: Vec<u8>,
     /// Don't show the contents in a diff, e.g. because they were decrypted
     pub redact: bool,
-}
-
-impl FileAtom for SetContents {
-    fn get_path(&self) -> &PathBuf {
-        &self.path
-    }
 }
 
 impl std::fmt::Display for SetContents {
@@ -34,7 +29,7 @@ impl std::fmt::Display for SetContents {
     }
 }
 
-impl Atom for SetContents {
+impl Change for SetContents {
     fn plan(&self) -> anyhow::Result<Outcome> {
         // If the file doesn't exist, assume it's because
         // another atom is going to provide it.
@@ -66,7 +61,7 @@ impl Atom for SetContents {
         })
     }
 
-    fn execute(&mut self) -> anyhow::Result<()> {
+    fn execute(&self) -> anyhow::Result<()> {
         std::fs::write(&self.path, &self.contents)?;
 
         Ok(())
@@ -135,7 +130,7 @@ mod tests {
 
         assert_eq!(false, file_contents.plan().unwrap().should_run);
 
-        let mut file_contents = SetContents {
+        let file_contents = SetContents {
             path: file.path().to_path_buf(),
             contents: String::from("Hello, world!").into_bytes(),
             redact: false,

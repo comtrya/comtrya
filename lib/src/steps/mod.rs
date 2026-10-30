@@ -1,6 +1,6 @@
 //! Steps: the atoms an action plans, with the checks around them
 
-use crate::atoms::Atom;
+use crate::atoms::{Atom, Output};
 use crate::steps::finalizers::FlowControl;
 use tracing::error;
 
@@ -13,7 +13,7 @@ pub mod initializers;
 /// finalizers that decide whether the action goes on after it
 pub struct Step {
     /// The change to make
-    pub atom: Box<dyn Atom>,
+    pub atom: Atom,
     /// Checked before the atom runs, see [`Step::do_initializers_allow_us_to_run`]
     pub initializers: Vec<initializers::FlowControl>,
     /// Checked after the atom ran, see [`Step::do_finalizers_allow_us_to_continue`]
@@ -22,9 +22,9 @@ pub struct Step {
 
 impl Step {
     /// A step that runs `atom` without initializers or finalizers
-    pub fn new(atom: impl Atom + 'static) -> Self {
+    pub fn new(atom: impl Into<Atom>) -> Self {
         Step {
-            atom: Box::new(atom),
+            atom: atom.into(),
             initializers: vec![],
             finalizers: vec![],
         }
@@ -70,14 +70,15 @@ impl Step {
             })
     }
 
-    /// Every finalizer has to allow continuing. All of them run, even after one said stop,
-    /// because finalizers also clean up, like removing env vars again
-    pub fn do_finalizers_allow_us_to_continue(&self) -> bool {
+    /// Every finalizer has to allow continuing, judging the `output` of the atom. All of them
+    /// run, even after one said stop, because finalizers also clean up, like removing env vars
+    /// again
+    pub fn do_finalizers_allow_us_to_continue(&self, output: &Output) -> bool {
         self.finalizers
             .iter()
             .map(|flow_control| match flow_control {
                 // Stop if true
-                FlowControl::StopIf(i) => match i.finalize(self.atom.as_ref()) {
+                FlowControl::StopIf(i) => match i.finalize(output) {
                     Ok(stop) => !stop,
                     Err(err) => {
                         error!("Failed to run finalizers: {}", err.to_string());
@@ -87,7 +88,7 @@ impl Step {
                         false
                     }
                 },
-                FlowControl::Ensure(i) => match i.finalize(self.atom.as_ref()) {
+                FlowControl::Ensure(i) => match i.finalize(output) {
                     Ok(ensured) => ensured,
                     Err(err) => {
                         error!("Failed to run finalizers: {}", err.to_string());
@@ -176,18 +177,27 @@ mod tests {
         let step = Step::new(EchoAtom("hello-world"))
             .with_finalizer(FinalizerFlowControl::StopIf(Box::new(EchoFinalizer(false))));
 
-        assert_eq!(true, step.do_finalizers_allow_us_to_continue());
+        assert_eq!(
+            true,
+            step.do_finalizers_allow_us_to_continue(&Output::default())
+        );
 
         let step = Step::new(EchoAtom("hello-world"))
             .with_finalizer(FinalizerFlowControl::StopIf(Box::new(EchoFinalizer(true))));
 
-        assert_eq!(false, step.do_finalizers_allow_us_to_continue());
+        assert_eq!(
+            false,
+            step.do_finalizers_allow_us_to_continue(&Output::default())
+        );
 
         let step = Step::new(EchoAtom("hello-world"))
             .with_finalizer(FinalizerFlowControl::StopIf(Box::new(EchoFinalizer(false))))
             .with_finalizer(FinalizerFlowControl::StopIf(Box::new(EchoFinalizer(true))));
 
-        assert_eq!(false, step.do_finalizers_allow_us_to_continue());
+        assert_eq!(
+            false,
+            step.do_finalizers_allow_us_to_continue(&Output::default())
+        );
     }
 
     #[test]
@@ -195,13 +205,19 @@ mod tests {
         let step = Step::new(EchoAtom("hello-world"))
             .with_finalizer(FinalizerFlowControl::StopIf(Box::new(ErrorFinalizer())));
 
-        assert_eq!(false, step.do_finalizers_allow_us_to_continue());
+        assert_eq!(
+            false,
+            step.do_finalizers_allow_us_to_continue(&Output::default())
+        );
 
         let step = Step::new(EchoAtom("hello-world"))
             .with_finalizer(FinalizerFlowControl::StopIf(Box::new(EchoFinalizer(false))))
             .with_finalizer(FinalizerFlowControl::StopIf(Box::new(ErrorFinalizer())));
 
-        assert_eq!(false, step.do_finalizers_allow_us_to_continue());
+        assert_eq!(
+            false,
+            step.do_finalizers_allow_us_to_continue(&Output::default())
+        );
     }
 
     #[test]
@@ -238,19 +254,25 @@ mod tests {
         let step = Step::new(EchoAtom("hello-world"))
             .with_finalizer(FinalizerFlowControl::StopIf(Box::new(EchoFinalizer(true))))
             .with_finalizer(FinalizerFlowControl::StopIf(Box::new(EchoFinalizer(false))));
-        assert_eq!(false, step.do_finalizers_allow_us_to_continue());
+        assert_eq!(
+            false,
+            step.do_finalizers_allow_us_to_continue(&Output::default())
+        );
 
         let step = Step::new(EchoAtom("hello-world"))
             .with_finalizer(FinalizerFlowControl::StopIf(Box::new(ErrorFinalizer())))
             .with_finalizer(FinalizerFlowControl::Ensure(Box::new(EchoFinalizer(true))));
-        assert_eq!(false, step.do_finalizers_allow_us_to_continue());
+        assert_eq!(
+            false,
+            step.do_finalizers_allow_us_to_continue(&Output::default())
+        );
     }
 
     /// Counts how often it ran, and allows continuing as told
     struct CountingFinalizer(std::rc::Rc<std::cell::Cell<u32>>, bool);
 
     impl finalizers::Finalizer for CountingFinalizer {
-        fn finalize(&self, _atom: &dyn crate::atoms::Atom) -> anyhow::Result<bool> {
+        fn finalize(&self, _output: &Output) -> anyhow::Result<bool> {
             self.0.set(self.0.get() + 1);
             Ok(self.1)
         }
@@ -269,7 +291,10 @@ mod tests {
                 true,
             ))));
 
-        assert_eq!(false, step.do_finalizers_allow_us_to_continue());
+        assert_eq!(
+            false,
+            step.do_finalizers_allow_us_to_continue(&Output::default())
+        );
         assert_eq!(2, runs.get());
     }
 }

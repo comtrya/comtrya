@@ -1,24 +1,19 @@
 //! Copies a file over another one
 
 use crate::atoms::Outcome;
+use serde::{Deserialize, Serialize};
 
-use super::super::Atom;
-use super::FileAtom;
+use super::super::Change;
 use std::path::PathBuf;
 use tracing::error;
 
 /// Copies a file over an existing file, when their contents differ. No action uses it
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Copy {
     /// The file to copy
     pub from: PathBuf,
     /// The file to overwrite. Must exist
     pub to: PathBuf,
-}
-
-impl FileAtom for Copy {
-    fn get_path(&self) -> &PathBuf {
-        &self.from
-    }
 }
 
 impl std::fmt::Display for Copy {
@@ -32,7 +27,7 @@ impl std::fmt::Display for Copy {
     }
 }
 
-impl Atom for Copy {
+impl Change for Copy {
     fn plan(&self) -> anyhow::Result<Outcome> {
         if !self.to.is_file() {
             error!("Cannot plan: target isn't a file: {}", self.to.display());
@@ -49,7 +44,7 @@ impl Atom for Copy {
         })
     }
 
-    fn execute(&mut self) -> anyhow::Result<()> {
+    fn execute(&self) -> anyhow::Result<()> {
         std::fs::copy(&self.from, &self.to)?;
 
         Ok(())
@@ -138,7 +133,7 @@ mod tests {
             .is_ok()
         );
 
-        let mut file_copy = Copy {
+        let file_copy = Copy {
             from: from_file.path().to_path_buf(),
             to: to_file.path().to_path_buf(),
         };

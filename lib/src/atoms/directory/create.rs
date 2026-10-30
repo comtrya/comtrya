@@ -1,11 +1,13 @@
 //! Creates a directory
 
 use crate::atoms::Outcome;
+use serde::{Deserialize, Serialize};
 
-use super::super::Atom;
+use super::super::Change;
 use std::path::PathBuf;
 
 /// Creates a directory and its parents, unless it exists
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Create {
     /// The directory to create
     pub path: PathBuf,
@@ -21,7 +23,7 @@ impl std::fmt::Display for Create {
     }
 }
 
-impl Atom for Create {
+impl Change for Create {
     fn plan(&self) -> anyhow::Result<Outcome> {
         Ok(Outcome {
             side_effects: vec![],
@@ -29,7 +31,7 @@ impl Atom for Create {
         })
     }
 
-    fn execute(&mut self) -> anyhow::Result<()> {
+    fn execute(&self) -> anyhow::Result<()> {
         std::fs::create_dir_all(&self.path)?;
 
         Ok(())
@@ -65,7 +67,7 @@ mod tests {
             }
         };
 
-        let mut atom = Create {
+        let atom = Create {
             path: temp_dir.path().join("create-me"),
         };
 

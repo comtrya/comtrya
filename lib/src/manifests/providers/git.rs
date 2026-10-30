@@ -91,11 +91,11 @@ impl GitManifestProvider {
         let result = gix::url::parse(config.repository.as_str())
             .map_err(anyhow::Error::from)
             .and_then(|repository| {
-                Update {
+                Atom::from(Update {
                     repository,
                     directory: cache_path.to_path_buf(),
                     reference: config.branch.clone(),
-                }
+                })
                 .execute()
             });
 

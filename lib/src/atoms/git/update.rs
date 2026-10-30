@@ -1,9 +1,10 @@
 //! Brings a clone up to date with its remote
 
-use super::super::Atom;
+use super::super::Change;
 use super::clone_repository;
 use crate::atoms::Outcome;
 use gix::Url;
+use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use tracing::instrument;
 
@@ -13,9 +14,10 @@ use tracing::instrument;
 /// A fresh clone is used instead of a fetch and checkout in the old one because the clone
 /// is a cache: local changes are meant to be discarded, and replacing the directory also
 /// removes files that are gone from the remote, which a checkout in gix would not.
-#[derive(Default)]
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct Update {
     /// The URL of the repository
+    #[serde(with = "super::url_as_string")]
     pub repository: Url,
     /// The existing clone
     pub directory: PathBuf,
@@ -72,7 +74,7 @@ impl Update {
     }
 }
 
-impl Atom for Update {
+impl Change for Update {
     #[instrument(name = "git.update.plan", level = "info", skip(self))]
     fn plan(&self) -> anyhow::Result<Outcome> {
         Ok(Outcome {
@@ -82,7 +84,7 @@ impl Atom for Update {
     }
 
     #[instrument(name = "git.update.execute", level = "info", skip(self))]
-    fn execute(&mut self) -> anyhow::Result<()> {
+    fn execute(&self) -> anyhow::Result<()> {
         let fresh = sibling(&self.directory, ".updating");
         remove_dir_if_exists(&fresh)?;
 

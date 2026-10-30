@@ -1,23 +1,18 @@
 //! Sets the permissions of a file
 
 use crate::atoms::Outcome;
+use serde::{Deserialize, Serialize};
 
-use super::super::Atom;
-use super::FileAtom;
+use super::super::Change;
 use std::path::PathBuf;
 
 /// Sets the permissions of a file, when they differ
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Chmod {
     /// The file
     pub path: PathBuf,
     /// The permissions, like `0o644`
     pub mode: u32,
-}
-
-impl FileAtom for Chmod {
-    fn get_path(&self) -> &PathBuf {
-        &self.path
-    }
 }
 
 impl std::fmt::Display for Chmod {
@@ -35,7 +30,7 @@ impl std::fmt::Display for Chmod {
 use {std::os::unix::prelude::PermissionsExt, tracing::error};
 
 #[cfg(unix)]
-impl Atom for Chmod {
+impl Change for Chmod {
     fn plan(&self) -> anyhow::Result<Outcome> {
         // If the file doesn't exist, assume it's because
         // another atom is going to provide it.
@@ -72,7 +67,7 @@ impl Atom for Chmod {
         })
     }
 
-    fn execute(&mut self) -> anyhow::Result<()> {
+    fn execute(&self) -> anyhow::Result<()> {
         std::fs::set_permissions(
             self.path.as_path(),
             std::fs::Permissions::from_mode(self.mode),
@@ -94,7 +89,7 @@ impl Atom for Chmod {
 }
 
 #[cfg(not(unix))]
-impl Atom for Chmod {
+impl Change for Chmod {
     fn plan(&self) -> anyhow::Result<Outcome> {
         // Never run
         Ok(Outcome {
@@ -103,7 +98,7 @@ impl Atom for Chmod {
         })
     }
 
-    fn execute(&mut self) -> anyhow::Result<()> {
+    fn execute(&self) -> anyhow::Result<()> {
         Ok(())
     }
 }
@@ -190,7 +185,7 @@ mod tests {
 
         assert_eq!(false, file_chmod.plan().unwrap().should_run);
 
-        let mut file_chmod = Chmod {
+        let file_chmod = Chmod {
             path: temp_dir.path().join("644"),
             mode: 0o640,
         };

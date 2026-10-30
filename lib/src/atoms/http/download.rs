@@ -1,14 +1,16 @@
 //! Downloads a file
 
 use crate::atoms::Outcome;
+use serde::{Deserialize, Serialize};
 
-use super::super::Atom;
+use super::super::Change;
 use crate::utilities::sha256 as digest;
 use anyhow::anyhow;
 use std::io::Write;
 use std::{fs::File, path::PathBuf};
 
 /// Downloads a file, unless it exists and matches `sha256`
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Download {
     /// What to download
     pub url: String,
@@ -24,7 +26,7 @@ impl std::fmt::Display for Download {
     }
 }
 
-impl Atom for Download {
+impl Change for Download {
     fn plan(&self) -> anyhow::Result<Outcome> {
         let should_run = match (&self.sha256, std::fs::read(&self.to)) {
             (_, Err(_)) => true,
@@ -39,7 +41,7 @@ impl Atom for Download {
         })
     }
 
-    fn execute(&mut self) -> anyhow::Result<()> {
+    fn execute(&self) -> anyhow::Result<()> {
         let response = reqwest::blocking::get(&self.url)?.error_for_status()?;
         let content = response.bytes()?;
 
@@ -104,7 +106,7 @@ mod tests {
     fn writes_the_file_when_the_checksum_matches() {
         let dir = tempdir().unwrap();
         let to = dir.path().join("file");
-        let mut atom = atom(serve(200, BODY), to.clone(), Some(&digest(BODY)));
+        let atom = atom(serve(200, BODY), to.clone(), Some(&digest(BODY)));
 
         assert!(atom.plan().unwrap().should_run);
         atom.execute().unwrap();
@@ -119,7 +121,7 @@ mod tests {
         let to = dir.path().join("file");
         std::fs::write(&to, "old").unwrap();
         let expected = digest("something else");
-        let mut atom = atom(serve(200, BODY), to.clone(), Some(&expected));
+        let atom = atom(serve(200, BODY), to.clone(), Some(&expected));
 
         let err = atom.execute().unwrap_err().to_string();
 
@@ -135,7 +137,7 @@ mod tests {
         let dir = tempdir().unwrap();
         let to = dir.path().join("file");
         std::fs::write(&to, "outdated").unwrap();
-        let mut atom = atom(serve(200, BODY), to.clone(), Some(&digest(BODY)));
+        let atom = atom(serve(200, BODY), to.clone(), Some(&digest(BODY)));
 
         assert!(atom.plan().unwrap().should_run);
         atom.execute().unwrap();
@@ -156,7 +158,7 @@ mod tests {
     fn http_errors_fail_instead_of_saving_the_error_page() {
         let dir = tempdir().unwrap();
         let to = dir.path().join("file");
-        let mut atom = atom(serve(404, b"not found"), to.clone(), None);
+        let atom = atom(serve(404, b"not found"), to.clone(), None);
 
         let err = atom.execute().unwrap_err().to_string();
 
@@ -169,7 +171,7 @@ mod tests {
         let tmpdir = tempdir().unwrap();
         let to_file = tmpdir.path().join("download");
 
-        let mut atom = Download {
+        let atom = Download {
             url: String::from("https://www.google.com/images/branding/googlelogo/2x/googlelogo_color_272x92dp.png"),
             to: to_file,
             sha256: None,
