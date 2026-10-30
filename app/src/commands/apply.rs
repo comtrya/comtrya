@@ -32,6 +32,11 @@ pub(crate) struct Apply {
     /// Define label selector
     #[arg(short, long)]
     pub label: Option<String>,
+
+    /// Run up to this many manifests at once, each when the manifests it depends on are done.
+    /// Steps that change the same files or package database take turns
+    #[arg(short, long, default_value_t = 1, value_parser = clap::value_parser!(u16).range(1..))]
+    jobs: u16,
 }
 
 impl Apply {
@@ -132,6 +137,7 @@ impl ComtryaCommand for Apply {
                 label: self.label.as_deref(),
                 observer: &log::Log::new(self.dry_run),
                 cancel: Some(stop_on_ctrl_c()),
+                jobs: self.jobs.into(),
             },
         )
         .into_result()

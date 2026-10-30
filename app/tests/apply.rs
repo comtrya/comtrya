@@ -1291,3 +1291,30 @@ fn dry_run_shows_a_step_that_needs_what_an_earlier_step_makes() {
     assert!(stdout.contains("Unarchiving file"), "{stdout}");
     assert!(!archive.exists());
 }
+
+#[test]
+fn jobs_run_manifests_at_once_after_their_dependencies() {
+    let f = Fixture::new();
+    f.manifest("base.yaml", &format!("actions:\n{}", f.create("base")))
+        .manifest(
+            "app.yaml",
+            &format!("depends: [base]\nactions:\n{}", f.create("base/app")),
+        )
+        .manifest("other.yaml", &format!("actions:\n{}", f.create("other")));
+
+    let stdout = f.run(&["apply", "--jobs", "3"]).get_output().stdout.clone();
+    let stdout = String::from_utf8_lossy(&stdout);
+
+    assert!(f.created("base/app") && f.created("other"));
+    // Every line still names its manifest, also when manifests run at once
+    for line in stdout.lines().filter(|line| line.contains("Completed")) {
+        assert!(line.contains("manifest="), "{line}");
+    }
+}
+
+#[test]
+fn jobs_must_be_at_least_one() {
+    let f = Fixture::new();
+
+    f.command(&["apply", "--jobs", "0"]).assert().failure();
+}

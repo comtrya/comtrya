@@ -95,13 +95,15 @@ pub enum StepSkip<'a> {
     CheckFailed(&'a atoms::Error),
 }
 
-/// Receives the events of a run
-pub trait Observer {
-    /// Called for each event, in the order they happen
+/// Receives the events of a run. With `--jobs`, manifests run in threads, and each calls it for
+/// its own events from its thread, so the events of a manifest are in order but may come between
+/// those of another one
+pub trait Observer: Sync {
+    /// Called for each event, in the order they happen in its thread
     fn on(&self, event: &Event);
 }
 
-impl<F: Fn(&Event)> Observer for F {
+impl<F: Fn(&Event) + Sync> Observer for F {
     fn on(&self, event: &Event) {
         self(event)
     }

@@ -72,6 +72,22 @@ manifest that can't be planned, not only the first one.
 comtrya -d ./manifests apply --dry-run
 ```
 
+### Several manifests at once
+
+`--jobs N` (or `-j N`) runs up to N manifests at the same time, each as soon as the manifests it
+`depends` on are done. The actions and steps of one manifest still run in order. Steps of
+different manifests that change the same file or directory, use the same package manager, or
+may ask for a password take turns; a `command.run` takes turns with every other step, because
+comtrya can't know what it changes. The default is 1, one manifest after the other. A dry run
+always runs one manifest after the other.
+
+Log lines of manifests that run at once can come between each other; each line names its
+manifest and action.
+
+```shell
+comtrya -d ./manifests apply --jobs 4
+```
+
 ## Contexts
 
 The **contexts** command is useful to see what comtrya knows about your system. This can be environment variables, included variables, information about the OS, user information and other variables. Below is an exmaple of the output.
