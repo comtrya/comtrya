@@ -88,6 +88,14 @@ manifest and action.
 comtrya -d ./manifests apply --jobs 4
 ```
 
+### More output
+
+With `-v`, `apply` also shows what each step changes, and the output of programs that `command.run` and package managers run, line by line while they run. `-vv` shows even more.
+
+### Stopping a run
+
+Ctrl-C lets the step that is running finish, then stops: nothing starts after it, and comtrya exits with an error. Press Ctrl-C again to quit at once. A program that is running gets the Ctrl-C from the terminal too, and usually stops, which fails its step.
+
 ## Contexts
 
 The **contexts** command is useful to see what comtrya knows about your system. This can be environment variables, included variables, information about the OS, user information and other variables. Below is an exmaple of the output.
@@ -146,7 +154,7 @@ You can also view the values that these contexts have by passing in a `show-valu
 comtrya contexts --show-values
 ```
 
-At the end, `comtrya contexts` also prints the directory where manifests fetched from git repositories are cached, e.g. `~/.cache/comtrya/manifests/git` on Linux. Delete a repository's folder there to fetch it again.
+At the end, `comtrya contexts` also prints the directory where manifests fetched from git repositories are cached, e.g. `~/.cache/comtrya/manifests/git` on Linux. Comtrya updates these clones on every run, see [remote manifests](./cli.md#basic-usage-on-remote-manifests).
 
 ## Status
 

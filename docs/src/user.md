@@ -7,14 +7,16 @@
 
 Adds a user to the system.
 
-| Key      | Type   | Ooptional | Description               |
-|:---------|:-------|:----------|:--------------------------|
-| action   | string | no        | `user.add`                |
-| fullname | string | no        | full name of user         |
-| home_dir | string | no        | home directory of user    |
-| username | string | no        | username of user          |
-| shell    | string | yes       | shell for user            |
-| group    | list   | yes       | groups to add new user to |
+| Key      | Type   | Optional | Description               |
+|:---------|:-------|:---------|:--------------------------|
+| action   | string | no       | `user.add`                |
+| username | string | no       | username of user          |
+| fullname | string | yes      | full name of user         |
+| home_dir | string | yes      | home directory of user, the tool's default without it |
+| shell    | string | yes      | shell for user, the tool's default without it |
+| group    | list   | yes      | groups to add new user to |
+
+On Linux, macOS and FreeBSD, a user that exists already is left alone. The action fails when `username` is empty or the tool to create users (`useradd`, `dscl` or `pw`) isn't installed.
 
 
 ### Example
@@ -45,6 +47,8 @@ Adds an already created user to a group.
 | action   | string | no       | `user.group`                     |
 | username | string | no       | username of user to add to group |
 | group    | list   | no       | groups to add user to            |
+
+The action fails when `username` or `group` is empty, or the tool (`usermod`, `dscl` or `pw`) isn't installed.
 
 
 ### Example

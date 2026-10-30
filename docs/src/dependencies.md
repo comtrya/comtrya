@@ -18,15 +18,19 @@ depends:
 
 actions:
   - action: user.add
-    fullename: testuser
-	home_dir: /home/test
-	username: test
-	shell: sh
-	group:
-	  - testgroup
+    fullname: testuser
+    home_dir: /home/test
+    username: test
+    shell: sh
+    group:
+      - testgroup
 ```
 
 As shown, at the top of the `users.yaml` file, `depends` takes a lists of manifests that this manifest depends on.
+
+## Manifest names
+
+`depends` and `-m` use a manifest's name: its path below the manifest directory, with `.` between the parts and without `.yaml`, `.yml` or `.toml`. `tools/git.toml` is `tools.git`, and `tools/main.yaml` is `tools`. In `depends`, `./` stands for the manifest's own directory: `./git` in a manifest in `tools/` is `tools.git`, and at the top level just `git`.
 
 ## When something fails
 
