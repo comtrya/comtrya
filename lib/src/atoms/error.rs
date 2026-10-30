@@ -128,6 +128,15 @@ pub enum Error {
         stderr: String,
     },
 
+    /// A signal ended a program, like `SIGKILL` from the OOM killer
+    #[error("Command was killed by signal {signal}{}", stderr_suffix(stderr))]
+    Killed {
+        /// The signal number
+        signal: i32,
+        /// What it wrote to stderr until then, trimmed
+        stderr: String,
+    },
+
     /// Only programs can run as root until the privileged helper (#502) runs any atom
     #[error("{atom}: only programs can run as root for now")]
     NotElevatable {
