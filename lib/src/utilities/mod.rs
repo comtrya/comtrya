@@ -1,7 +1,5 @@
 //! Small helpers that several actions use
 
-use crate::contexts::Facts;
-
 use sha2::{Digest, Sha256};
 use which::which;
 
@@ -15,11 +13,6 @@ pub fn get_binary_path(binary: &str) -> Result<String, anyhow::Error> {
     let binary = which(binary)?.to_string_lossy().to_string();
 
     Ok(binary)
-}
-
-/// The command that elevates privileges: `privilege` from `Comtrya.yaml`, `sudo` by default
-pub fn get_privilege_provider(facts: &Facts) -> String {
-    facts.privilege.to_string()
 }
 
 /// Whether comtrya runs as root, by its uid: also under another name, like FreeBSD's `toor`,
@@ -38,22 +31,6 @@ pub fn running_as_root() -> bool {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::contexts::privilege::Privilege;
-
-    #[test]
-    fn the_configured_privilege_provider_is_used() {
-        let facts = Facts {
-            privilege: Privilege::Doas,
-            ..Default::default()
-        };
-
-        assert_eq!("doas", get_privilege_provider(&facts));
-    }
-
-    #[test]
-    fn sudo_is_the_default_privilege_provider() {
-        assert_eq!("sudo", get_privilege_provider(&Facts::default()));
-    }
 
     /// apt key file names are derived from it, so it must never change.
     #[test]

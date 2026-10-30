@@ -3,7 +3,7 @@
 use super::GroupProvider;
 use crate::contexts::Facts;
 use crate::steps::Step;
-use crate::{actions::group::GroupVariant, atoms::command::Exec, utilities};
+use crate::{actions::group::GroupVariant, atoms::command::Exec};
 use anyhow::bail;
 use serde::{Deserialize, Serialize};
 
@@ -12,20 +12,17 @@ use serde::{Deserialize, Serialize};
 pub struct FreeBSDGroupProvider {}
 
 impl GroupProvider for FreeBSDGroupProvider {
-    fn add_group(&self, group: &GroupVariant, facts: &Facts) -> anyhow::Result<Vec<Step>> {
+    fn add_group(&self, group: &GroupVariant, _facts: &Facts) -> anyhow::Result<Vec<Step>> {
         if group.group_name.is_empty() {
             bail!("can't create a group without a group_name");
         }
 
-        let privilege_provider = utilities::get_privilege_provider(facts);
-
         Ok(vec![Step::new(Exec {
             command: String::from("/usr/bin/pw"),
             arguments: vec![String::from("groupadd"), group.group_name.clone()],
-            privileged: true,
-            privilege_provider: privilege_provider.clone(),
             ..Default::default()
-        })])
+        })
+        .as_root()])
     }
 }
 

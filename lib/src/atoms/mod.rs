@@ -12,7 +12,19 @@ pub mod git;
 /// Downloading files
 pub mod http;
 
+use crate::contexts::privilege::Privilege;
 use serde::{Deserialize, Serialize};
+
+/// Who runs an atom
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum RunAs {
+    /// The user running comtrya
+    #[default]
+    User,
+    /// root: through the privilege provider, unless comtrya runs as root already
+    Root,
+}
 
 /// What an atom changes besides its target. Nothing reports any yet
 pub enum SideEffect {}
@@ -119,6 +131,15 @@ impl Atom {
     /// need to run
     pub fn describe_change(&self) -> Option<String> {
         self.change().describe_change()
+    }
+
+    /// The atom that makes this change as root, through `privilege` (`sudo`, `doas`, `run0`).
+    /// Only programs can be run that way, until the privileged helper (#502) runs any atom
+    pub fn elevated(self, privilege: &Privilege) -> anyhow::Result<Atom> {
+        match self {
+            Atom::Exec(exec) => Ok(Atom::Exec(exec.elevated(privilege))),
+            atom => anyhow::bail!("{atom}: only programs can run as root for now"),
+        }
     }
 }
 
@@ -234,8 +255,6 @@ mod tests {
                 arguments: vec![String::from("hi")],
                 working_dir: Some(String::from("/tmp")),
                 environment: vec![(String::from("A"), String::from("b"))],
-                privileged: true,
-                privilege_provider: String::from("doas"),
                 stdout_file: Some(path()),
             }
             .into(),
@@ -338,5 +357,22 @@ mod tests {
 
         let json = serde_json::to_value(&atom).unwrap();
         assert_eq!("https://github.com/comtrya/comtrya", json["repository"]);
+    }
+
+    #[test]
+    fn only_programs_can_be_elevated() {
+        let exec = Atom::from(command::Exec {
+            command: String::from("id"),
+            ..Default::default()
+        });
+        let file = Atom::from(file::Create {
+            path: PathBuf::from("/etc/x"),
+        });
+
+        assert_eq!(
+            "CommandExec with: doas id",
+            exec.elevated(&Privilege::Doas).unwrap().to_string().trim()
+        );
+        assert!(file.elevated(&Privilege::Sudo).is_err());
     }
 }

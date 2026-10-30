@@ -4,7 +4,7 @@ use super::PackageProvider;
 use crate::actions::package::repository::PackageRepository;
 use crate::contexts::Facts;
 use crate::steps::Step;
-use crate::{actions::package::PackageVariant, atoms::command::Exec, utilities};
+use crate::{actions::package::PackageVariant, atoms::command::Exec};
 use serde::{Deserialize, Serialize};
 use std::default::Default;
 use tracing::warn;
@@ -29,9 +29,7 @@ impl PackageProvider for Snapcraft {
         }
     }
 
-    fn bootstrap(&self, facts: &Facts) -> Vec<Step> {
-        let privilege_provider = utilities::get_privilege_provider(facts);
-
+    fn bootstrap(&self, _facts: &Facts) -> Vec<Step> {
         vec![Step::new(Exec {
             command: String::from("apt"),
             arguments: vec![
@@ -39,10 +37,9 @@ impl PackageProvider for Snapcraft {
                 String::from("--yes"),
                 String::from("snapd"),
             ],
-            privileged: true,
-            privilege_provider: privilege_provider.clone(),
             ..Default::default()
-        })]
+        })
+        .as_root()]
     }
 
     fn has_repository(&self, _package: &PackageRepository) -> bool {
@@ -61,8 +58,7 @@ impl PackageProvider for Snapcraft {
         Ok(package.packages())
     }
 
-    fn install(&self, package: &PackageVariant, facts: &Facts) -> anyhow::Result<Vec<Step>> {
-        let privilege_provider = utilities::get_privilege_provider(facts);
+    fn install(&self, package: &PackageVariant, _facts: &Facts) -> anyhow::Result<Vec<Step>> {
         Ok(vec![Step::new(Exec {
             command: String::from("snap"),
             arguments: vec![String::from("install"), String::from("--yes")]
@@ -70,10 +66,9 @@ impl PackageProvider for Snapcraft {
                 .chain(package.extra_args.clone())
                 .chain(package.packages())
                 .collect(),
-            privileged: true,
-            privilege_provider: privilege_provider.clone(),
             ..Default::default()
-        })])
+        })
+        .as_root()])
     }
 }
 

@@ -4,7 +4,7 @@ use super::PackageProvider;
 use crate::actions::package::repository::PackageRepository;
 use crate::contexts::Facts;
 use crate::steps::Step;
-use crate::{actions::package::PackageVariant, atoms::command::Exec, utilities};
+use crate::{actions::package::PackageVariant, atoms::command::Exec};
 use serde::{Deserialize, Serialize};
 use tracing::warn;
 use which::which;
@@ -51,7 +51,7 @@ impl PackageProvider for Macports {
         Ok(vec![])
     }
 
-    fn install(&self, package: &PackageVariant, facts: &Facts) -> anyhow::Result<Vec<Step>> {
+    fn install(&self, package: &PackageVariant, _facts: &Facts) -> anyhow::Result<Vec<Step>> {
         let cli = match which("port") {
             Ok(c) => c,
             Err(_) => {
@@ -60,8 +60,6 @@ impl PackageProvider for Macports {
             }
         };
 
-        let privilege_provider = utilities::get_privilege_provider(facts);
-
         Ok(vec![Step::new(Exec {
             command: cli.display().to_string(),
             arguments: vec![String::from("install")]
@@ -69,9 +67,8 @@ impl PackageProvider for Macports {
                 .chain(package.extra_args.clone())
                 .chain(package.packages())
                 .collect(),
-            privileged: true,
-            privilege_provider: privilege_provider.clone(),
             ..Default::default()
-        })])
+        })
+        .as_root()])
     }
 }

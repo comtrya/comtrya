@@ -1,9 +1,10 @@
-//! Runs a program, with the privilege provider if needed, and keeps its output
+//! Runs a program and returns its output
 
 use crate::atoms::{Outcome, Output};
 use serde::{Deserialize, Serialize};
 
 use super::super::Change;
+use crate::contexts::privilege::Privilege;
 use crate::utilities;
 use anyhow::{anyhow, Context};
 use std::path::{Path, PathBuf};
@@ -21,10 +22,6 @@ pub struct Exec {
     pub working_dir: Option<String>,
     /// Environment variables for the program only. A `PATH` here is also where the program is looked up
     pub environment: Vec<(String, String)>,
-    /// Run the program with `privilege_provider`, unless comtrya runs as root
-    pub privileged: bool,
-    /// The program that runs commands as root, like `sudo`, `doas` or `run0`
-    pub privilege_provider: String,
     /// Writes stdout to this file instead of logging it
     pub stdout_file: Option<PathBuf>,
 }
@@ -39,19 +36,12 @@ pub fn new_run_command(command: String) -> Exec {
 }
 
 impl Exec {
-    /// The program and arguments to run: prefixed with the privilege provider if needed
-    fn elevate_if_required(&self) -> (String, Vec<String>) {
-        self.command_line(utilities::running_as_root())
-    }
-
-    /// The program and arguments to run, prefixed with the privilege provider when the command
-    /// is privileged and comtrya doesn't run `as_root` already
-    fn command_line(&self, as_root: bool) -> (String, Vec<String>) {
-        if self.privileged && !as_root {
-            let arguments = [vec![self.command.clone()], self.arguments.clone()].concat();
-            (self.privilege_provider.clone(), arguments)
-        } else {
-            (self.command.clone(), self.arguments.clone())
+    /// The same command run through `privilege`, like `sudo pacman -S …`
+    pub fn elevated(self, privilege: &Privilege) -> Exec {
+        Exec {
+            command: privilege.to_string(),
+            arguments: [vec![self.command], self.arguments].concat(),
+            ..self
         }
     }
 
@@ -134,8 +124,7 @@ impl std::fmt::Display for Exec {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "CommandExec with: privileged={}: {} {}",
-            self.privileged,
+            "CommandExec with: {} {}",
             self.command,
             self.arguments.join(" ")
         )
@@ -161,13 +150,11 @@ impl Change for Exec {
     }
 
     fn execute_with_output(&self) -> anyhow::Result<Output> {
-        let (command, arguments) = self.elevate_if_required();
-
         let command = self
-            .find_binary(&command)
-            .map_err(|_| anyhow!("Command `{command}` not found in path"))?;
+            .find_binary(&self.command)
+            .map_err(|_| anyhow!("Command `{}` not found in path", self.command))?;
 
-        let output = self.process(&command, &arguments).output()?;
+        let output = self.process(&command, &self.arguments).output()?;
 
         if output.status.success() {
             self.succeeded(output)
@@ -180,7 +167,6 @@ impl Change for Exec {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::contexts::privilege::Privilege;
     use pretty_assertions::assert_eq;
 
     #[test]
@@ -193,7 +179,6 @@ mod tests {
         assert_eq!(0, command_run.arguments.len());
         assert_eq!(None, command_run.working_dir);
         assert_eq!(0, command_run.environment.len());
-        assert_eq!(false, command_run.privileged);
 
         let command_run = new_run_command(String::from("echo"));
 
@@ -201,54 +186,25 @@ mod tests {
         assert_eq!(0, command_run.arguments.len());
         assert_eq!(None, command_run.working_dir);
         assert_eq!(0, command_run.environment.len());
-        assert_eq!(false, command_run.privileged);
-    }
-
-    /// `echo "Hello, world!"`, privileged with `provider` if there is one
-    fn hello(provider: Option<Privilege>) -> Exec {
-        let mut command_run = new_run_command(String::from("echo"));
-        command_run.arguments = vec![String::from("Hello, world!")];
-        if let Some(provider) = provider {
-            command_run.privileged = true;
-            command_run.privilege_provider = provider.to_string();
-        }
-        command_run
     }
 
     #[test]
-    fn an_unprivileged_command_runs_as_it_is() {
-        for as_root in [false, true] {
-            assert_eq!(
-                (String::from("echo"), vec![String::from("Hello, world!")]),
-                hello(None).command_line(as_root)
-            );
-        }
-    }
-
-    #[test]
-    fn a_privileged_command_runs_with_the_privilege_provider() {
+    fn elevated_runs_the_command_through_the_privilege_provider() {
         for (provider, name) in [
             (Privilege::Sudo, "sudo"),
             (Privilege::Doas, "doas"),
             (Privilege::Run0, "run0"),
         ] {
-            assert_eq!(
-                (
-                    String::from(name),
-                    vec![String::from("echo"), String::from("Hello, world!")]
-                ),
-                hello(Some(provider)).command_line(false)
-            );
-        }
-    }
+            let mut command_run = new_run_command(String::from("echo"));
+            command_run.arguments = vec![String::from("Hello, world!")];
+            command_run.working_dir = Some(String::from("/tmp"));
 
-    /// Root is found by its uid, so also under another name or without a passwd entry
-    #[test]
-    fn a_privileged_command_runs_as_it_is_for_root() {
-        assert_eq!(
-            (String::from("echo"), vec![String::from("Hello, world!")]),
-            hello(Some(Privilege::Sudo)).command_line(true)
-        );
+            let elevated = command_run.elevated(&provider);
+
+            assert_eq!(name, elevated.command);
+            assert_eq!(vec!["echo", "Hello, world!"], elevated.arguments);
+            assert_eq!(Some(String::from("/tmp")), elevated.working_dir);
+        }
     }
 
     #[cfg(unix)]

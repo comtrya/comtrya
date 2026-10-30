@@ -2,7 +2,7 @@
 
 use crate::actions::PlanCx;
 use crate::steps::Step;
-use crate::{actions::Action, manifests::Manifest, utilities};
+use crate::{actions::Action, manifests::Manifest};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -68,21 +68,23 @@ impl Action for RunCommand {
         format!("Running {} command", self.command)
     }
 
-    fn plan(&self, _: &Manifest, cx: &PlanCx) -> anyhow::Result<Vec<Step>> {
+    fn plan(&self, _: &Manifest, _: &PlanCx) -> anyhow::Result<Vec<Step>> {
         use crate::atoms::command::Exec;
 
-        let privilege_provider = utilities::get_privilege_provider(cx.facts);
-
-        Ok(vec![Step::new(Exec {
+        let step = Step::new(Exec {
             command: self.command.clone(),
             arguments: self.args.clone(),
-            privileged: self.privileged,
             working_dir: Some(self.dir.clone()),
-            privilege_provider: privilege_provider.clone(),
             stdout_file: self.stdout_file(),
             // Only for the command, comtrya's own environment stays as it is
             environment: self.env.clone().into_iter().collect(),
-        })])
+        });
+
+        Ok(vec![if self.privileged {
+            step.as_root()
+        } else {
+            step
+        }])
     }
 }
 

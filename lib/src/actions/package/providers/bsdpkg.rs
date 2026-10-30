@@ -6,7 +6,7 @@ use crate::contexts::Facts;
 use crate::steps::finalizers::FlowControl::StopIf;
 use crate::steps::finalizers::OutputContains;
 use crate::steps::Step;
-use crate::{actions::package::PackageVariant, atoms::command::Exec, utilities};
+use crate::{actions::package::PackageVariant, atoms::command::Exec};
 use serde::{Deserialize, Serialize};
 use tracing::{instrument, warn};
 use which::which;
@@ -39,16 +39,13 @@ impl PackageProvider for BsdPkg {
 
     #[instrument(name = "bootstrap", level = "info", skip(self))]
     fn bootstrap(&self, facts: &Facts) -> Vec<Step> {
-        let privilege_provider = utilities::get_privilege_provider(facts);
-
         vec![Step::new(Exec {
             command: String::from("/usr/sbin/pkg"),
             arguments: vec![String::from("bootstrap")],
             environment: self.env(),
-            privileged: true,
-            privilege_provider: privilege_provider.clone(),
             ..Default::default()
-        })]
+        })
+        .as_root()]
     }
 
     fn has_repository(&self, _: &PackageRepository) -> bool {
@@ -65,9 +62,7 @@ impl PackageProvider for BsdPkg {
         Ok(package.packages())
     }
 
-    fn install(&self, package: &PackageVariant, facts: &Facts) -> anyhow::Result<Vec<Step>> {
-        let privilege_provider = utilities::get_privilege_provider(facts);
-
+    fn install(&self, package: &PackageVariant, _facts: &Facts) -> anyhow::Result<Vec<Step>> {
         if package.file {
             return Ok(vec![Step::new(Exec {
                 command: String::from("/usr/sbin/pkg"),
@@ -76,10 +71,9 @@ impl PackageProvider for BsdPkg {
                     .chain(package.extra_args.clone())
                     .chain(package.packages())
                     .collect(),
-                privileged: true,
-                privilege_provider: privilege_provider.clone(),
                 ..Default::default()
-            })]);
+            })
+            .as_root()]);
         }
 
         Ok(vec![
@@ -90,10 +84,9 @@ impl PackageProvider for BsdPkg {
                     .chain(package.extra_args.clone())
                     .chain(package.packages())
                     .collect(),
-                privileged: true,
-                privilege_provider: privilege_provider.clone(),
                 ..Default::default()
             })
+            .as_root()
             .with_finalizer(StopIf(Box::new(OutputContains("removed")))),
             Step::new(Exec {
                 command: String::from("/usr/sbin/pkg"),
@@ -102,10 +95,9 @@ impl PackageProvider for BsdPkg {
                     .chain(package.extra_args.clone())
                     .chain(package.packages())
                     .collect(),
-                privileged: true,
-                privilege_provider: privilege_provider.clone(),
                 ..Default::default()
-            }),
+            })
+            .as_root(),
         ])
     }
 }

@@ -3,7 +3,7 @@
 use super::GroupProvider;
 use crate::contexts::Facts;
 use crate::steps::Step;
-use crate::{actions::group::GroupVariant, atoms::command::Exec, utilities};
+use crate::{actions::group::GroupVariant, atoms::command::Exec};
 use anyhow::{bail, Context};
 use serde::{Deserialize, Serialize};
 use which::which;
@@ -13,7 +13,7 @@ use which::which;
 pub struct MacOsGroupProvider {}
 
 impl GroupProvider for MacOsGroupProvider {
-    fn add_group(&self, group: &GroupVariant, facts: &Facts) -> anyhow::Result<Vec<Step>> {
+    fn add_group(&self, group: &GroupVariant, _facts: &Facts) -> anyhow::Result<Vec<Step>> {
         if group.group_name.is_empty() {
             bail!("can't create a group without a group_name");
         }
@@ -28,15 +28,12 @@ impl GroupProvider for MacOsGroupProvider {
             group_creation_string.to_owned(),
         ];
 
-        let privilege_provider = utilities::get_privilege_provider(facts);
-
         Ok(vec![Step::new(Exec {
             command: cli.display().to_string(),
             arguments: args.into_iter().collect(),
-            privileged: true,
-            privilege_provider: privilege_provider.clone(),
             ..Default::default()
-        })])
+        })
+        .as_root()])
     }
 }
 
