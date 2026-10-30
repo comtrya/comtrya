@@ -5,6 +5,7 @@ use super::{
     graph::ManifestGraph,
     Options, Report,
 };
+use crate::helper::Helper;
 use crate::{
     actions::{Action, PlanCx},
     atoms::{self, command::Stream, Atom, Check, Output},
@@ -41,6 +42,8 @@ pub(super) struct Run<'a> {
     cancel: Option<&'a AtomicBool>,
     /// Whether the run stopped because of `cancel`
     cancelled: bool,
+    /// Runs the root steps that aren't programs, started on first use
+    helper: Helper,
     /// Manifests that failed, or were skipped because a dependency failed
     failed: HashSet<NodeIndex>,
     /// What the steps of a dry run would have made so far. A later step that needs one of
@@ -59,6 +62,7 @@ impl<'a> Run<'a> {
             observer: options.observer,
             cancel: options.cancel,
             cancelled: false,
+            helper: Helper::new(cx.facts.privilege.clone()),
             failed: graph.broken.clone(),
             produced: vec![],
         }
@@ -276,10 +280,7 @@ impl<'a> Run<'a> {
             return true;
         }
 
-        let output = match step
-            .atom_to_run(&self.cx.facts.privilege)
-            .and_then(|atom| self.execute(&atom))
-        {
+        let output = match self.run_atom(&step) {
             Ok(output) => output,
             Err(error) => {
                 self.observer.on(&Event::StepFailed {
@@ -323,5 +324,15 @@ impl<'a> Run<'a> {
                 .join()
                 .unwrap_or_else(|panic| std::panic::resume_unwind(panic))
         })
+    }
+
+    /// Runs the step's atom: in the privileged helper if it needs root and isn't a program,
+    /// otherwise here, through the privilege provider for a root program
+    fn run_atom(&mut self, step: &Step) -> atoms::Result<Output> {
+        if step.needs_helper() {
+            return self.helper.run(&step.atom);
+        }
+        step.atom_to_run(&self.cx.facts.privilege)
+            .and_then(|atom| self.execute(&atom))
     }
 }

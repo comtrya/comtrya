@@ -673,6 +673,7 @@ dependencies = [
  "ctrlc",
  "dirs",
  "predicates",
+ "serde_json",
  "serde_yaml_ng",
  "strip-ansi-escapes",
  "tempfile",

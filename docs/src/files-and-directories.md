@@ -11,6 +11,8 @@
 
 All `directory.*` actions can also be written as `dir.*`, e.g. `dir.create`.
 
+Every `file.*` and `directory.*` action takes `privileged: true` (or `sudo: true`) to make its change as root, e.g. for a file below `/etc`. See [Privilege Escalation](./privileged.md#files-and-directories).
+
 ## Note
 The following commands expect the `from`/`source` to point to files/directories which are themselves under a "files" directory.
 This is a restriction so that comtrya knows not to parse any .yaml file e.g. a config for a different tool as a manifest.

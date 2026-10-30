@@ -19,6 +19,19 @@ Comtrya knows two keywords for escalating privilege. In older versions, it had t
   privileged: true
 ```
 
+## Files and directories
+
+Every `file.*` and `directory.*` action takes `privileged: true` (or `sudo: true`) too. Its change is then made as root:
+
+```yaml
+- action: file.copy
+  from: hosts
+  to: /etc/hosts
+  privileged: true
+```
+
+Comtrya itself keeps running as you, so contexts like `user.home_dir` stay yours. For these actions it starts `sudo comtrya __helper` (or `doas`, `run0`) once per run, on the first one that needs it, so you are asked for your password once. Checking whether something changes still runs as you, so a file only root can read can't be compared. When comtrya runs as root already, the actions run directly.
+
 ## Privilege escalation providers
 
 Comtrya, as of version 0.9.0 and later, supports different providers for privilege escalation. Not all operating systems may support sudo and some users prefer different programs, such as OpenBSD's doas which is available on multiple platforms or run0 which is part of systemd in versions 256 and newer.

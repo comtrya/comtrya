@@ -9,6 +9,7 @@ pub mod atoms;
 pub mod config;
 pub mod contexts;
 pub mod executor;
+pub mod helper;
 pub mod manifests;
 pub mod runner;
 mod runtime;

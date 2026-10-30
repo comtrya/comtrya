@@ -1,0 +1,54 @@
+# `privileged` (or `sudo`) on every `file.*` and `directory.*` action. 0.10.0 ignored it
+actions:
+  - action: file.copy
+    from: config
+    to: /etc/comtrya-compat/config
+    privileged: true
+    variants:
+      - sudo: true
+  - action: file.chown
+    path: /etc/comtrya-compat/config
+    user: root
+    group: wheel
+    privileged: true
+    variants:
+      - sudo: true
+  - action: file.download
+    from: https://example.com/file.txt
+    to: /etc/comtrya-compat/file.txt
+    privileged: true
+    variants:
+      - sudo: true
+  - action: file.link
+    source: dotfile
+    target: /etc/comtrya-compat/.dotfile
+    privileged: true
+    variants:
+      - sudo: true
+  - action: file.remove
+    target: /etc/comtrya-compat/old-file
+    privileged: true
+    variants:
+      - sudo: true
+  - action: file.unarchive
+    from: /tmp/comtrya-compat/archive.tar.gz
+    to: /opt/comtrya-compat/archive
+    privileged: true
+    variants:
+      - sudo: true
+  - action: directory.copy
+    from: dir
+    to: /etc/comtrya-compat/dir/
+    privileged: true
+    variants:
+      - sudo: true
+  - action: directory.create
+    path: /etc/comtrya-compat/created
+    privileged: true
+    variants:
+      - sudo: true
+  - action: directory.remove
+    target: /etc/comtrya-compat/old-dir
+    privileged: true
+    variants:
+      - sudo: true

@@ -108,6 +108,8 @@ fn known_differences() -> Vec<(&'static str, &'static str)> {
     vec![
         // 0.11.0 accepts `repository` and `reference` again, 0.10.0 refuses them
         ("v1", "git-clone-reference"),
+        // 0.11.0 runs file and directory actions with `privileged` as root, 0.10.0 ignored it
+        ("v1", "privileged"),
         // 0.11.0 drops `.toml` from manifest names like `.yaml`, 0.10.0 kept it
         ("v1", "toml.command.toml"),
         ("v1", "toml.command"),

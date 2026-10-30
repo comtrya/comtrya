@@ -15,6 +15,15 @@ use super::FileAction;
 pub struct FileRemove {
     /// The file to remove
     pub target: String,
+    /// Make the change as root, in the privileged helper that the privilege provider (like
+    /// sudo) starts once per run, unless comtrya runs as root
+    #[serde(
+        default,
+        alias = "sudo",
+        skip_serializing_if = "crate::actions::is_false"
+    )]
+    #[schemars(extend("x-aliases" = ["sudo"]))]
+    pub privileged: bool,
 }
 
 impl FileRemove {}
@@ -22,6 +31,10 @@ impl FileRemove {}
 impl FileAction for FileRemove {}
 
 impl Action for FileRemove {
+    fn privileged(&self) -> bool {
+        self.privileged
+    }
+
     fn summarize(&self) -> String {
         format!("Removing file {}", self.target)
     }

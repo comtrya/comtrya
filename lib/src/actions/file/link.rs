@@ -30,6 +30,15 @@ pub struct FileLink {
     /// directory itself
     #[serde(default = "walk_dir_default")]
     pub walk_dir: bool,
+    /// Make the change as root, in the privileged helper that the privilege provider (like
+    /// sudo) starts once per run, unless comtrya runs as root
+    #[serde(
+        default,
+        alias = "sudo",
+        skip_serializing_if = "crate::actions::is_false"
+    )]
+    #[schemars(extend("x-aliases" = ["sudo"]))]
+    pub privileged: bool,
 }
 
 /// Directories are linked as a whole unless `walk_dir` says otherwise
@@ -114,6 +123,10 @@ impl FileLink {
 impl FileAction for FileLink {}
 
 impl Action for FileLink {
+    fn privileged(&self) -> bool {
+        self.privileged
+    }
+
     fn summarize(&self) -> String {
         format!(
             "Linking file {} to {}",

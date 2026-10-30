@@ -44,6 +44,15 @@ pub struct FileDownload {
     /// Expected SHA-256 of the file in hex. The download fails if it doesn't match, and an
     /// existing file that doesn't match is downloaded again
     pub sha256: Option<String>,
+    /// Make the change as root, in the privileged helper that the privilege provider (like
+    /// sudo) starts once per run, unless comtrya runs as root
+    #[serde(
+        default,
+        alias = "sudo",
+        skip_serializing_if = "crate::actions::is_false"
+    )]
+    #[schemars(extend("x-aliases" = ["sudo"]))]
+    pub privileged: bool,
 }
 
 /// `template` is off unless set
@@ -81,6 +90,10 @@ impl FileDownload {
 impl FileAction for FileDownload {}
 
 impl Action for FileDownload {
+    fn privileged(&self) -> bool {
+        self.privileged
+    }
+
     fn summarize(&self) -> String {
         format!("Downloading file {} to {}", self.from, self.to)
     }
@@ -243,6 +256,7 @@ mod tests {
             owner_user: Some("test".to_string()),
             owner_group: Some("test".to_string()),
             sha256: None,
+            ..Default::default()
         };
 
         let steps = file_download.plan(&Default::default(), &crate::actions::PlanCx::empty());

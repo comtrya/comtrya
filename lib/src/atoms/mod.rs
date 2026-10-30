@@ -83,7 +83,7 @@ impl Check {
 }
 
 /// What running an atom returned, for the finalizers. Empty for atoms that don't run programs
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct Output {
     /// What the program wrote to stdout, unless it went to a file
     pub stdout: String,
@@ -233,7 +233,8 @@ impl Atom {
     }
 
     /// The atom that makes this change as root, through `privilege` (`sudo`, `doas`, `run0`).
-    /// Only programs can be run that way, until the privileged helper (#502) runs any atom
+    /// Only programs can be run that way, other atoms run in the privileged helper, see
+    /// [`crate::helper`]
     pub fn elevated(self, privilege: &Privilege) -> Result<Atom> {
         match self {
             Atom::Exec(exec) => Ok(Atom::Exec(exec.elevated(privilege))),
