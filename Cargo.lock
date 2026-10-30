@@ -671,7 +671,6 @@ dependencies = [
  "comfy-table",
  "comtrya-lib 0.10.0",
  "dirs",
- "petgraph",
  "predicates",
  "serde_yaml_ng",
  "strip-ansi-escapes",

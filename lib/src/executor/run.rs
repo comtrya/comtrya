@@ -1,7 +1,7 @@
 //! Runs the manifests of a [`ManifestGraph`]: each manifest's actions, each action's steps.
 
-use super::graph::ManifestGraph;
-use comtrya_lib::{
+use super::{graph::ManifestGraph, Report};
+use crate::{
     actions::{Action, PlanCx},
     atoms::Check,
     contexts::evaluate_condition,
@@ -57,16 +57,16 @@ impl<'a> Run<'a> {
         }
     }
 
-    /// The result of the run: an error if any manifest failed or was skipped because of one
-    pub(super) fn finish(self) -> anyhow::Result<()> {
-        if self.failed.is_empty() {
-            return Ok(());
-        }
+    /// What the run did
+    pub(super) fn finish(self) -> Report {
+        let mut failed: Vec<String> = self
+            .failed
+            .iter()
+            .filter_map(|&node| self.graph.dag[node].name.clone())
+            .collect();
+        failed.sort();
 
-        Err(anyhow::anyhow!(
-            "{} manifest(s) failed or were skipped because a dependency failed",
-            self.failed.len()
-        ))
+        Report { failed }
     }
 
     /// Runs one manifest, unless it's the root, failed already, or something skips it

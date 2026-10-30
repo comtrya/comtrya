@@ -1,18 +1,14 @@
 //! `comtrya apply` and `comtrya status`
 
-mod graph;
-mod run;
-
 use super::ComtryaCommand;
 use crate::Runtime;
 use clap::Parser;
 use comfy_table::{Cell, ContentArrangement, Table};
 use comtrya_lib::{
     actions::PlanCx,
+    executor::{self, Options},
     manifests::{load_all, Loaded},
 };
-use graph::ManifestGraph;
-use run::Run;
 use std::ops::Deref;
 use std::path::PathBuf;
 use tracing::{error, instrument, trace};
@@ -103,19 +99,17 @@ impl ComtryaCommand for Apply {
     #[instrument(skip(self, runtime))]
     fn execute(&self, runtime: &Runtime) -> anyhow::Result<()> {
         let manifest_path = self.manifest_path(runtime)?;
-        let graph = ManifestGraph::build(
+
+        executor::run(
             load_all(manifest_path.clone(), &runtime.contexts),
             &manifest_path,
-        );
-
-        let mut run = Run::new(
-            &graph,
             PlanCx::new(&runtime.facts, &runtime.contexts),
-            self.dry_run,
-            self.label.as_deref(),
-        );
-        run.all(graph.run_order(&self.manifests));
-
-        run.finish()
+            &Options {
+                manifests: &self.manifests,
+                dry_run: self.dry_run,
+                label: self.label.as_deref(),
+            },
+        )
+        .into_result()
     }
 }
