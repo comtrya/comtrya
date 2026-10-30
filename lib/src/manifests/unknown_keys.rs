@@ -31,6 +31,11 @@ impl std::fmt::Display for UnknownKey {
 /// The keys an object with this schema reads: its properties, and the aliases in their
 /// `x-aliases`
 pub fn schema_keys(schema: Schema) -> Vec<String> {
+    keys_of(schema.as_value())
+}
+
+/// [`schema_keys`] of a part of a schema
+fn keys_of(schema: &Value) -> Vec<String> {
     let Some(properties) = schema.get("properties").and_then(Value::as_object) else {
         return vec![];
     };
@@ -62,9 +67,11 @@ pub fn unknown_keys(manifest: &Value) -> Vec<UnknownKey> {
         let Some(name) = action.get("action").and_then(Value::as_str) else {
             continue;
         };
-        let Some(mut known) = Actions::known_keys(name) else {
+        let Some(schema) = Actions::schema(name) else {
             continue;
         };
+        let schema = schema.as_value();
+        let mut known = keys_of(schema);
         let at = format!("action {} ({name})", index + 1);
 
         known.retain(|key| key != "variants");
@@ -72,10 +79,12 @@ pub fn unknown_keys(manifest: &Value) -> Vec<UnknownKey> {
         for (index, variant) in variants.into_iter().flatten().enumerate() {
             let at = format!("variant {} of {at}", index + 1);
             unknown.extend(unknown_in(variant, &known, &at));
+            unknown.extend(unknown_nested(variant, schema, schema, &at));
         }
 
         known.extend([String::from("action"), String::from("variants")]);
         unknown.extend(unknown_in(action, &known, &at));
+        unknown.extend(unknown_nested(action, schema, schema, &at));
     }
 
     unknown
@@ -94,6 +103,53 @@ fn unknown_in(object: &Value, known: &[String], at: &str) -> Vec<UnknownKey> {
             closest: closest(key, known.iter().map(String::as_str)),
         })
         .collect()
+}
+
+/// The unknown keys in the objects that the fields of `object` hold, like `key` of
+/// `package.repository`, and in theirs. `schema` is `object`'s, `root` the whole schema with
+/// the `$defs` its references point to
+fn unknown_nested(object: &Value, schema: &Value, root: &Value, at: &str) -> Vec<UnknownKey> {
+    let Some(properties) = schema.get("properties").and_then(Value::as_object) else {
+        return vec![];
+    };
+
+    let mut unknown = vec![];
+    for (key, value) in object.as_object().into_iter().flatten() {
+        let property = properties.get(key).or_else(|| aliased(properties, key));
+        let Some(nested) = property.and_then(|property| as_object_schema(property, root)) else {
+            continue;
+        };
+
+        let at = format!("`{key}` of {at}");
+        unknown.extend(unknown_in(value, &keys_of(nested), &at));
+        unknown.extend(unknown_nested(value, nested, root, &at));
+    }
+    unknown
+}
+
+/// The property that has `key` in its `x-aliases`
+fn aliased<'a>(properties: &'a serde_json::Map<String, Value>, key: &str) -> Option<&'a Value> {
+    properties.values().find(|property| {
+        property
+            .get("x-aliases")
+            .and_then(Value::as_array)
+            .is_some_and(|aliases| aliases.iter().any(|alias| alias == key))
+    })
+}
+
+/// The schema of the object a property holds, following a `$ref` into `root`'s `$defs`, also
+/// one of an `anyOf` like an `Option` has. `None` if the property holds no object with keys
+fn as_object_schema<'a>(property: &'a Value, root: &'a Value) -> Option<&'a Value> {
+    if let Some(reference) = property.get("$ref").and_then(Value::as_str) {
+        let name = reference.strip_prefix("#/$defs/")?;
+        return as_object_schema(root.get("$defs")?.get(name)?, root);
+    }
+    if let Some(alternatives) = property.get("anyOf").and_then(Value::as_array) {
+        return alternatives
+            .iter()
+            .find_map(|alternative| as_object_schema(alternative, root));
+    }
+    property.get("properties").map(|_| property)
 }
 
 /// The known word with the fewest typos from `key`, if it has at most two and isn't a
@@ -175,6 +231,48 @@ actions:
             ],
             unknown(yaml)
         );
+    }
+
+    #[test]
+    fn typos_in_objects_that_fields_hold_are_found() {
+        let yaml = r#"
+actions:
+  - action: package.repository
+    name: hashicorp
+    key:
+      ulr: https://example.com/key
+      name: hashicorp
+    variants:
+      - where: os.name == "macos"
+        name: hashicorp
+        key:
+          url: https://example.com/key
+          nmae: hashicorp
+"#;
+
+        assert_eq!(
+            vec![
+                "`nmae` in `key` of variant 1 of action 1 (package.repository) is ignored, did you mean `name`?",
+                "`ulr` in `key` of action 1 (package.repository) is ignored, did you mean `url`?",
+            ],
+            unknown(yaml)
+        );
+    }
+
+    #[test]
+    fn a_field_that_holds_text_or_a_map_of_anything_is_not_walked() {
+        let yaml = r#"
+actions:
+  - action: command.run
+    command: env
+    env:
+      ANYTHING: goes
+  - action: package.install
+    name: git
+    key: some-key
+"#;
+
+        assert_eq!(Vec::<String>::new(), unknown(yaml));
     }
 
     #[test]
