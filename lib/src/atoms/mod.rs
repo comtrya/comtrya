@@ -7,6 +7,8 @@ pub mod command;
 pub mod directory;
 /// Why atoms fail
 mod error;
+mod resource;
+pub use resource::Resource;
 /// Writing, linking, and changing files
 pub mod file;
 /// Cloning repositories
@@ -187,6 +189,32 @@ impl Atom {
             | Atom::FileRemove(_) => None,
             #[cfg(test)]
             Atom::Echo(_) => None,
+        }
+    }
+
+    /// What the atom reads, changes or needs, see [`Resource`]
+    pub fn resources(&self) -> Vec<Resource> {
+        use resource::path;
+
+        match self {
+            Atom::Exec(atom) => resource::of_exec(atom),
+            Atom::DirectoryCopy(atom) => vec![path(&atom.from), path(&atom.to)],
+            Atom::DirectoryCreate(atom) => vec![path(&atom.path)],
+            Atom::DirectoryRemove(atom) => vec![path(&atom.target)],
+            Atom::FileChmod(atom) => vec![path(&atom.path)],
+            Atom::FileChown(atom) => vec![path(&atom.path)],
+            Atom::FileCopy(atom) => vec![path(&atom.from), path(&atom.to)],
+            Atom::FileCreate(atom) => vec![path(&atom.path)],
+            Atom::FileDecrypt(atom) => vec![path(&atom.path)],
+            Atom::FileLink(atom) => vec![path(&atom.source), path(&atom.target)],
+            Atom::FileRemove(atom) => vec![path(&atom.target)],
+            Atom::FileSetContents(atom) => vec![path(&atom.path)],
+            Atom::FileUnarchive(atom) => vec![path(&atom.origin), path(&atom.dest)],
+            Atom::GitClone(atom) => vec![path(&atom.directory)],
+            Atom::GitUpdate(atom) => vec![path(&atom.directory)],
+            Atom::HttpDownload(atom) => vec![path(&atom.to)],
+            #[cfg(test)]
+            Atom::Echo(_) => vec![],
         }
     }
 

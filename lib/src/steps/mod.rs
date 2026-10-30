@@ -1,6 +1,6 @@
 //! Steps: the atoms an action plans, with the checks around them
 
-use crate::atoms::{self, Atom, Output, RunAs};
+use crate::atoms::{self, Atom, Output, Resource, RunAs};
 use crate::contexts::privilege::Privilege;
 use crate::steps::finalizers::FlowControl;
 use crate::utilities;
@@ -53,6 +53,16 @@ impl Step {
             RunAs::Root if !as_root => self.atom.clone().elevated(privilege),
             _ => Ok(self.atom.clone()),
         }
+    }
+
+    /// What the step uses, see [`Resource`]: its atom's resources, and the terminal for a root
+    /// step, because `sudo` may ask for a password
+    pub fn resources(&self) -> Vec<Resource> {
+        let mut resources = self.atom.resources();
+        if self.run_as == RunAs::Root {
+            resources.push(Resource::Tty);
+        }
+        resources
     }
 
     /// Adds an initializer, checked before the atom runs
@@ -152,6 +162,39 @@ mod tests {
     use pretty_assertions::assert_eq;
 
     use super::*;
+
+    #[test]
+    fn a_root_step_needs_the_terminal() {
+        let pacman = atoms::command::Exec {
+            command: String::from("pacman"),
+            ..Default::default()
+        };
+
+        assert_eq!(
+            vec![Resource::PackageDb(String::from("pacman"))],
+            Step::new(pacman.clone()).resources()
+        );
+        assert_eq!(
+            vec![Resource::PackageDb(String::from("pacman")), Resource::Tty],
+            Step::new(pacman).as_root().resources()
+        );
+    }
+
+    #[test]
+    fn a_copy_uses_both_of_its_paths() {
+        let copy = atoms::file::Copy {
+            from: std::path::PathBuf::from("/a"),
+            to: std::path::PathBuf::from("/b"),
+        };
+
+        assert_eq!(
+            vec![
+                Resource::Path(std::path::PathBuf::from("/a")),
+                Resource::Path(std::path::PathBuf::from("/b"))
+            ],
+            Step::new(copy).resources()
+        );
+    }
 
     #[test]
     fn initializers_can_control_execution() {
