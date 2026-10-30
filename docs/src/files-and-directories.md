@@ -299,6 +299,7 @@ Copies the contents of a directory into another directory, the same on all platf
 `to` and its subdirectories are created if missing, files with the same path are overwritten and other files in `to` are left alone.
 A trailing `/` on `to` makes no difference.
 On unix, symlinks inside `from` are copied as symlinks; on Windows the file they point to is copied.
+The action fails if `to` is `from` itself or a directory inside it, like `cp` does.
 
 Before 0.11.0, unix copied the directory itself to `<to>/<name>` unless `to` ended with `/`.
 To keep that, put the name into `to`.
