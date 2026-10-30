@@ -1,20 +1,21 @@
-//! `directory.copy`: `cp -r` on unix, `Xcopy` on Windows
+//! `directory.copy`: copies the contents of a directory into another one
 
 use super::DirectoryAction;
 use crate::actions::Action;
 use crate::actions::PlanCx;
 use crate::steps::Step;
-use crate::{atoms::command::Exec, manifests::Manifest};
+use crate::{atoms::directory::Copy, manifests::Manifest};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
 
-/// Copies a directory from the manifest's `files` directory, every time
+/// Copies the contents of a directory from the manifest's `files` directory, every time
 #[derive(JsonSchema, Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct DirectoryCopy {
     /// The directory to copy, below the manifest's `files` directory
     pub from: String,
-    /// Where to copy it to. With a trailing `/`, the contents of `from` are copied into it,
-    /// otherwise `from` itself
+    /// The directory the contents of `from` are copied into, on every platform. Files with the
+    /// same path are overwritten, other files in it are kept. A trailing `/` makes no difference
     pub to: String,
 }
 
@@ -22,54 +23,23 @@ impl DirectoryCopy {}
 
 impl DirectoryAction for DirectoryCopy {}
 
-#[cfg(target_family = "windows")]
 impl Action for DirectoryCopy {
     fn summarize(&self) -> String {
         format!("Copying {} to {}", self.from, self.to)
     }
 
     fn plan(&self, manifest: &Manifest, _context: &PlanCx) -> anyhow::Result<Vec<Step>> {
-        let from: String = self.resolve(manifest, &self.from)?.display().to_string();
-
-        Ok(vec![Step::new(Exec {
-            command: String::from("Xcopy"),
-            arguments: vec!["/E".to_string(), "/I".to_string(), from, self.to.clone()],
-            ..Default::default()
+        Ok(vec![Step::new(Copy {
+            from: self.resolve(manifest, &self.from)?,
+            to: PathBuf::from(&self.to),
         })])
-    }
-}
-
-#[cfg(target_family = "unix")]
-impl Action for DirectoryCopy {
-    fn summarize(&self) -> String {
-        format!("Copying {} to {}", self.from, self.to)
-    }
-
-    fn plan(&self, manifest: &Manifest, _context: &PlanCx) -> anyhow::Result<Vec<Step>> {
-        let mut from: String = self.resolve(manifest, &self.from)?.display().to_string();
-
-        if self.to.ends_with("/") {
-            from += "/."
-        }
-
-        Ok(vec![
-            Step::new(Exec {
-                command: String::from("mkdir"),
-                arguments: vec![String::from("-p"), self.to.clone()],
-                ..Default::default()
-            }),
-            Step::new(Exec {
-                command: String::from("cp"),
-                arguments: vec![String::from("-r"), from, self.to.clone()],
-                ..Default::default()
-            }),
-        ])
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::actions::Actions;
+    use super::DirectoryCopy;
+    use crate::actions::{Action, Actions, PlanCx};
     use crate::manifests::Manifest;
     use std::path::PathBuf;
 
@@ -81,6 +51,30 @@ mod tests {
             .join("examples")
             .join("directory")
             .join("copy")
+    }
+
+    #[test]
+    fn it_plans_one_step_with_the_copy_atom() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(dir.path().join("files").join("mydir")).unwrap();
+        let manifest = Manifest {
+            root_dir: Some(dir.path().to_path_buf()),
+            ..Default::default()
+        };
+        let action = DirectoryCopy {
+            from: String::from("mydir"),
+            to: String::from("/some/where/"),
+        };
+
+        let steps = action.plan(&manifest, &PlanCx::empty()).unwrap();
+
+        assert_eq!(1, steps.len());
+        let display = steps[0].atom.to_string();
+        assert!(
+            display.contains("need to be copied to /some/where/"),
+            "{display}"
+        );
+        assert!(display.contains("mydir"), "{display}");
     }
 
     #[test]
