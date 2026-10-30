@@ -168,6 +168,7 @@ mod tests {
     /// A short name for each event, to compare the order they come in
     fn name(event: &Event) -> String {
         match event {
+            Event::ManifestBroken { .. } => String::from("broken"),
             Event::ManifestStarted { name } => format!("start {name}"),
             Event::ManifestSkipped(Skip::DependencyFailed) => String::from("skip: dependency"),
             Event::ManifestSkipped(_) => String::from("skip"),
@@ -203,6 +204,7 @@ mod tests {
 
         assert_eq!(
             vec![
+                "broken",
                 "start app",
                 "skip: dependency",
                 "start ok",
@@ -385,5 +387,24 @@ mod tests {
 
         assert_eq!(Report::default(), report);
         assert_eq!(1, most.load(std::sync::atomic::Ordering::SeqCst));
+    }
+
+    #[test]
+    fn a_broken_manifest_that_isnt_selected_doesnt_fail_the_run() {
+        let dir = tempfile::tempdir().unwrap();
+        let loaded = Loaded {
+            manifests: HashMap::from([manifest("app", &[], &dir.path().join("app"))]),
+            errors: vec![broken("broken")],
+        };
+        let selected = [String::from("app")];
+        let options = Options {
+            manifests: &selected,
+            ..Default::default()
+        };
+
+        let report = run(loaded, dir.path(), PlanCx::empty(), &options);
+
+        assert_eq!(Report::default(), report);
+        assert!(dir.path().join("app").is_dir());
     }
 }

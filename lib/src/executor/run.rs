@@ -71,7 +71,7 @@ impl<'a> Run<'a> {
             cancel: options.cancel,
             cancelled: AtomicBool::new(false),
             helper: Mutex::new(Helper::new(cx.facts.privilege.clone())),
-            failed: Mutex::new(graph.broken.clone()),
+            failed: Mutex::new(HashSet::new()),
             produced: Mutex::new(vec![]),
             locks: Locks::default(),
         }
@@ -80,7 +80,18 @@ impl<'a> Run<'a> {
     /// Runs the manifests in `order`, see [`ManifestGraph::run_order`]. Several at once with
     /// `--jobs`, each after its dependencies
     pub(super) fn all(&self, order: Vec<NodeIndex>) {
-        schedule::visit_all(self.graph, order, self.jobs, |node| self.visit(node));
+        schedule::visit_all(self.graph, order, self.jobs, |node| {
+            match self.graph.broken.get(&node) {
+                Some(reason) => self.broken(node, reason),
+                None => self.visit(node),
+            }
+        });
+    }
+
+    /// Reports a manifest that fails before it runs, and fails it
+    fn broken(&self, node: NodeIndex, reason: &str) {
+        self.observer.on(&Event::ManifestBroken { reason });
+        self.failed().insert(node);
     }
 
     /// What the run did

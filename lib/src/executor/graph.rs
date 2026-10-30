@@ -5,7 +5,7 @@ use crate::manifests::{LoadError, Loaded, Manifest};
 use petgraph::{graph::NodeIndex, visit::DfsPostOrder, Graph};
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
-use tracing::{error, trace};
+use tracing::trace;
 
 /// The manifests of a run and their dependencies.
 ///
@@ -18,9 +18,9 @@ pub(super) struct ManifestGraph {
     root: NodeIndex,
     /// The node of each manifest, by its name
     nodes: HashMap<String, NodeIndex>,
-    /// Manifests that fail before they run: they can't be loaded, or depend on a manifest that
-    /// doesn't exist
-    pub(super) broken: HashSet<NodeIndex>,
+    /// Manifests that fail before they run, with why: they can't be loaded, or depend on a
+    /// manifest that doesn't exist. Reported only when they're part of the run
+    pub(super) broken: HashMap<NodeIndex, String>,
 }
 
 impl ManifestGraph {
@@ -35,7 +35,7 @@ impl ManifestGraph {
             dag: Graph::new(),
             root: NodeIndex::default(),
             nodes: HashMap::new(),
-            broken: HashSet::new(),
+            broken: HashMap::new(),
         };
         graph.root = graph.dag.add_node(Manifest::default());
 
@@ -62,14 +62,12 @@ impl ManifestGraph {
 
     /// Adds an empty, broken manifest in place of one that can't be loaded
     fn add_placeholder(&mut self, error: LoadError) {
-        error!("{error}");
-
         let manifest = Manifest {
             name: Some(error.name.clone()),
             ..Default::default()
         };
         let node = self.add_manifest(&error.name, &manifest);
-        self.broken.insert(node);
+        self.broken.insert(node, error.to_string());
     }
 
     /// Adds an edge from the manifest `name` in `directory` to each of its dependencies. A
@@ -90,12 +88,9 @@ impl ManifestGraph {
                     self.dag.add_edge(node, dependency_node, 0);
                 }
                 None => {
-                    error!(
-                        message = "Unresolved dependency",
-                        manifest = name,
-                        dependency = dependency.as_str()
-                    );
-                    self.broken.insert(node);
+                    let reason =
+                        format!("Manifest '{name}' depends on '{dependency}', which doesn't exist");
+                    self.broken.insert(node, reason);
                 }
             }
         }
@@ -266,7 +261,11 @@ mod tests {
     fn a_missing_dependency_breaks_the_manifest() {
         let graph = graph(&[manifest("app", &["nope"]), manifest("other", &[])]);
 
-        assert_eq!(HashSet::from([graph.nodes["app"]]), graph.broken);
+        assert_eq!(
+            vec![&graph.nodes["app"]],
+            graph.broken.keys().collect::<Vec<_>>()
+        );
+        assert!(graph.broken[&graph.nodes["app"]].contains("doesn't exist"));
     }
 
     #[test]
@@ -284,8 +283,8 @@ mod tests {
         );
         let broken = graph.nodes["broken"];
 
-        assert_eq!(HashSet::from([broken]), graph.broken);
+        assert_eq!(vec![&broken], graph.broken.keys().collect::<Vec<_>>());
         assert!(graph.dag[broken].actions.is_empty());
-        assert!(graph.depends_on_any(graph.nodes["app"], &graph.broken));
+        assert!(graph.depends_on_any(graph.nodes["app"], &HashSet::from([broken])));
     }
 }
