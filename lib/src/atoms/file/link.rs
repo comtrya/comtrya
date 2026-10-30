@@ -1,11 +1,11 @@
 //! Creates a symlink
 
-use crate::atoms::Outcome;
+use crate::atoms::Check;
 use serde::{Deserialize, Serialize};
 
 use super::super::Change;
+use anyhow::bail;
 use std::path::{Path, PathBuf};
-use tracing::{error, warn};
 
 /// Links `target` to `source`. Replaces symlinks that point elsewhere or are broken, but
 /// never files or directories
@@ -29,46 +29,22 @@ impl std::fmt::Display for Link {
 }
 
 impl Change for Link {
-    fn plan(&self) -> anyhow::Result<Outcome> {
-        // First, ensure source exists and can be linked to
-        if !self.source.exists() {
-            error!(
-                "Cannot plan: source file is missing: {}",
-                self.source.display()
-            );
-
-            return Ok(Outcome {
-                side_effects: vec![],
-                should_run: false,
-            });
+    fn check(&self) -> anyhow::Result<Check> {
+        if let Some(pending) = Check::needs(&self.source) {
+            return Ok(pending);
         }
 
         // Target doesn't exist, we can run safely.
         // `symlink_metadata` doesn't follow links, so a broken symlink still counts as existing.
         let metadata = match std::fs::symlink_metadata(&self.target) {
             Ok(metadata) => metadata,
-            Err(err) if err.kind() == std::io::ErrorKind::NotFound => {
-                return Ok(Outcome {
-                    side_effects: vec![],
-                    should_run: true,
-                })
-            }
+            Err(err) if err.kind() == std::io::ErrorKind::NotFound => return Ok(Check::Drift),
             Err(err) => return Err(err.into()),
         };
 
-        // Target exists, lets check if it's a symlink which can be safely updated
-        // or return a false and emit some logging that we can't create the link
-        // without purging a file
+        // A link can be replaced, anything else would be lost
         if !metadata.file_type().is_symlink() {
-            warn!(
-                "Cannot plan: target already exists and isn't a link: {}",
-                self.target.display()
-            );
-
-            return Ok(Outcome {
-                side_effects: vec![],
-                should_run: false,
-            });
+            bail!("{} already exists and isn't a link", self.target.display());
         }
 
         let link = std::fs::read_link(&self.target)?;
@@ -81,10 +57,7 @@ impl Change for Link {
         };
 
         // If this file doesn't link to what we expect, lets make it so
-        Ok(Outcome {
-            side_effects: vec![],
-            should_run: !link.eq(&source),
-        })
+        Ok(Check::drift_if(!link.eq(&source)))
     }
 
     #[cfg(unix)]
@@ -147,10 +120,10 @@ mod tests {
             target: from_dir.path().join("symlink"),
             source: to_file.path().to_path_buf(),
         };
-        assert_eq!(true, atom.plan().unwrap().should_run);
+        assert_eq!(Check::Drift, atom.check().unwrap());
         match atom.execute() {
             Ok(_) => {
-                assert_eq!(false, atom.plan().unwrap().should_run);
+                assert_eq!(Check::InSync, atom.check().unwrap());
             }
             Err(e) => {
                 #[cfg(windows)]
@@ -180,11 +153,11 @@ mod tests {
             source: source.clone(),
             target: target.clone(),
         };
-        assert_eq!(true, atom.plan().unwrap().should_run);
+        assert_eq!(Check::Drift, atom.check().unwrap());
         atom.execute().unwrap();
 
         assert_eq!(source, std::fs::read_link(&target).unwrap());
-        assert_eq!(false, atom.plan().unwrap().should_run);
+        assert_eq!(Check::InSync, atom.check().unwrap());
     }
 
     #[cfg(unix)]
@@ -202,7 +175,7 @@ mod tests {
             source: source.clone(),
             target: target.clone(),
         };
-        assert_eq!(true, atom.plan().unwrap().should_run);
+        assert_eq!(Check::Drift, atom.check().unwrap());
         atom.execute().unwrap();
 
         assert_eq!(source, std::fs::read_link(&target).unwrap());
@@ -221,7 +194,23 @@ mod tests {
             source,
             target: target.clone(),
         };
-        assert_eq!(false, atom.plan().unwrap().should_run);
+        assert!(atom.check().is_err());
         assert_eq!("keep me", std::fs::read_to_string(&target).unwrap());
+    }
+
+    #[test]
+    fn a_missing_source_is_pending() {
+        let dir = tempfile::tempdir().unwrap();
+        let atom = Link {
+            source: dir.path().join("cloned/config"),
+            target: dir.path().join("link"),
+        };
+
+        assert_eq!(
+            Check::Pending {
+                needs: dir.path().join("cloned/config")
+            },
+            atom.check().unwrap()
+        );
     }
 }

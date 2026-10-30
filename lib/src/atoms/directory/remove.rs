@@ -3,9 +3,9 @@
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
-use tracing::error;
+use anyhow::bail;
 
-use crate::atoms::{Change, Outcome};
+use crate::atoms::{Change, Check};
 
 /// Removes an empty directory
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -25,38 +25,18 @@ impl std::fmt::Display for Remove {
 }
 
 impl Change for Remove {
-    fn plan(&self) -> anyhow::Result<Outcome> {
-        let path_to_dir = PathBuf::from(&self.target);
-
-        if !path_to_dir.is_dir() {
-            error!(
-                "Cannot plan: target isn`t a directory: {}",
-                self.target.display()
-            );
-            return Ok(Outcome {
-                side_effects: vec![],
-                should_run: false,
-            });
+    fn check(&self) -> anyhow::Result<Check> {
+        if !self.target.exists() {
+            return Ok(Check::InSync);
+        }
+        if !self.target.is_dir() {
+            bail!("{} isn't a directory", self.target.display());
+        }
+        if self.target.read_dir()?.next().is_some() {
+            bail!("{} isn't empty", self.target.display());
         }
 
-        let is_empty = path_to_dir.read_dir()?.next().is_none();
-
-        if !is_empty {
-            error!(
-                "Cannot plan: directory {} is not empty",
-                self.target.display()
-            );
-
-            return Ok(Outcome {
-                side_effects: vec![],
-                should_run: false,
-            });
-        }
-
-        Ok(Outcome {
-            side_effects: vec![],
-            should_run: self.target.exists(),
-        })
+        Ok(Check::Drift)
     }
 
     fn execute(&self) -> anyhow::Result<()> {
@@ -80,21 +60,26 @@ mod tests {
         let atom = Remove {
             target: temp.clone(),
         };
-        assert_eq!(true, atom.plan().unwrap().should_run);
+        assert_eq!(Check::Drift, atom.check().unwrap());
 
         let file_path = temp.join("my-temporary-note.txt");
         let mut file = File::create(&file_path).unwrap();
         writeln!(file, "Brian was here. Briefly.").unwrap();
 
-        // Should not run when dir is not empty
-        assert_eq!(false, atom.plan().unwrap().should_run);
+        // Can't run when dir is not empty
+        assert!(atom.check().is_err());
 
-        // Should not run if path is not a dir
+        // Can't run if path is not a dir
         let atom = Remove {
             target: file_path.clone(),
         };
+        assert!(atom.check().is_err());
 
-        assert_eq!(false, atom.plan().unwrap().should_run)
+        // Nothing to do if it's gone already
+        let atom = Remove {
+            target: temp.join("missing"),
+        };
+        assert_eq!(Check::InSync, atom.check().unwrap());
     }
 
     #[test]

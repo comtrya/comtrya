@@ -1,6 +1,6 @@
 //! Runs a program and returns its output
 
-use crate::atoms::{Outcome, Output};
+use crate::atoms::{Check, Output};
 use serde::{Deserialize, Serialize};
 
 use super::super::Change;
@@ -132,17 +132,8 @@ impl std::fmt::Display for Exec {
 }
 
 impl Change for Exec {
-    fn plan(&self) -> anyhow::Result<Outcome> {
-        Ok(Outcome {
-            // Commands may have side-effects, but none that can be "known"
-            // without some sandboxed operations to detect filesystem and network
-            // affects.
-            // Maybe we'll look into this one day?
-            side_effects: vec![],
-            // Commands should always run, we have no cache-key based
-            // determinism atm the moment.
-            should_run: true,
-        })
+    fn check(&self) -> anyhow::Result<Check> {
+        Ok(Check::Drift)
     }
 
     fn execute(&self) -> anyhow::Result<()> {

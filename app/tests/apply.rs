@@ -1259,3 +1259,29 @@ fn all_examples_load() {
     assert!(manifest_files > 20, "only {manifest_files} examples found");
     assert_eq!(manifest_files - failing, rows, "{stdout}");
 }
+
+/// A dry run doesn't make the archive an earlier action writes, so the archive is missing when
+/// the unpacking is checked. It still shows that it would be unpacked (#128)
+#[test]
+fn dry_run_shows_a_step_that_needs_what_an_earlier_step_makes() {
+    let f = Fixture::new();
+    let files = f.path().join("manifests/files");
+    std::fs::create_dir_all(&files).unwrap();
+    std::fs::write(files.join("archive.tar.gz"), "not unpacked in a dry run").unwrap();
+    let archive = f.out("archive.tar.gz");
+    f.manifest(
+        "unpack.yaml",
+        &format!(
+            "actions:\n  - action: file.copy\n    from: archive.tar.gz\n    to: '{}'\n  - action: file.unarchive\n    from: '{}'\n    to: '{}'\n",
+            archive.display(),
+            archive.display(),
+            f.out("unpacked").display()
+        ),
+    );
+
+    let stdout = f.run(&["apply", "--dry-run"]).get_output().stdout.clone();
+    let stdout = String::from_utf8_lossy(&stdout);
+
+    assert!(stdout.contains("Unarchiving file"), "{stdout}");
+    assert!(!archive.exists());
+}

@@ -6,7 +6,7 @@ use std::{fs::File, path::PathBuf};
 use flate2::read::GzDecoder;
 use tar::Archive;
 
-use crate::atoms::{Change, Outcome};
+use crate::atoms::{Change, Check};
 
 /// Unpacks a `.tar.gz` archive into a directory
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -21,24 +21,12 @@ pub struct Unarchive {
 
 impl Change for Unarchive {
     // Determine if this atom needs to run
-    fn plan(&self) -> anyhow::Result<Outcome> {
-        if self.dest.exists() {
-            if self.force {
-                return Ok(Outcome {
-                    side_effects: vec![],
-                    should_run: self.origin.exists(),
-                });
-            }
-            return Ok(Outcome {
-                side_effects: vec![],
-                should_run: false,
-            });
+    fn check(&self) -> anyhow::Result<Check> {
+        if self.dest.exists() && !self.force {
+            return Ok(Check::InSync);
         }
 
-        Ok(Outcome {
-            side_effects: vec![],
-            should_run: self.origin.exists(),
-        })
+        Ok(Check::needs(&self.origin).unwrap_or(Check::Drift))
     }
 
     // Apply new to old
@@ -60,5 +48,43 @@ impl std::fmt::Display for Unarchive {
             f,
             "The archive {origin_path} to be decompressed to {dest_path}"
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use pretty_assertions::assert_eq;
+
+    #[test]
+    fn a_missing_archive_is_pending() {
+        let dir = tempfile::tempdir().unwrap();
+        let atom = Unarchive {
+            origin: dir.path().join("archive.tar.gz"),
+            dest: dir.path().join("unpacked"),
+            force: false,
+        };
+
+        assert_eq!(
+            Check::Pending {
+                needs: dir.path().join("archive.tar.gz")
+            },
+            atom.check().unwrap()
+        );
+    }
+
+    #[test]
+    fn an_existing_destination_is_kept_unless_forced() {
+        let dir = tempfile::tempdir().unwrap();
+        let origin = dir.path().join("archive.tar.gz");
+        std::fs::write(&origin, "").unwrap();
+        let atom = |force| Unarchive {
+            origin: origin.clone(),
+            dest: dir.path().to_path_buf(),
+            force,
+        };
+
+        assert_eq!(Check::InSync, atom(false).check().unwrap());
+        assert_eq!(Check::Drift, atom(true).check().unwrap());
     }
 }

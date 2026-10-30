@@ -1,6 +1,6 @@
 //! Downloads a file
 
-use crate::atoms::Outcome;
+use crate::atoms::Check;
 use serde::{Deserialize, Serialize};
 
 use super::super::Change;
@@ -27,18 +27,15 @@ impl std::fmt::Display for Download {
 }
 
 impl Change for Download {
-    fn plan(&self) -> anyhow::Result<Outcome> {
-        let should_run = match (&self.sha256, std::fs::read(&self.to)) {
+    fn check(&self) -> anyhow::Result<Check> {
+        let differs = match (&self.sha256, std::fs::read(&self.to)) {
             (_, Err(_)) => true,
             // Download again if the file doesn't match, e.g. after the URL and hash were updated
             (Some(expected), Ok(existing)) => digest(existing.as_slice()) != *expected,
             (None, Ok(_)) => false,
         };
 
-        Ok(Outcome {
-            side_effects: vec![],
-            should_run,
-        })
+        Ok(Check::drift_if(differs))
     }
 
     fn execute(&self) -> anyhow::Result<()> {
@@ -108,11 +105,11 @@ mod tests {
         let to = dir.path().join("file");
         let atom = atom(serve(200, BODY), to.clone(), Some(&digest(BODY)));
 
-        assert!(atom.plan().unwrap().should_run);
+        assert_eq!(Check::Drift, atom.check().unwrap());
         atom.execute().unwrap();
 
         assert_eq!(BODY, std::fs::read(&to).unwrap().as_slice());
-        assert!(!atom.plan().unwrap().should_run);
+        assert_eq!(Check::InSync, atom.check().unwrap());
     }
 
     #[test]
@@ -139,7 +136,7 @@ mod tests {
         std::fs::write(&to, "outdated").unwrap();
         let atom = atom(serve(200, BODY), to.clone(), Some(&digest(BODY)));
 
-        assert!(atom.plan().unwrap().should_run);
+        assert_eq!(Check::Drift, atom.check().unwrap());
         atom.execute().unwrap();
 
         assert_eq!(BODY, std::fs::read(&to).unwrap().as_slice());
@@ -151,7 +148,10 @@ mod tests {
         let to = dir.path().join("file");
         std::fs::write(&to, "anything").unwrap();
 
-        assert!(!atom(serve(200, BODY), to, None).plan().unwrap().should_run);
+        assert_eq!(
+            Check::InSync,
+            atom(serve(200, BODY), to, None).check().unwrap()
+        );
     }
 
     #[test]
@@ -177,10 +177,10 @@ mod tests {
             sha256: None,
         };
 
-        assert_eq!(true, atom.plan().unwrap().should_run);
+        assert_eq!(Check::Drift, atom.check().unwrap());
 
         let result = atom.execute();
-        assert_eq!(true, result.is_ok());
-        assert_eq!(false, atom.plan().unwrap().should_run);
+        assert!(result.is_ok());
+        assert_eq!(Check::InSync, atom.check().unwrap());
     }
 }

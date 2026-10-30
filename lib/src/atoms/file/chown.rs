@@ -1,15 +1,12 @@
 //! Sets the owner and group of a file
 
-use crate::atoms::Outcome;
+use crate::atoms::Check;
 use serde::{Deserialize, Serialize};
 
 use super::super::Change;
 use std::path::PathBuf;
 
-#[cfg(unix)]
-use tracing::error;
-
-/// Sets the owner and group of a file, when they differ. Skipped if either doesn't exist
+/// Sets the owner and group of a file, when they differ. Can't run if either doesn't exist
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Chown {
     /// The file
@@ -36,90 +33,27 @@ impl std::fmt::Display for Chown {
 use std::os::unix::prelude::MetadataExt;
 
 #[cfg(unix)]
-use anyhow::anyhow;
+use anyhow::{anyhow, Context};
 
 #[cfg(unix)]
 impl Change for Chown {
-    fn plan(&self) -> anyhow::Result<Outcome> {
+    fn check(&self) -> anyhow::Result<Check> {
         // If the file doesn't exist, assume it's because
         // another atom is going to provide it.
         if !self.path.exists() {
-            return Ok(Outcome {
-                side_effects: vec![],
-                should_run: true,
-            });
+            return Ok(Check::Drift);
         }
 
-        let metadata = match std::fs::metadata(&self.path) {
-            Ok(m) => m,
-            Err(err) => {
-                error!(
-                    "Couldn't get metadata for {}, rejecting atom: {}",
-                    &self.path.display(),
-                    err.to_string()
-                );
+        let metadata = std::fs::metadata(&self.path)
+            .with_context(|| format!("can't read the owner of {}", self.path.display()))?;
+        let owner = uzers::get_user_by_name(&self.owner)
+            .ok_or_else(|| anyhow!("user {} doesn't exist", self.owner))?;
+        let group = uzers::get_group_by_name(&self.group)
+            .ok_or_else(|| anyhow!("group {} doesn't exist", self.group))?;
 
-                return Ok(Outcome {
-                    side_effects: vec![],
-                    should_run: false,
-                });
-            }
-        };
-
-        if let (Some(current_owner), Some(current_group)) = (
-            uzers::get_user_by_uid(metadata.uid()),
-            uzers::get_group_by_gid(metadata.gid()),
-        ) {
-            let requested_owner = match uzers::get_user_by_name(self.owner.as_str()) {
-                Some(owner) => owner,
-                None => {
-                    error!(
-                        "Skipping chown as requested owner, {}, does not exist",
-                        self.owner,
-                    );
-                    return Ok(Outcome {
-                        side_effects: vec![],
-                        should_run: false,
-                    });
-                }
-            };
-
-            let requested_group = match uzers::get_group_by_name(self.group.as_str()) {
-                Some(group) => group,
-                None => {
-                    error!(
-                        "Skipping chown as requested group, {}, does not exist",
-                        self.group,
-                    );
-
-                    return Ok(Outcome {
-                        side_effects: vec![],
-                        should_run: false,
-                    });
-                }
-            };
-
-            if current_owner.uid() != requested_owner.uid() {
-                return Ok(Outcome {
-                    side_effects: vec![],
-                    should_run: true,
-                });
-            }
-
-            if current_group.gid() != requested_group.gid() {
-                return Ok(Outcome {
-                    side_effects: vec![],
-                    should_run: true,
-                });
-            }
-        }
-
-        error!("Something happened here");
-
-        Ok(Outcome {
-            side_effects: vec![],
-            should_run: false,
-        })
+        Ok(Check::drift_if(
+            metadata.uid() != owner.uid() || metadata.gid() != group.gid(),
+        ))
     }
 
     fn execute(&self) -> anyhow::Result<()> {
@@ -149,12 +83,9 @@ impl Change for Chown {
 
 #[cfg(not(unix))]
 impl Change for Chown {
-    fn plan(&self) -> anyhow::Result<Outcome> {
+    fn check(&self) -> anyhow::Result<Check> {
         // Never run
-        Ok(Outcome {
-            side_effects: vec![],
-            should_run: false,
-        })
+        Ok(Check::InSync)
     }
 
     fn execute(&self) -> anyhow::Result<()> {
@@ -197,7 +128,7 @@ mod tests {
             group: group.clone(),
         };
 
-        assert_eq!(false, file_chown.plan().unwrap().should_run);
+        assert_eq!(Check::InSync, file_chown.check().unwrap());
 
         let file_chown = Chown {
             path: temp_file.path().to_path_buf(),
@@ -205,7 +136,7 @@ mod tests {
             group: String::from("daemon"),
         };
 
-        assert_eq!(true, file_chown.plan().unwrap().should_run);
+        assert_eq!(Check::Drift, file_chown.check().unwrap());
 
         let file_chown = Chown {
             path: temp_file.path().to_path_buf(),
@@ -213,7 +144,7 @@ mod tests {
             group,
         };
 
-        assert_eq!(true, file_chown.plan().unwrap().should_run);
+        assert_eq!(Check::Drift, file_chown.check().unwrap());
 
         let file_chown = Chown {
             path: temp_file.path().to_path_buf(),
@@ -221,7 +152,7 @@ mod tests {
             group: String::from("daemon"),
         };
 
-        assert_eq!(true, file_chown.plan().unwrap().should_run);
+        assert_eq!(Check::Drift, file_chown.check().unwrap());
     }
 
     #[test]
@@ -251,6 +182,22 @@ mod tests {
             group: String::new(),
         };
         let error = file_chown.execute().unwrap_err();
+        assert!(
+            error.to_string().contains("comtrya-no-such-user"),
+            "{error}"
+        );
+    }
+
+    #[test]
+    fn an_unknown_owner_is_an_error() {
+        let temp_file = tempfile::NamedTempFile::new().unwrap();
+        let file_chown = Chown {
+            path: temp_file.path().to_path_buf(),
+            owner: String::from("comtrya-no-such-user"),
+            group: String::from("comtrya-no-such-group"),
+        };
+
+        let error = file_chown.check().unwrap_err();
         assert!(
             error.to_string().contains("comtrya-no-such-user"),
             "{error}"

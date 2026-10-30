@@ -1,6 +1,6 @@
 //! Creates an empty file
 
-use crate::atoms::Outcome;
+use crate::atoms::Check;
 use serde::{Deserialize, Serialize};
 
 use super::super::Change;
@@ -20,11 +20,8 @@ impl std::fmt::Display for Create {
 }
 
 impl Change for Create {
-    fn plan(&self) -> anyhow::Result<Outcome> {
-        Ok(Outcome {
-            side_effects: vec![],
-            should_run: !self.path.exists(),
-        })
+    fn check(&self) -> anyhow::Result<Check> {
+        Ok(Check::drift_if(!self.path.exists()))
     }
 
     fn execute(&self) -> anyhow::Result<()> {
@@ -45,7 +42,7 @@ mod tests {
             path: std::path::PathBuf::from("some-random-path"),
         };
 
-        assert_eq!(true, file_create.plan().unwrap().should_run);
+        assert_eq!(Check::Drift, file_create.check().unwrap());
 
         let temp_file = match tempfile::NamedTempFile::new() {
             std::result::Result::Ok(file) => file,
@@ -59,7 +56,7 @@ mod tests {
             path: temp_file.path().to_path_buf(),
         };
 
-        assert_eq!(false, file_create.plan().unwrap().should_run);
+        assert_eq!(Check::InSync, file_create.check().unwrap());
     }
 
     #[test]
@@ -76,7 +73,7 @@ mod tests {
             path: temp_dir.path().join("create-me"),
         };
 
-        assert_eq!(true, file_create.execute().is_ok());
-        assert_eq!(false, file_create.plan().unwrap().should_run);
+        assert!(file_create.execute().is_ok());
+        assert_eq!(Check::InSync, file_create.check().unwrap());
     }
 }

@@ -1,7 +1,7 @@
 //! Clones a repository
 
 use super::super::Change;
-use crate::atoms::Outcome;
+use crate::atoms::Check;
 use gix::interrupt;
 use gix::remote::fetch::Shallow;
 use gix::{progress::Discard, Url};
@@ -43,11 +43,8 @@ impl std::fmt::Display for Clone {
 
 impl Change for Clone {
     #[instrument(name = "git.clone.plan", level = "info", skip(self))]
-    fn plan(&self) -> anyhow::Result<Outcome> {
-        Ok(Outcome {
-            side_effects: vec![],
-            should_run: !self.directory.exists(),
-        })
+    fn check(&self) -> anyhow::Result<Check> {
+        Ok(Check::drift_if(!self.directory.exists()))
     }
 
     #[instrument(name = "git.clone.execute", level = "info", skip(self))]

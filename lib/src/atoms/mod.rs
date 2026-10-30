@@ -14,6 +14,7 @@ pub mod http;
 
 use crate::contexts::privilege::Privilege;
 use serde::{Deserialize, Serialize};
+use std::path::{Path, PathBuf};
 
 /// Who runs an atom
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -26,15 +27,37 @@ pub enum RunAs {
     Root,
 }
 
-/// What an atom changes besides its target. Nothing reports any yet
-pub enum SideEffect {}
+/// What an atom found when it compared the system with what it wants
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Check {
+    /// The system is as the atom wants it, nothing to do
+    InSync,
+    /// The system differs, the atom has to run
+    Drift,
+    /// The atom needs a path that doesn't exist. A dry run goes on if an earlier step makes it,
+    /// like a download for an archive that's unpacked next (#128). Otherwise the atom can't run
+    Pending {
+        /// The missing path
+        needs: PathBuf,
+    },
+}
 
-/// What planning an atom found
-pub struct Outcome {
-    /// Always empty for now
-    pub side_effects: Vec<SideEffect>,
-    /// Whether the system differs from what the atom wants, so it needs to run
-    pub should_run: bool,
+impl Check {
+    /// [`Check::Drift`] if the system `differs`, otherwise [`Check::InSync`]
+    pub fn drift_if(differs: bool) -> Check {
+        if differs {
+            Check::Drift
+        } else {
+            Check::InSync
+        }
+    }
+
+    /// [`Check::Pending`] for `path` if it doesn't exist
+    pub fn needs(path: &Path) -> Option<Check> {
+        (!path.exists()).then(|| Check::Pending {
+            needs: path.to_path_buf(),
+        })
+    }
 }
 
 /// What running an atom returned, for the finalizers. Empty for atoms that don't run programs
@@ -117,9 +140,34 @@ impl Atom {
         }
     }
 
-    /// Whether this atom needs to run
-    pub fn plan(&self) -> anyhow::Result<Outcome> {
-        self.change().plan()
+    /// Whether this atom needs to run. An error means it can't
+    pub fn check(&self) -> anyhow::Result<Check> {
+        self.change().check()
+    }
+
+    /// The path this atom creates or replaces, if it makes one. A dry run counts it as there for
+    /// the steps after it, see [`Check::Pending`]
+    pub fn produces(&self) -> Option<&Path> {
+        match self {
+            Atom::Exec(atom) => atom.stdout_file.as_deref(),
+            Atom::DirectoryCopy(atom) => Some(&atom.to),
+            Atom::DirectoryCreate(atom) => Some(&atom.path),
+            Atom::FileCopy(atom) => Some(&atom.to),
+            Atom::FileCreate(atom) => Some(&atom.path),
+            Atom::FileDecrypt(atom) => Some(&atom.path),
+            Atom::FileLink(atom) => Some(&atom.target),
+            Atom::FileSetContents(atom) => Some(&atom.path),
+            Atom::FileUnarchive(atom) => Some(&atom.dest),
+            Atom::GitClone(atom) => Some(&atom.directory),
+            Atom::GitUpdate(atom) => Some(&atom.directory),
+            Atom::HttpDownload(atom) => Some(&atom.to),
+            Atom::DirectoryRemove(_)
+            | Atom::FileChmod(_)
+            | Atom::FileChown(_)
+            | Atom::FileRemove(_) => None,
+            #[cfg(test)]
+            Atom::Echo(_) => None,
+        }
     }
 
     /// Makes the change
@@ -186,8 +234,8 @@ atom_from!(Echo(Echo));
 
 /// What every atom does. [`Atom`] calls it on the atom inside
 trait Change: std::fmt::Display {
-    /// Whether this atom needs to run
-    fn plan(&self) -> anyhow::Result<Outcome>;
+    /// Whether this atom needs to run. An error means it can't
+    fn check(&self) -> anyhow::Result<Check>;
 
     /// Makes the change
     fn execute(&self) -> anyhow::Result<()>;
@@ -211,11 +259,8 @@ pub struct Echo(pub &'static str);
 
 #[cfg(test)]
 impl Change for Echo {
-    fn plan(&self) -> anyhow::Result<Outcome> {
-        Ok(Outcome {
-            side_effects: vec![],
-            should_run: true,
-        })
+    fn check(&self) -> anyhow::Result<Check> {
+        Ok(Check::Drift)
     }
 
     fn execute(&self) -> anyhow::Result<()> {
@@ -374,5 +419,16 @@ mod tests {
             exec.elevated(&Privilege::Doas).unwrap().to_string().trim()
         );
         assert!(file.elevated(&Privilege::Sudo).is_err());
+    }
+
+    #[test]
+    fn atoms_that_write_a_path_produce_it() {
+        let atoms = every_atom();
+        let produced: Vec<Option<&Path>> = atoms.iter().map(Atom::produces).collect();
+
+        let path = Path::new("/tmp/comtrya");
+        // Every atom but chmod, chown and the two removes makes its path
+        assert_eq!(12, produced.iter().filter(|p| **p == Some(path)).count());
+        assert_eq!(4, produced.iter().filter(|p| p.is_none()).count());
     }
 }

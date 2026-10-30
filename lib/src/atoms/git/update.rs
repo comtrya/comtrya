@@ -2,7 +2,7 @@
 
 use super::super::Change;
 use super::clone_repository;
-use crate::atoms::Outcome;
+use crate::atoms::Check;
 use gix::Url;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
@@ -76,11 +76,8 @@ impl Update {
 
 impl Change for Update {
     #[instrument(name = "git.update.plan", level = "info", skip(self))]
-    fn plan(&self) -> anyhow::Result<Outcome> {
-        Ok(Outcome {
-            side_effects: vec![],
-            should_run: self.directory.exists(),
-        })
+    fn check(&self) -> anyhow::Result<Check> {
+        Ok(Check::drift_if(self.directory.exists()))
     }
 
     #[instrument(name = "git.update.execute", level = "info", skip(self))]

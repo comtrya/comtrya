@@ -3,12 +3,16 @@
 use super::graph::ManifestGraph;
 use comtrya_lib::{
     actions::{Action, PlanCx},
+    atoms::Check,
     contexts::evaluate_condition,
     manifests::Manifest,
     steps::Step,
 };
 use petgraph::graph::NodeIndex;
-use std::collections::HashSet;
+use std::{
+    collections::HashSet,
+    path::{Path, PathBuf},
+};
 use tracing::{debug, error, info, span, warn};
 
 /// One `comtrya apply`: walks the graph and remembers which manifests failed
@@ -23,6 +27,9 @@ pub(super) struct Run<'a> {
     label: Option<&'a str>,
     /// Manifests that failed, or were skipped because a dependency failed
     failed: HashSet<NodeIndex>,
+    /// What the steps of a dry run would have made so far. A later step that needs one of
+    /// these paths would find it in a real run
+    produced: Vec<PathBuf>,
 }
 
 impl<'a> Run<'a> {
@@ -39,6 +46,7 @@ impl<'a> Run<'a> {
             dry_run,
             label,
             failed: graph.broken.clone(),
+            produced: vec![],
         }
     }
 
@@ -133,7 +141,7 @@ impl<'a> Run<'a> {
     ///
     /// Later actions usually build on earlier ones, so a failure stops the manifest. A dry run
     /// changes nothing, so it goes on and reports every action that can't be planned.
-    fn run_actions(&self, manifest: &Manifest) -> bool {
+    fn run_actions(&mut self, manifest: &Manifest) -> bool {
         let mut successful = true;
 
         for action in &manifest.actions {
@@ -151,7 +159,7 @@ impl<'a> Run<'a> {
     }
 
     /// Plans one action and runs the steps that are needed, false if it failed
-    fn run_action(&self, manifest: &Manifest, action: &dyn Action) -> bool {
+    fn run_action(&mut self, manifest: &Manifest, action: &dyn Action) -> bool {
         let steps = match action.plan(manifest, &self.cx) {
             Ok(steps) => steps,
             Err(err) => {
@@ -160,22 +168,60 @@ impl<'a> Run<'a> {
             }
         };
 
-        // Lazy on purpose: whether a step is needed may depend on the steps before it, like a
-        // link that needs the directory an earlier step creates
-        let mut needed = steps.into_iter().filter(is_needed).peekable();
-        if needed.peek().is_none() {
+        // Each step is checked right before it runs: whether it's needed may depend on the
+        // steps before it, like a link that needs the directory an earlier step creates
+        let mut ran_any = false;
+        let mut successful = true;
+        for step in steps {
+            if !self.is_needed(&step) {
+                continue;
+            }
+            ran_any = true;
+            if !self.run_step(step) {
+                successful = false;
+                break;
+            }
+        }
+
+        if !ran_any {
             info!("nothing to be done to reconcile action");
             return true;
         }
-
-        // `all` stops at the first step that fails
-        let successful = needed.all(|step| self.run_step(step));
         info!("{}", action.summarize());
         successful
     }
 
+    /// Whether a step has to run: its initializers allow it, and its atom finds something to
+    /// change. An atom that can't tell, or can't run, is skipped with a warning
+    fn is_needed(&self, step: &Step) -> bool {
+        if !step.do_initializers_allow_us_to_run() {
+            return false;
+        }
+
+        match step.atom.check() {
+            Ok(Check::InSync) => false,
+            Ok(Check::Drift) => true,
+            Ok(Check::Pending { needs }) if self.will_exist(&needs) => true,
+            Ok(Check::Pending { needs }) => {
+                warn!("Skipping {step}: {} doesn't exist", needs.display());
+                false
+            }
+            Err(err) => {
+                warn!("Skipping {step}: {err:#}");
+                false
+            }
+        }
+    }
+
+    /// Whether an earlier step of this dry run would have made `path`, or a directory it's in
+    fn will_exist(&self, path: &Path) -> bool {
+        self.produced
+            .iter()
+            .any(|produced| path.starts_with(produced))
+    }
+
     /// Shows what the step changes and, unless this is a dry run, runs it. False if it failed
-    fn run_step(&self, step: Step) -> bool {
+    fn run_step(&mut self, step: Step) -> bool {
         if let Some(change) = step.atom.describe_change() {
             if self.dry_run {
                 info!("{change}");
@@ -185,6 +231,8 @@ impl<'a> Run<'a> {
         }
 
         if self.dry_run {
+            self.produced
+                .extend(step.atom.produces().map(Path::to_path_buf));
             return true;
         }
 
@@ -205,21 +253,5 @@ impl<'a> Run<'a> {
         }
 
         true
-    }
-}
-
-/// Whether a step has to run: its initializers allow it, and its atom finds something to change.
-/// An atom that can't tell is skipped with a warning
-fn is_needed(step: &Step) -> bool {
-    if !step.do_initializers_allow_us_to_run() {
-        return false;
-    }
-
-    match step.atom.plan() {
-        Ok(outcome) => outcome.should_run,
-        Err(err) => {
-            warn!("Skipping {step}: {err:#}");
-            false
-        }
     }
 }
