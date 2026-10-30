@@ -26,15 +26,22 @@ pub struct Facts {
 }
 
 impl Facts {
-    /// Looks at the system and the configuration. A source in `include_variables` that fails is
-    /// logged, and only its variables are left out
+    /// Looks at the system and the configuration. The user, the OS and `include_variables` are
+    /// gathered at the same time. A source in `include_variables` that fails or doesn't answer
+    /// in time is logged, and only its variables are left out
     #[instrument(skip(config))]
     pub fn gather(config: &Config) -> Self {
-        let include_variables = variable_include::gather(config);
+        let (user, os, include_variables) = std::thread::scope(|scope| {
+            let user = scope.spawn(UserFacts::gather);
+            let os = scope.spawn(OsFacts::gather);
+            let include_variables = variable_include::gather(config);
+
+            (join(user), join(os), include_variables)
+        });
 
         Self {
-            user: UserFacts::gather(),
-            os: OsFacts::gather(),
+            user,
+            os,
             env: std::env::vars().collect(),
             variables: config.variables.clone(),
             include_variables,
@@ -84,6 +91,13 @@ impl Facts {
 
         contexts
     }
+}
+
+/// The result of a gathering thread. A panic there is passed on: comtrya can't run without it
+fn join<T>(handle: std::thread::ScopedJoinHandle<'_, T>) -> T {
+    handle
+        .join()
+        .unwrap_or_else(|panic| std::panic::resume_unwind(panic))
 }
 
 #[cfg(test)]
