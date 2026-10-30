@@ -1,7 +1,7 @@
 //! The manifests and their `depends` as a graph, so dependencies run before the manifests that
 //! need them.
 
-use comtrya_lib::manifests::{LoadError, Loaded, Manifest};
+use crate::manifests::{LoadError, Loaded, Manifest};
 use petgraph::{graph::NodeIndex, visit::DfsPostOrder, Graph};
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
@@ -273,7 +273,7 @@ mod tests {
                 errors: vec![LoadError {
                     name: "broken".to_string(),
                     path: PathBuf::from("broken.yaml"),
-                    kind: comtrya_lib::manifests::LoadErrorKind::Parse("nope".to_string()),
+                    kind: crate::manifests::LoadErrorKind::Parse("nope".to_string()),
                 }],
             },
             Path::new("/manifests"),
