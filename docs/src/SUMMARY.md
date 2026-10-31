@@ -19,3 +19,4 @@
   - [Privilege Escalation](./privileged.md)
   - [Dependencies](./dependencies.md)
   - [Variants](./variants.md)
+- [Recipes](./recipes.md)
