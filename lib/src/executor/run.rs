@@ -312,6 +312,7 @@ impl<'a> Run<'a> {
         }
 
         let _lock = self.locks.lock(step.resources());
+        self.observer.on(&Event::StepStarted(&step));
         let output = match self.run_atom(&step) {
             Ok(output) => output,
             Err(error) => {

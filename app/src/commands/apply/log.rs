@@ -3,9 +3,11 @@
 //! thread, so each thread keeps its own spans: every line names its manifest and action, also
 //! when lines of several manifests come between each other
 
+use super::progress::Progress;
 use comtrya_lib::{
-    atoms::command::Stream,
+    atoms::{command::Stream, Resource, RunAs},
     executor::{Event, Observer, Skip, StepSkip},
+    steps::Step,
 };
 use std::cell::RefCell;
 use tracing::{debug, error, info, span::EnteredSpan, warn};
@@ -19,12 +21,26 @@ thread_local! {
 pub(super) struct Log {
     /// A dry run shows what steps would change, a real run only with `-v`
     dry_run: bool,
+    /// The status line for a step that takes a while, if there is one, see [`Progress`]
+    progress: Option<Progress>,
 }
 
 impl Log {
-    /// Logs a run, a dry run if `dry_run`
-    pub(super) fn new(dry_run: bool) -> Self {
-        Self { dry_run }
+    /// Logs a run, a dry run if `dry_run`, with a status line for long steps if `progress`
+    pub(super) fn new(dry_run: bool, progress: Option<Progress>) -> Self {
+        Self { dry_run, progress }
+    }
+
+    /// Shows the status line for `step` while it runs, unless it may ask for a password: the
+    /// line would be drawn over the prompt
+    fn started(&self, step: &Step) {
+        let Some(progress) = &self.progress else {
+            return;
+        };
+        let prompts = step.run_as == RunAs::Root || step.resources().contains(&Resource::Tty);
+        if !prompts {
+            progress.start(&step.to_string());
+        }
     }
 
     /// Lines of this thread after this one belong to `span`, until [`Log::leave`]
@@ -66,7 +82,14 @@ fn chain(error: &dyn std::error::Error) -> String {
 
 impl Observer for Log {
     fn on(&self, event: &Event) {
+        // Any other event means the step ended; the line goes before the next log line does
+        if let (Some(progress), false) = (&self.progress, matches!(event, Event::StepOutput { .. }))
+        {
+            progress.stop();
+        }
+
         match event {
+            Event::StepStarted(step) => self.started(step),
             Event::ManifestBroken { reason } => error!("{reason}"),
             Event::ManifestStarted { name } => {
                 self.enter(tracing::info_span!("", manifest = name));
