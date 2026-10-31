@@ -527,18 +527,25 @@ fn output_log(assert: Assert) -> String {
     String::from_utf8_lossy(&output.stdout).to_string() + &String::from_utf8_lossy(&output.stderr)
 }
 
-/// `Comtrya.yaml` next to the manifests is the config, not a manifest named `Comtrya`
+/// `Comtrya.yaml` (or `.yml`, `.toml`) next to the manifests is the config, not a manifest named
+/// `Comtrya`
 #[test]
 fn the_config_file_is_not_a_manifest() {
-    let f = Fixture::new();
-    f.manifest("Comtrya.yaml", "variables:\n  a: b\n")
-        .manifest("app.yaml", &format!("actions:\n{}", f.create("app")));
+    for (name, contents) in [
+        ("Comtrya.yaml", "variables:\n  a: b\n"),
+        ("Comtrya.yml", "variables:\n  a: b\n"),
+        ("Comtrya.toml", "[variables]\na = \"b\"\n"),
+    ] {
+        let f = Fixture::new();
+        f.manifest(name, contents)
+            .manifest("app.yaml", &format!("actions:\n{}", f.create("app")));
 
-    let log = output_log(f.run(&["status"]));
+        let log = output_log(f.run(&["status"]));
 
-    assert!(log.contains("| app "), "{log}");
-    assert!(!log.contains("Comtrya "), "{log}");
-    assert!(!log.contains("ignored"), "{log}");
+        assert!(log.contains("| app "), "{name}: {log}");
+        assert!(!log.contains("Comtrya "), "{name}: {log}");
+        assert!(!log.contains("ignored"), "{name}: {log}");
+    }
 }
 
 #[test]

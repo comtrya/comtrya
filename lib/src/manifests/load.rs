@@ -101,11 +101,14 @@ pub fn load_all(manifest_path: PathBuf, contexts: &Contexts) -> Loaded {
         .max_depth(Some(9))
         .filter_entry({
             // The config file next to the manifests isn't a manifest
-            let config = manifest_path.join("Comtrya.yaml");
+            let configs: Vec<_> = crate::config::FILE_NAMES
+                .iter()
+                .map(|name| manifest_path.join(name))
+                .collect();
             move |entry| {
                 let files_dir = entry.file_type().is_some_and(|ft| ft.is_dir())
                     && entry.file_name() == OsStr::new("files");
-                !files_dir && entry.path() != config
+                !files_dir && !configs.iter().any(|config| entry.path() == config)
             }
         })
         .build()
