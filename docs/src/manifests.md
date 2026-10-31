@@ -56,7 +56,7 @@ The manifest still runs without them. When the misspelled key is a required one,
 actions[0]: unknown action `file.cpy`, did you mean `file.copy`? at line 2 column 5
 ```
 
-A `Comtrya.yaml` in the manifest directory is the config, not a manifest.
+A `Comtrya.yaml` (or `Comtrya.yml`, `Comtrya.toml`) in the manifest directory is the config, not a manifest.
 
 ## Editor support
 

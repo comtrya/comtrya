@@ -11,7 +11,7 @@ use std::{
     vec,
 };
 
-use tracing::{debug, trace};
+use tracing::{debug, trace, warn};
 
 /// The arguments of `comtrya`
 #[derive(Parser, Debug, Default)]
@@ -105,9 +105,9 @@ pub(crate) fn load_config(args: &GlobalArgs) -> Result<Config> {
     }
 }
 
-/// Check the current working directory for a `Comtrya.yaml` file
-/// If that doesn't exist, we'll check the platforms config directory
-/// for Comtrya.yaml. Relative `manifest_paths` are relative to the directory of the file
+/// Check the current working directory for a `Comtrya.yaml` (or `Comtrya.yml`, `Comtrya.toml`)
+/// file. If that doesn't exist, we'll check the platforms config directory for one. Relative
+/// `manifest_paths` are relative to the directory of the file
 ///
 /// # Arguments
 ///
@@ -116,28 +116,22 @@ pub(crate) fn load_config(args: &GlobalArgs) -> Result<Config> {
 /// # Returns
 ///
 /// `Result<Config>`
-/// - `Ok(Config)` - valid `Comtrya.yaml` file is found and deserialized successfully
+/// - `Ok(Config)` - a valid config file is found and deserialized successfully
 /// - `Err` - Error occurs during reading/deserialization OR a user provided an invalid
 ///   path for the config file
 ///
 /// # Errors
 ///
 /// Exits if the user specified an invalid config file path
-/// returns errors if file read fails or yaml content is not successfully deserialized
+/// returns errors if file read fails or its content is not successfully deserialized
 pub fn lib_config(args: &GlobalArgs) -> anyhow::Result<Config> {
     let mut config = match find_configs(args) {
         Some(config_path) => {
-            let yaml = std::fs::read_to_string(&config_path)
-                .with_context(|| "Found Comtrya.yaml, but was unable to read the contents.")?;
+            let contents = std::fs::read_to_string(&config_path)
+                .with_context(|| format!("Found {}, but can't read it", config_path.display()))?;
 
-            let mut config = match yaml.trim().is_empty() {
-                true => Config {
-                    ..Default::default()
-                },
-
-                false => serde_yaml_ng::from_str(yaml.as_str())
-                    .with_context(|| "Found Comtrya.yaml, but couldn't deserialize the YAML.")?,
-            };
+            let mut config = comtrya_lib::config::parse(&contents, &config_path)
+                .with_context(|| format!("Found {}, but can't read it", config_path.display()))?;
 
             // Without `manifest_paths`, the manifests are next to the config file
             let dir = config_dir(&config_path);
@@ -232,34 +226,42 @@ fn find_configs(args: &GlobalArgs) -> Option<PathBuf> {
         }
     }
 
-    // Check current working directory first
-    if let Ok(cwd) = std::env::current_dir() {
-        let local_config = cwd.join("Comtrya.yaml");
+    // The current working directory first, then the platform's config directory
+    let cwd = std::env::current_dir().ok();
+    [cwd, dirs::config_dir()]
+        .into_iter()
+        .flatten()
+        .find_map(|dir| config_in(&dir))
+}
 
-        if local_config.is_file() {
-            debug!("Comtrya.yaml found in current working directory");
-            return Some(local_config);
-        }
-        trace!("No Comtrya.yaml found in current working directory");
-    }
+/// The config file in `dir`: the first of [`comtrya_lib::config::FILE_NAMES`] that exists. With
+/// more than one, the others are ignored with a warning
+fn config_in(dir: &Path) -> Option<PathBuf> {
+    let found: Vec<PathBuf> = comtrya_lib::config::FILE_NAMES
+        .iter()
+        .map(|name| dir.join(name))
+        .filter(|path| path.is_file())
+        .collect();
 
-    // Check platform's config dir
-    if let Some(config_dir) = dirs::config_dir() {
-        let local_config = config_dir.join("Comtrya.yaml");
-
-        if local_config.is_file() {
-            debug!("Comtrya.yaml found in users config directory");
-            return Some(local_config);
-        }
-        trace!("No Comtrya.yaml found in users config directory");
+    let Some(first) = found.first() else {
+        trace!("No config file in {}", dir.display());
+        return None;
     };
-
-    None
+    if found.len() > 1 {
+        warn!(
+            "Found {} config files in {}, using {}",
+            found.len(),
+            dir.display(),
+            first.display()
+        );
+    }
+    debug!("Config file: {}", first.display());
+    Some(first.clone())
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::config::{config_dir, lib_config, GlobalArgs};
+    use crate::config::{config_dir, config_in, lib_config, GlobalArgs};
     use std::path::PathBuf;
 
     fn get_config_file() -> PathBuf {
@@ -300,9 +302,14 @@ mod tests {
 
     /// Writes `yaml` as `Comtrya.yaml` into a new directory, and loads it
     fn load(yaml: &str) -> (tempfile::TempDir, crate::config::Config) {
+        load_file("Comtrya.yaml", yaml)
+    }
+
+    /// Writes `contents` as `name` into a new directory, and loads it with `--config`
+    fn load_file(name: &str, contents: &str) -> (tempfile::TempDir, crate::config::Config) {
         let dir = tempfile::tempdir().unwrap();
-        let config_path = dir.path().join("Comtrya.yaml");
-        std::fs::write(&config_path, yaml).unwrap();
+        let config_path = dir.path().join(name);
+        std::fs::write(&config_path, contents).unwrap();
         let args = GlobalArgs {
             config_path: Some(config_path.display().to_string()),
             ..Default::default()
@@ -338,5 +345,56 @@ mod tests {
             "dotfiles",
             config_dir(std::path::Path::new("dotfiles/Comtrya.yaml"))
         );
+    }
+
+    #[test]
+    fn the_config_can_be_toml() {
+        let (dir, config) = load_file(
+            "Comtrya.toml",
+            "manifest_paths = [\"manifests\"]\n\n[variables]\nship = \"Daedalus\"\n",
+        );
+
+        assert_eq!("Daedalus", config.variables["ship"]);
+        assert_eq!(
+            vec![dir.path().join("manifests").display().to_string()],
+            config.manifest_paths
+        );
+    }
+
+    #[test]
+    fn a_yml_config_is_yaml() {
+        let (_dir, config) = load_file("Comtrya.yml", "variables:\n  ship: Daedalus\n");
+
+        assert_eq!("Daedalus", config.variables["ship"]);
+    }
+
+    #[test]
+    fn a_broken_config_names_its_file() {
+        let dir = tempfile::tempdir().unwrap();
+        let config_path = dir.path().join("Comtrya.toml");
+        std::fs::write(&config_path, "manifest_paths = [").unwrap();
+        let args = GlobalArgs {
+            config_path: Some(config_path.display().to_string()),
+            ..Default::default()
+        };
+
+        let error = format!("{:#}", lib_config(&args).unwrap_err());
+
+        assert!(error.contains("Comtrya.toml"), "{error}");
+    }
+
+    #[test]
+    fn in_a_directory_yaml_comes_before_yml_and_toml() {
+        let dir = tempfile::tempdir().unwrap();
+        assert_eq!(None, config_in(dir.path()));
+
+        std::fs::write(dir.path().join("Comtrya.toml"), "").unwrap();
+        assert_eq!(Some(dir.path().join("Comtrya.toml")), config_in(dir.path()));
+
+        std::fs::write(dir.path().join("Comtrya.yml"), "").unwrap();
+        assert_eq!(Some(dir.path().join("Comtrya.yml")), config_in(dir.path()));
+
+        std::fs::write(dir.path().join("Comtrya.yaml"), "").unwrap();
+        assert_eq!(Some(dir.path().join("Comtrya.yaml")), config_in(dir.path()));
     }
 }
