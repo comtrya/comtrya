@@ -13,8 +13,11 @@ use comtrya_lib::manifests;
 use clap::Parser;
 use tracing::{error, Level};
 
-#[allow(unused_imports)]
-use tracing_subscriber::{fmt::writer::MakeWriterExt, layer::SubscriberExt, FmtSubscriber};
+use anyhow::Context;
+use std::fs::OpenOptions;
+use std::path::Path;
+use std::sync::Mutex;
+use tracing_subscriber::{fmt, fmt::writer::MakeWriterExt, layer::SubscriberExt, Layer};
 
 /// The subcommands
 mod commands;
@@ -47,30 +50,70 @@ pub(crate) fn execute(runtime: Runtime) -> anyhow::Result<()> {
     }
 }
 
-/// Logs to stdout, more with each `-v`, and to journald on Linux when it's there
-fn configure_tracing(args: &GlobalArgs) {
-    let stdout_writer = match args.verbose {
-        0 => io::stdout.with_max_level(tracing::Level::INFO),
-        1 => io::stdout.with_max_level(tracing::Level::DEBUG),
-        _ => io::stdout.with_max_level(tracing::Level::TRACE),
-    };
-
-    let builder = FmtSubscriber::builder()
-        .with_max_level(Level::TRACE)
+/// Logs to stdout, more with each `-v`, to `--log-file` if given, and to journald on Linux when
+/// it's there
+fn configure_tracing(args: &GlobalArgs) -> anyhow::Result<()> {
+    let stdout = fmt::layer()
         .with_ansi(!args.no_color)
         .with_target(false)
-        .with_writer(stdout_writer)
-        .without_time();
+        .without_time()
+        .with_writer(io::stdout.with_max_level(level(args.verbose)));
+
+    let file = match &args.log_file {
+        Some(path) => Some(file_layer(path, args.verbose)?),
+        None => None,
+    };
+
+    let subscriber = tracing_subscriber::registry().with(stdout).with(file);
 
     #[cfg(target_os = "linux")]
-    if let Ok(layer) = tracing_journald::layer() {
-        tracing::subscriber::set_global_default(builder.finish().with(layer))
-            .expect("Unable to set a global subscriber");
-        return;
-    }
+    let subscriber = subscriber.with(tracing_journald::layer().ok());
 
-    tracing::subscriber::set_global_default(builder.finish())
-        .expect("Unable to set a global subscriber");
+    tracing::subscriber::set_global_default(subscriber).expect("Unable to set a global subscriber");
+    Ok(())
+}
+
+/// What stdout shows: info, more with each `-v`
+fn level(verbose: u8) -> Level {
+    match verbose {
+        0 => Level::INFO,
+        1 => Level::DEBUG,
+        _ => Level::TRACE,
+    }
+}
+
+/// Writes the log to the file at `path`, appending. It gets at least what `-v` shows, because a
+/// log file is read later, when it's too late to run again with `-v`
+fn file_layer<S>(path: &Path, verbose: u8) -> anyhow::Result<impl Layer<S>>
+where
+    S: tracing::Subscriber + for<'span> tracing_subscriber::registry::LookupSpan<'span>,
+{
+    let file = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(path)
+        .with_context(|| format!("can't open the log file {}", path.display()))?;
+
+    Ok(fmt::layer()
+        .with_ansi(false)
+        .with_target(false)
+        .fmt_fields(PlainFields::default())
+        .with_writer(Mutex::new(file).with_max_level(level(verbose.max(1)))))
+}
+
+/// Formats fields like stdout does. A type of its own, because the fields of a span are formatted
+/// once per formatter type: with stdout's type, the file would get stdout's colors
+#[derive(Default)]
+struct PlainFields(fmt::format::DefaultFields);
+
+impl<'writer> fmt::FormatFields<'writer> for PlainFields {
+    fn format_fields<R: tracing_subscriber::field::RecordFields>(
+        &self,
+        writer: fmt::format::Writer<'writer>,
+        fields: R,
+    ) -> std::fmt::Result {
+        self.0.format_fields(writer, fields)
+    }
 }
 
 fn main() -> anyhow::Result<()> {
@@ -83,7 +126,10 @@ fn main() -> anyhow::Result<()> {
             io::stdout().lock(),
         )?);
     }
-    configure_tracing(&args);
+    if let Err(error) = configure_tracing(&args) {
+        eprintln!("{error:#}");
+        std::process::exit(1);
+    }
 
     let config = match config::load_config(&args) {
         Ok(config) => config,
