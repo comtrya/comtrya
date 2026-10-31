@@ -32,10 +32,15 @@ impl PackageProvider for Pkgin {
         }
     }
 
+    /// Installs pkgin with `pkg_add`, which comes with NetBSD
     #[instrument(name = "bootstrap", level = "info", skip(self))]
     fn bootstrap(&self, _facts: &Facts) -> Vec<Step> {
-        // TODO: Adjust for boot strapping pkgin
-        vec![]
+        vec![Step::new(Exec {
+            command: String::from("/usr/sbin/pkg_add"),
+            arguments: vec![String::from("pkgin")],
+            ..Default::default()
+        })
+        .as_root()]
     }
 
     fn has_repository(&self, _: &PackageRepository) -> bool {
@@ -77,5 +82,24 @@ impl PackageProvider for Pkgin {
             })
             .as_root(),
         ])
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::atoms::RunAs;
+    use pretty_assertions::assert_eq;
+
+    #[test]
+    fn bootstrap_installs_pkgin_with_pkg_add_as_root() {
+        let steps = Pkgin {}.bootstrap(&Facts::default());
+
+        assert_eq!(1, steps.len());
+        assert_eq!(RunAs::Root, steps[0].run_as);
+        assert_eq!(
+            "CommandExec with: /usr/sbin/pkg_add pkgin (as root)",
+            steps[0].to_string()
+        );
     }
 }
