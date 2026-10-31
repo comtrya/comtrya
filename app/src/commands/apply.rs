@@ -2,6 +2,8 @@
 
 /// Showing the events of a run
 mod log;
+/// A status line for steps that take a while
+mod progress;
 
 use super::ComtryaCommand;
 use crate::Runtime;
@@ -101,6 +103,16 @@ impl Apply {
 
         Ok(())
     }
+
+    /// The status line for long steps, when the log goes to a terminal, see
+    /// [`progress::wanted`]
+    fn progress(&self, runtime: &Runtime) -> Option<progress::Progress> {
+        use std::io::IsTerminal;
+
+        let terminal = std::io::stdout().is_terminal();
+        progress::wanted(terminal, runtime.args.verbose, self.dry_run, self.jobs)
+            .then(progress::Progress::stdout)
+    }
 }
 
 /// Set by the first Ctrl-C: the step that's running finishes, nothing starts after it. A
@@ -135,7 +147,7 @@ impl ComtryaCommand for Apply {
                 manifests: &self.manifests,
                 dry_run: self.dry_run,
                 label: self.label.as_deref(),
-                observer: &log::Log::new(self.dry_run),
+                observer: &log::Log::new(self.dry_run, self.progress(runtime)),
                 cancel: Some(stop_on_ctrl_c()),
                 jobs: self.jobs.into(),
             },

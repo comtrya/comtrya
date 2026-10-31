@@ -176,6 +176,7 @@ mod tests {
             Event::ActionStarted { action } => format!("action {action}"),
             Event::ActionDone { summary } => format!("action done: {}", summary.is_some()),
             Event::StepChange(_) => String::from("change"),
+            Event::StepStarted(_) => String::from("step"),
             Event::Cancelled => String::from("cancelled"),
             _ => String::from("other"),
         }
@@ -209,6 +210,7 @@ mod tests {
                 "skip: dependency",
                 "start ok",
                 "action directory.create",
+                "step",
                 "action done: true",
                 "done, failed: false",
             ],

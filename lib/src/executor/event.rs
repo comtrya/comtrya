@@ -50,6 +50,9 @@ pub enum Event<'a> {
     /// What a step changes, like a diff, if its atom can say more than its name. In a dry run,
     /// this is the change it would make
     StepChange(&'a str),
+    /// A step starts to make its change. It runs until the next event of this manifest that
+    /// isn't a [`Event::StepOutput`]
+    StepStarted(&'a Step),
     /// A line that the program of a step printed, while it runs
     StepOutput {
         /// Where it printed it
