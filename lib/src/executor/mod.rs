@@ -173,7 +173,7 @@ mod tests {
             Event::ManifestSkipped(Skip::DependencyFailed) => String::from("skip: dependency"),
             Event::ManifestSkipped(_) => String::from("skip"),
             Event::ManifestDone { failed } => format!("done, failed: {failed}"),
-            Event::ActionStarted { action } => format!("action {action}"),
+            Event::ActionStarted { action, .. } => format!("action {action}"),
             Event::ActionDone { summary } => format!("action done: {}", summary.is_some()),
             Event::StepChange(_) => String::from("change"),
             Event::StepStarted(_) => String::from("step"),
@@ -408,5 +408,87 @@ mod tests {
 
         assert_eq!(Report::default(), report);
         assert!(dir.path().join("app").is_dir());
+    }
+
+    /// A manifest `name` from `yaml`
+    fn manifest_from(name: &str, yaml: &str) -> (String, Manifest) {
+        let manifest = Manifest {
+            name: Some(name.to_string()),
+            ..serde_yaml_ng::from_str(yaml).unwrap()
+        };
+        (name.to_string(), manifest)
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn continue_on_error_goes_on_with_the_next_action() {
+        let dir = tempfile::tempdir().unwrap();
+        let yaml = format!(
+            "actions:\n  - action: command.run\n    command: 'false'\n    continue_on_error: true\n  - action: directory.create\n    path: '{}'\n",
+            dir.path().join("after").display()
+        );
+        let loaded = Loaded {
+            manifests: HashMap::from([
+                manifest_from("tolerant", &yaml),
+                manifest("dependent", &["tolerant"], &dir.path().join("dependent")),
+            ]),
+            errors: vec![],
+        };
+
+        let report = run(loaded, dir.path(), PlanCx::empty(), &Options::default());
+
+        assert_eq!(Report::default(), report);
+        assert!(dir.path().join("after").is_dir());
+        assert!(dir.path().join("dependent").is_dir());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn without_continue_on_error_a_failure_stops_the_manifest() {
+        let dir = tempfile::tempdir().unwrap();
+        let yaml = format!(
+            "actions:\n  - action: command.run\n    command: 'false'\n  - action: directory.create\n    path: '{}'\n",
+            dir.path().join("after").display()
+        );
+        let loaded = Loaded {
+            manifests: HashMap::from([manifest_from("strict", &yaml)]),
+            errors: vec![],
+        };
+
+        let report = run(loaded, dir.path(), PlanCx::empty(), &Options::default());
+
+        assert_eq!(vec!["strict"], report.failed);
+        assert!(!dir.path().join("after").exists());
+    }
+
+    #[test]
+    fn continue_on_error_doesnt_go_on_after_a_cancel() {
+        let dir = tempfile::tempdir().unwrap();
+        let yaml = format!(
+            "actions:\n  - action: directory.create\n    path: '{0}/a'\n    continue_on_error: true\n  - action: directory.create\n    path: '{0}/b'\n",
+            dir.path().display()
+        );
+        let loaded = Loaded {
+            manifests: HashMap::from([manifest_from("tolerant", &yaml)]),
+            errors: vec![],
+        };
+        let cancel = AtomicBool::new(false);
+        // Ctrl-C while the first action plans: its step and everything after it don't run
+        let record = |event: &Event| {
+            if let Event::ActionStarted { .. } = event {
+                cancel.store(true, std::sync::atomic::Ordering::Relaxed);
+            }
+        };
+        let options = Options {
+            observer: &record,
+            cancel: Some(&cancel),
+            ..Default::default()
+        };
+
+        let report = run(loaded, dir.path(), PlanCx::empty(), &options);
+
+        assert!(report.cancelled);
+        assert!(!dir.path().join("a").exists());
+        assert!(!dir.path().join("b").exists());
     }
 }

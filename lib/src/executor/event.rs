@@ -37,6 +37,8 @@ pub enum Event<'a> {
     ActionStarted {
         /// The action, as it's shown
         action: &'a str,
+        /// Whether its failure only warns and the manifest goes on, see `continue_on_error`
+        continue_on_error: bool,
     },
     /// The action can't plan its steps. It ends here
     ActionPlanFailed(&'a actions::Error),

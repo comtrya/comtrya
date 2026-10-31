@@ -1353,3 +1353,28 @@ fn default_manifests_run_without_a_selection() {
 
     assert!(f.created("other"));
 }
+
+/// `continue_on_error`: the failure is a warning, the manifest goes on and counts as done (#288)
+#[cfg(unix)]
+#[test]
+fn continue_on_error_warns_and_goes_on() {
+    let f = Fixture::new();
+    f.manifest(
+        "tolerant.yaml",
+        &format!(
+            "actions:\n  - action: command.run\n    command: 'false'\n    continue_on_error: true\n{}",
+            f.create("after")
+        ),
+    );
+
+    let output = f.run(&["apply"]).get_output().clone();
+    let stdout = String::from_utf8_lossy(&output.stdout);
+
+    let line = stdout
+        .lines()
+        .find(|line| line.contains("continuing (continue_on_error)"))
+        .unwrap_or_else(|| panic!("no warning in:\n{stdout}"));
+    assert!(line.contains("WARN"), "{line}");
+    assert!(!stdout.contains("ERROR"), "{stdout}");
+    assert!(f.created("after"));
+}
