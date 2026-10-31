@@ -26,6 +26,7 @@ Not all package managers are supported. This is a list of currently supported pa
 | macports   | macOS             |
 | dnf        | Fedora            |
 | snapcraft  | Linux             |
+| luarocks   | Lua modules, any OS (see below) |
 
 If you would like support to be added for a package provider, feel free to contribute the support or request support in the [repository](https://github.com/comtrya/comtrya) issue tracker.
 
@@ -73,6 +74,19 @@ paru and yay install packages from the official repositories and the AUR. They r
 ```
 
 Before 0.10.0, `pacman` was another name for `yay`. Manifests that use `provider: pacman` for AUR packages need `provider: yay` now.
+
+### LuaRocks
+
+`provider: luarocks` installs Lua modules with `luarocks install`, one rock at a time, and only the ones `luarocks list` doesn't show yet. Rocks go into the system tree, so comtrya runs `luarocks` through the privilege provider (like sudo). With `--local` (or `--tree`) in `extra_args`, they go into your own tree instead and need no root:
+
+```yaml
+- action: package.install
+  provider: luarocks
+  extra_args: [--local]
+  list:
+    - lgi
+    - lyaml
+```
 
 ### Important note on homebrew and macOS
 

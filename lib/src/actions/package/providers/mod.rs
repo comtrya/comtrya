@@ -13,6 +13,8 @@ mod dnf;
 use self::dnf::Dnf;
 mod homebrew;
 use self::homebrew::Homebrew;
+mod luarocks;
+use self::luarocks::Luarocks;
 mod macports;
 use self::macports::Macports;
 mod pacman;
@@ -52,6 +54,10 @@ pub enum PackageProviders {
     /// Homebrew on macOS
     #[serde(rename = "homebrew", alias = "brew")]
     Homebrew,
+
+    /// LuaRocks, for Lua modules
+    #[serde(rename = "luarocks")]
+    Luarocks,
 
     /// MacPorts on macOS
     #[serde(rename = "macports", alias = "port")]
@@ -98,6 +104,7 @@ impl PackageProviders {
             PackageProviders::BsdPkg => Box::new(BsdPkg {}),
             PackageProviders::Dnf => Box::new(Dnf {}),
             PackageProviders::Homebrew => Box::new(Homebrew::default()),
+            PackageProviders::Luarocks => Box::new(Luarocks::default()),
             PackageProviders::Macports => Box::new(Macports {}),
             PackageProviders::Pkgin => Box::new(Pkgin {}),
             PackageProviders::Pacman => Box::new(Pacman::default()),
@@ -117,6 +124,7 @@ impl PackageProviders {
             PackageProviders::BsdPkg => "bsdpkg",
             PackageProviders::Dnf => "dnf",
             PackageProviders::Homebrew => "homebrew",
+            PackageProviders::Luarocks => "luarocks",
             PackageProviders::Macports => "macports",
             PackageProviders::Pkgin => "pkgin",
             PackageProviders::Snapcraft => "snapcraft",
@@ -294,6 +302,7 @@ mod tests {
             PackageProviders::BsdPkg,
             PackageProviders::Dnf,
             PackageProviders::Homebrew,
+            PackageProviders::Luarocks,
             PackageProviders::Macports,
             PackageProviders::Pkgin,
             PackageProviders::Snapcraft,
