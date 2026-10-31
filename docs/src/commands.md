@@ -102,6 +102,14 @@ comtrya -d ./manifests apply --jobs 4
 
 With `-v`, `apply` also shows what each step changes, and the output of programs that `command.run` and package managers run, line by line while they run. `-vv` shows even more.
 
+### Keeping a log
+
+`--log-file <path>` writes the log to a file as well, for reading later. The file gets times and no colors, and always as much as `-v` shows, or more with `-vv`; the terminal shows what it always does. A run adds to the end of the file.
+
+```shell
+comtrya --log-file ~/comtrya.log -d ./manifests apply
+```
+
 ### Stopping a run
 
 Ctrl-C lets the step that is running finish, then stops: nothing starts after it, and comtrya exits with an error. Press Ctrl-C again to quit at once. A program that is running gets the Ctrl-C from the terminal too, and usually stops, which fails its step.

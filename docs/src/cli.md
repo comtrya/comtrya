@@ -81,6 +81,8 @@ Options:
 
   -v...
           Debug & tracing mode (-v, -vv)
+      --log-file <PATH>
+          Also write the log to this file, without colors and with times. It gets what `-v` shows, or more with `-vv`, and is appended to
   -h, --help
           Print help
   -V, --version

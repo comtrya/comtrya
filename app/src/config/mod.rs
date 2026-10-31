@@ -37,6 +37,11 @@ pub struct GlobalArgs {
     #[arg(short, action = clap::ArgAction::Count)]
     pub verbose: u8,
 
+    /// Also write the log to this file, without colors and with times. It gets what `-v` shows,
+    /// or more with `-vv`, and is appended to
+    #[arg(long, value_name = "PATH")]
+    pub log_file: Option<PathBuf>,
+
     /// The subcommand
     #[command(subcommand)]
     pub command: Commands,
