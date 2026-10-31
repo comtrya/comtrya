@@ -13,6 +13,11 @@ pub struct Config {
     #[serde(default)]
     pub manifest_paths: Vec<String>,
 
+    /// The manifests `comtrya apply` runs when `-m` doesn't name any, with their dependencies.
+    /// All manifests when it's empty
+    #[serde(default)]
+    pub default_manifests: Vec<String>,
+
     /// Values for manifests, the `variables` context
     #[serde(default)]
     pub variables: BTreeMap<String, String>,

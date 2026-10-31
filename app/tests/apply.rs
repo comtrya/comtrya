@@ -1318,3 +1318,31 @@ fn jobs_must_be_at_least_one() {
 
     f.command(&["apply", "--jobs", "0"]).assert().failure();
 }
+
+/// `default_manifests` in Comtrya.yaml are what `apply` runs without `-m`, with their
+/// dependencies; `-m` still picks others (#237)
+#[test]
+fn default_manifests_run_without_a_selection() {
+    let f = Fixture::new();
+    std::fs::write(
+        f.path().join("Comtrya.yaml"),
+        "disable_update_check: true\ndefault_manifests: [dev]\n",
+    )
+    .unwrap();
+    f.manifest(
+        "dev.yaml",
+        &format!("depends: [base]\nactions:\n{}", f.create("dev")),
+    )
+    .manifest("base.yaml", &format!("actions:\n{}", f.create("base")))
+    .manifest("other.yaml", &format!("actions:\n{}", f.create("other")));
+
+    f.run(&["apply"]);
+
+    assert!(f.created("dev"));
+    assert!(f.created("base"));
+    assert!(!f.created("other"));
+
+    f.run(&["apply", "-m", "other"]);
+
+    assert!(f.created("other"));
+}

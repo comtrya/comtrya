@@ -39,6 +39,16 @@ comtrya -d ./ apply -m one,two,three
 
 The `-m` option is used to let comtrya know which manifests to apply. Note that the name of the manifest (i.e. one.yaml) is only the name and must not contain any path information or file extension (.yaml). So, `/manifests/one` is not a valid input. Any manifests are expected to be located in the directory of the manifests you specified.
 
+Without `-m`, `apply` runs the manifests listed as `default_manifests` in `Comtrya.yaml`, with their dependencies. When there are none, it runs all manifests:
+
+```yaml
+default_manifests:
+  - dev.tools
+  - shell
+```
+
+`-m` still runs the manifests it names instead.
+
 Suppose you have a directory `manifests/` that contains the manifests `one.yaml` and `two.yaml`. You want to *only* execute `one.yaml`. There are three ways to achieve this. You can simply specify the manifest if it's in the current working directory:
 
 ```shell
