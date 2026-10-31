@@ -76,7 +76,7 @@ Before 0.10.0, `pacman` was another name for `yay`. Manifests that use `provider
 
 ### Important note on homebrew and macOS
 
-Some package manager providers can implement a `bootstrap` method that will automatically configure the package manager on the system if it is not part of the default installation. This is the case with macOS. Comtrya can automatically install `homebrew` to a macOS system and will do so if a manifest specifies a `package.install` action and does not overridfe the macOS default of homebrew.
+Some package manager providers can implement a `bootstrap` method that will automatically configure the package manager on the system if it is not part of the default installation. This is the case with macOS. Comtrya can automatically install `homebrew` to a macOS system and will do so if a manifest specifies a `package.install` action and does not override the macOS default of homebrew. On NetBSD, comtrya installs `pkgin` with `pkg_add pkgin` as root when it is missing; `pkg_add` needs to know where to download from, e.g. through `PKG_PATH` or `/etc/pkg_install.conf`.
 
 ## package.install
 
