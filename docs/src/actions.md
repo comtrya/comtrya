@@ -17,6 +17,25 @@ The above does the following: It defines a list of actions (with only one elemen
 echo hi
 ```
 
+## When an action fails
+
+An action that fails stops its manifest: the actions after it don't run, the manifest fails, and the manifests that `depends` on it are skipped. Other manifests still run.
+
+With `continue_on_error: true`, any action may fail without that. Its failure is shown as a warning, the manifest goes on with its next action, and it still counts as done, so the manifests that depend on it run too. Ctrl-C still stops the run.
+
+```yaml
+actions:
+  # Fails on systems without a running Docker daemon, which is fine here
+  - action: command.run
+    command: docker
+    args: [pull, alpine]
+    continue_on_error: true
+  - action: directory.create
+    path: ~/.config/myapp
+```
+
+`continue_on_error` belongs to the action, not to one of its `variants`.
+
 ## Groups of actions provided
 
 Comtrya provides multiple actions which are broken down into groups with the actions being apart of a larger group:

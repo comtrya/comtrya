@@ -192,8 +192,9 @@ impl<'a> Run<'a> {
 
     /// Runs the manifest's actions in order, false if any failed.
     ///
-    /// Later actions usually build on earlier ones, so a failure stops the manifest. A dry run
-    /// changes nothing, so it goes on and reports every action that can't be planned.
+    /// Later actions usually build on earlier ones, so a failure stops the manifest, unless the
+    /// action has `continue_on_error`. A dry run changes nothing, so it goes on and reports
+    /// every action that can't be planned.
     fn run_actions(&self, manifest: &Manifest) -> bool {
         let mut successful = true;
 
@@ -202,9 +203,14 @@ impl<'a> Run<'a> {
                 return false;
             }
             let shown = action.to_string();
-            self.observer.on(&Event::ActionStarted { action: &shown });
+            let action = action.inner_ref();
+            self.observer.on(&Event::ActionStarted {
+                action: &shown,
+                continue_on_error: action.continue_on_error(),
+            });
 
-            if !self.run_action(manifest, action.inner_ref()) {
+            // A cancelled run stops at the top of the loop, also after such an action
+            if !self.run_action(manifest, action) && !action.continue_on_error() {
                 successful = false;
                 if !self.dry_run {
                     break;

@@ -1,0 +1,90 @@
+# `continue_on_error` on every action. 0.10.0 ignored the key and stopped the manifest at a
+# failure
+actions:
+- action: command.run
+  command: echo
+  args:
+  - hi
+  sudo: true
+  continue_on_error: true
+- action: directory.copy
+  from: one
+  to: /tmp/comtrya-compat/one
+  continue_on_error: true
+- action: directory.create
+  path: /tmp/comtrya-compat/created
+  continue_on_error: true
+- action: file.copy
+  source: config
+  target: /tmp/comtrya-compat/config
+  chmod: 644
+  continue_on_error: true
+- action: file.chown
+  path: /tmp/comtrya-compat/config
+  user: ada
+  group: staff
+  continue_on_error: true
+- action: file.download
+  source: https://example.com/file
+  target: /tmp/comtrya-compat/file
+  continue_on_error: true
+- action: file.link
+  source: dotfile
+  target: /tmp/comtrya-compat/.dotfile
+  walk_dir: true
+  continue_on_error: true
+- action: file.remove
+  target: /tmp/comtrya-compat/old-file
+  continue_on_error: true
+- action: file.unarchive
+  source: /tmp/a.tar.gz
+  target: /tmp/comtrya-compat/a
+  continue_on_error: true
+- action: directory.remove
+  target: /tmp/comtrya-compat/removed
+  continue_on_error: true
+- action: binary.github
+  name: comtrya
+  directory: /tmp/comtrya-compat/bin
+  repository: comtrya/comtrya
+  continue_on_error: true
+- action: git.clone
+  repo_url: https://github.com/comtrya/comtrya
+  directory: /tmp/comtrya-compat/comtrya
+  continue_on_error: true
+- action: group.add
+  group_name: compat
+  provider: linux
+  continue_on_error: true
+- action: macos.default
+  domain: com.example.compat
+  key: flag
+  kind: bool
+  value: true
+  continue_on_error: true
+- action: package.install
+  provider: brew
+  list:
+  - ripgrep
+  continue_on_error: true
+- action: package.repository
+  url: ppa:neovim-ppa/stable
+  provider: apt
+  continue_on_error: true
+- action: user.add
+  username: compat
+  fullname: Compat User
+  home_dir: /tmp/comtrya-compat/home
+  shell: /bin/sh
+  group:
+  - compat
+  - wheel
+  provider: linux
+  continue_on_error: true
+- action: user.group
+  username: compat
+  group:
+  - compat
+  - docker
+  provider: linux
+  continue_on_error: true

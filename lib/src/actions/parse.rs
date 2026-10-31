@@ -1,5 +1,6 @@
 //! Reads actions from manifests in two steps, without `#[serde(flatten)]`: the `action` key
-//! picks the action from the registry, then the frontend takes `where` and `variants` itself
+//! picks the action from the registry, then the frontend takes `where`, `variants` and
+//! `continue_on_error` itself
 //! and hands the remaining keys to the action's own struct
 //!
 //! The entry is read into a [`serde_yaml_ng::Value`] first, for YAML and TOML alike. That is
@@ -54,13 +55,16 @@ impl<'de, T: DeserializeOwned> Deserialize<'de> for ConditionalVariantAction<T> 
 }
 
 impl<T: DeserializeOwned> ConditionalVariantAction<T> {
-    /// The action from its keys without `action`: `where`, `variants`, and the action's own
+    /// The action from its keys without `action`: `where`, `variants`, `continue_on_error`,
+    /// and the action's own
     pub(super) fn from_fields(mut fields: Fields) -> Result<Self, serde_yaml_ng::Error> {
         let condition = take(&mut fields, "where")?;
+        let continue_on_error = take(&mut fields, "continue_on_error")?.unwrap_or_default();
         let variants: Vec<Fields> = take(&mut fields, "variants")?.unwrap_or_default();
 
         Ok(Self {
             condition,
+            continue_on_error,
             variants: variants
                 .into_iter()
                 .enumerate()

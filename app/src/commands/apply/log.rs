@@ -7,12 +7,16 @@ use comtrya_lib::{
     atoms::command::Stream,
     executor::{Event, Observer, Skip, StepSkip},
 };
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use tracing::{debug, error, info, span::EnteredSpan, warn};
 
 thread_local! {
     /// The spans of the manifest and the action that run in this thread, innermost last
     static SPANS: RefCell<Vec<EnteredSpan>> = const { RefCell::new(vec![]) };
+
+    /// Whether the action that runs in this thread has `continue_on_error`, so its failure is a
+    /// warning
+    static CONTINUES: Cell<bool> = const { Cell::new(false) };
 }
 
 /// Logs each event of a run with tracing
@@ -35,6 +39,15 @@ impl Log {
     /// Ends the innermost span of this thread
     fn leave(&self) {
         SPANS.with_borrow_mut(|spans| spans.pop());
+    }
+
+    /// Logs that the action failed: an error, or a warning if the manifest goes on
+    fn failed(&self, message: &str) {
+        if CONTINUES.get() {
+            warn!("{message}, continuing (continue_on_error)");
+        } else {
+            error!("{message}");
+        }
     }
 
     /// Why a manifest is skipped
@@ -88,11 +101,15 @@ impl Observer for Log {
                 }
                 self.leave();
             }
-            Event::ActionStarted { action } => {
+            Event::ActionStarted {
+                action,
+                continue_on_error,
+            } => {
+                CONTINUES.set(*continue_on_error);
                 self.enter(tracing::info_span!("", action = %action));
             }
             Event::ActionPlanFailed(error) => {
-                error!("Action failed to get plan: {}", chain(*error));
+                self.failed(&format!("Action failed to get plan: {}", chain(*error)));
                 self.leave();
             }
             Event::StepSkipped { step, reason } => match reason {
@@ -114,10 +131,10 @@ impl Observer for Log {
                 line,
             } => debug!("stderr: {line}"),
             Event::StepFailed { step, error } => {
-                error!("{step} failed: {}", chain(*error))
+                self.failed(&format!("{step} failed: {}", chain(*error)))
             }
             Event::FinalizersFailed => {
-                error!("Finalizers won't allow us to continue with this action")
+                self.failed("Finalizers won't allow us to continue with this action")
             }
             Event::Cancelled => warn!("Cancelled, nothing else runs"),
             Event::ActionDone { summary } => {

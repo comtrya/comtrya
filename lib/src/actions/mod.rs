@@ -63,6 +63,11 @@ pub struct ConditionalVariantAction<T> {
     /// Other versions of the action, for other conditions
     #[serde(default)]
     pub variants: Vec<Variant<T>>,
+
+    /// `continue_on_error`: when the action fails, the manifest goes on with its next action
+    /// and still counts as done
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub continue_on_error: bool,
 }
 
 /// Another version of an action, used instead of it when its `where` is true
@@ -90,6 +95,10 @@ where
 {
     fn summarize(&self) -> String {
         self.action.summarize()
+    }
+
+    fn continue_on_error(&self) -> bool {
+        self.continue_on_error
     }
 
     fn plan(&self, manifest: &Manifest, cx: &PlanCx) -> Result<Vec<Step>> {
@@ -175,6 +184,11 @@ pub trait Action {
 
     /// Whether all of its steps run as root, see `privileged` on the file and directory actions
     fn privileged(&self) -> bool {
+        false
+    }
+
+    /// Whether the manifest goes on when this action fails, see `continue_on_error`
+    fn continue_on_error(&self) -> bool {
         false
     }
 }
@@ -297,6 +311,7 @@ actions:
                     .iter()
                     .map(|(condition, name)| Variant::new(*name, condition.map(String::from)))
                     .collect(),
+                continue_on_error: false,
             }
         }
 

@@ -211,6 +211,13 @@ actions:
     }
 
     #[test]
+    fn continue_on_error_is_known_on_every_action() {
+        let yaml = "actions:\n  - action: directory.create\n    path: a\n    continue_on_error: true\n  - action: package.install\n    name: git\n    continue_on_error: true\n";
+
+        assert_eq!(Vec::<String>::new(), unknown(yaml));
+    }
+
+    #[test]
     fn typos_in_the_manifest_and_in_variants_are_found() {
         let yaml = r#"
 depend: [a]
