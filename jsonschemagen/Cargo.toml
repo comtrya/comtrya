@@ -1,14 +1,18 @@
 [package]
 name = "jsonschemagen"
+description = "Writes the JSON schema of manifests that editors use, published at comtrya.dev/schema.json"
 version = "0.1.0"
-edition = "2021"
+publish = false
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
 
 [dependencies]
-comtrya-lib = { path = "../lib" }
-schemars = "1.2"
-serde_json = "1.0"
+comtrya-lib.workspace = true
+schemars.workspace = true
+serde_json.workspace = true
 
 [dev-dependencies]
-jsonschema = { version = "0.60", default-features = false }
-serde_yaml_ng = "0.10"
-walkdir = "2.5"
+jsonschema.workspace = true
+serde_yaml_ng.workspace = true
+walkdir.workspace = true

@@ -44,7 +44,7 @@ curl -fsSL https://comtrya.dev/install.sh | sh
 or specify `VERSION=vx.x.x` to pin to a release version
 
 ```shell
-curl -fsSL https://comtrya.dev/install.sh | VERSION=v0.10.0 sh
+curl -fsSL https://comtrya.dev/install.sh | VERSION=v0.11.0 sh
 ```
 
 On Windows (PowerShell):
