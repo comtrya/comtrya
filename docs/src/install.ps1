@@ -3,7 +3,7 @@
 #   irm https://comtrya.dev/install.ps1 | iex
 #
 # Environment variables:
-#   VERSION      release tag to install, e.g. v0.10.0 (default: the latest release)
+#   VERSION      release tag to install, e.g. v0.11.0 (default: the latest release)
 #   INSTALL_DIR  where to put comtrya.exe (default: $env:USERPROFILE\.comtrya)
 #   GITHUB_TOKEN optional, avoids GitHub API rate limits (e.g. in CI)
 $ErrorActionPreference = "Stop"

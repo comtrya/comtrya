@@ -31,7 +31,7 @@ curl -fsSL https://comtrya.dev/install.sh | sh
 It installs to `/usr/local/bin` and asks for `sudo` if that isn't writable. To pin a version or install somewhere else:
 
 ```shell
-curl -fsSL https://comtrya.dev/install.sh | VERSION=v0.10.0 INSTALL_DIR="$HOME/.local/bin" sh
+curl -fsSL https://comtrya.dev/install.sh | VERSION=v0.11.0 INSTALL_DIR="$HOME/.local/bin" sh
 ```
 
 On Windows, in PowerShell:

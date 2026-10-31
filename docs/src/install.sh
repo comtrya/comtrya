@@ -4,7 +4,7 @@
 #   curl -fsSL https://comtrya.dev/install.sh | sh
 #
 # Environment variables:
-#   VERSION      release tag to install, e.g. v0.10.0 (default: the latest release)
+#   VERSION      release tag to install, e.g. v0.11.0 (default: the latest release)
 #   INSTALL_DIR  where to put the binary (default: /usr/local/bin, using sudo if needed)
 #   GITHUB_TOKEN optional, avoids GitHub API rate limits (e.g. in CI)
 set -eu

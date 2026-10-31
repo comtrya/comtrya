@@ -1,60 +1,48 @@
 [package]
 name = "comtrya-lib"
-version = "0.10.0"
-authors = ["David McKay <david@rawkode.dev>"]
-edition = "2021"
-# Keep in sync with MIN_SUPPORTED_RUST_VERSION in .github/workflows
-rust-version = "1.88"
-license = "MIT"
 description = "The library behind comtrya: manifests, actions, contexts and package providers"
-repository = "https://github.com/comtrya/comtrya"
-homepage = "https://comtrya.dev"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
 
 [dependencies]
-anyhow = "1.0"
-age = { version = "0.12", features = ["armor"] }
-dirs = "6.0"
-gethostname = "1.1"
-ignore = "0.4"
-normpath = "1.5"
-os_info = { version = "3.14", features = ["schemars"] }
-petgraph = "0.8"
-regex = "1.12"
-reqwest = { version = "0.13", default-features = false, features = [
-    "json",
-    "rustls",
-] }
-rhai = { version = "1.24", features = ["serde", "sync"] }
-schemars = "1.2"
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-serde_yaml_ng = "0.10"
-strsim = "0.11"
-sha2 = "0.10"
-similar = "3.2"
-tokio = { version = "1.49", features = ["rt-multi-thread", "time"] }
-toml = "1.0"
-# Tera 2 changes the template language used in manifests (e.g. `get_env` was removed,
-# undefined variables error). Stay on 1.x until a deliberate migration; see .github/dependabot.yml.
-tera = "1.20"
-thiserror = "2.0"
-tracing = "0.1"
-hickory-resolver = "0.26.2"
-which = "8.0"
-whoami = "2.1"
-tar = "0.4.44"
-flate2 = "1.1.9"
-gix = { version = "0.90.0", features = [
-    "status",
-    "tracing",
-    "tracing-detail",
-    "blocking-http-transport-reqwest-rust-tls",
-    "blocking-network-client",
-] }
+age.workspace = true
+anyhow.workspace = true
+dirs.workspace = true
+flate2.workspace = true
+gethostname.workspace = true
+gix.workspace = true
+hickory-resolver.workspace = true
+ignore.workspace = true
+normpath.workspace = true
+os_info.workspace = true
+petgraph.workspace = true
+regex.workspace = true
+reqwest.workspace = true
+rhai = { workspace = true, features = ["sync"] }
+schemars.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+serde_yaml_ng.workspace = true
+sha2.workspace = true
+similar.workspace = true
+strsim.workspace = true
+tar.workspace = true
+tera.workspace = true
+thiserror.workspace = true
+tokio = { workspace = true, features = ["rt-multi-thread", "time"] }
+toml.workspace = true
+tracing.workspace = true
+which.workspace = true
+whoami.workspace = true
 
 [target.'cfg(unix)'.dependencies]
-uzers = "0.12"
+uzers.workspace = true
 
 [dev-dependencies]
-tempfile = "3.26"
-pretty_assertions = "1.4"
+pretty_assertions.workspace = true
+tempfile.workspace = true

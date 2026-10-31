@@ -13,7 +13,7 @@ updates:
         patterns:
           - "*"
     ignore:
-      # Tera 2 breaks user manifest templates, see the comment in lib/Cargo.toml
+      # Tera 2 breaks user manifest templates, see the comment in the root Cargo.toml
       - dependency-name: "tera"
         update-types: ["version-update:semver-major"]
       # The compat suite compares with an exact release, moved by hand after each release
