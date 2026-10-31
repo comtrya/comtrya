@@ -65,6 +65,16 @@ impl Apply {
         Ok(manifest_path)
     }
 
+    /// The manifests to run: those of `-m`, else `default_manifests` from the config. Empty
+    /// means all
+    fn selected<'a>(&'a self, runtime: &'a Runtime) -> &'a [String] {
+        if self.manifests.is_empty() {
+            &runtime.config.default_manifests
+        } else {
+            &self.manifests
+        }
+    }
+
     /// Lists the manifests with their number of actions, and fails if any can't be loaded
     #[instrument(skip(self, runtime))]
     pub fn status(&self, runtime: &Runtime) -> anyhow::Result<()> {
@@ -132,7 +142,7 @@ impl ComtryaCommand for Apply {
             &manifest_path,
             PlanCx::new(&runtime.facts, &runtime.contexts),
             &Options {
-                manifests: &self.manifests,
+                manifests: self.selected(runtime),
                 dry_run: self.dry_run,
                 label: self.label.as_deref(),
                 observer: &log::Log::new(self.dry_run),
