@@ -6,6 +6,7 @@
 use super::progress::Progress;
 use comtrya_lib::{
     atoms::{command::Stream, Resource, RunAs},
+    error_chain as chain,
     executor::{Event, Observer, Skip, StepSkip},
     steps::Step,
 };
@@ -75,22 +76,11 @@ impl Log {
             }
             Skip::WhereFalse => info!("Skip manifest, because 'where' conditions were false!"),
             Skip::WhereFailed { condition, error } => {
-                warn!("'where' condition '{condition}' failed: {error}");
+                warn!("'where' condition '{condition}' failed: {}", chain(*error));
                 info!("Skip manifest, because 'where' conditions were false!");
             }
         }
     }
-}
-
-/// The error and its causes, like `{:#}` of [`anyhow::Error`]
-fn chain(error: &dyn std::error::Error) -> String {
-    let mut text = error.to_string();
-    let mut source = error.source();
-    while let Some(cause) = source {
-        text.push_str(&format!(": {cause}"));
-        source = cause.source();
-    }
-    text
 }
 
 impl Observer for Log {

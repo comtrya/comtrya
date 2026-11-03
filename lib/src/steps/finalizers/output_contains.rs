@@ -8,8 +8,8 @@ use crate::atoms::Output;
 pub struct OutputContains(pub &'static str);
 
 impl Finalizer for OutputContains {
-    fn finalize(&self, output: &Output) -> anyhow::Result<bool> {
-        Ok(output.stdout.contains(self.0))
+    fn finalize(&self, output: &Output) -> bool {
+        output.stdout.contains(self.0)
     }
 }
 
@@ -29,13 +29,13 @@ mod tests {
     fn it_returns_false_when_not_found() {
         let result = OutputContains("hello-world").finalize(&stdout("goodbye-world"));
 
-        assert_eq!(false, result.unwrap());
+        assert_eq!(false, result);
     }
 
     #[test]
     fn it_returns_true_when_found() {
         let result = OutputContains("hello-world").finalize(&stdout("hello-world"));
 
-        assert_eq!(true, result.unwrap());
+        assert_eq!(true, result);
     }
 }

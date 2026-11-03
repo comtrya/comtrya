@@ -1,6 +1,6 @@
 //! What the executor tells about a run, for the command line to show
 
-use crate::{actions, atoms, atoms::command::Stream, steps::Step};
+use crate::{actions, atoms, atoms::command::Stream, contexts::ConditionError, steps::Step};
 use std::path::Path;
 
 /// Something that happened in a run. The events of a manifest come between its
@@ -94,7 +94,7 @@ pub enum Skip<'a> {
         /// The condition
         condition: &'a str,
         /// Why
-        error: &'a anyhow::Error,
+        error: &'a ConditionError,
     },
 }
 

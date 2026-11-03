@@ -2,9 +2,9 @@
 
 use std::{collections::HashMap, io::ErrorKind};
 
-use anyhow::{anyhow, bail, Context, Result};
 use serde::Deserialize;
 
+use super::{Error, Result};
 use crate::runner::{CommandSpec, Runner};
 
 /// The part of `op item get --format json` that holds the values
@@ -41,24 +41,24 @@ pub fn item_values(
         command = command.args(["--account", account]);
     }
 
-    let output = runner.run(&command).map_err(|err| match err.kind() {
-        ErrorKind::NotFound => anyhow!(
-            "{include} needs the 1Password CLI `op`, see https://developer.1password.com/docs/cli/get-started/"
-        ),
-        _ => anyhow!("failed to run `op` for {include}: {err}"),
+    let output = runner.run(&command).map_err(|source| match source.kind() {
+        ErrorKind::NotFound => Error::OpMissing(include.to_string()),
+        _ => Error::OpRun {
+            include: include.to_string(),
+            source,
+        },
     })?;
 
     if !output.success {
-        bail!(
-            "`op` failed to read {include}: {}. Sign in with `op signin`, or turn on the 1Password app integration",
-            String::from_utf8_lossy(&output.stderr).trim()
-        );
+        return Err(Error::OpFailed {
+            include: include.to_string(),
+            stderr: String::from_utf8_lossy(&output.stderr).trim().to_string(),
+        });
     }
 
     // serde_json errors can quote the input, so don't pass them on
     let item = serde_json::from_slice::<Item>(&output.stdout)
-        .ok()
-        .with_context(|| format!("`op` returned an item for {include} that can't be read"))?;
+        .map_err(|_| Error::OpItem(include.to_string()))?;
 
     contexts.extend(values(item));
 
@@ -67,8 +67,7 @@ pub fn item_values(
 
 /// The vault, item and account of an `op://` include
 fn parse(include: &str) -> Result<(&str, &str, Option<&str>)> {
-    let invalid =
-        || anyhow!("{include} is not of the form op://<vault>/<item>[?account=<account>]");
+    let invalid = || Error::OpUrl(include.to_string());
 
     let rest = include.strip_prefix("op://").ok_or_else(invalid)?;
     let (path, query) = match rest.split_once('?') {
@@ -163,7 +162,8 @@ mod tests {
 
         let error = item_values("op://My Vault/GitHub", &runner, &mut HashMap::new()).unwrap_err();
 
-        assert!(!format!("{error:#}").contains("s3cret"), "{error:#}");
+        let message = crate::utilities::error_chain(&error);
+        assert!(!message.contains("s3cret"), "{message}");
     }
 
     #[test]

@@ -21,29 +21,19 @@ pub enum FlowControl {
 /// A check before an atom runs, which can skip it
 pub trait Initializer {
     /// The answer
-    fn initialize(&self) -> anyhow::Result<bool>;
+    fn initialize(&self) -> bool;
 }
 
 #[cfg(test)]
 pub(crate) mod test {
     use super::Initializer;
-    use anyhow::anyhow;
 
     #[derive(Clone, Debug)]
     pub struct Echo(pub bool);
 
     impl Initializer for Echo {
-        fn initialize(&self) -> anyhow::Result<bool> {
-            Ok(self.0)
-        }
-    }
-
-    #[derive(Clone, Debug)]
-    pub struct Error();
-
-    impl Initializer for Error {
-        fn initialize(&self) -> anyhow::Result<bool> {
-            Err(anyhow!("ErrorInitializer"))
+        fn initialize(&self) -> bool {
+            self.0
         }
     }
 }

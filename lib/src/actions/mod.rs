@@ -125,7 +125,10 @@ impl<T> ConditionalVariantAction<T> {
         let variant = self.variants.iter().find(|variant| {
             variant.condition.as_ref().is_some_and(|condition| {
                 evaluate_condition(condition, contexts).unwrap_or_else(|error| {
-                    error!("Failed execution condition for action: {}", error);
+                    error!(
+                        "Failed execution condition for action: {}",
+                        crate::error_chain(&error)
+                    );
                     false
                 })
             })

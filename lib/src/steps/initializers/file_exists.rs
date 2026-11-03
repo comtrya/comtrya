@@ -9,8 +9,8 @@ use super::Initializer;
 pub struct FileExists(pub PathBuf);
 
 impl Initializer for FileExists {
-    fn initialize(&self) -> anyhow::Result<bool> {
-        Ok(self.0.exists())
+    fn initialize(&self) -> bool {
+        self.0.exists()
     }
 }
 
@@ -24,8 +24,7 @@ mod tests {
         let initializer = FileExists(PathBuf::from("not-a-existing-file"));
         let result = initializer.initialize();
 
-        assert_eq!(true, result.is_ok());
-        assert_eq!(false, result.unwrap());
+        assert_eq!(false, result);
     }
 
     #[test]
@@ -43,7 +42,6 @@ mod tests {
         let initializer = FileExists(path_buf);
         let result = initializer.initialize();
 
-        assert_eq!(true, result.is_ok());
-        assert_eq!(true, result.unwrap());
+        assert_eq!(true, result);
     }
 }

@@ -86,7 +86,7 @@ mod tests {
     use std::io::Write;
 
     #[test]
-    fn it_can_plan() -> anyhow::Result<()> {
+    fn it_can_plan() -> std::result::Result<(), Box<dyn std::error::Error>> {
         // encrypt and write to file
         let passphrase = "Teal'c".to_string();
         let content = b"Shol'va";
@@ -120,7 +120,7 @@ mod tests {
     }
 
     #[test]
-    fn it_can_execute() -> anyhow::Result<()> {
+    fn it_can_execute() -> std::result::Result<(), Box<dyn std::error::Error>> {
         // encrypt and write to file
         let passphrase = "Teal'c".to_string();
         let content = b"Shol'va";
@@ -144,7 +144,10 @@ mod tests {
         Ok(())
     }
 
-    fn encrypt(passphrase: String, content: Vec<u8>) -> anyhow::Result<Vec<u8>> {
+    fn encrypt(
+        passphrase: String,
+        content: Vec<u8>,
+    ) -> std::result::Result<Vec<u8>, Box<dyn std::error::Error>> {
         let secret = SecretString::from(passphrase);
         let encryptor = age::Encryptor::with_user_passphrase(secret);
 

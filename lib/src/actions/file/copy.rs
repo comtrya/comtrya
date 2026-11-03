@@ -377,10 +377,7 @@ mod tests {
             String::from("-c"),
             String::from("echo bad key >&2; exit 2"),
         ];
-        let err = format!(
-            "{:#}",
-            anyhow::Error::from(super::process(&command, vec![]).unwrap_err())
-        );
+        let err = crate::utilities::error_chain(&super::process(&command, vec![]).unwrap_err());
         assert!(err.ends_with("exit code: 2: bad key"), "{err}");
     }
 

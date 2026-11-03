@@ -89,7 +89,10 @@ pub fn resolve(uri: &str) -> Result<PathBuf, ManifestProviderError> {
 
 /// The name of the manifest at `location`: its path below `manifest_directory`, with `.`
 /// between the parts and without `.yaml`/`.yml`/`.toml`. `x/main.yaml` is `x`
-pub fn get_manifest_name(manifest_directory: &Path, location: &Path) -> anyhow::Result<String> {
+pub fn get_manifest_name(
+    manifest_directory: &Path,
+    location: &Path,
+) -> Result<String, std::path::StripPrefixError> {
     let local_name = location.strip_prefix(manifest_directory)?;
     let manifest_name = local_name
         .components()

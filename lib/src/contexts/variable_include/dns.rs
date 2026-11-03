@@ -2,29 +2,36 @@
 
 use std::collections::HashMap;
 
-use anyhow::Result;
 use hickory_resolver::config::{ResolverConfig, GOOGLE};
 use hickory_resolver::net::runtime::TokioRuntimeProvider;
 use hickory_resolver::proto::rr::RData;
 use hickory_resolver::Resolver;
 use reqwest::Url;
 
+use super::{Error, Result};
+use crate::atoms::BoxError;
 use crate::runtime;
 
 /// Reads the TXT records of the host as `key=value`, using Google's DNS. Records without `=`
 /// are left out
 pub fn txt_record_values(url: &Url, contexts: &mut HashMap<String, String>) -> Result<()> {
+    let host = url
+        .host_str()
+        .ok_or_else(|| Error::NoHost(url.to_string()))?;
+    let dns_error = |source: BoxError| Error::Dns {
+        host: host.to_string(),
+        source,
+    };
+
     let resolver = Resolver::builder_with_config(
         ResolverConfig::udp_and_tcp(&GOOGLE),
         TokioRuntimeProvider::default(),
     )
-    .build()?;
+    .build()
+    .map_err(|err| dns_error(err.into()))?;
 
-    let host = url
-        .host_str()
-        .ok_or_else(|| anyhow::anyhow!("Failed to parse host"))?;
-
-    let records = runtime::block_on(resolver.txt_lookup(host))?;
+    let records =
+        runtime::block_on(resolver.txt_lookup(host)).map_err(|err| dns_error(err.into()))?;
 
     for record in records.answers() {
         let RData::TXT(txt) = &record.data else {

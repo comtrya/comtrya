@@ -745,7 +745,6 @@ name = "comtrya-lib"
 version = "0.11.0"
 dependencies = [
  "age",
- "anyhow",
  "dirs",
  "flate2",
  "gethostname",

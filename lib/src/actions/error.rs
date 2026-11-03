@@ -4,8 +4,8 @@ use crate::atoms::{self, BoxError};
 use std::path::PathBuf;
 use thiserror::Error as ThisError;
 
-/// Why an action can't plan its steps. The message doesn't repeat the source; print the chain,
-/// e.g. with `{:#}` through [`anyhow::Error`]
+/// Why an action can't plan its steps. The message doesn't repeat the source; print the chain
+/// with [`crate::error_chain`]
 #[derive(Debug, ThisError)]
 pub enum Error {
     /// The action's own `where` can't be evaluated
@@ -168,7 +168,7 @@ mod tests {
 
         assert_eq!(
             "process_with `op inject` failed: Command failed with exit code: 1: bad key",
-            format!("{:#}", anyhow::Error::from(error))
+            crate::utilities::error_chain(&error)
         );
     }
 }

@@ -5,6 +5,7 @@ mod de;
 mod json;
 mod number;
 
+pub use json::NumberError;
 pub use number::Number;
 
 use serde::Serialize;
@@ -136,11 +137,10 @@ mod test {
     use std::{borrow::Cow, ffi::OsString, path::PathBuf};
 
     use crate::values::{Number, Value};
-    use anyhow::Ok;
     use pretty_assertions::assert_eq;
 
     #[test]
-    fn from_string_tests() -> anyhow::Result<()> {
+    fn from_string_tests() {
         assert_eq!(
             Value::from("John Sheppard"),
             Value::String("John Sheppard".to_string())
@@ -162,12 +162,10 @@ mod test {
             Value::from(OsString::from("Jennifer Keller")),
             Value::String("Jennifer Keller".to_string())
         );
-
-        Ok(())
     }
 
     #[test]
-    fn from_vec_test() -> anyhow::Result<()> {
+    fn from_vec_test() {
         assert_eq!(
             Value::from(vec!["Aiden Ford", "Rodney McKay", "Ronon Dex"]),
             Value::List(vec![
@@ -176,12 +174,10 @@ mod test {
                 Value::String("Ronon Dex".to_string())
             ])
         );
-
-        Ok(())
     }
 
     #[test]
-    fn debug_tests() -> anyhow::Result<()> {
+    fn debug_tests() {
         assert_eq!(format!("{:?}", Value::Null), "Null".to_string());
 
         assert_eq!(
@@ -216,7 +212,5 @@ mod test {
             format!("{:?}", Value::Number(Number::from(2.0))),
             "Number(2)".to_string()
         );
-
-        Ok(())
     }
 }

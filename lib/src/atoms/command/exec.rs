@@ -68,18 +68,17 @@ impl Exec {
     }
 
     /// Looks the command up in the `PATH` set for it, if there is one
-    fn find_binary(&self, command: &str) -> anyhow::Result<String> {
+    fn find_binary(&self, command: &str) -> Option<String> {
         match self.environment.iter().rev().find(|(key, _)| key == "PATH") {
             Some((_, path)) => {
                 let cwd = match &self.working_dir {
                     Some(dir) => PathBuf::from(dir),
-                    None => std::env::current_dir()?,
+                    None => std::env::current_dir().ok()?,
                 };
-                Ok(which::which_in(command, Some(path), cwd)?
-                    .to_string_lossy()
-                    .to_string())
+                let binary = which::which_in(command, Some(path), cwd).ok()?;
+                Some(binary.to_string_lossy().to_string())
             }
-            None => utilities::get_binary_path(command),
+            None => utilities::get_binary_path(command).ok(),
         }
     }
 
@@ -251,7 +250,7 @@ impl Exec {
     pub fn execute_with_lines(&self, on_line: OnLine) -> Result<Output> {
         let command = self
             .find_binary(&self.command)
-            .map_err(|_| Error::CommandNotFound(self.command.clone()))?;
+            .ok_or_else(|| Error::CommandNotFound(self.command.clone()))?;
 
         let finished = self.run(&command, on_line)?;
         if finished.status.success() {

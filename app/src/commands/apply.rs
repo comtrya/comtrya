@@ -149,7 +149,7 @@ impl ComtryaCommand for Apply {
     fn execute(&self, runtime: &Runtime) -> anyhow::Result<()> {
         let manifest_path = self.manifest_path(runtime)?;
 
-        executor::run(
+        let report = executor::run(
             load_all(manifest_path.clone(), &runtime.contexts),
             &manifest_path,
             PlanCx::new(&runtime.facts, &runtime.contexts),
@@ -161,7 +161,7 @@ impl ComtryaCommand for Apply {
                 cancel: Some(stop_on_ctrl_c()),
                 jobs: self.jobs.into(),
             },
-        )
-        .into_result()
+        );
+        Ok(report.into_result()?)
     }
 }
