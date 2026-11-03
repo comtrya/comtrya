@@ -1299,6 +1299,29 @@ fn dry_run_shows_a_step_that_needs_what_an_earlier_step_makes() {
     assert!(!archive.exists());
 }
 
+/// Linking a program an earlier step would unpack, like neovim into /opt: a dry run shows the
+/// link instead of failing because the program isn't there yet
+#[test]
+fn dry_run_shows_a_link_to_what_an_earlier_step_makes() {
+    let f = Fixture::new();
+    let unpacked = f.out("opt/nvim");
+    f.manifest(
+        "nvim.yaml",
+        &format!(
+            "actions:\n  - action: directory.create\n    path: '{}'\n  - action: file.link\n    source: '{}'\n    target: '{}'\n",
+            unpacked.display(),
+            unpacked.join("bin/nvim").display(),
+            f.out("bin/nvim").display()
+        ),
+    );
+
+    let stdout = f.run(&["apply", "--dry-run"]).get_output().stdout.clone();
+    let stdout = String::from_utf8_lossy(&stdout);
+
+    assert!(stdout.contains("Linking file"), "{stdout}");
+    assert!(!unpacked.exists());
+}
+
 #[test]
 fn jobs_run_manifests_at_once_after_their_dependencies() {
     let f = Fixture::new();

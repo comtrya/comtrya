@@ -8,7 +8,7 @@ use crate::steps::initializers::FlowControl::Ensure;
 use crate::steps::Step;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::vec;
 
 // TODO: Next Major Version - Deprecate from and to
@@ -58,6 +58,17 @@ impl FileLink {
             })
     }
 
+    /// The source: an absolute path as it is, since an earlier step may still have to make it,
+    /// like a program it unpacks. Anything else is below the manifest's `files` directory, which
+    /// must have it
+    fn source_path(&self, manifest: &Manifest) -> Result<PathBuf> {
+        let source = self.source()?;
+        if Path::new(source).is_absolute() {
+            return Ok(PathBuf::from(source));
+        }
+        self.resolve(manifest, source)
+    }
+
     /// `target`, or the old `to`
     fn target(&self) -> Result<&str> {
         self.target
@@ -80,11 +91,11 @@ impl FileLink {
                     Step::new(DirCreate {
                         path: parent.to_path_buf(),
                     }),
+                    // A missing source makes the link pending, see `Link::check`
                     Step::new(Link {
-                        source: from.to_owned(),
+                        source: from,
                         target: to,
-                    })
-                    .with_initializer(Ensure(Box::new(FileExists(from)))),
+                    }),
                 ]
             }
             None => vec![],
@@ -136,7 +147,7 @@ impl Action for FileLink {
     }
 
     fn plan(&self, manifest: &Manifest, _: &PlanCx) -> Result<Vec<Step>> {
-        let from: PathBuf = self.resolve(manifest, self.source()?)?;
+        let from = self.source_path(manifest)?;
 
         let to = PathBuf::from(self.target()?);
 
@@ -292,5 +303,29 @@ mod tests {
             link("source: a\ntarget: b\n").summarize()
         );
         assert_eq!("Linking file a to b", link("from: a\nto: b\n").summarize());
+    }
+
+    /// A source outside of `files`, like a program an earlier step unpacks, may not exist while
+    /// a dry run plans: the link is then pending on it, instead of failing the action
+    #[test]
+    fn an_absolute_source_that_doesnt_exist_yet_is_pending() {
+        use crate::atoms::Check;
+
+        let dir = tempfile::tempdir().unwrap();
+        let source = dir.path().join("unpacked/bin/nvim");
+        let link = FileLink {
+            source: Some(source.display().to_string()),
+            target: Some(dir.path().join("bin/nvim").display().to_string()),
+            ..Default::default()
+        };
+
+        let steps = link.plan(&Manifest::default(), &PlanCx::empty()).unwrap();
+        let link_step = steps.last().unwrap();
+
+        assert!(link_step.do_initializers_allow_us_to_run());
+        assert_eq!(
+            Check::Pending { needs: source },
+            link_step.atom.check().unwrap()
+        );
     }
 }
