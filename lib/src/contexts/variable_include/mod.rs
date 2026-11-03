@@ -2,18 +2,21 @@ use std::collections::{BTreeMap, HashMap};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-use anyhow::Result;
 use reqwest::Url;
 
 use crate::config::Config;
 use crate::runner::SystemRunner;
 use crate::runtime;
+use crate::utilities::error_chain;
 use tokio::task::JoinHandle;
 use tracing::warn;
 
 pub mod dns;
+mod error;
 pub mod file;
 pub mod op;
+
+pub use error::{Error, Result};
 
 /// How long all sources together may take. A source that is still running then is left out, so
 /// an unreachable DNS server or a stuck `op` can't hang comtrya
@@ -52,9 +55,10 @@ fn gather_with(
         for (source, task) in pending {
             match tokio::time::timeout_at(deadline.into(), task).await {
                 Ok(Ok(Ok(values))) => variables.extend(values),
-                Ok(Ok(Err(err))) => {
-                    warn!("Can't read the variables of {source} in include_variables: {err}")
-                }
+                Ok(Ok(Err(err))) => warn!(
+                    "Can't read the variables of {source} in include_variables: {}",
+                    error_chain(&err)
+                ),
                 Ok(Err(_)) => {
                     warn!("Can't read the variables of {source} in include_variables: it crashed")
                 }
@@ -90,12 +94,15 @@ fn read(source: &str) -> Result<Values> {
         return Ok(values);
     }
 
-    let url = Url::parse(source)?;
+    let url = Url::parse(source).map_err(|err| Error::Url {
+        url: source.to_string(),
+        source: err.into(),
+    })?;
     match url.scheme() {
         "dns+txt" => dns::txt_record_values(&url, &mut values)?,
         "file+toml" => file::toml_values(&url, &mut values)?,
         "file+yaml" => file::yaml_values(&url, &mut values)?,
-        scheme => anyhow::bail!("Unknown variable include scheme: {scheme}"),
+        scheme => return Err(Error::UnknownScheme(scheme.to_string())),
     }
 
     Ok(values)
@@ -200,7 +207,7 @@ mod concurrency_tests {
             &sources(&["fails", "panics", "works"]),
             Duration::from_secs(10),
             |name| match name {
-                "fails" => anyhow::bail!("nope"),
+                "fails" => Err(Error::UnknownScheme(String::from("nope"))),
                 "panics" => panic!("boom"),
                 _ => Ok(values(&[(name, "read")])),
             },

@@ -9,6 +9,7 @@
 
 use crate::atoms::{self, Atom, Output};
 use crate::contexts::privilege::Privilege;
+use crate::utilities::error_chain;
 use std::io::{self, BufRead, BufReader, Write};
 use std::process::{Child, ChildStdin, ChildStdout, Command, Stdio};
 
@@ -30,18 +31,7 @@ pub fn serve(requests: impl BufRead, mut answers: impl Write) -> io::Result<()> 
 /// Runs the atom of one request
 fn answer(request: &str) -> Answer {
     let atom: Atom = serde_json::from_str(request).map_err(|err| format!("bad request: {err}"))?;
-    atom.execute().map_err(|err| chain(&err))
-}
-
-/// The error and its causes, like `{:#}` of [`anyhow::Error`]
-fn chain(error: &dyn std::error::Error) -> String {
-    let mut text = error.to_string();
-    let mut source = error.source();
-    while let Some(cause) = source {
-        text.push_str(&format!(": {cause}"));
-        source = cause.source();
-    }
-    text
+    atom.execute().map_err(|err| error_chain(&err))
 }
 
 /// Sends requests to a helper and reads its answers

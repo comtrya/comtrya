@@ -2,16 +2,18 @@
 
 use std::collections::HashMap;
 
-use anyhow::Result;
 use reqwest::Url;
+use std::path::Path;
 use toml::Value;
+
+use super::{Error, Result};
 
 /// Reads the top-level keys of a TOML file
 pub fn toml_values(url: &Url, contexts: &mut HashMap<String, String>) -> Result<()> {
-    let path = url.path();
+    let path = Path::new(url.path());
 
-    let contents = std::fs::read_to_string(path)?;
-    let values: HashMap<String, Value> = toml::from_str(&contents)?;
+    let values: HashMap<String, Value> =
+        toml::from_str(&read(path)?).map_err(|err| parse_error(path, err))?;
 
     for (key, value) in values {
         contexts.insert(key, plain(value));
@@ -22,16 +24,32 @@ pub fn toml_values(url: &Url, contexts: &mut HashMap<String, String>) -> Result<
 
 /// Reads the top-level keys of a YAML file
 pub fn yaml_values(url: &Url, contexts: &mut HashMap<String, String>) -> Result<()> {
-    let path = url.path();
+    let path = Path::new(url.path());
 
-    let contents = std::fs::read_to_string(path)?;
-    let values: HashMap<String, Value> = serde_yaml_ng::from_str(&contents)?;
+    let values: HashMap<String, Value> =
+        serde_yaml_ng::from_str(&read(path)?).map_err(|err| parse_error(path, err))?;
 
     for (key, value) in values {
         contexts.insert(key, plain(value));
     }
 
     Ok(())
+}
+
+/// The contents of the file
+fn read(path: &Path) -> Result<String> {
+    std::fs::read_to_string(path).map_err(|source| Error::Read {
+        path: path.to_path_buf(),
+        source,
+    })
+}
+
+/// For `map_err`: the file isn't valid YAML or TOML
+fn parse_error(path: &Path, source: impl std::error::Error + Send + Sync + 'static) -> Error {
+    Error::Parse {
+        path: path.to_path_buf(),
+        source: source.into(),
+    }
 }
 
 /// The value as text: a string as it is, anything else as TOML, like `3` or `[1, 2]`

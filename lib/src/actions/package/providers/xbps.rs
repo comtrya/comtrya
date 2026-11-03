@@ -177,10 +177,7 @@ uu half-installed-1.0_1               Unpacked, but not configured
             ..Default::default()
         };
 
-        let error = format!(
-            "{:#}",
-            anyhow::Error::from(xbps.query(&package).unwrap_err())
-        );
+        let error = crate::utilities::error_chain(&xbps.query(&package).unwrap_err());
         assert_eq!(
             "can't list the installed packages with `xbps-query -l`: ERROR: can't open pkgdb",
             error

@@ -1,9 +1,10 @@
 //! Contexts: the facts about the system and the configuration, as templates and `where`
 //! conditions see them
 
-use rhai::{Engine, Scope};
+use rhai::{Engine, EvalAltResult, Scope};
 use std::collections::BTreeMap;
 use std::sync::LazyLock;
+use thiserror::Error as ThisError;
 use tracing::trace;
 
 use crate::{config::Config, values::Value};
@@ -45,20 +46,38 @@ static ENGINE: LazyLock<Engine> = LazyLock::new(|| {
     engine
 });
 
+/// Why a `where` condition can't be evaluated
+#[derive(Debug, ThisError)]
+pub enum ConditionError {
+    /// The values of a context can't be turned into Rhai values
+    #[error("context {context} can't be used in conditions")]
+    Context {
+        /// The context, like `env`
+        context: String,
+        /// Why
+        #[source]
+        source: Box<EvalAltResult>,
+    },
+
+    /// The condition isn't valid Rhai, fails, or isn't true or false
+    #[error(transparent)]
+    Eval(#[from] Box<EvalAltResult>),
+}
+
 /// Evaluates a `where` condition against the contexts
-pub fn evaluate_condition(condition: &str, contexts: &Contexts) -> anyhow::Result<bool> {
-    ENGINE
-        .eval_with_scope::<bool>(&mut to_rhai(contexts)?, condition)
-        .map_err(|err| anyhow::anyhow!("{err}"))
+pub fn evaluate_condition(condition: &str, contexts: &Contexts) -> Result<bool, ConditionError> {
+    Ok(ENGINE.eval_with_scope::<bool>(&mut to_rhai(contexts)?, condition)?)
 }
 
 /// The contexts as constants for a `where` condition
-pub fn to_rhai(context: &Contexts) -> anyhow::Result<rhai::Scope<'_>> {
+pub fn to_rhai(context: &Contexts) -> Result<rhai::Scope<'_>, ConditionError> {
     let mut scope = Scope::new();
 
     for (m, v) in context {
-        let dynamic = rhai::serde::to_dynamic(v)
-            .map_err(|error| anyhow::anyhow!("context {m} can't be used in conditions: {error}"))?;
+        let dynamic = rhai::serde::to_dynamic(v).map_err(|source| ConditionError::Context {
+            context: m.clone(),
+            source,
+        })?;
 
         // Only the name: env and included variables often hold secrets
         trace!("Add dynamic constant '{}'", &m);
@@ -114,7 +133,7 @@ mod test {
     }
 
     #[test]
-    fn variables_context_resolves_from_config() -> anyhow::Result<()> {
+    fn variables_context_resolves_from_config() {
         let mut variables = BTreeMap::new();
         variables.insert("ship_name".to_string(), "Jack O'Neill".to_string());
         variables.insert("ship_captain".to_string(), "Thor".to_string());
@@ -144,12 +163,10 @@ mod test {
                 .to_string(),
             "Thor".to_string()
         );
-
-        Ok(())
     }
 
     #[test]
-    fn env_context() -> anyhow::Result<()> {
+    fn env_context() {
         let variables = BTreeMap::new();
 
         let config = Config {
@@ -180,7 +197,5 @@ mod test {
                 .to_string(),
             "Ganos Lal".to_string()
         );
-
-        Ok(())
     }
 }

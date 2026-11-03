@@ -17,6 +17,7 @@ pub use event::{Event, Ignore, Observer, Skip, StepSkip};
 use graph::ManifestGraph;
 use run::Run;
 use std::{path::Path, sync::atomic::AtomicBool};
+use thiserror::Error as ThisError;
 
 /// What to run, and how
 #[derive(Clone, Copy)]
@@ -73,20 +74,28 @@ pub struct Report {
     pub cancelled: bool,
 }
 
+/// Why a run didn't succeed
+#[derive(Debug, ThisError, PartialEq, Eq)]
+pub enum RunError {
+    /// The run stopped early, see [`Options::cancel`]
+    #[error("Cancelled")]
+    Cancelled,
+    /// Manifests failed
+    #[error("{0} manifest(s) failed or were skipped because a dependency failed")]
+    Failed(usize),
+}
+
 impl Report {
     /// An error if any manifest failed, or the run was cancelled
-    pub fn into_result(self) -> anyhow::Result<()> {
+    pub fn into_result(self) -> Result<(), RunError> {
         if self.cancelled {
-            return Err(anyhow::anyhow!("Cancelled"));
+            return Err(RunError::Cancelled);
         }
         if self.failed.is_empty() {
             return Ok(());
         }
 
-        Err(anyhow::anyhow!(
-            "{} manifest(s) failed or were skipped because a dependency failed",
-            self.failed.len()
-        ))
+        Err(RunError::Failed(self.failed.len()))
     }
 }
 
@@ -144,7 +153,7 @@ mod tests {
         assert_eq!(vec!["app", "broken"], report.failed);
         assert!(!dir.path().join("app").exists());
         assert!(dir.path().join("other").is_dir());
-        assert!(report.into_result().is_err());
+        assert_eq!(Err(RunError::Failed(2)), report.into_result());
     }
 
     #[test]
@@ -245,7 +254,7 @@ mod tests {
         assert!(report.cancelled);
         assert!(!dir.path().join("app").exists());
         assert!(events.lock().unwrap().contains(&String::from("cancelled")));
-        assert!(report.into_result().is_err());
+        assert_eq!(Err(RunError::Cancelled), report.into_result());
     }
 
     #[cfg(unix)]

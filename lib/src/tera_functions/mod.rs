@@ -37,7 +37,7 @@ mod test {
     use tera::{Context, Tera};
 
     #[test]
-    fn can_read_from_file() -> anyhow::Result<()> {
+    fn can_read_from_file() -> std::result::Result<(), Box<dyn std::error::Error>> {
         let mut tera = Tera::default();
         tera.register_function("read_file_contents", ReadFileContents);
 

@@ -5,12 +5,12 @@ use crate::{
     contexts::{evaluate_condition, to_tera, Contexts},
     manifests::get_manifest_name,
     tera_functions::register_functions,
+    utilities::error_chain,
 };
 use ignore::WalkBuilder;
 use serde::{de::DeserializeOwned, Deserialize};
 use std::{
     collections::HashMap,
-    error::Error,
     ffi::OsStr,
     fs::canonicalize,
     path::{Path, PathBuf},
@@ -199,7 +199,7 @@ fn load_file(path: &Path, contexts: &Contexts) -> Result<Manifest, LoadErrorKind
     let manifest = parse::<Manifest>(&rendered, path).map_err(|err| {
         // A misspelled required field is the likely cause
         let hints: String = unknown.iter().map(|key| format!("; {key}")).collect();
-        LoadErrorKind::Parse(format!("{err:#}{hints}"))
+        LoadErrorKind::Parse(format!("{}{hints}", error_chain(&err)))
     })?;
     check_version(manifest.version)?;
     for key in unknown {
@@ -209,24 +209,26 @@ fn load_file(path: &Path, contexts: &Contexts) -> Result<Manifest, LoadErrorKind
     Ok(manifest)
 }
 
-/// Tera puts the useful part of a message into the error's sources
-fn error_chain(err: &dyn Error) -> String {
-    let mut message = err.to_string();
-    let mut source = err.source();
-    while let Some(err) = source {
-        message.push_str(": ");
-        message.push_str(&err.to_string());
-        source = err.source();
-    }
-    message
+/// Why a manifest file isn't valid YAML or TOML
+#[derive(Debug, ThisError)]
+enum ParseError {
+    /// The file isn't valid YAML, or doesn't fit the type
+    #[error(transparent)]
+    Yaml(#[from] serde_yaml_ng::Error),
+    /// The file isn't valid TOML, or doesn't fit the type
+    #[error(transparent)]
+    Toml(#[from] toml::de::Error),
+    /// The file is neither
+    #[error("Unrecognized file extension for manifest")]
+    Extension,
 }
 
 /// Parses YAML or TOML, by the file extension
-fn parse<T: DeserializeOwned>(contents: &str, path: &Path) -> anyhow::Result<T> {
+fn parse<T: DeserializeOwned>(contents: &str, path: &Path) -> Result<T, ParseError> {
     match path.extension().and_then(OsStr::to_str) {
         Some("yaml") | Some("yml") => Ok(serde_yaml_ng::from_str(contents)?),
         Some("toml") => Ok(toml::from_str(contents)?),
-        _ => Err(anyhow::anyhow!("Unrecognized file extension for manifest")),
+        _ => Err(ParseError::Extension),
     }
 }
 

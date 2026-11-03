@@ -7,8 +7,8 @@ use super::Initializer;
 pub struct CommandFound(pub &'static str);
 
 impl Initializer for CommandFound {
-    fn initialize(&self) -> anyhow::Result<bool> {
-        Ok(which::which(self.0).is_ok())
+    fn initialize(&self) -> bool {
+        which::which(self.0).is_ok()
     }
 }
 
@@ -22,8 +22,7 @@ mod tests {
         let initializer = CommandFound("not-a-real-command");
         let result = initializer.initialize();
 
-        assert_eq!(true, result.is_ok());
-        assert_eq!(false, result.unwrap());
+        assert_eq!(false, result);
     }
 
     #[cfg(target_family = "windows")]
@@ -32,8 +31,7 @@ mod tests {
         let initializer = CommandFound("cmd.exe");
         let result = initializer.initialize();
 
-        assert_eq!(true, result.is_ok());
-        assert_eq!(true, result.unwrap());
+        assert_eq!(true, result);
     }
 
     #[cfg(target_family = "windows")]
@@ -42,8 +40,7 @@ mod tests {
         let initializer = CommandFound("Xcopy");
         let result = initializer.initialize();
 
-        assert_eq!(true, result.is_ok());
-        assert_eq!(true, result.unwrap());
+        assert_eq!(true, result);
     }
 
     #[cfg(target_family = "unix")]
@@ -52,7 +49,6 @@ mod tests {
         let initializer = CommandFound("ls");
         let result = initializer.initialize();
 
-        assert_eq!(true, result.is_ok());
-        assert_eq!(true, result.unwrap());
+        assert_eq!(true, result);
     }
 }

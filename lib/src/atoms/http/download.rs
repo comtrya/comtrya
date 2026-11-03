@@ -170,7 +170,7 @@ mod tests {
         let to = dir.path().join("file");
         let atom = atom(serve(404, b"not found"), to.clone(), None);
 
-        let err = format!("{:#}", anyhow::Error::from(atom.execute().unwrap_err()));
+        let err = crate::utilities::error_chain(&atom.execute().unwrap_err());
 
         assert!(err.starts_with("can't download http://"), "{err}");
         assert!(err.contains("404"), "{err}");

@@ -7,6 +7,7 @@ use crate::atoms::{
     git::{clone_repository, Update},
     Atom,
 };
+use crate::utilities::error_chain;
 
 use std::path::PathBuf;
 use tracing::{info, warn};
@@ -53,10 +54,7 @@ impl ManifestProvider for GitManifestProvider {
         }
     }
 
-    fn resolve(
-        &self,
-        url: &str,
-    ) -> anyhow::Result<std::path::PathBuf, super::ManifestProviderError> {
+    fn resolve(&self, url: &str) -> Result<std::path::PathBuf, ManifestProviderError> {
         let config = self.parse_config_url(url);
         let cache_path = git_cache_dir()
             .ok_or(ManifestProviderError::NoCacheDir)?
@@ -88,22 +86,21 @@ impl GitManifestProvider {
     /// the clone as it is: stale manifests are better than none when offline
     fn update_clone(&self, cache_path: &std::path::Path, config: &GitConfig) {
         info!("Updating cached manifests.");
-        let result = gix::url::parse(config.repository.as_str())
-            .map_err(anyhow::Error::from)
-            .and_then(|repository| {
-                Atom::from(Update {
-                    repository,
-                    directory: cache_path.to_path_buf(),
-                    reference: config.branch.clone(),
-                })
-                .execute()
-                .map(|_| ())
-                .map_err(anyhow::Error::from)
-            });
+        let result = match gix::url::parse(config.repository.as_str()) {
+            Ok(repository) => Atom::from(Update {
+                repository,
+                directory: cache_path.to_path_buf(),
+                reference: config.branch.clone(),
+            })
+            .execute()
+            .map(|_| ())
+            .map_err(|err| error_chain(&err)),
+            Err(err) => Err(error_chain(&err)),
+        };
 
         if let Err(err) = result {
             warn!(
-                "Couldn't update {}, using the cached clone in {}: {err:#}",
+                "Couldn't update {}, using the cached clone in {}: {err}",
                 config.repository,
                 cache_path.display()
             );
@@ -115,7 +112,7 @@ impl GitManifestProvider {
         &self,
         cache_path: &std::path::Path,
         config: &GitConfig,
-    ) -> anyhow::Result<(), super::ManifestProviderError> {
+    ) -> Result<(), ManifestProviderError> {
         info!("Preparing to fetch and clone manifests.");
         std::fs::create_dir_all(cache_path).map_err(|source| ManifestProviderError::CacheDir {
             path: cache_path.to_path_buf(),
@@ -132,7 +129,7 @@ impl GitManifestProvider {
         clone_repository(&repository, cache_path, config.branch.as_deref(), true).map_err(
             |err| ManifestProviderError::Clone {
                 url: config.repository.clone(),
-                message: format!("{:#}", anyhow::Error::from(err)),
+                message: error_chain(&err),
             },
         )?;
 

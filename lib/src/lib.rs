@@ -17,3 +17,5 @@ pub mod steps;
 pub mod tera_functions;
 mod utilities;
 pub mod values;
+
+pub use utilities::error_chain;

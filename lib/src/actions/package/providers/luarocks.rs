@@ -240,7 +240,7 @@ lyaml\t6.2.8-1\tinstalled\t/home/ada/.luarocks/lib/luarocks/rocks-5.4
 
         assert_eq!(
             "can't list the installed packages with `luarocks list --porcelain`: Error: no rocks trees",
-            format!("{:#}", anyhow::Error::from(error))
+            crate::utilities::error_chain(&error)
         );
     }
 }

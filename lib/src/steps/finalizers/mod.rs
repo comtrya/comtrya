@@ -18,30 +18,20 @@ pub enum FlowControl {
 /// A check after an atom ran, which can end the action
 pub trait Finalizer {
     /// The answer, from what the atom returned
-    fn finalize(&self, output: &Output) -> anyhow::Result<bool>;
+    fn finalize(&self, output: &Output) -> bool;
 }
 
 /// Finalizers for tests
 #[cfg(test)]
 pub mod test {
     use super::*;
-    use anyhow::anyhow;
 
     /// Answers with its value
     pub struct EchoFinalizer(pub bool);
 
     impl Finalizer for EchoFinalizer {
-        fn finalize(&self, _output: &Output) -> anyhow::Result<bool> {
-            Ok(self.0)
-        }
-    }
-
-    /// Fails
-    pub struct ErrorFinalizer();
-
-    impl Finalizer for ErrorFinalizer {
-        fn finalize(&self, _output: &Output) -> anyhow::Result<bool> {
-            Err(anyhow!("ErrorFinalizer"))
+        fn finalize(&self, _output: &Output) -> bool {
+            self.0
         }
     }
 }

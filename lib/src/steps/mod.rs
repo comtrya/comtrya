@@ -4,7 +4,6 @@ use crate::atoms::{self, Atom, Output, Resource, RunAs};
 use crate::contexts::privilege::Privilege;
 use crate::steps::finalizers::FlowControl;
 use crate::utilities;
-use tracing::error;
 
 /// Checks after an atom ran
 pub mod finalizers;
@@ -95,25 +94,8 @@ impl Step {
         self.initializers
             .iter()
             .all(|flow_control| match flow_control {
-                initializers::FlowControl::Ensure(i) => i.initialize().unwrap_or_else(|err| {
-                    error!("Failed to run initializer: {}", err.to_string());
-
-                    // On an error, we can't really determine if this Atom should
-                    // run; so lets play it safe and filter it out too
-                    false
-                }),
-
-                // Skip if true
-                initializers::FlowControl::SkipIf(i) => match i.initialize() {
-                    Ok(skip) => !skip,
-                    Err(err) => {
-                        error!("Failed to run initializer: {}", err.to_string());
-
-                        // On an error, we can't really determine if this Atom should
-                        // run; so lets play it safe and filter it out too
-                        false
-                    }
-                },
+                initializers::FlowControl::Ensure(i) => i.initialize(),
+                initializers::FlowControl::SkipIf(i) => !i.initialize(),
             })
     }
 
@@ -124,27 +106,8 @@ impl Step {
         self.finalizers
             .iter()
             .map(|flow_control| match flow_control {
-                // Stop if true
-                FlowControl::StopIf(i) => match i.finalize(output) {
-                    Ok(stop) => !stop,
-                    Err(err) => {
-                        error!("Failed to run finalizers: {}", err.to_string());
-
-                        // On an error, we can't really determine if this Atom should
-                        // run; so lets play it safe and filter it out too
-                        false
-                    }
-                },
-                FlowControl::Ensure(i) => match i.finalize(output) {
-                    Ok(ensured) => ensured,
-                    Err(err) => {
-                        error!("Failed to run finalizers: {}", err.to_string());
-
-                        // On an error, we can't really determine if this Atom should
-                        // run; so lets play it safe and filter it out too
-                        false
-                    }
-                },
+                FlowControl::StopIf(i) => !i.finalize(output),
+                FlowControl::Ensure(i) => i.finalize(output),
             })
             // Collected first, so every finalizer runs before `all` short-circuits
             .collect::<Vec<bool>>()
@@ -165,10 +128,8 @@ impl std::fmt::Display for Step {
 #[cfg(test)]
 mod tests {
     use super::finalizers::test::EchoFinalizer;
-    use super::finalizers::test::ErrorFinalizer;
     use super::finalizers::FlowControl as FinalizerFlowControl;
     use super::initializers::test::Echo as EchoInitializer;
-    use super::initializers::test::Error as ErrorInitializer;
     use super::initializers::FlowControl as InitializerFlowControl;
     use crate::atoms::Echo as EchoAtom;
     use pretty_assertions::assert_eq;
@@ -246,22 +207,6 @@ mod tests {
     }
 
     #[test]
-    fn initializers_that_error_block_execution() {
-        let step = Step::new(EchoAtom("hello-world"))
-            .with_initializer(InitializerFlowControl::SkipIf(Box::new(ErrorInitializer())));
-
-        assert_eq!(false, step.do_initializers_allow_us_to_run());
-
-        let step = Step::new(EchoAtom("hello-world"))
-            .with_initializer(InitializerFlowControl::SkipIf(Box::new(EchoInitializer(
-                false,
-            ))))
-            .with_initializer(InitializerFlowControl::SkipIf(Box::new(ErrorInitializer())));
-
-        assert_eq!(false, step.do_initializers_allow_us_to_run());
-    }
-
-    #[test]
     fn finalizers_can_control_execution() {
         let step = Step::new(EchoAtom("hello-world"))
             .with_finalizer(FinalizerFlowControl::StopIf(Box::new(EchoFinalizer(false))));
@@ -290,26 +235,6 @@ mod tests {
     }
 
     #[test]
-    fn finalizers_that_error_block_execution() {
-        let step = Step::new(EchoAtom("hello-world"))
-            .with_finalizer(FinalizerFlowControl::StopIf(Box::new(ErrorFinalizer())));
-
-        assert_eq!(
-            false,
-            step.do_finalizers_allow_us_to_continue(&Output::default())
-        );
-
-        let step = Step::new(EchoAtom("hello-world"))
-            .with_finalizer(FinalizerFlowControl::StopIf(Box::new(EchoFinalizer(false))))
-            .with_finalizer(FinalizerFlowControl::StopIf(Box::new(ErrorFinalizer())));
-
-        assert_eq!(
-            false,
-            step.do_finalizers_allow_us_to_continue(&Output::default())
-        );
-    }
-
-    #[test]
     fn any_initializer_can_block_execution() {
         // The blocking initializer comes first, a later one that allows must not win
         let step = Step::new(EchoAtom("hello-world"))
@@ -329,13 +254,6 @@ mod tests {
                 true,
             ))));
         assert_eq!(false, step.do_initializers_allow_us_to_run());
-
-        let step = Step::new(EchoAtom("hello-world"))
-            .with_initializer(InitializerFlowControl::SkipIf(Box::new(ErrorInitializer())))
-            .with_initializer(InitializerFlowControl::SkipIf(Box::new(EchoInitializer(
-                false,
-            ))));
-        assert_eq!(false, step.do_initializers_allow_us_to_run());
     }
 
     #[test]
@@ -349,7 +267,7 @@ mod tests {
         );
 
         let step = Step::new(EchoAtom("hello-world"))
-            .with_finalizer(FinalizerFlowControl::StopIf(Box::new(ErrorFinalizer())))
+            .with_finalizer(FinalizerFlowControl::Ensure(Box::new(EchoFinalizer(false))))
             .with_finalizer(FinalizerFlowControl::Ensure(Box::new(EchoFinalizer(true))));
         assert_eq!(
             false,
@@ -361,9 +279,9 @@ mod tests {
     struct CountingFinalizer(std::rc::Rc<std::cell::Cell<u32>>, bool);
 
     impl finalizers::Finalizer for CountingFinalizer {
-        fn finalize(&self, _output: &Output) -> anyhow::Result<bool> {
+        fn finalize(&self, _output: &Output) -> bool {
             self.0.set(self.0.get() + 1);
-            Ok(self.1)
+            self.1
         }
     }
 

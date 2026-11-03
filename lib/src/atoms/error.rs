@@ -7,7 +7,7 @@ use thiserror::Error as ThisError;
 pub type BoxError = Box<dyn std::error::Error + Send + Sync>;
 
 /// Why an atom can't check or make its change. The message doesn't repeat the source; print the
-/// chain, e.g. with `{:#}` through [`anyhow::Error`]
+/// chain with [`crate::error_chain`]
 #[derive(Debug, ThisError)]
 pub enum Error {
     /// Reading or changing the file system failed
@@ -184,7 +184,7 @@ mod tests {
         assert_eq!("can't read /etc/x", error.to_string());
         assert_eq!(
             "can't read /etc/x: entity not found",
-            format!("{:#}", anyhow::Error::from(error))
+            crate::utilities::error_chain(&error)
         );
     }
 }

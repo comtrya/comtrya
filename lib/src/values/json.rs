@@ -2,11 +2,17 @@
 //! can't be converted are left out
 
 use super::Value;
-use anyhow::anyhow;
 use serde_json::Value as JsonValue;
+use thiserror::Error as ThisError;
+
+/// A JSON number that is neither an integer nor a float, which serde_json only makes with its
+/// `arbitrary_precision` feature
+#[derive(Debug, ThisError)]
+#[error("Failed converting number {0} to json.")]
+pub struct NumberError(String);
 
 impl TryFrom<JsonValue> for Value {
-    type Error = anyhow::Error;
+    type Error = NumberError;
 
     fn try_from(from: JsonValue) -> Result<Self, Self::Error> {
         let value = match from {
@@ -23,7 +29,7 @@ impl TryFrom<JsonValue> for Value {
 }
 
 /// Keeps integers as integers, everything else becomes a float
-fn from_number(number: &serde_json::Number) -> anyhow::Result<Value> {
+fn from_number(number: &serde_json::Number) -> Result<Value, NumberError> {
     if let Some(n) = number.as_u64() {
         Ok(n.into())
     } else if let Some(n) = number.as_i64() {
@@ -31,7 +37,7 @@ fn from_number(number: &serde_json::Number) -> anyhow::Result<Value> {
     } else if let Some(n) = number.as_f64() {
         Ok(n.into())
     } else {
-        Err(anyhow!("Failed converting number {number:?} to json."))
+        Err(NumberError(number.to_string()))
     }
 }
 

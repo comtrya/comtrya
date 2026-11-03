@@ -9,10 +9,23 @@ pub fn sha256(data: impl AsRef<[u8]>) -> String {
 }
 
 /// The full path of a program in `PATH`
-pub fn get_binary_path(binary: &str) -> Result<String, anyhow::Error> {
+pub fn get_binary_path(binary: &str) -> which::Result<String> {
     let binary = which(binary)?.to_string_lossy().to_string();
 
     Ok(binary)
+}
+
+/// The error and its causes, separated by `: `, like "can't read /etc/x: entity not found".
+/// Errors of comtrya don't repeat their cause in their message, so this shows why
+pub fn error_chain(error: &dyn std::error::Error) -> String {
+    let mut text = error.to_string();
+    let mut source = error.source();
+    while let Some(cause) = source {
+        text.push_str(": ");
+        text.push_str(&cause.to_string());
+        source = cause.source();
+    }
+    text
 }
 
 /// Whether comtrya runs as root, by its uid: also under another name, like FreeBSD's `toor`,
