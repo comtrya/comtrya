@@ -175,10 +175,7 @@ impl<E: std::error::Error> From<E> for ActionError {
 /// What every action can do
 pub trait Action {
     /// One line about what the action does, for the output
-    fn summarize(&self) -> String {
-        warn!("need to define action summarize");
-        "not found action summarize".to_string()
-    }
+    fn summarize(&self) -> String;
     /// The steps that bring the system to what the action asks for. Doesn't change the system
     fn plan(&self, manifest: &Manifest, cx: &PlanCx) -> Result<Vec<Step>>;
 
