@@ -19,6 +19,9 @@ pub struct OsFacts {
     pub codename: Option<String>,
     /// `32-bit` or `64-bit`
     pub bitness: String,
+    /// The CPU, like `x86_64` or `aarch64`: the one comtrya was built for, which is the one it
+    /// runs on, as `std::env::consts::ARCH` names it
+    pub arch: String,
     /// The version of the OS
     pub version: String,
     /// The edition, like `Pro` on Windows, where the OS has one
@@ -37,6 +40,7 @@ impl OsFacts {
             distribution: osinfo.os_type().to_string(),
             codename: osinfo.codename().map(String::from),
             bitness: osinfo.bitness().to_string(),
+            arch: std::env::consts::ARCH.to_string(),
             version: osinfo.version().to_string(),
             edition: osinfo.edition().map(String::from),
         }
@@ -56,6 +60,7 @@ impl OsFacts {
             ),
             (String::from("codename"), or_unknown(&self.codename)),
             (String::from("bitness"), self.bitness.clone().into()),
+            (String::from("arch"), self.arch.clone().into()),
             (String::from("version"), self.version.clone().into()),
             (String::from("edition"), or_unknown(&self.edition)),
         ])
@@ -81,6 +86,13 @@ mod test {
             ("windows", "windows"),
             (os.family.as_str(), os.name.as_str())
         );
+    }
+
+    #[test]
+    fn arch_is_the_cpu_comtrya_was_built_for() {
+        let context = OsFacts::gather().to_context();
+
+        assert_eq!(std::env::consts::ARCH, context["arch"].to_string());
     }
 
     #[test]
