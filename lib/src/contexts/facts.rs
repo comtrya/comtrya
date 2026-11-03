@@ -148,6 +148,7 @@ mod test {
         );
         assert_eq!(
             vec![
+                "arch",
                 "bitness",
                 "codename",
                 "distribution",

@@ -142,6 +142,7 @@ include_variables
  <empty>
 
 os
+ arch
  bitness
  codename
  distribution

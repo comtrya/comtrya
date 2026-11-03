@@ -22,11 +22,22 @@ The values available in templates come from contexts. Run `comtrya contexts` to 
 | Context             | Contains                                                                                        |
 |:--------------------|:------------------------------------------------------------------------------------------------|
 | `user`              | `username`, `name`, `id`, `home_dir`, `config_dir`, `data_dir`, `data_local_dir`, `document_dir` |
-| `os`                | `name`, `family`, `distribution`, `version`, `codename`, `edition`, `bitness`, `hostname`       |
+| `os`                | `name`, `family`, `distribution`, `version`, `codename`, `edition`, `bitness`, `arch`, `hostname` |
 | `env`               | All environment variables, e.g. `env.HOME`                                                      |
 | `variables`         | `variables` from `Comtrya.yaml`, and values passed with `-D key=value`                         |
 | `include_variables` | Variables loaded from the files listed under `include_variables` in `Comtrya.yaml`              |
 | `privilege`         | `privilege`: the configured privilege escalation tool (`sudo`, `doas` or `run0`)                 |
+
+`os.arch` is the CPU, like `x86_64` or `aarch64`. Release downloads often name it differently,
+e.g. `arm64`; Tera's `replace` filter maps it:
+
+```yaml
+- action: file.download
+  where: os.name == "linux"
+  from: "https://github.com/neovim/neovim/releases/download/stable/nvim-linux-{{ os.arch | replace(from='aarch64', to='arm64') }}.tar.gz"
+  to: /opt/nvim-linux.tar.gz
+  privileged: true
+```
 
 ### Including variables
 
