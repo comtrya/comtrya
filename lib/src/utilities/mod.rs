@@ -5,7 +5,10 @@ use which::which;
 
 /// Lowercase hex SHA-256 of `data`
 pub fn sha256(data: impl AsRef<[u8]>) -> String {
-    format!("{:x}", Sha256::digest(data))
+    Sha256::digest(data)
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect()
 }
 
 /// The full path of a program in `PATH`
