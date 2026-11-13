@@ -62,6 +62,14 @@ pub enum Error {
         to: PathBuf,
     },
 
+    /// A link inside a directory to copy points back to a directory the copy is in, like a
+    /// Windows junction to a parent
+    #[error("{} links back to a directory above it, copying it would loop forever", path.display())]
+    LinkLoop {
+        /// The link
+        path: PathBuf,
+    },
+
     /// Encrypted contents can't be decrypted, e.g. with a wrong passphrase
     #[error("can't decrypt {}", path.display())]
     Decrypt {
