@@ -1,6 +1,6 @@
 //! Runs a program and returns its output
 
-use crate::atoms::{Check, Error, Output, Result};
+use crate::atoms::{Check, Error, Result};
 use serde::{Deserialize, Serialize};
 
 use super::super::Change;
@@ -141,20 +141,12 @@ impl Exec {
         })
     }
 
-    /// What the program printed. Stdout goes to `stdout_file` instead, if there is one
-    fn succeeded(&self, finished: Finished) -> Result<Output> {
-        let stderr = String::from_utf8_lossy(&finished.stderr).into_owned();
-
-        if let Some(stdout_file) = &self.stdout_file {
-            write_stdout(stdout_file, &finished.stdout)?;
-            return Ok(Output {
-                stdout: String::new(),
-                stderr,
-            });
+    /// Writes stdout to `stdout_file`, if there is one
+    fn write_stdout_file(&self, stdout: &[u8]) -> Result<()> {
+        match &self.stdout_file {
+            Some(stdout_file) => write_stdout(stdout_file, stdout),
+            None => Ok(()),
         }
-
-        let stdout = String::from_utf8_lossy(&finished.stdout).into_owned();
-        Ok(Output { stdout, stderr })
     }
 }
 
@@ -239,18 +231,14 @@ impl Change for Exec {
     }
 
     fn execute(&self) -> Result<()> {
-        self.execute_with_output().map(|_| ())
-    }
-
-    fn execute_with_output(&self) -> Result<Output> {
         self.execute_with_lines(&log_line)
     }
 }
 
 impl Exec {
-    /// Runs the program like [`Change::execute_with_output`], and passes each line it prints to
-    /// `on_line` while it runs
-    pub fn execute_with_lines(&self, on_line: OnLine) -> Result<Output> {
+    /// Runs the program like [`Change::execute`], and passes each line it prints to `on_line`
+    /// while it runs
+    pub fn execute_with_lines(&self, on_line: OnLine) -> Result<()> {
         let command = self
             .find_binary(&self.command)
             .ok_or_else(|| Error::CommandNotFound(self.command.clone()))?;
@@ -260,7 +248,7 @@ impl Exec {
             return Err(failed(finished));
         }
         self.stop_if_stdout_contains(&finished.stdout)?;
-        self.succeeded(finished)
+        self.write_stdout_file(&finished.stdout)
     }
 
     /// Fails if `stdout` contains [`Exec::stop_if_stdout_contains`], in any case
@@ -333,10 +321,9 @@ mod tests {
         let mut command_run = new_run_command(String::from("echo"));
         command_run.arguments = vec![String::from("hello")];
         command_run.stdout_file = Some(stdout_file.clone());
-        let output = command_run.execute_with_output().unwrap();
+        command_run.execute().unwrap();
 
         assert_eq!("hello\n", std::fs::read_to_string(stdout_file).unwrap());
-        assert_eq!("", output.stdout);
     }
 
     #[cfg(unix)]
@@ -362,18 +349,6 @@ mod tests {
         let error = command_run.execute().expect_err("Command should fail");
 
         assert_eq!("Command failed with exit code: 3", error.to_string());
-    }
-
-    #[cfg(unix)]
-    #[test]
-    fn the_output_is_returned() {
-        let mut command_run = new_run_command(String::from("echo"));
-        command_run.arguments = vec![String::from("hello")];
-
-        assert_eq!(
-            "hello",
-            command_run.execute_with_output().unwrap().stdout.trim()
-        );
     }
 
     #[cfg(unix)]
@@ -452,17 +427,21 @@ mod tests {
     #[cfg(unix)]
     #[test]
     fn output_that_isnt_utf8_doesnt_fail_the_command() {
+        let dir = tempfile::tempdir().unwrap();
+        let stdout_file = dir.path().join("out.bin");
         let mut command_run = new_run_command(String::from("printf"));
         command_run.arguments = vec![String::from("a\\377b")];
+        command_run.stdout_file = Some(stdout_file.clone());
 
-        let output = command_run.execute_with_output().unwrap();
+        command_run.execute().unwrap();
 
-        assert_eq!("a\u{FFFD}b", output.stdout);
+        // The file gets the bytes as they are
+        assert_eq!(b"a\xffb".to_vec(), std::fs::read(stdout_file).unwrap());
     }
 
     /// Runs `script` with `sh -c` and returns the lines it printed, in order
     #[cfg(unix)]
-    fn lines_of(command_run: &mut Exec, script: &str) -> (Result<Output>, Vec<(Stream, String)>) {
+    fn lines_of(command_run: &mut Exec, script: &str) -> (Result<()>, Vec<(Stream, String)>) {
         use std::sync::Mutex;
 
         command_run.command = String::from("sh");
@@ -477,8 +456,8 @@ mod tests {
 
     #[cfg(unix)]
     #[test]
-    fn lines_arrive_in_order_and_are_still_returned() {
-        let (output, lines) = lines_of(&mut Exec::default(), "echo one; echo two; echo oops >&2");
+    fn lines_arrive_in_order() {
+        let (result, lines) = lines_of(&mut Exec::default(), "echo one; echo two; echo oops >&2");
 
         let stdout: Vec<_> = lines.iter().filter(|(s, _)| *s == Stream::Stdout).collect();
         assert_eq!(
@@ -489,9 +468,7 @@ mod tests {
             stdout
         );
         assert!(lines.contains(&(Stream::Stderr, String::from("oops"))));
-        let output = output.unwrap();
-        assert_eq!("one\ntwo\n", output.stdout);
-        assert_eq!("oops\n", output.stderr);
+        result.unwrap();
     }
 
     #[cfg(unix)]
@@ -526,9 +503,10 @@ mod tests {
     #[test]
     fn a_program_reading_stdin_gets_an_end_of_file() {
         // Waits forever if stdin is the terminal or an open pipe
-        let (output, _) = lines_of(&mut Exec::default(), "cat; echo done");
+        let (result, lines) = lines_of(&mut Exec::default(), "cat; echo done");
 
-        assert_eq!("done\n", output.unwrap().stdout);
+        result.unwrap();
+        assert_eq!(vec![(Stream::Stdout, String::from("done"))], lines);
     }
 
     #[cfg(unix)]
