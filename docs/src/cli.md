@@ -9,7 +9,7 @@ Comtrya works by running a manifest or set of manifests. Following are examples 
 comtrya apply
 
 # Run all manifests within your current directory and a specified configuration file
-comtrya -d ./ -c /path/to/Comtrya/yaml
+comtrya -d ./ -c /path/to/Comtrya.yaml apply
 
 # --manifests, or -m, will run a subset of your manifests
 comtrya -d ./ apply -m one,two,three
@@ -54,7 +54,7 @@ The part after `#` is `<branch>:<path>`, and either can be left out, e.g. `#main
 Comtrya provides a help menu that can be shown by running the following command in your terminal:
 
 ```shell
-comtrya -h
+comtrya --help
 ```
 
 ```shell
@@ -72,13 +72,13 @@ Commands:
 
 Options:
   -d, --manifest-directory <MANIFEST_DIRECTORY>
-
+          Directory or git repository of the manifests, instead of `manifest_paths` from the config
   -c, --config-path <CONFIG_PATH>
           Specify a configuration path (if invalid Comtrya will exit)
       --no-color
           Disable color printing
   -D, --defines <DEFINES>
-
+          Set a variable, as `key=value`. Wins over `variables` from the config
   -v...
           Debug & tracing mode (-v, -vv)
       --log-file <PATH>
@@ -86,8 +86,10 @@ Options:
   -h, --help
           Print help
   -V, --version
-          Print versionA tool to simplify reprovisioning a fresh OS. Installs packages and manages dotfiles.
+          Print version
 ```
+
+The options can come before or after the command: `comtrya -v apply` and `comtrya apply -v` are the same.
 
 ## Auto generate completions
 
