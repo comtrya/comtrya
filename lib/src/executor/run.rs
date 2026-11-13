@@ -9,7 +9,7 @@ use super::{
 use crate::helper::Helper;
 use crate::{
     actions::{Action, PlanCx},
-    atoms::{self, command::Stream, Atom, Check, Output},
+    atoms::{self, command::Stream, Atom, Check},
     contexts::evaluate_condition,
     manifests::Manifest,
     steps::Step,
@@ -328,7 +328,7 @@ impl<'a> Run<'a> {
     /// Runs `atom`, and tells each line its program prints while it runs. The atom runs in its
     /// own thread, so the lines reach the observer here, in the spans of the manifest and the
     /// action
-    fn execute(&self, atom: &Atom) -> atoms::Result<Output> {
+    fn execute(&self, atom: &Atom) -> atoms::Result<()> {
         let (sender, lines) = mpsc::channel::<(Stream, String)>();
 
         std::thread::scope(|scope| {
@@ -354,7 +354,7 @@ impl<'a> Run<'a> {
 
     /// Runs the step's atom: in the privileged helper if it needs root and isn't a program,
     /// otherwise here, through the privilege provider for a root program
-    fn run_atom(&self, step: &Step) -> atoms::Result<Output> {
+    fn run_atom(&self, step: &Step) -> atoms::Result<()> {
         if step.needs_helper() {
             return self
                 .helper

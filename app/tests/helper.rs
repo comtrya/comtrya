@@ -17,10 +17,7 @@ fn the_helper_runs_the_atoms_it_is_sent() {
         .unwrap();
 
     assert!(output.status.success());
-    assert_eq!(
-        "{\"Ok\":{\"stdout\":\"\",\"stderr\":\"\"}}\n",
-        String::from_utf8_lossy(&output.stdout)
-    );
+    assert_eq!("{\"Ok\":null}\n", String::from_utf8_lossy(&output.stdout));
     assert!(file.is_file());
 }
 

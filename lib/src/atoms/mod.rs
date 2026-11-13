@@ -82,15 +82,6 @@ impl Check {
     }
 }
 
-/// What running an atom returned. Empty for atoms that don't run programs
-#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
-pub struct Output {
-    /// What the program wrote to stdout, unless it went to a file
-    pub stdout: String,
-    /// What the program wrote to stderr
-    pub stderr: String,
-}
-
 /// One change to the system, as data: actions plan atoms, the executor runs them. It can be
 /// written out and read back, so that another process, like a privileged helper, can run it.
 /// `Display` describes it in the output
@@ -219,13 +210,13 @@ impl Atom {
     }
 
     /// Makes the change
-    pub fn execute(&self) -> Result<Output> {
-        self.change().execute_with_output()
+    pub fn execute(&self) -> Result<()> {
+        self.change().execute()
     }
 
     /// Makes the change like [`Atom::execute`], and passes each line a program prints to
     /// `on_line` while it runs
-    pub fn execute_with_lines(&self, on_line: command::OnLine) -> Result<Output> {
+    pub fn execute_with_lines(&self, on_line: command::OnLine) -> Result<()> {
         match self {
             Atom::Exec(exec) => exec.execute_with_lines(on_line),
             atom => atom.execute(),
@@ -293,15 +284,9 @@ trait Change: std::fmt::Display {
 
     /// Makes the change
     fn execute(&self) -> Result<()>;
-
-    /// Makes the change and returns what it printed. Atoms that run programs return their
-    /// output
-    fn execute_with_output(&self) -> Result<Output> {
-        self.execute().map(|()| Output::default())
-    }
 }
 
-/// Does nothing, and has its text as output. For tests
+/// Does nothing, and shows its text. For tests
 #[cfg(test)]
 #[derive(Clone, Debug, PartialEq)]
 pub struct Echo(pub &'static str);
@@ -314,13 +299,6 @@ impl Change for Echo {
 
     fn execute(&self) -> Result<()> {
         Ok(())
-    }
-
-    fn execute_with_output(&self) -> Result<Output> {
-        Ok(Output {
-            stdout: self.0.to_string(),
-            stderr: String::new(),
-        })
     }
 }
 

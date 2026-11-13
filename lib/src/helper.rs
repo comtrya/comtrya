@@ -3,18 +3,18 @@
 //! step, so the privilege provider asks for the password once.
 //!
 //! The protocol is one JSON line per request, a serialized [`Atom`], and one JSON line per
-//! answer, `{"Ok": <Output>}` or `{"Err": "<the error and its causes>"}`. The helper only runs
+//! answer, `{"Ok": null}` or `{"Err": "<the error and its causes>"}`. The helper only runs
 //! what its parent sends, the same trust as `sudo` running a program. Requests can hold secrets,
 //! like the passphrase of encrypted contents, so neither side logs them
 
-use crate::atoms::{self, Atom, Output};
+use crate::atoms::{self, Atom};
 use crate::contexts::privilege::Privilege;
 use crate::utilities::error_chain;
 use std::io::{self, BufRead, BufReader, Write};
 use std::process::{Child, ChildStdin, ChildStdout, Command, Stdio};
 
-/// The answer to one request
-type Answer = std::result::Result<Output, String>;
+/// The answer to one request: whether the atom made its change, or why not
+type Answer = std::result::Result<(), String>;
 
 /// Answers requests from `requests` on `answers` until `requests` ends. This is
 /// `comtrya __helper`, it runs as root
@@ -44,7 +44,7 @@ struct Connection<W, R> {
 
 impl<W: Write, R: BufRead> Connection<W, R> {
     /// Runs `atom` in the helper and waits for the answer
-    fn run(&mut self, atom: &Atom) -> atoms::Result<Output> {
+    fn run(&mut self, atom: &Atom) -> atoms::Result<()> {
         self.send(atom).map_err(|_| quit())?;
 
         let mut line = String::new();
@@ -96,7 +96,7 @@ impl Helper {
     }
 
     /// Runs `atom` as root
-    pub(crate) fn run(&mut self, atom: &Atom) -> atoms::Result<Output> {
+    pub(crate) fn run(&mut self, atom: &Atom) -> atoms::Result<()> {
         if self.running.is_none() {
             self.running = Some(self.start()?);
         }
@@ -171,7 +171,7 @@ mod tests {
             let atom = Atom::from(Create {
                 path: dir.path().join(name),
             });
-            assert_eq!(Output::default(), helper.run(&atom).unwrap());
+            helper.run(&atom).unwrap();
         }
 
         assert!(dir.path().join("a").is_file());
