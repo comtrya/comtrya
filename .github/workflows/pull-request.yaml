@@ -24,6 +24,24 @@ jobs:
       # Runs on the minimum supported Rust version, so this also checks that it still builds
       - run: cargo clippy --all-features --all-targets -- -D warnings
 
+  # Advisories, licenses, duplicate versions and sources of the dependencies, see deny.toml
+  deny:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          command: check
+
+  # Dependencies that no code uses
+  machete:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - uses: bnjbvr/cargo-machete@v0.9.1
+
   test:
     name: ${{ matrix.job.os }} (${{ matrix.job.target }})
     runs-on: ${{ matrix.job.os }}

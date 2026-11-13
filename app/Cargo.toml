@@ -20,7 +20,6 @@ colored.workspace = true
 comfy-table.workspace = true
 ctrlc.workspace = true
 dirs.workspace = true
-serde_yaml_ng.workspace = true
 strip-ansi-escapes.workspace = true
 tracing.workspace = true
 tracing-journald.workspace = true
