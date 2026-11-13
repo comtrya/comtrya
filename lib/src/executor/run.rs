@@ -255,14 +255,9 @@ impl<'a> Run<'a> {
         successful
     }
 
-    /// `Some` if a step has to run: its initializers allow it, and its atom finds something to
-    /// change. Inside is what it changes, if the atom can say. An atom that can't tell, or
+    /// `Some` if a step has to run: its atom finds something to change. Inside is what it changes, if the atom can say. An atom that can't tell, or
     /// can't run, is skipped with a warning
     fn needed_change(&self, step: &Step) -> Option<Change> {
-        if !step.do_initializers_allow_us_to_run() {
-            return None;
-        }
-
         match step.atom.check() {
             Ok(Check::InSync) => None,
             Ok(Check::Drift(change)) => Some(change),
@@ -319,19 +314,11 @@ impl<'a> Run<'a> {
 
         let _lock = self.locks.lock(step.resources());
         self.observer.on(&Event::StepStarted(&step));
-        let output = match self.run_atom(&step) {
-            Ok(output) => output,
-            Err(error) => {
-                self.observer.on(&Event::StepFailed {
-                    step: &step,
-                    error: &error,
-                });
-                return false;
-            }
-        };
-
-        if !step.do_finalizers_allow_us_to_continue(&output) {
-            self.observer.on(&Event::FinalizersFailed);
+        if let Err(error) = self.run_atom(&step) {
+            self.observer.on(&Event::StepFailed {
+                step: &step,
+                error: &error,
+            });
             return false;
         }
 

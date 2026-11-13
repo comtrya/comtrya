@@ -69,8 +69,6 @@ pub enum Event<'a> {
         /// Why
         error: &'a atoms::Error,
     },
-    /// A step's finalizers stop the action
-    FinalizersFailed,
     /// The run was asked to stop, e.g. with Ctrl-C. The step that's running finishes, nothing
     /// starts after it
     Cancelled,

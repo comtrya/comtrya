@@ -3,8 +3,6 @@
 use super::FileAction;
 use crate::actions::{Action, Error, PlanCx, Result};
 use crate::manifests::Manifest;
-use crate::steps::initializers::FileExists;
-use crate::steps::initializers::FlowControl::Ensure;
 use crate::steps::Step;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -115,13 +113,12 @@ impl FileLink {
                     let p = path.path();
 
                     if let Some(file_name) = p.file_name() {
-                        steps.push(
-                            Step::new(Link {
-                                source: p.clone(),
-                                target: to.join(file_name),
-                            })
-                            .with_initializer(Ensure(Box::new(FileExists(p.clone())))),
-                        )
+                        // An entry gone by the time the step runs makes the link pending, see
+                        // `Link::check`
+                        steps.push(Step::new(Link {
+                            source: p.clone(),
+                            target: to.join(file_name),
+                        }))
                     }
                 }
             })
@@ -322,7 +319,6 @@ mod tests {
         let steps = link.plan(&Manifest::default(), &PlanCx::empty()).unwrap();
         let link_step = steps.last().unwrap();
 
-        assert!(link_step.do_initializers_allow_us_to_run());
         assert_eq!(
             Check::Pending { needs: source },
             link_step.atom.check().unwrap()

@@ -24,6 +24,9 @@ pub struct Exec {
     pub environment: Vec<(String, String)>,
     /// Writes stdout to this file instead of logging it
     pub stdout_file: Option<PathBuf>,
+    /// Fails the step when stdout contains this text, in any case, like a dry run of a package
+    /// manager that would remove packages. The action stops there
+    pub stop_if_stdout_contains: Option<String>,
 }
 
 /// Which output of a program a line is from
@@ -138,7 +141,7 @@ impl Exec {
         })
     }
 
-    /// The output for the finalizers. Stdout goes to `stdout_file` instead, if there is one
+    /// What the program printed. Stdout goes to `stdout_file` instead, if there is one
     fn succeeded(&self, finished: Finished) -> Result<Output> {
         let stderr = String::from_utf8_lossy(&finished.stderr).into_owned();
 
@@ -253,11 +256,28 @@ impl Exec {
             .ok_or_else(|| Error::CommandNotFound(self.command.clone()))?;
 
         let finished = self.run(&command, on_line)?;
-        if finished.status.success() {
-            self.succeeded(finished)
-        } else {
-            Err(failed(finished))
+        if !finished.status.success() {
+            return Err(failed(finished));
         }
+        self.stop_if_stdout_contains(&finished.stdout)?;
+        self.succeeded(finished)
+    }
+
+    /// Fails if `stdout` contains [`Exec::stop_if_stdout_contains`], in any case
+    fn stop_if_stdout_contains(&self, stdout: &[u8]) -> Result<()> {
+        let Some(text) = &self.stop_if_stdout_contains else {
+            return Ok(());
+        };
+        let stdout = String::from_utf8_lossy(stdout).to_lowercase();
+        if !stdout.contains(&text.to_lowercase()) {
+            return Ok(());
+        }
+        Err(Error::StdoutContains {
+            command: [vec![self.command.clone()], self.arguments.clone()]
+                .concat()
+                .join(" "),
+            text: text.clone(),
+        })
     }
 }
 
@@ -354,6 +374,25 @@ mod tests {
             "hello",
             command_run.execute_with_output().unwrap().stdout.trim()
         );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn it_stops_when_stdout_contains_the_text() {
+        let mut command_run = new_run_command(String::from("echo"));
+        command_run.arguments = vec![String::from("1 package to be REMOVED")];
+        command_run.stop_if_stdout_contains = Some(String::from("removed"));
+
+        let error = command_run
+            .execute()
+            .expect_err("the output contains the text");
+        assert_eq!(
+            "the output of `echo 1 package to be REMOVED` contains \"removed\"",
+            error.to_string()
+        );
+
+        command_run.arguments = vec![String::from("nothing to do")];
+        command_run.execute().unwrap();
     }
 
     #[test]

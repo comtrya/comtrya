@@ -4,8 +4,6 @@ use super::PackageProvider;
 use crate::actions::package::repository::PackageRepository;
 use crate::actions::Result;
 use crate::contexts::Facts;
-use crate::steps::finalizers::FlowControl::StopIf;
-use crate::steps::finalizers::OutputContains;
 use crate::steps::Step;
 use crate::{actions::package::PackageVariant, atoms::command::Exec};
 use serde::{Deserialize, Serialize};
@@ -60,6 +58,7 @@ impl PackageProvider for Pkgin {
 
     fn install(&self, package: &PackageVariant, _facts: &Facts) -> Result<Vec<Step>> {
         Ok(vec![
+            // A dry run first: pkgin may remove packages to install others
             Step::new(Exec {
                 command: String::from("/usr/pkg/bin/pkgin"),
                 arguments: vec![String::from("-n"), String::from("install")]
@@ -67,10 +66,10 @@ impl PackageProvider for Pkgin {
                     .chain(package.extra_args.clone())
                     .chain(package.packages())
                     .collect(),
+                stop_if_stdout_contains: Some(String::from("removed")),
                 ..Default::default()
             })
-            .as_root()
-            .with_finalizer(StopIf(Box::new(OutputContains("removed")))),
+            .as_root(),
             Step::new(Exec {
                 command: String::from("/usr/pkg/bin/pkgin"),
                 arguments: vec![String::from("-y"), String::from("install")]
@@ -90,6 +89,36 @@ mod tests {
     use super::*;
     use crate::atoms::RunAs;
     use pretty_assertions::assert_eq;
+
+    /// The first step only looks: a dry run, which stops the action if pkgin would remove
+    /// packages. Only then pkgin installs
+    #[test]
+    fn install_stops_when_a_dry_run_would_remove_packages() {
+        use crate::atoms::Atom;
+
+        let package = PackageVariant {
+            list: vec![String::from("git")],
+            ..Default::default()
+        };
+
+        let steps = Pkgin {}.install(&package, &Facts::default()).unwrap();
+
+        let commands: Vec<String> = steps.iter().map(Step::to_string).collect();
+        assert_eq!(
+            vec![
+                "CommandExec with: /usr/pkg/bin/pkgin -n install git (as root)",
+                "CommandExec with: /usr/pkg/bin/pkgin -y install git (as root)",
+            ],
+            commands
+        );
+        let Atom::Exec(dry_run) = &steps[0].atom else {
+            panic!("the dry run is a program");
+        };
+        assert_eq!(
+            Some(String::from("removed")),
+            dry_run.stop_if_stdout_contains
+        );
+    }
 
     #[test]
     fn bootstrap_installs_pkgin_with_pkg_add_as_root() {
