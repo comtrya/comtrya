@@ -13,33 +13,34 @@ use std::{
 
 use tracing::{debug, trace, warn};
 
-/// The arguments of `comtrya`
+/// The arguments of `comtrya`. They can come before or after the subcommand, like
+/// `comtrya -v apply` or `comtrya apply -v`
 #[derive(Parser, Debug, Default)]
 #[command(version, about, name="comtrya", long_about = None)]
 pub struct GlobalArgs {
     /// Directory or git repository of the manifests, instead of `manifest_paths` from the config
-    #[arg(short = 'd', long)]
+    #[arg(short = 'd', long, global = true)]
     pub manifest_directory: Option<String>,
 
     /// Specify a configuration path (if invalid Comtrya will exit)
-    #[arg(short = 'c', long)]
+    #[arg(short = 'c', long, global = true)]
     pub config_path: Option<String>,
 
     /// Disable color printing
-    #[arg(long)]
+    #[arg(long, global = true)]
     pub no_color: bool,
 
     /// Set a variable, as `key=value`. Wins over `variables` from the config
-    #[arg(short = 'D', long, value_parser = parse_key_val::<String, String>)]
+    #[arg(short = 'D', long, global = true, value_parser = parse_key_val::<String, String>)]
     pub defines: Vec<(String, String)>,
 
     /// Debug & tracing mode (-v, -vv)
-    #[arg(short, action = clap::ArgAction::Count)]
+    #[arg(short, global = true, action = clap::ArgAction::Count)]
     pub verbose: u8,
 
     /// Also write the log to this file, without colors and with times. It gets what `-v` shows,
     /// or more with `-vv`, and is appended to
-    #[arg(long, value_name = "PATH")]
+    #[arg(long, global = true, value_name = "PATH")]
     pub log_file: Option<PathBuf>,
 
     /// The subcommand
@@ -401,5 +402,47 @@ mod tests {
 
         std::fs::write(dir.path().join("Comtrya.yaml"), "").unwrap();
         assert_eq!(Some(dir.path().join("Comtrya.yaml")), config_in(dir.path()));
+    }
+    /// `comtrya apply -v` is how most people write it, not only `comtrya -v apply`
+    #[test]
+    fn global_options_also_come_after_the_subcommand() {
+        use clap::Parser;
+
+        let args = GlobalArgs::try_parse_from([
+            "comtrya",
+            "apply",
+            "-d",
+            "manifests",
+            "-c",
+            "Comtrya.yaml",
+            "-D",
+            "ship=Daedalus",
+            "-vv",
+            "--no-color",
+            "--log-file",
+            "comtrya.log",
+        ])
+        .unwrap();
+
+        assert_eq!(Some("manifests"), args.manifest_directory.as_deref());
+        assert_eq!(Some("Comtrya.yaml"), args.config_path.as_deref());
+        assert_eq!(
+            vec![(String::from("ship"), String::from("Daedalus"))],
+            args.defines
+        );
+        assert_eq!(2, args.verbose);
+        assert!(args.no_color);
+        assert_eq!(Some(PathBuf::from("comtrya.log")), args.log_file);
+    }
+
+    #[test]
+    fn global_options_before_the_subcommand_still_work() {
+        use clap::Parser;
+
+        let args =
+            GlobalArgs::try_parse_from(["comtrya", "-v", "-d", "manifests", "status"]).unwrap();
+
+        assert_eq!(1, args.verbose);
+        assert_eq!(Some("manifests"), args.manifest_directory.as_deref());
     }
 }
