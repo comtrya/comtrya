@@ -37,7 +37,7 @@ impl Change for Copy {
 
     fn execute(&self) -> Result<()> {
         refuse_copy_into_itself(&self.from, &self.to)?;
-        copy_contents(&self.from, &self.to)?;
+        copy_contents(&self.from, &self.to, Links::native(), &mut Vec::new())?;
 
         Ok(())
     }
@@ -74,25 +74,79 @@ fn canonicalize_missing(path: &Path) -> std::io::Result<PathBuf> {
     }
 }
 
-/// Copies everything in `from` into `to`, creating `to` and the subdirectories as needed
-fn copy_contents(from: &Path, to: &Path) -> Result<()> {
+/// What the copy does with a symlink inside `from`
+#[derive(Clone, Copy, Debug, PartialEq)]
+enum Links {
+    /// Recreates it as a symlink, on unix
+    #[cfg(unix)]
+    Recreate,
+    /// Copies what it points to, like on Windows, where creating links needs extra rights. A
+    /// link to a directory is copied as a directory
+    #[cfg_attr(
+        all(unix, not(test)),
+        expect(
+            dead_code,
+            reason = "unix recreates links, tests follow them like Windows"
+        )
+    )]
+    Follow,
+}
+
+impl Links {
+    /// What this platform does: recreate links on unix, follow them elsewhere
+    fn native() -> Self {
+        #[cfg(unix)]
+        return Links::Recreate;
+        #[cfg(not(unix))]
+        return Links::Follow;
+    }
+}
+
+/// Copies everything in `from` into `to`, creating `to` and the subdirectories as needed.
+///
+/// `above` holds the canonical paths of the directories the walk is in, `from`'s parents in the
+/// copy. A followed link back to one of them fails the copy, which otherwise would never end
+fn copy_contents(from: &Path, to: &Path, links: Links, above: &mut Vec<PathBuf>) -> Result<()> {
+    let canonical = from.canonicalize().map_err(Error::io("read", from))?;
+    if above.contains(&canonical) {
+        return Err(Error::LinkLoop {
+            path: from.to_path_buf(),
+        });
+    }
+
     std::fs::create_dir_all(to).map_err(Error::io("create the directory", to))?;
 
+    above.push(canonical);
     for entry in std::fs::read_dir(from).map_err(Error::io("read", from))? {
         let entry = entry.map_err(Error::io("read", from))?;
-        copy_entry(&entry.path(), &to.join(entry.file_name()), &entry)?;
+        copy_entry(
+            &entry.path(),
+            &to.join(entry.file_name()),
+            &entry,
+            links,
+            above,
+        )?;
     }
+    above.pop();
 
     Ok(())
 }
 
-/// Copies one directory entry: subdirectories recursively, symlinks as symlinks on unix
-fn copy_entry(from: &Path, to: &Path, entry: &std::fs::DirEntry) -> Result<()> {
+/// Copies one directory entry: subdirectories recursively, symlinks as `links` says. `above` is
+/// as for [`copy_contents`]
+fn copy_entry(
+    from: &Path,
+    to: &Path,
+    entry: &std::fs::DirEntry,
+    links: Links,
+    above: &mut Vec<PathBuf>,
+) -> Result<()> {
     #[cfg(unix)]
-    if entry
-        .file_type()
-        .map_err(Error::io("read", from))?
-        .is_symlink()
+    if links == Links::Recreate
+        && entry
+            .file_type()
+            .map_err(Error::io("read", from))?
+            .is_symlink()
     {
         return copy_symlink(from, to);
     }
@@ -100,7 +154,7 @@ fn copy_entry(from: &Path, to: &Path, entry: &std::fs::DirEntry) -> Result<()> {
     let _ = entry;
 
     if from.is_dir() {
-        copy_contents(from, to)
+        copy_contents(from, to, links, above)
     } else {
         std::fs::copy(from, to)
             .map(|_| ())
@@ -262,6 +316,34 @@ mod tests {
         .unwrap();
 
         assert_eq!("a", read(sibling.join("a.txt")));
+    }
+
+    /// Followed links, as on Windows, where a link or junction to a directory above it would
+    /// otherwise be copied into itself until the path gets too long
+    #[cfg(unix)]
+    #[test]
+    fn a_followed_link_to_a_directory_above_it_fails_instead_of_looping() {
+        let (_dir, from, to) = source();
+        std::os::unix::fs::symlink(&from, from.join("sub").join("loop")).unwrap();
+
+        let error = copy_contents(&from, &to, Links::Follow, &mut Vec::new()).unwrap_err();
+
+        assert!(error.to_string().contains("loop"), "{error}");
+        assert_eq!(false, to.join("sub").join("loop").join("sub").exists());
+    }
+
+    /// The same directory reached twice through a followed link, but not from inside itself, is
+    /// copied twice
+    #[cfg(unix)]
+    #[test]
+    fn a_followed_link_to_a_sibling_directory_is_copied() {
+        let (_dir, from, to) = source();
+        std::os::unix::fs::symlink(from.join("sub"), from.join("alias")).unwrap();
+
+        copy_contents(&from, &to, Links::Follow, &mut Vec::new()).unwrap();
+
+        assert_eq!("c", read(to.join("alias").join("deeper").join("c.txt")));
+        assert_eq!(false, to.join("alias").is_symlink());
     }
 
     #[cfg(unix)]

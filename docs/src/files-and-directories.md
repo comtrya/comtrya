@@ -300,7 +300,7 @@ actions:
 Copies the contents of a directory into another directory, the same on all platforms. After the action, `to` holds everything `from` holds:
 `to` and its subdirectories are created if missing, files with the same path are overwritten and other files in `to` are left alone.
 A trailing `/` on `to` makes no difference.
-On unix, symlinks inside `from` are copied as symlinks; on Windows the file they point to is copied.
+On unix, symlinks inside `from` are copied as symlinks; on Windows the file or directory they point to is copied, and a link or junction back to a directory above it fails the action instead of copying forever.
 The action fails if `to` is `from` itself or a directory inside it, like `cp` does.
 
 Before 0.11.0, unix copied the directory itself to `<to>/<name>` unless `to` ended with `/`.
