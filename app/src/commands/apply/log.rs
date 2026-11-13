@@ -146,9 +146,6 @@ impl Observer for Log {
             Event::StepFailed { step, error } => {
                 self.failed(&format!("{step} failed: {}", chain(*error)))
             }
-            Event::FinalizersFailed => {
-                self.failed("Finalizers won't allow us to continue with this action")
-            }
             Event::Cancelled => warn!("Cancelled, nothing else runs"),
             Event::ActionDone { summary } => {
                 match summary {

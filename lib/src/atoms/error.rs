@@ -137,6 +137,15 @@ pub enum Error {
         stderr: String,
     },
 
+    /// A program printed what stops the action, see [`crate::atoms::command::Exec::stop_if_stdout_contains`]
+    #[error("the output of `{command}` contains \"{text}\"")]
+    StdoutContains {
+        /// The program and its arguments
+        command: String,
+        /// The text it printed
+        text: String,
+    },
+
     /// Only programs can be run through sudo, other atoms run as root in the privileged helper
     #[error("{atom}: only programs can run through the privilege provider")]
     NotElevatable {

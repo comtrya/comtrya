@@ -4,8 +4,6 @@ use super::PackageProvider;
 use crate::actions::package::repository::PackageRepository;
 use crate::actions::Result;
 use crate::contexts::Facts;
-use crate::steps::finalizers::FlowControl::StopIf;
-use crate::steps::finalizers::OutputContains;
 use crate::steps::Step;
 use crate::{actions::package::PackageVariant, atoms::command::Exec};
 use serde::{Deserialize, Serialize};
@@ -78,17 +76,18 @@ impl PackageProvider for BsdPkg {
         }
 
         Ok(vec![
+            // A dry run first: pkg may remove packages to install others
             Step::new(Exec {
                 command: String::from("/usr/sbin/pkg"),
-                arguments: vec![String::from("install"), String::from("-y")]
+                arguments: vec![String::from("install"), String::from("-n")]
                     .into_iter()
                     .chain(package.extra_args.clone())
                     .chain(package.packages())
                     .collect(),
+                stop_if_stdout_contains: Some(String::from("removed")),
                 ..Default::default()
             })
-            .as_root()
-            .with_finalizer(StopIf(Box::new(OutputContains("removed")))),
+            .as_root(),
             Step::new(Exec {
                 command: String::from("/usr/sbin/pkg"),
                 arguments: vec![String::from("install"), String::from("-y")]
@@ -100,5 +99,40 @@ impl PackageProvider for BsdPkg {
             })
             .as_root(),
         ])
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::atoms::Atom;
+    use pretty_assertions::assert_eq;
+
+    /// The first step only looks: a dry run, which stops the action if pkg would remove
+    /// packages. Only then pkg installs
+    #[test]
+    fn install_stops_when_a_dry_run_would_remove_packages() {
+        let package = PackageVariant {
+            list: vec![String::from("git")],
+            ..Default::default()
+        };
+
+        let steps = BsdPkg {}.install(&package, &Facts::default()).unwrap();
+
+        let commands: Vec<String> = steps.iter().map(Step::to_string).collect();
+        assert_eq!(
+            vec![
+                "CommandExec with: /usr/sbin/pkg install -n git (as root)",
+                "CommandExec with: /usr/sbin/pkg install -y git (as root)",
+            ],
+            commands
+        );
+        let Atom::Exec(dry_run) = &steps[0].atom else {
+            panic!("the dry run is a program");
+        };
+        assert_eq!(
+            Some(String::from("removed")),
+            dry_run.stop_if_stdout_contains
+        );
     }
 }

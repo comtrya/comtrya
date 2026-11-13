@@ -82,7 +82,7 @@ impl Check {
     }
 }
 
-/// What running an atom returned, for the finalizers. Empty for atoms that don't run programs
+/// What running an atom returned. Empty for atoms that don't run programs
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct Output {
     /// What the program wrote to stdout, unless it went to a file
@@ -294,8 +294,8 @@ trait Change: std::fmt::Display {
     /// Makes the change
     fn execute(&self) -> Result<()>;
 
-    /// Makes the change and returns what the finalizers look at. Atoms that run programs
-    /// return their output
+    /// Makes the change and returns what it printed. Atoms that run programs return their
+    /// output
     fn execute_with_output(&self) -> Result<Output> {
         self.execute().map(|()| Output::default())
     }
@@ -350,6 +350,7 @@ mod tests {
                 working_dir: Some(String::from("/tmp")),
                 environment: vec![(String::from("A"), String::from("b"))],
                 stdout_file: Some(path()),
+                stop_if_stdout_contains: Some(String::from("removed")),
             }
             .into(),
             directory::Copy {
