@@ -105,23 +105,8 @@ fn manifest_dirs() -> Vec<PathBuf> {
 
 /// Intended differences to the release, as (manifest directory, manifest name)
 fn known_differences() -> Vec<(&'static str, &'static str)> {
-    vec![
-        // 0.11.0 accepts `repository` and `reference` again, 0.10.0 refuses them
-        ("v1", "git-clone-reference"),
-        // 0.11.0 runs file and directory actions with `privileged` as root, 0.10.0 ignored it
-        ("v1", "privileged"),
-        // 0.11.0 reads `continue_on_error` on actions, 0.10.0 ignored it
-        ("v1", "continue-on-error"),
-        // 0.11.0 drops `.toml` from manifest names like `.yaml`, 0.10.0 kept it
-        ("v1", "toml.command.toml"),
-        ("v1", "toml.command"),
-        ("v1", "toml.everything.toml"),
-        ("v1", "toml.everything"),
-        ("examples", "toml-examples.command.command.toml"),
-        ("examples", "toml-examples.command.command"),
-        // 0.11.0 doesn't load `Comtrya.yaml` next to the manifests as a manifest, 0.10.0 did
-        ("examples", "Comtrya"),
-    ]
+    // None since 0.11.0: the differences to 0.10.0 are in its release notes
+    vec![]
 }
 
 /// Drops `null` fields and empty objects, so a new optional field, or a removed one that was
@@ -197,27 +182,6 @@ fn manifests_mean_what_they_meant_in_the_last_release() {
     }
 }
 
-/// Records which action the released `ConditionalVariantAction::plan` picks, so the release's own
-/// code decides which variant wins
-#[derive(Default, serde::Deserialize)]
-#[serde(transparent)]
-struct Recorder(Value);
-
-thread_local! {
-    static PLANNED: std::cell::RefCell<Option<Value>> = const { std::cell::RefCell::new(None) };
-}
-
-impl released::actions::Action for Recorder {
-    fn plan(
-        &self,
-        _: &released::manifests::Manifest,
-        _: &released::contexts::Contexts,
-    ) -> anyhow::Result<Vec<released::steps::Step>> {
-        PLANNED.with(|planned| *planned.borrow_mut() = Some(self.0.clone()));
-        Ok(vec![])
-    }
-}
-
 /// What a manifest does under the facts: whether it runs, and which action or variant of each
 /// action applies. `None` for an action means it's skipped, `"error"` that its `where` is broken
 fn selections(
@@ -261,26 +225,19 @@ fn current_selections(manifest: &Value, facts: &Value) -> Value {
     )
 }
 
+/// The same with the release's own code, so it decides which manifest runs and which variant wins
 fn released_selections(manifest: &Value, facts: &Value) -> Value {
-    use released::actions::Action;
-
     let contexts: released::contexts::Contexts = serde_json::from_value(facts.clone()).unwrap();
 
     selections(
         manifest,
-        // How 0.10.0 evaluated a manifest's `where`
-        |condition| {
-            rhai::Engine::new()
-                .eval_with_scope::<bool>(&mut released::contexts::to_rhai(&contexts), condition)
-                .unwrap_or(false)
-        },
+        |condition| released::contexts::evaluate_condition(condition, &contexts).unwrap_or(false),
         |action| {
-            let action: released::actions::ConditionalVariantAction<Recorder> =
+            let action: released::actions::ConditionalVariantAction<Value> =
                 serde_json::from_value(action.clone()).unwrap();
-            PLANNED.with(|planned| planned.borrow_mut().take());
             action
-                .plan(&Default::default(), &contexts)
-                .map(|_| PLANNED.with(|planned| planned.borrow_mut().take()))
+                .select(&contexts)
+                .map(|selected| selected.cloned())
                 .map_err(|_| ())
         },
     )
