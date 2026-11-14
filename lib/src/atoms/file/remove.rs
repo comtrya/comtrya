@@ -14,7 +14,7 @@ pub struct Remove {
 
 impl std::fmt::Display for Remove {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "The file {} needs to be removed", self.target.display())
+        write!(f, "Remove file {}", self.target.display())
     }
 }
 

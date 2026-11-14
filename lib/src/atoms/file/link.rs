@@ -20,9 +20,9 @@ impl std::fmt::Display for Link {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "The file {} contents needs to be linked from {}",
+            "Link {} to {}",
             self.target.display(),
-            self.source.display(),
+            self.source.display()
         )
     }
 }

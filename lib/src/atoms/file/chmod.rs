@@ -17,12 +17,7 @@ pub struct Chmod {
 
 impl std::fmt::Display for Chmod {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "The permissions on {} need to be set to {:o}",
-            self.path.display(),
-            self.mode
-        )
+        write!(f, "Set mode {:o} on {}", self.mode, self.path.display())
     }
 }
 

@@ -129,7 +129,7 @@ mod tests {
             .atom_to_run_with(&Privilege::Doas, false)
             .unwrap();
 
-        assert_eq!("CommandExec with: doas echo hi", atom.to_string());
+        assert_eq!("Run doas echo hi", atom.to_string());
     }
 
     /// Root is found by its uid, so also under another name or without a passwd entry
@@ -139,7 +139,7 @@ mod tests {
             .atom_to_run_with(&Privilege::Doas, true)
             .unwrap();
 
-        assert_eq!("CommandExec with: echo hi", atom.to_string());
+        assert_eq!("Run echo hi", atom.to_string());
     }
 
     #[test]
@@ -150,7 +150,7 @@ mod tests {
         });
 
         assert_eq!(
-            "CommandExec with: id ",
+            "Run id",
             step.atom_to_run_with(&Privilege::Sudo, false)
                 .unwrap()
                 .to_string()
@@ -159,10 +159,7 @@ mod tests {
 
     #[test]
     fn a_root_step_says_so() {
-        assert_eq!(
-            "CommandExec with: echo hi (as root)",
-            root_echo().to_string()
-        );
+        assert_eq!("Run echo hi (as root)", root_echo().to_string());
     }
 
     #[test]

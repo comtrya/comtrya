@@ -106,8 +106,8 @@ mod tests {
         let commands: Vec<String> = steps.iter().map(Step::to_string).collect();
         assert_eq!(
             vec![
-                "CommandExec with: /usr/pkg/bin/pkgin -n install git (as root)",
-                "CommandExec with: /usr/pkg/bin/pkgin -y install git (as root)",
+                "Run /usr/pkg/bin/pkgin -n install git (as root)",
+                "Run /usr/pkg/bin/pkgin -y install git (as root)",
             ],
             commands
         );
@@ -127,7 +127,7 @@ mod tests {
         assert_eq!(1, steps.len());
         assert_eq!(RunAs::Root, steps[0].run_as);
         assert_eq!(
-            "CommandExec with: /usr/sbin/pkg_add pkgin (as root)",
+            "Run /usr/sbin/pkg_add pkgin (as root)",
             steps[0].to_string()
         );
     }

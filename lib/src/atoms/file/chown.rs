@@ -21,10 +21,10 @@ impl std::fmt::Display for Chown {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "The owner and group on {} need to be set to {}:{}",
-            self.path.display(),
+            "Set owner {}:{} on {}",
             self.owner,
             self.group,
+            self.path.display()
         )
     }
 }

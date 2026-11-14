@@ -200,7 +200,7 @@ mod test {
         let step = install_step(&package, package.packages());
 
         assert_eq!(
-            "CommandExec with: pacman -S --needed --noconfirm --asdeps git ripgrep (as root)",
+            "Run pacman -S --needed --noconfirm --asdeps git ripgrep (as root)",
             step.to_string()
         );
     }

@@ -22,11 +22,8 @@ pub struct Decrypt {
 
 impl std::fmt::Display for Decrypt {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "The content needs to be decrypted to {}",
-            self.path.as_path().display()
-        )
+        // Neither the contents nor the passphrase: both are secrets
+        write!(f, "Decrypt into {}", self.path.display())
     }
 }
 

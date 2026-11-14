@@ -188,10 +188,7 @@ lyaml\t6.2.8-1\tinstalled\t/home/ada/.luarocks/lib/luarocks/rocks-5.4
 
         let shown: Vec<String> = steps.iter().map(|step| step.atom.to_string()).collect();
         assert_eq!(
-            vec![
-                "CommandExec with: luarocks install lgi",
-                "CommandExec with: luarocks install path"
-            ],
+            vec!["Run luarocks install lgi", "Run luarocks install path"],
             shown
         );
         assert!(steps.iter().all(|step| step.run_as == RunAs::Root));
@@ -208,7 +205,7 @@ lyaml\t6.2.8-1\tinstalled\t/home/ada/.luarocks/lib/luarocks/rocks-5.4
             .unwrap();
 
         assert_eq!(
-            "CommandExec with: luarocks install --local lgi",
+            "Run luarocks install --local lgi",
             steps[0].atom.to_string()
         );
         assert_eq!(RunAs::User, steps[0].run_as);

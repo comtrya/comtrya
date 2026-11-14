@@ -15,11 +15,7 @@ pub struct Create {
 
 impl std::fmt::Display for Create {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "The directory {} needs to be created",
-            self.path.display(),
-        )
+        write!(f, "Create directory {}", self.path.display())
     }
 }
 

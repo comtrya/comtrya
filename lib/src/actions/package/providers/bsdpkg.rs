@@ -122,8 +122,8 @@ mod tests {
         let commands: Vec<String> = steps.iter().map(Step::to_string).collect();
         assert_eq!(
             vec![
-                "CommandExec with: /usr/sbin/pkg install -n git (as root)",
-                "CommandExec with: /usr/sbin/pkg install -y git (as root)",
+                "Run /usr/sbin/pkg install -n git (as root)",
+                "Run /usr/sbin/pkg install -y git (as root)",
             ],
             commands
         );

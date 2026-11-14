@@ -24,20 +24,11 @@ pub struct Clone {
 
 impl std::fmt::Display for Clone {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match &self.reference {
-            Some(reference) => write!(
-                f,
-                "GitClone {}#{reference} to {}",
-                self.repository,
-                self.directory.display()
-            ),
-            None => write!(
-                f,
-                "GitClone {} to {}",
-                self.repository,
-                self.directory.display()
-            ),
+        write!(f, "Clone {}", self.repository)?;
+        if let Some(reference) = &self.reference {
+            write!(f, " at {reference}")?;
         }
+        write!(f, " into {}", self.directory.display())
     }
 }
 
