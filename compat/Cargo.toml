@@ -13,6 +13,5 @@ comtrya-lib.workspace = true
 # release, so it stays out of the workspace dependencies
 released = { package = "comtrya-lib", version = "=0.11.0" }
 pretty_assertions.workspace = true
-serde.workspace = true
 serde_json.workspace = true
 serde_yaml_ng.workspace = true

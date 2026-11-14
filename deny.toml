@@ -1,0 +1,52 @@
+# cargo deny check: advisories, licenses, duplicate versions and sources of the dependencies.
+# Runs in CI, see .github/workflows/pull-request.yaml
+
+[graph]
+all-features = true
+
+[advisories]
+version = 2
+# Vulnerabilities always fail. Unmaintained crates fail only when comtrya depends on them
+# directly; a transitive one is up to the crate that pulls it in
+unmaintained = "workspace"
+# An advisory without a fix goes here, with why it doesn't affect comtrya
+ignore = [
+    # crypto-bigint 0.5 (age 0.12 -> p256 -> elliptic-curve) isn't constant-time. Fixed only in
+    # 0.7, which age doesn't use yet (0.12.1 is its latest release, 2026-11). comtrya decrypts
+    # with a passphrase (scrypt) and never with p256 recipients, so no secret goes through it
+    { id = "RUSTSEC-2026-0387", reason = "age 0.12 pulls crypto-bigint 0.5 via p256, which comtrya doesn't use" },
+]
+
+[licenses]
+version = 2
+# What the dependency tree uses. An `OR` license needs only one of these
+allow = [
+    "Apache-2.0",
+    "BSD-3-Clause",
+    "CC0-1.0",
+    "CDLA-Permissive-2.0",
+    "ISC",
+    "MIT",
+    "MIT-0",
+    "MPL-2.0",
+    "Unicode-3.0",
+    "Zlib",
+]
+confidence-threshold = 0.8
+
+[licenses.private]
+# The workspace's own crates that aren't published, like compat
+ignore = true
+
+[bans]
+# gix and others pull in several versions of some crates; shown, but not a failure
+multiple-versions = "warn"
+wildcards = "deny"
+# Path dependencies inside the workspace have no version
+allow-wildcard-paths = true
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+allow-git = []
