@@ -236,6 +236,9 @@ impl Atom {
     }
 }
 
+/// What the atom does, as a short imperative sentence in the user's terms, like `Run pacman -S
+/// git`, `Create directory ~/.config` or `Link ~/.zshrc to files/zshrc`. Paths and programs are
+/// shown as given, secrets never: no file contents, passphrases or environment values
 impl std::fmt::Display for Atom {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.change().fmt(f)
@@ -305,7 +308,7 @@ impl Change for Echo {
 #[cfg(test)]
 impl std::fmt::Display for Echo {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Echo: {}", self.0)
+        write!(f, "Echo {}", self.0)
     }
 }
 
@@ -443,7 +446,7 @@ mod tests {
         });
 
         assert_eq!(
-            "CommandExec with: doas id",
+            "Run doas id",
             exec.elevated(&Privilege::Doas).unwrap().to_string().trim()
         );
         assert!(file.elevated(&Privilege::Sudo).is_err());

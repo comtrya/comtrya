@@ -1318,7 +1318,7 @@ fn dry_run_shows_a_link_to_what_an_earlier_step_makes() {
     let stdout = f.run(&["apply", "--dry-run"]).get_output().stdout.clone();
     let stdout = String::from_utf8_lossy(&stdout);
 
-    assert!(stdout.contains("Linking file"), "{stdout}");
+    assert!(stdout.contains("Linking "), "{stdout}");
     assert!(!unpacked.exists());
 }
 

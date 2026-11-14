@@ -20,11 +20,8 @@ pub struct SetContents {
 
 impl std::fmt::Display for SetContents {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "The file {} contents need to be set",
-            self.path.display(),
-        )
+        // Not the contents, they may be a secret
+        write!(f, "Write {}", self.path.display())
     }
 }
 

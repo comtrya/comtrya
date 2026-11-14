@@ -239,7 +239,7 @@ mod tests {
 
             assert_eq!(1, steps.len());
             assert_eq!(
-                format!("CommandExec with: {expected}"),
+                format!("Run {expected}"),
                 steps[0].to_string()
             );
         }

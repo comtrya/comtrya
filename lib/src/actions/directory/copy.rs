@@ -83,10 +83,7 @@ mod tests {
 
         assert_eq!(1, steps.len());
         let display = steps[0].atom.to_string();
-        assert!(
-            display.contains("need to be copied to /some/where/"),
-            "{display}"
-        );
+        assert!(display.contains("into /some/where/"), "{display}");
         assert!(display.contains("mydir"), "{display}");
     }
 

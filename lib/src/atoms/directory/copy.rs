@@ -22,9 +22,9 @@ impl std::fmt::Display for Copy {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "The contents of the directory {} need to be copied to {}",
+            "Copy the contents of {} into {}",
             self.from.display(),
-            self.to.display(),
+            self.to.display()
         )
     }
 }

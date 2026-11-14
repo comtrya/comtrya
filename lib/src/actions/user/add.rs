@@ -15,7 +15,7 @@ pub type UserAdd = User;
 
 impl Action for UserAdd {
     fn summarize(&self) -> String {
-        format!("Adding user: {}", self.username)
+        format!("Adding user {}", self.username)
     }
 
     fn plan(&self, _manifest: &Manifest, cx: &PlanCx) -> Result<Vec<Step>> {

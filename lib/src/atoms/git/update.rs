@@ -29,9 +29,9 @@ impl std::fmt::Display for Update {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "GitUpdate {} in {}",
-            self.repository,
-            self.directory.display()
+            "Update {} from {}",
+            self.directory.display(),
+            self.repository
         )
     }
 }

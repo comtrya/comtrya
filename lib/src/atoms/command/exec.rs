@@ -216,12 +216,12 @@ fn write_stdout(path: &Path, stdout: &[u8]) -> Result<()> {
 
 impl std::fmt::Display for Exec {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "CommandExec with: {} {}",
-            self.command,
-            self.arguments.join(" ")
-        )
+        // Not the environment, it may hold secrets
+        write!(f, "Run {}", self.command)?;
+        for argument in &self.arguments {
+            write!(f, " {argument}")?;
+        }
+        Ok(())
     }
 }
 

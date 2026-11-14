@@ -42,12 +42,11 @@ impl Change for Unarchive {
 
 impl std::fmt::Display for Unarchive {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let origin_path = self.origin.display().to_string();
-        let dest_path = self.dest.display().to_string();
-
         write!(
             f,
-            "The archive {origin_path} to be decompressed to {dest_path}"
+            "Unpack {} into {}",
+            self.origin.display(),
+            self.dest.display()
         )
     }
 }

@@ -1,5 +1,5 @@
 //! A status line for a step that takes a while, like a long `package.install`, so comtrya doesn't
-//! look stuck: `⠋ CommandExec with: brew install git … 12s`. It's drawn on the terminal over and
+//! look stuck: `⠋ Run brew install git … 12s`. It's drawn on the terminal over and
 //! over in place, and wiped before the next log line
 
 use std::io::Write;
