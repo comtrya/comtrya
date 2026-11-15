@@ -54,12 +54,11 @@ impl PackageProvider for Winget {
     }
 
     fn available(&self) -> bool {
-        match which("winget") {
-            Ok(_) => true,
-            Err(_) => {
-                warn!(message = "winget not available");
-                false
-            }
+        if which("winget").is_ok() {
+            true
+        } else {
+            warn!(message = "winget not available");
+            false
         }
     }
 

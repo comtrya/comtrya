@@ -14,6 +14,10 @@ use crate::runtime;
 
 /// Reads the TXT records of the host as `key=value`, using Google's DNS. Records without `=`
 /// are left out
+///
+/// # Errors
+///
+/// When the URL has no host or the lookup fails
 pub fn txt_record_values(url: &Url, contexts: &mut HashMap<String, String>) -> Result<()> {
     let host = url
         .host_str()

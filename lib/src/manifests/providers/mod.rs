@@ -70,5 +70,9 @@ pub trait ManifestProvider {
     fn looks_familiar(&self, url: &str) -> bool;
 
     /// The directory with the manifests
+    ///
+    /// # Errors
+    ///
+    /// When the manifests aren't there, or can't be fetched
     fn resolve(&self, url: &str) -> Result<PathBuf, ManifestProviderError>;
 }

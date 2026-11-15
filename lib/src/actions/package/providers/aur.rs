@@ -112,12 +112,11 @@ impl PackageProvider for AurHelper {
     }
 
     fn available(&self) -> bool {
-        match which(self.helper.command) {
-            Ok(_) => true,
-            Err(_) => {
-                warn!("{} not available", self.helper.command);
-                false
-            }
+        if which(self.helper.command).is_ok() {
+            true
+        } else {
+            warn!("{} not available", self.helper.command);
+            false
         }
     }
 
@@ -174,7 +173,7 @@ fn refuse_root(provider: &str, facts: &Facts) -> Result<()> {
 
 /// The arguments as owned strings, for `Exec`
 fn strings(args: &[&str]) -> Vec<String> {
-    args.iter().map(|arg| arg.to_string()).collect()
+    args.iter().map(std::string::ToString::to_string).collect()
 }
 
 #[cfg(test)]
@@ -259,7 +258,7 @@ mod tests {
     #[test]
     fn bootstrap_builds_the_helper_from_the_aur() {
         let steps = AurHelper::paru().bootstrap(&Facts::default());
-        let commands: Vec<String> = steps.iter().map(|step| step.to_string()).collect();
+        let commands: Vec<String> = steps.iter().map(std::string::ToString::to_string).collect();
 
         // Only pacman runs as root: makepkg refuses to
         assert_eq!(3, commands.len());

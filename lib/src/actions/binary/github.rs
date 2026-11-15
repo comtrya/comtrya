@@ -286,7 +286,7 @@ mod tests {
     }
 
     fn terms(terms: &[&str]) -> Vec<String> {
-        terms.iter().map(|term| term.to_string()).collect()
+        terms.iter().map(std::string::ToString::to_string).collect()
     }
 
     #[test]

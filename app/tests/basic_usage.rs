@@ -33,16 +33,16 @@ fn dry_run_doesnt_error() {
                 ),
                 f(
                     "main.yaml",
-                    r#"
+                    r"
 actions:
   - action: directory.copy
     from: mydir
     to: mydircopy
-"#,
+",
                 ),
                 f(
                     "where_condition.yaml",
-                    r#"
+                    r"
 where: non.existing.variable == true
 
 actions:
@@ -50,7 +50,7 @@ actions:
     command: echo
     args:
       - hello, world!
-                    "#,
+                    ",
                 ),
             ],
         )],
@@ -68,13 +68,13 @@ fn apply_without_config_uses_current_directory() {
     let t = TempDir::new().expect("could not create tempdir");
     f(
         "hello.yaml",
-        r#"
+        r"
 actions:
   - action: command.run
     command: echo
     args:
       - hello
-"#,
+",
     )
     .create_in(t.path())
     .expect("should have created manifest");

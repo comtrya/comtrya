@@ -128,7 +128,7 @@ fn without_nulls(value: Value) -> Value {
 
 /// Whether `value` is `{}`
 fn is_empty_object(value: &Value) -> bool {
-    value.as_object().is_some_and(|fields| fields.is_empty())
+    value.as_object().is_some_and(serde_json::Map::is_empty)
 }
 
 fn current(dir: &Path, facts: &Value) -> BTreeMap<String, Value> {
@@ -219,7 +219,7 @@ fn current_selections(manifest: &Value, facts: &Value) -> Value {
                 serde_json::from_value(action.clone()).unwrap();
             action
                 .select(&contexts)
-                .map(|selected| selected.cloned())
+                .map(<Option<&Value>>::cloned)
                 .map_err(|_| ())
         },
     )
@@ -237,7 +237,7 @@ fn released_selections(manifest: &Value, facts: &Value) -> Value {
                 serde_json::from_value(action.clone()).unwrap();
             action
                 .select(&contexts)
-                .map(|selected| selected.cloned())
+                .map(<Option<&Value>>::cloned)
                 .map_err(|_| ())
         },
     )

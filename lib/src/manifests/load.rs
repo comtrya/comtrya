@@ -147,7 +147,7 @@ pub fn load_all(manifest_path: PathBuf, contexts: &Contexts) -> Loaded {
 
             match load_file(&path, contexts) {
                 Ok(mut manifest) => {
-                    manifest.root_dir = path.parent().map(|parent| parent.to_path_buf());
+                    manifest.root_dir = path.parent().map(std::path::Path::to_path_buf);
                     manifest.name = Some(name.clone());
                     loaded.manifests.insert(name, manifest);
                 }

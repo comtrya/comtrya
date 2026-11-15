@@ -21,12 +21,11 @@ impl PackageProvider for Dnf {
     }
 
     fn available(&self) -> bool {
-        match which("dnf") {
-            Ok(_) => true,
-            Err(_) => {
-                warn!(message = "dnf not available");
-                false
-            }
+        if which("dnf").is_ok() {
+            true
+        } else {
+            warn!(message = "dnf not available");
+            false
         }
     }
 

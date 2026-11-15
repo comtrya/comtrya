@@ -45,7 +45,7 @@ impl Aptitude {
             "apt",
             [String::from("install"), String::from("--yes")]
                 .into_iter()
-                .chain(packages.iter().map(|p| p.to_string()))
+                .chain(packages.iter().map(std::string::ToString::to_string))
                 .collect(),
         )
     }
@@ -130,12 +130,11 @@ impl PackageProvider for Aptitude {
     }
 
     fn available(&self) -> bool {
-        match which("apt") {
-            Ok(_) => true,
-            Err(_) => {
-                warn!(message = "apt not available");
-                false
-            }
+        if which("apt").is_ok() {
+            true
+        } else {
+            warn!(message = "apt not available");
+            false
         }
     }
 

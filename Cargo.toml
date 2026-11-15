@@ -18,6 +18,15 @@ repository = "https://github.com/comtrya/comtrya"
 homepage = "https://comtrya.dev"
 readme = "README.md"
 
+# A subset of `clippy::pedantic` that makes the code easier to read. CI denies warnings, so
+# these fail the build. `missing_errors_doc` is on for the library only, in `lib/src/lib.rs`
+[workspace.lints.clippy]
+manual_let_else = "warn"
+needless_raw_string_hashes = "warn"
+redundant_closure_for_method_calls = "warn"
+semicolon_if_nothing_returned = "warn"
+single_match_else = "warn"
+
 [workspace.dependencies]
 comtrya-lib = { path = "lib", version = "0.11.0" }
 

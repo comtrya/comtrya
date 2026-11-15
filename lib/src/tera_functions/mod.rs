@@ -43,12 +43,12 @@ mod test {
 
         let mut file = tempfile::NamedTempFile::new()?;
 
-        let file_content = r#"
+        let file_content = r"
 FKBR
 KUCI
 SXOE
 
-"#;
+";
 
         write!(file.as_file_mut(), "{file_content}")?;
 
@@ -59,9 +59,9 @@ SXOE
 
         let content = tera.render_str(&template, &Context::new())?;
 
-        let expected_file_content = r#"FKBR
+        let expected_file_content = r"FKBR
 KUCI
-SXOE"#;
+SXOE";
 
         assert_eq!(expected_file_content, content);
 

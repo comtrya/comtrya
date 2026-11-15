@@ -64,7 +64,8 @@ impl Display for Value {
             Value::String(string) => f.write_str(string),
             Value::Number(number) => write!(f, "{number}"),
             Value::List(list) => {
-                let items: Vec<String> = list.iter().map(|value| value.to_string()).collect();
+                let items: Vec<String> =
+                    list.iter().map(std::string::ToString::to_string).collect();
                 f.write_str(&items.join(","))
             }
         }

@@ -23,7 +23,7 @@ pub trait DirectoryAction: Action {
         let path = root_dir.join("files").join(path);
 
         path.normalize()
-            .map(|path| path.into_path_buf())
+            .map(normpath::BasePathBuf::into_path_buf)
             .map_err(|_| Error::NotFound(path))
     }
 }

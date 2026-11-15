@@ -147,11 +147,11 @@ mod tests {
 
     #[test]
     fn it_can_be_deserialized() {
-        let yaml = r#"
+        let yaml = r"
 - action: file.download
   from: a
   to: b
-"#;
+";
 
         let mut actions: Vec<Actions> = serde_yaml_ng::from_str(yaml).unwrap();
 
@@ -183,13 +183,13 @@ mod tests {
     #[test]
     #[cfg(unix)]
     fn it_can_be_deserialized_owners() {
-        let yaml = r#"
+        let yaml = r"
 - action: file.download
   from: a
   to: b
   owned_by_user: test
   owned_by_group: test
-"#;
+";
 
         let mut actions: Vec<Actions> = serde_yaml_ng::from_str(yaml).unwrap();
 
@@ -222,7 +222,7 @@ mod tests {
 
         match actions.pop() {
             Some(Actions::FileDownload(action)) => {
-                assert_eq!(Some("ABC"), action.action.sha256.as_deref())
+                assert_eq!(Some("ABC"), action.action.sha256.as_deref());
             }
             _ => panic!("FileDownload didn't deserialize to the correct type"),
         }

@@ -140,15 +140,12 @@ impl GitManifestProvider {
 
     /// Splits a location into URL, branch and path
     fn parse_config_url(&self, uri: &str) -> GitConfig {
-        let (repository, parts) = match uri.split_once('#') {
-            Some(parts) => parts,
-            None => {
-                return GitConfig {
-                    repository: String::from(uri),
-                    branch: None,
-                    path: None,
-                };
-            }
+        let Some((repository, parts)) = uri.split_once('#') else {
+            return GitConfig {
+                repository: String::from(uri),
+                branch: None,
+                path: None,
+            };
         };
 
         let (reference, path) = match parts.split_once(':') {

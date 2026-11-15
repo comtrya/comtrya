@@ -131,38 +131,34 @@ pub(crate) fn load_config(args: &GlobalArgs) -> Result<Config> {
 /// Exits if the user specified an invalid config file path
 /// returns errors if file read fails or its content is not successfully deserialized
 pub fn lib_config(args: &GlobalArgs) -> anyhow::Result<Config> {
-    let mut config = match find_configs(args) {
-        Some(config_path) => {
-            let contents = std::fs::read_to_string(&config_path)
-                .with_context(|| format!("Found {}, but can't read it", config_path.display()))?;
+    let mut config = if let Some(config_path) = find_configs(args) {
+        let contents = std::fs::read_to_string(&config_path)
+            .with_context(|| format!("Found {}, but can't read it", config_path.display()))?;
 
-            let mut config = comtrya_lib::config::parse(&contents, &config_path)
-                .with_context(|| format!("Found {}, but can't read it", config_path.display()))?;
+        let mut config = comtrya_lib::config::parse(&contents, &config_path)
+            .with_context(|| format!("Found {}, but can't read it", config_path.display()))?;
 
-            // Without `manifest_paths`, the manifests are next to the config file
-            let dir = config_dir(&config_path);
-            for path in &mut config.manifest_paths {
-                *path = relative_to(&dir, path);
-            }
-            if config.manifest_paths.is_empty() {
-                config.manifest_paths.push(dir);
-            }
-
-            config
+        // Without `manifest_paths`, the manifests are next to the config file
+        let dir = config_dir(&config_path);
+        for path in &mut config.manifest_paths {
+            *path = relative_to(&dir, path);
+        }
+        if config.manifest_paths.is_empty() {
+            config.manifest_paths.push(dir);
         }
 
-        None => {
-            // Panic early if an incorrect configuration path was specified by the user.
-            if let Some(cfg_path) = &args.config_path {
-                return Err(anyhow!(
-                    "The user specified a file at {cfg_path} but none exists."
-                ));
-            }
+        config
+    } else {
+        // Panic early if an incorrect configuration path was specified by the user.
+        if let Some(cfg_path) = &args.config_path {
+            return Err(anyhow!(
+                "The user specified a file at {cfg_path} but none exists."
+            ));
+        }
 
-            Config {
-                manifest_paths: vec![String::from(".")],
-                ..Default::default()
-            }
+        Config {
+            manifest_paths: vec![String::from(".")],
+            ..Default::default()
         }
     };
 

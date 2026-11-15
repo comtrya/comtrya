@@ -139,6 +139,10 @@ impl PackageProviders {
 
     /// The provider an action uses: its own `provider`, else the one in the facts
     /// (`package_provider` in `Comtrya.yaml`, else the default for this OS)
+    ///
+    /// # Errors
+    ///
+    /// When neither the action nor the facts name a provider, see [`Error::NoPackageProvider`]
     pub fn resolve(provider: Option<&PackageProviders>, facts: &Facts) -> Result<Self> {
         provider
             .cloned()
@@ -289,7 +293,7 @@ mod tests {
 
         match PackageProviders::for_os() {
             Some(default) => {
-                assert_eq!(PackageProviders::resolve(None, &facts).unwrap(), default)
+                assert_eq!(PackageProviders::resolve(None, &facts).unwrap(), default);
             }
             None => assert!(PackageProviders::resolve(None, &facts).is_err()),
         }

@@ -56,21 +56,9 @@ mod tests {
 
     #[test]
     fn it_can_plan() {
-        let to_file = match tempfile::NamedTempFile::new() {
-            std::result::Result::Ok(file) => file,
-            std::result::Result::Err(_) => {
-                assert_eq!(false, true);
-                return;
-            }
-        };
+        let to_file = tempfile::NamedTempFile::new().unwrap();
 
-        let mut from_file = match tempfile::NamedTempFile::new() {
-            std::result::Result::Ok(file) => file,
-            std::result::Result::Err(_) => {
-                assert_eq!(false, true);
-                return;
-            }
-        };
+        let mut from_file = tempfile::NamedTempFile::new().unwrap();
 
         assert_eq!(
             true,
@@ -100,21 +88,9 @@ mod tests {
     fn it_can_execute() {
         use std::io::Write;
 
-        let to_file = match tempfile::NamedTempFile::new() {
-            std::result::Result::Ok(file) => file,
-            std::result::Result::Err(_) => {
-                assert_eq!(false, true);
-                return;
-            }
-        };
+        let to_file = tempfile::NamedTempFile::new().unwrap();
 
-        let mut from_file = match tempfile::NamedTempFile::new() {
-            std::result::Result::Ok(file) => file,
-            std::result::Result::Err(_) => {
-                assert_eq!(false, true);
-                return;
-            }
-        };
+        let mut from_file = tempfile::NamedTempFile::new().unwrap();
 
         assert_eq!(
             true,
@@ -137,21 +113,9 @@ mod tests {
 
     #[test]
     fn it_wont_destroy_directories() {
-        let to = match tempfile::TempDir::new() {
-            std::result::Result::Ok(dir) => dir,
-            std::result::Result::Err(_) => {
-                assert_eq!(false, true);
-                return;
-            }
-        };
+        let to = tempfile::TempDir::new().unwrap();
 
-        let from_file = match tempfile::NamedTempFile::new() {
-            std::result::Result::Ok(file) => file,
-            std::result::Result::Err(_) => {
-                assert_eq!(false, true);
-                return;
-            }
-        };
+        let from_file = tempfile::NamedTempFile::new().unwrap();
 
         let file_copy = Copy {
             from: from_file.path().to_path_buf(),

@@ -87,13 +87,7 @@ mod tests {
 
     #[test]
     fn it_can_execute() {
-        let temp_dir = match tempfile::tempdir() {
-            std::result::Result::Ok(dir) => dir,
-            std::result::Result::Err(_) => {
-                assert_eq!(false, true);
-                return;
-            }
-        };
+        let temp_dir = tempfile::tempdir().unwrap();
 
         let path = temp_dir.path();
 
@@ -106,6 +100,6 @@ mod tests {
         // Deletes dir
         assert_eq!(true, atom.execute().is_ok());
         // Dir is deleted and dont exists
-        assert_eq!(false, temp_dir.path().exists())
+        assert_eq!(false, temp_dir.path().exists());
     }
 }

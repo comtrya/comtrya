@@ -121,6 +121,10 @@ impl<T> ConditionalVariantAction<T> {
     /// - A variant applies even when the action's own `where` is false
     /// - A variant without `where` never applies
     /// - A variant's `where` that can't be evaluated counts as false, the action's is an error
+    ///
+    /// # Errors
+    ///
+    /// When the action's own `where` can't be evaluated
     pub fn select(&self, contexts: &Contexts) -> Result<Option<&T>> {
         let variant = self.variants.iter().find(|variant| {
             variant.condition.as_ref().is_some_and(|condition| {
@@ -180,6 +184,10 @@ pub trait Action {
     /// One line about what the action does, for the output
     fn summarize(&self) -> String;
     /// The steps that bring the system to what the action asks for. Doesn't change the system
+    ///
+    /// # Errors
+    ///
+    /// When the action can't be planned, like a missing source file or no package provider
     fn plan(&self, manifest: &Manifest, cx: &PlanCx) -> Result<Vec<Step>>;
 
     /// Whether all of its steps run as root, see `privileged` on the file and directory actions
@@ -230,7 +238,7 @@ mod tests {
 
     #[test]
     fn can_parse_some_advanced_stuff() {
-        let content = r#"
+        let content = r"
 actions:
 - action: command.run
   command: echo
@@ -239,14 +247,13 @@ actions:
   variants:
     - where: Debian
       command: halt
-"#;
+";
         let m: Manifest = serde_yaml_ng::from_str(content).unwrap();
 
         let action = &m.actions[0];
 
-        let ext = match action {
-            Actions::CommandRun(cr) => cr,
-            _ => panic!("did not get a command to run"),
+        let Actions::CommandRun(ext) = action else {
+            panic!("did not get a command to run");
         };
 
         assert_eq!(
@@ -271,13 +278,13 @@ actions:
 
     #[test]
     fn display_shows_the_action_name() {
-        let content = r#"
+        let content = r"
 actions:
 - action: bin.gh
   name: comtrya
   directory: /tmp
   repository: comtrya/comtrya
-"#;
+";
         let m: Manifest = serde_yaml_ng::from_str(content).unwrap();
         let action = &m.actions[0];
 

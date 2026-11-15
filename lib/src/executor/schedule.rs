@@ -135,7 +135,10 @@ mod tests {
             .map(|(name, depends)| {
                 let manifest = Manifest {
                     name: Some(name.to_string()),
-                    depends: depends.iter().map(|d| d.to_string()).collect(),
+                    depends: depends
+                        .iter()
+                        .map(std::string::ToString::to_string)
+                        .collect(),
                     ..Default::default()
                 };
                 (name.to_string(), manifest)

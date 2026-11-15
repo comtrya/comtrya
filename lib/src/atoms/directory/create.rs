@@ -53,13 +53,7 @@ mod tests {
 
     #[test]
     fn it_can_execute() {
-        let temp_dir = match tempfile::tempdir() {
-            std::result::Result::Ok(dir) => dir,
-            std::result::Result::Err(_) => {
-                assert_eq!(false, true);
-                return;
-            }
-        };
+        let temp_dir = tempfile::tempdir().unwrap();
 
         let atom = Create {
             path: temp_dir.path().join("create-me"),

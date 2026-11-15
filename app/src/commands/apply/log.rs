@@ -55,7 +55,7 @@ impl Log {
 
     /// Ends the innermost span of this thread
     fn leave(&self) {
-        SPANS.with_borrow_mut(|spans| spans.pop());
+        SPANS.with_borrow_mut(std::vec::Vec::pop);
     }
 
     /// Logs that the action failed: an error, or a warning if the manifest goes on
@@ -72,7 +72,7 @@ impl Log {
         match skip {
             Skip::DependencyFailed => warn!("Skipping manifest, because a dependency failed"),
             Skip::LabelMissing(label) => {
-                info!(message = "Skipping manifest, label not found", label)
+                info!(message = "Skipping manifest, label not found", label);
             }
             Skip::WhereFalse => info!("Skip manifest, because 'where' conditions were false!"),
             Skip::WhereFailed { condition, error } => {
@@ -102,7 +102,7 @@ impl Observer for Log {
                 self.leave();
             }
             Event::WhereEvaluated { condition, result } => {
-                debug!("Result of 'where' condition '{condition}' -> '{result}'")
+                debug!("Result of 'where' condition '{condition}' -> '{result}'");
             }
             Event::ManifestDone { failed: true } => {
                 error!("Failed");
@@ -127,10 +127,10 @@ impl Observer for Log {
             }
             Event::StepSkipped { step, reason } => match reason {
                 StepSkip::Missing(needs) => {
-                    warn!("Skipping {step}: {} doesn't exist", needs.display())
+                    warn!("Skipping {step}: {} doesn't exist", needs.display());
                 }
                 StepSkip::CheckFailed(error) => {
-                    warn!("Skipping {step}: {}", chain(*error))
+                    warn!("Skipping {step}: {}", chain(*error));
                 }
             },
             Event::StepChange(change) if self.dry_run => info!("{change}"),
@@ -144,13 +144,14 @@ impl Observer for Log {
                 line,
             } => debug!("stderr: {line}"),
             Event::StepFailed { step, error } => {
-                self.failed(&format!("{step} failed: {}", chain(*error)))
+                self.failed(&format!("{step} failed: {}", chain(*error)));
             }
             Event::Cancelled => warn!("Cancelled, nothing else runs"),
             Event::ActionDone { summary } => {
-                match summary {
-                    Some(summary) => info!("{summary}"),
-                    None => info!("nothing to be done to reconcile action"),
+                if let Some(summary) = summary {
+                    info!("{summary}");
+                } else {
+                    info!("nothing to be done to reconcile action");
                 }
                 self.leave();
             }

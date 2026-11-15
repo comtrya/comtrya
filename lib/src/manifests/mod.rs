@@ -61,6 +61,11 @@ pub const MANIFEST_VERSION: u32 = 1;
 
 /// Finds the manifests at `uri`: a local directory, or a git repository that's cloned into the
 /// cache. The error is the one of the last provider that tried
+///
+/// # Errors
+///
+/// When no provider can resolve `uri`, like a missing directory or a repository that can't be
+/// cloned
 pub fn resolve(uri: &str) -> Result<PathBuf, ManifestProviderError> {
     let mut error = None;
 
@@ -89,6 +94,10 @@ pub fn resolve(uri: &str) -> Result<PathBuf, ManifestProviderError> {
 
 /// The name of the manifest at `location`: its path below `manifest_directory`, with `.`
 /// between the parts and without `.yaml`/`.yml`/`.toml`. `x/main.yaml` is `x`
+///
+/// # Errors
+///
+/// When `location` isn't inside `manifest_directory`
 pub fn get_manifest_name(
     manifest_directory: &Path,
     location: &Path,

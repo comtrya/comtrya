@@ -118,10 +118,10 @@ impl FileLink {
                         steps.push(Step::new(Link {
                             source: p.clone(),
                             target: to.join(file_name),
-                        }))
+                        }));
                     }
                 }
-            })
+            });
         }
 
         steps
@@ -172,11 +172,11 @@ mod tests {
 
     #[test]
     fn it_can_be_deserialized() {
-        let yaml = r#"
+        let yaml = r"
 - action: file.link
   source: a
   target: b
-"#;
+";
 
         let mut actions: Vec<Actions> = serde_yaml_ng::from_str(yaml).unwrap();
 
@@ -191,11 +191,11 @@ mod tests {
         };
 
         // Old style format
-        let yaml = r#"
+        let yaml = r"
 - action: file.link
   from: a
   to: b
-"#;
+";
 
         let mut actions: Vec<Actions> = serde_yaml_ng::from_str(yaml).unwrap();
 
@@ -212,13 +212,7 @@ mod tests {
 
     #[test]
     fn it_links_directories() {
-        let source_dir = match tempfile::tempdir() {
-            Ok(dir) => dir,
-            Err(_) => {
-                assert_eq!(false, true);
-                return;
-            }
-        };
+        let source_dir = tempfile::tempdir().unwrap();
 
         let manifest: Manifest = Manifest {
             r#where: None,

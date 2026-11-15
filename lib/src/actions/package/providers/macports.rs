@@ -20,12 +20,11 @@ impl PackageProvider for Macports {
     }
 
     fn available(&self) -> bool {
-        match which("port") {
-            Ok(_) => true,
-            Err(_) => {
-                warn!(message = "MacPorts not available, check if in $PATH");
-                false
-            }
+        if which("port").is_ok() {
+            true
+        } else {
+            warn!(message = "MacPorts not available, check if in $PATH");
+            false
         }
     }
 
@@ -49,12 +48,9 @@ impl PackageProvider for Macports {
     }
 
     fn install(&self, package: &PackageVariant, _facts: &Facts) -> Result<Vec<Step>> {
-        let cli = match which("port") {
-            Ok(c) => c,
-            Err(_) => {
-                warn!(message = "MacPorts is not availiable.");
-                return Ok(vec![]);
-            }
+        let Ok(cli) = which("port") else {
+            warn!(message = "MacPorts is not availiable.");
+            return Ok(vec![]);
         };
 
         Ok(vec![Step::new(Exec {

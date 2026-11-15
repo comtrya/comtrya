@@ -78,7 +78,7 @@ impl Progress {
     fn state(&self) -> std::sync::MutexGuard<'_, State> {
         self.state
             .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
     }
 }
 
@@ -119,7 +119,7 @@ fn draw(state: &Weak<Mutex<State>>, after: Duration) {
         };
         let mut state = state
             .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner());
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
         state.draw(frame, after);
     }
 }
