@@ -31,14 +31,22 @@ ctrlc = "3.5.2"
 dirs = "7.0"
 flate2 = "1.1.9"
 gethostname = "1.1"
-gix = { version = "0.90.0", features = [
-    "status",
+# Only what comtrya calls: clone, fetch and check out a worktree. The defaults also build merge,
+# blame, mailmap, archives and notes
+gix = { version = "0.90.0", default-features = false, features = [
+    "max-performance",
+    "sha1",
+    "auto-chain-error",
+    "worktree-mutation",
+    "credentials",
+    "interrupt",
     "tracing",
     "tracing-detail",
     "blocking-http-transport-reqwest-rust-tls",
     "blocking-network-client",
 ] }
-hickory-resolver = "0.26.2"
+# `dns:` includes always ask Google's resolvers, so the system's resolver config isn't read
+hickory-resolver = { version = "0.26.2", default-features = false, features = ["tokio"] }
 ignore = "0.4"
 normpath = "1.5"
 os_info = { version = "3.14", features = ["schemars"] }
@@ -77,3 +85,8 @@ predicates = "3.1"
 pretty_assertions = "1.4"
 tempfile = "3.26"
 walkdir = "2.5"
+
+# Dependencies build without debug info: faster debug builds and a smaller target dir. Backtraces
+# still name the functions, they only lose variables inside dependencies
+[profile.dev.package."*"]
+debug = "line-tables-only"
