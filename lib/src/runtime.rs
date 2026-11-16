@@ -1,5 +1,6 @@
-//! The one tokio runtime of comtrya: DNS lookups, downloads and the `include_variables` sources
-//! run on it, instead of each building its own runtime or blocking HTTP client
+//! The one tokio runtime of comtrya: DNS lookups, downloads, the `include_variables` sources and
+//! the app's update check run on it, instead of each building its own runtime or blocking HTTP
+//! client
 
 use std::future::Future;
 use std::sync::LazyLock;
