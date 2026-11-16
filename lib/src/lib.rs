@@ -5,7 +5,9 @@
 #![warn(
     missing_docs,
     clippy::missing_docs_in_private_items,
-    clippy::missing_errors_doc
+    clippy::missing_errors_doc,
+    // A failure is an error, and `expect` is for what can't fail, saying why it holds
+    clippy::unwrap_used
 )]
 
 pub mod actions;

@@ -3,7 +3,7 @@
 use std::{
     collections::HashMap,
     fmt, io,
-    sync::{Arc, LazyLock, Mutex},
+    sync::{Arc, LazyLock, Mutex, MutexGuard},
 };
 
 /// A command that only reads the system, like asking a package manager what's installed.
@@ -113,22 +113,29 @@ impl Cached {
             answers: Mutex::default(),
         }
     }
+
+    /// The answers so far
+    fn answers(&self) -> MutexGuard<'_, HashMap<String, CommandOutput>> {
+        self.answers
+            .lock()
+            .expect("no command panicked while its answer was noted")
+    }
 }
 
 impl Runner for Cached {
     fn run(&self, command: &CommandSpec) -> io::Result<CommandOutput> {
         let line = command.to_string();
-        if let Some(output) = self.answers.lock().unwrap().get(&line) {
+        if let Some(output) = self.answers().get(&line) {
             return Ok(output.clone());
         }
 
         let output = self.inner.run(command)?;
-        self.answers.lock().unwrap().insert(line, output.clone());
+        self.answers().insert(line, output.clone());
         Ok(output)
     }
 
     fn forget(&self) {
-        self.answers.lock().unwrap().clear();
+        self.answers().clear();
     }
 }
 
