@@ -1,4 +1,5 @@
-//! Keeps steps that run at the same time from using the same things, see [`Resource`]
+//! Keeps steps that run at the same time from using the same things, see
+//! [`Resource`](crate::atoms::Resource)
 
 use crate::atoms::Resource;
 use std::sync::{

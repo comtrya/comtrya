@@ -26,7 +26,7 @@ const TIMEOUT: Duration = Duration::from_secs(30);
 type Values = HashMap<String, String>;
 
 /// Reads the variables of `include_variables` in `Comtrya.yaml`, the `include_variables` context.
-/// The sources are read at the same time. A source that fails or takes longer than [`TIMEOUT`]
+/// The sources are read at the same time. A source that fails or takes longer than 30 seconds
 /// is logged, and only its variables are left out
 pub fn gather(config: &Config) -> BTreeMap<String, String> {
     let sources: Vec<String> = config.include_variables.iter().flatten().cloned().collect();

@@ -145,7 +145,8 @@ pub enum Error {
         stderr: String,
     },
 
-    /// A program printed what stops the action, see [`crate::atoms::command::Exec::stop_if_stdout_contains`]
+    /// A program printed what stops the action, see `stop_if_stdout_contains` of
+    /// [`Exec`](crate::atoms::command::Exec)
     #[error("the output of `{command}` contains \"{text}\"")]
     StdoutContains {
         /// The program and its arguments

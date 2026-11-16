@@ -1,5 +1,5 @@
 //! The list of actions. Each action's name in manifests, its aliases and its type are written
-//! once, in [`actions!`]: the [`Actions`] enum, its serde names, its `Display` and
+//! once, in `actions!`: the [`Actions`] enum, its serde names, its `Display` and
 //! [`Actions::NAMES`] all come from there, so they can't drift apart
 
 use super::binary::BinaryGitHub;

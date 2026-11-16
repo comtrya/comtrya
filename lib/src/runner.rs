@@ -63,7 +63,7 @@ pub struct CommandOutput {
     pub stderr: Vec<u8>,
 }
 
-/// Runs read-only commands, so tests can replace the system with [`fake::FakeRunner`]
+/// Runs read-only commands, so tests can replace the system with `fake::FakeRunner`
 pub trait Runner: Send + Sync {
     /// Runs `command` and waits for it. Fails only if it can't be started
     ///
