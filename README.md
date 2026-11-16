@@ -82,4 +82,4 @@ Licensed under the [MIT license](./LICENSE).
 
 Comtrya is a free and open project and lives from contributions of the community.
 
-See our [Contribution Guide](CONTRIBUTING.md)
+See our [Contribution Guide](CONTRIBUTING.md), and [ARCHITECTURE.md](ARCHITECTURE.md) for a map of the code
