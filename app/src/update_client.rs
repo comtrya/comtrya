@@ -23,6 +23,7 @@ impl HttpClient for UpdateClient {
         timeout: Duration,
         headers: HeaderMap,
     ) -> update_informer::Result<T> {
+        comtrya_lib::tls::install_crypto_provider();
         let client = reqwest::Client::builder()
             .user_agent(USER_AGENT)
             .timeout(timeout)

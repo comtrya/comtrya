@@ -22,6 +22,7 @@ os_info.workspace = true
 petgraph.workspace = true
 regex.workspace = true
 reqwest.workspace = true
+rustls.workspace = true
 rhai = { workspace = true, features = ["sync"] }
 schemars.workspace = true
 serde.workspace = true

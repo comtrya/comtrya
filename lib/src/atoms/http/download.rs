@@ -66,6 +66,7 @@ impl Change for Download {
 
 /// The body of `url`, or an error if the server answers with one
 async fn fetch(url: &str) -> reqwest::Result<Vec<u8>> {
+    crate::tls::install_crypto_provider();
     let response = reqwest::get(url).await?.error_for_status()?;
     Ok(response.bytes().await?.into())
 }

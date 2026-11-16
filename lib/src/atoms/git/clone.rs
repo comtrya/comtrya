@@ -72,6 +72,7 @@ fn fetch_and_check_out(
     reference: Option<&str>,
     shallow: bool,
 ) -> std::result::Result<(), BoxError> {
+    crate::tls::install_crypto_provider();
     unsafe {
         interrupt::init_handler(1, || {})?;
     };

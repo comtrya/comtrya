@@ -21,6 +21,7 @@ pub mod runner;
 pub mod runtime;
 pub mod steps;
 pub mod tera_functions;
+pub mod tls;
 mod utilities;
 pub mod values;
 

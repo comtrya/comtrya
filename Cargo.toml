@@ -51,7 +51,8 @@ gix = { version = "0.90.0", default-features = false, features = [
     "interrupt",
     "tracing",
     "tracing-detail",
-    "blocking-http-transport-reqwest-rust-tls",
+    # TLS comes from comtrya's own reqwest, with the ring crypto provider
+    "blocking-http-transport-reqwest",
     "blocking-network-client",
 ] }
 # `dns:` includes always ask Google's resolvers, so the system's resolver config isn't read
@@ -61,7 +62,10 @@ normpath = "1.5"
 os_info = { version = "3.14", features = ["schemars"] }
 petgraph = "0.8"
 regex = "1.12"
-reqwest = { version = "0.13", default-features = false, features = ["json", "rustls"] }
+# `rustls-no-provider`: TLS uses ring, see `comtrya_lib::tls`. reqwest's default, aws-lc, builds C and
+# assembly and was the slowest crate of a release build
+reqwest = { version = "0.13", default-features = false, features = ["json", "rustls-no-provider"] }
+rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12", "logging"] }
 rhai = { version = "1.24", features = ["serde"] }
 schemars = "1.2"
 serde = { version = "1.0", features = ["derive"] }
