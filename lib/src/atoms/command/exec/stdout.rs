@@ -45,13 +45,14 @@ fn write_stdout(path: &Path, stdout: &[u8]) -> Result<()> {
     Ok(())
 }
 
+// Every test runs `sh`
 #[cfg(test)]
+#[cfg(unix)]
 mod tests {
     use crate::atoms::command::exec::new_run_command;
     use crate::atoms::Change;
     use pretty_assertions::assert_eq;
 
-    #[cfg(unix)]
     #[test]
     fn stdout_is_written_to_a_file() {
         let dir = tempfile::tempdir().unwrap();
@@ -65,7 +66,6 @@ mod tests {
         assert_eq!("hello\n", std::fs::read_to_string(stdout_file).unwrap());
     }
 
-    #[cfg(unix)]
     #[test]
     fn stdout_file_is_left_alone_when_the_command_fails() {
         let dir = tempfile::tempdir().unwrap();
@@ -80,7 +80,6 @@ mod tests {
         assert_eq!("before", std::fs::read_to_string(stdout_file).unwrap());
     }
 
-    #[cfg(unix)]
     #[test]
     fn it_stops_when_stdout_contains_the_text() {
         let mut command_run = new_run_command(String::from("echo"));
@@ -99,7 +98,6 @@ mod tests {
         command_run.execute().unwrap();
     }
 
-    #[cfg(unix)]
     #[test]
     fn output_that_isnt_utf8_doesnt_fail_the_command() {
         let dir = tempfile::tempdir().unwrap();

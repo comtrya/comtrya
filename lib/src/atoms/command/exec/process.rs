@@ -137,14 +137,15 @@ pub(super) fn log_line(stream: Stream, line: &str) {
     }
 }
 
+// Every test runs `sh`
 #[cfg(test)]
+#[cfg(unix)]
 mod tests {
     use super::*;
     use crate::atoms::command::exec::new_run_command;
     use crate::atoms::Change;
     use pretty_assertions::assert_eq;
 
-    #[cfg(unix)]
     #[test]
     fn the_error_has_the_exit_code() {
         let mut command_run = new_run_command(String::from("sh"));
@@ -154,7 +155,6 @@ mod tests {
         assert_eq!("Command failed with exit code: 3", error.to_string());
     }
 
-    #[cfg(unix)]
     #[test]
     fn environment_is_only_set_for_the_command() {
         let dir = tempfile::tempdir().unwrap();
@@ -180,7 +180,6 @@ mod tests {
     }
 
     /// Runs `script` with `sh -c` and returns the lines it printed, in order
-    #[cfg(unix)]
     fn lines_of(command_run: &mut Exec, script: &str) -> (Result<()>, Vec<(Stream, String)>) {
         use std::sync::Mutex;
 
@@ -194,7 +193,6 @@ mod tests {
         (result, lines.into_inner().unwrap())
     }
 
-    #[cfg(unix)]
     #[test]
     fn lines_arrive_in_order() {
         let (result, lines) = lines_of(&mut Exec::default(), "echo one; echo two; echo oops >&2");
@@ -211,7 +209,6 @@ mod tests {
         result.unwrap();
     }
 
-    #[cfg(unix)]
     #[test]
     fn lines_are_passed_while_the_program_runs() {
         use std::sync::mpsc;
@@ -239,7 +236,6 @@ mod tests {
         });
     }
 
-    #[cfg(unix)]
     #[test]
     fn a_program_reading_stdin_gets_an_end_of_file() {
         // Waits forever if stdin is the terminal or an open pipe
@@ -249,7 +245,6 @@ mod tests {
         assert_eq!(vec![(Stream::Stdout, String::from("done"))], lines);
     }
 
-    #[cfg(unix)]
     #[test]
     fn lines_that_arent_utf8_are_passed_lossily() {
         let (_, lines) = lines_of(&mut Exec::default(), "printf 'a\\377b\\n'");
@@ -257,7 +252,6 @@ mod tests {
         assert_eq!(vec![(Stream::Stdout, String::from("a\u{FFFD}b"))], lines);
     }
 
-    #[cfg(unix)]
     #[test]
     fn stdout_for_a_file_isnt_passed() {
         let dir = tempfile::tempdir().unwrap();
@@ -271,7 +265,6 @@ mod tests {
         assert_eq!(vec![(Stream::Stderr, String::from("note"))], lines);
     }
 
-    #[cfg(unix)]
     #[test]
     fn a_program_killed_by_a_signal_says_so() {
         let (result, _) = lines_of(&mut Exec::default(), "echo dying >&2; kill -9 $$");
