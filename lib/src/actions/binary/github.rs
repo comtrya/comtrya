@@ -57,6 +57,7 @@ fn fetch_release(
         Some(tag) => format!("{api}/repos/{owner}/{repo}/releases/tags/{tag}"),
     };
 
+    crate::tls::install_crypto_provider();
     let mut request = reqwest::Client::new()
         .get(&url)
         .header("Accept", "application/vnd.github+json")
