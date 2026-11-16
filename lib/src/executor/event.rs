@@ -114,7 +114,7 @@ pub trait Observer: Sync {
 
 impl<F: Fn(&Event) + Sync> Observer for F {
     fn on(&self, event: &Event) {
-        self(event)
+        self(event);
     }
 }
 

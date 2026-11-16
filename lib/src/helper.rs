@@ -18,6 +18,11 @@ type Answer = std::result::Result<(), String>;
 
 /// Answers requests from `requests` on `answers` until `requests` ends. This is
 /// `comtrya __helper`, it runs as root
+///
+/// # Errors
+///
+/// When `requests` can't be read or `answers` can't be written. A failing atom isn't an
+/// error, it's an answer
 pub fn serve(requests: impl BufRead, mut answers: impl Write) -> io::Result<()> {
     for request in requests.lines() {
         let answer = answer(&request?);

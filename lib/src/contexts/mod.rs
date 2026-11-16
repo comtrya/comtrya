@@ -65,11 +65,20 @@ pub enum ConditionError {
 }
 
 /// Evaluates a `where` condition against the contexts
+///
+/// # Errors
+///
+/// When the contexts can't be turned into Rhai values, or the condition isn't valid Rhai,
+/// fails, or isn't true or false
 pub fn evaluate_condition(condition: &str, contexts: &Contexts) -> Result<bool, ConditionError> {
     Ok(ENGINE.eval_with_scope::<bool>(&mut to_rhai(contexts)?, condition)?)
 }
 
 /// The contexts as constants for a `where` condition
+///
+/// # Errors
+///
+/// When a context value can't be turned into a Rhai value
 pub fn to_rhai(context: &Contexts) -> Result<rhai::Scope<'_>, ConditionError> {
     let mut scope = Scope::new();
 
@@ -104,7 +113,7 @@ mod test {
         assert!(evaluate_condition(r#"user.username == "rawkode""#, &contexts).unwrap());
         assert!(!evaluate_condition(r#"user.username == "root""#, &contexts).unwrap());
         assert!(evaluate_condition("user.username ==", &contexts).is_err());
-        assert!(evaluate_condition(r#"user.username"#, &contexts).is_err());
+        assert!(evaluate_condition(r"user.username", &contexts).is_err());
     }
 
     #[test]

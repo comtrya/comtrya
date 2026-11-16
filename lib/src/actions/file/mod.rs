@@ -25,7 +25,7 @@ pub trait FileAction: Action {
         let path = files_dir(manifest, path)?.join(path);
 
         path.normalize()
-            .map(|path| path.into_path_buf())
+            .map(normpath::BasePathBuf::into_path_buf)
             .map_err(|_| Error::NotFound(path))
     }
 

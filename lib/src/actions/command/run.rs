@@ -95,12 +95,12 @@ mod tests {
 
     #[test]
     fn it_can_be_deserialize() {
-        let yaml = r#"
+        let yaml = r"
   - action: command.run
     command: echo
     args:
       - hi
-"#;
+";
 
         let mut actions: Vec<Actions> = serde_yaml_ng::from_str(yaml).unwrap();
 
@@ -117,14 +117,14 @@ mod tests {
 
     #[test]
     fn it_can_deserialize_env_vars() {
-        let yaml = r#"
+        let yaml = r"
   - action: command.run
     command: echo
     args:
       - hi
     env:
         GOROOT: test
-"#;
+";
 
         let mut actions: Vec<Actions> = serde_yaml_ng::from_str(yaml).unwrap();
 
@@ -145,12 +145,12 @@ mod tests {
 
     #[test]
     fn stdout_is_relative_to_dir() {
-        let yaml = r#"
+        let yaml = r"
   - action: command.run
     command: echo
     dir: /tmp/work
     stdout: completions/echo
-"#;
+";
 
         let mut actions: Vec<Actions> = serde_yaml_ng::from_str(yaml).unwrap();
 

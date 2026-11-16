@@ -58,30 +58,18 @@ mod tests {
 
     #[test]
     fn it_can_plan() {
-        let target_file = match tempfile::NamedTempFile::new() {
-            std::result::Result::Ok(file) => file,
-            std::result::Result::Err(_) => {
-                assert_eq!(false, true);
-                return;
-            }
-        };
+        let target_file = tempfile::NamedTempFile::new().unwrap();
 
         let file_remove = Remove {
             target: target_file.path().to_path_buf(),
         };
 
-        assert_eq!(Check::Drift(None), file_remove.check().unwrap())
+        assert_eq!(Check::Drift(None), file_remove.check().unwrap());
     }
 
     #[test]
     fn it_can_execute() {
-        let target_file = match tempfile::NamedTempFile::new() {
-            std::result::Result::Ok(file) => file,
-            std::result::Result::Err(_) => {
-                assert_eq!(false, true);
-                return;
-            }
-        };
+        let target_file = tempfile::NamedTempFile::new().unwrap();
 
         let file_remove = Remove {
             target: target_file.path().to_path_buf(),
@@ -89,7 +77,7 @@ mod tests {
 
         assert_eq!(Check::Drift(None), file_remove.check().unwrap());
         assert!(file_remove.execute().is_ok());
-        assert_eq!(Check::InSync, file_remove.check().unwrap())
+        assert_eq!(Check::InSync, file_remove.check().unwrap());
     }
 
     #[test]

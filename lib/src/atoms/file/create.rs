@@ -44,13 +44,7 @@ mod tests {
 
         assert_eq!(Check::Drift(None), file_create.check().unwrap());
 
-        let temp_file = match tempfile::NamedTempFile::new() {
-            std::result::Result::Ok(file) => file,
-            std::result::Result::Err(_) => {
-                assert_eq!(false, true);
-                return;
-            }
-        };
+        let temp_file = tempfile::NamedTempFile::new().unwrap();
 
         let file_create = Create {
             path: temp_file.path().to_path_buf(),
@@ -61,13 +55,7 @@ mod tests {
 
     #[test]
     fn it_can_execute() {
-        let temp_dir = match tempfile::tempdir() {
-            std::result::Result::Ok(dir) => dir,
-            std::result::Result::Err(_) => {
-                assert_eq!(false, true);
-                return;
-            }
-        };
+        let temp_dir = tempfile::tempdir().unwrap();
 
         let file_create = Create {
             path: temp_dir.path().join("create-me"),

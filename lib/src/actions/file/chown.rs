@@ -71,11 +71,11 @@ mod tests {
 
     #[test]
     fn it_can_be_deserialized_user() {
-        let yaml = r#"
+        let yaml = r"
 - action: file.chown
   path: /home/test/one
   user: test
-"#;
+";
 
         let mut actions: Vec<Actions> = serde_yaml_ng::from_str(yaml).unwrap();
         match actions.pop() {
@@ -92,11 +92,11 @@ mod tests {
 
     #[test]
     fn it_can_be_deserialized_group() {
-        let yaml = r#"
+        let yaml = r"
 - action: file.chown
   path: /home/test/one
   group: test
-"#;
+";
 
         let mut actions: Vec<Actions> = serde_yaml_ng::from_str(yaml).unwrap();
         match actions.pop() {

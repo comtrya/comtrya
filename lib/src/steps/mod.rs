@@ -30,6 +30,10 @@ impl Step {
 
     /// The atom to execute: a root step runs through `privilege`, unless comtrya runs as root
     /// already
+    ///
+    /// # Errors
+    ///
+    /// When a root step's atom can't run through `privilege`, see [`Atom::elevated`]
     pub fn atom_to_run(&self, privilege: &Privilege) -> atoms::Result<Atom> {
         self.atom_to_run_with(privilege, utilities::running_as_root())
     }

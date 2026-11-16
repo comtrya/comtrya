@@ -23,6 +23,10 @@ pub enum ParseError {
 
 /// Reads the contents of the config file at `path`: TOML for a `.toml` file, YAML otherwise. An
 /// empty file is the default config
+///
+/// # Errors
+///
+/// When the contents aren't valid TOML or YAML for a config
 pub fn parse(contents: &str, path: &Path) -> Result<Config, ParseError> {
     if contents.trim().is_empty() {
         return Ok(Config::default());

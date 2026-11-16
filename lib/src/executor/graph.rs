@@ -78,20 +78,17 @@ impl ManifestGraph {
         for dependency in &manifest.depends {
             let dependency = dependency_name(directory, dependency);
 
-            match self.nodes.get(&dependency) {
-                Some(&dependency_node) => {
-                    trace!(
-                        message = "Dependency Registered",
-                        from = name,
-                        to = dependency.as_str()
-                    );
-                    self.dag.add_edge(node, dependency_node, 0);
-                }
-                None => {
-                    let reason =
-                        format!("Manifest '{name}' depends on '{dependency}', which doesn't exist");
-                    self.broken.insert(node, reason);
-                }
+            if let Some(&dependency_node) = self.nodes.get(&dependency) {
+                trace!(
+                    message = "Dependency Registered",
+                    from = name,
+                    to = dependency.as_str()
+                );
+                self.dag.add_edge(node, dependency_node, 0);
+            } else {
+                let reason =
+                    format!("Manifest '{name}' depends on '{dependency}', which doesn't exist");
+                self.broken.insert(node, reason);
             }
         }
     }
@@ -173,7 +170,10 @@ mod tests {
     fn manifest(name: &str, depends: &[&str]) -> Manifest {
         Manifest {
             name: Some(name.to_string()),
-            depends: depends.iter().map(|d| d.to_string()).collect(),
+            depends: depends
+                .iter()
+                .map(std::string::ToString::to_string)
+                .collect(),
             ..Default::default()
         }
     }
@@ -200,7 +200,10 @@ mod tests {
     }
 
     fn names(graph: &ManifestGraph, selected: &[&str]) -> Vec<String> {
-        let selected: Vec<String> = selected.iter().map(|name| name.to_string()).collect();
+        let selected: Vec<String> = selected
+            .iter()
+            .map(std::string::ToString::to_string)
+            .collect();
         graph
             .run_order(&selected)
             .into_iter()

@@ -112,13 +112,7 @@ mod tests {
             .into_string()
             .unwrap();
 
-        let temp_file = match tempfile::NamedTempFile::new() {
-            std::result::Result::Ok(file) => file,
-            std::result::Result::Err(_) => {
-                assert_eq!(false, true);
-                return;
-            }
-        };
+        let temp_file = tempfile::NamedTempFile::new().unwrap();
 
         let file_chown = Chown {
             path: temp_file.path().to_path_buf(),

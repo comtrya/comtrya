@@ -2,7 +2,11 @@
 //! the steps that bring the system to the state the manifests describe, and runs them. The
 //! `comtrya` binary is the command line around it
 
-#![warn(missing_docs, clippy::missing_docs_in_private_items)]
+#![warn(
+    missing_docs,
+    clippy::missing_docs_in_private_items,
+    clippy::missing_errors_doc
+)]
 
 pub mod actions;
 pub mod atoms;

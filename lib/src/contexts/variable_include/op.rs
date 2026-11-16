@@ -28,6 +28,11 @@ struct Field {
 
 /// Loads the fields of a 1Password item, `op://<vault>/<item>[?account=<account>]`, with the
 /// 1Password CLI. The values are secrets: they must never end up in an error or log message.
+///
+/// # Errors
+///
+/// When the URL isn't `op://<vault>/<item>`, `op` is missing, can't start or fails, or its
+/// answer isn't an item. The error never holds a value of the item
 pub fn item_values(
     include: &str,
     runner: &dyn Runner,

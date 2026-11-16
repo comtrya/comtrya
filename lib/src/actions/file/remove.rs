@@ -60,10 +60,10 @@ mod tests {
 
     #[test]
     fn it_can_be_deserialized() {
-        let yaml = r#"
+        let yaml = r"
 - action: file.remove
   target: a
-"#;
+";
 
         let mut actions: Vec<Actions> = serde_yaml_ng::from_str(yaml).unwrap();
 

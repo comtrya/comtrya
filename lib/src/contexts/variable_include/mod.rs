@@ -60,7 +60,7 @@ fn gather_with(
                     error_chain(&err)
                 ),
                 Ok(Err(_)) => {
-                    warn!("Can't read the variables of {source} in include_variables: it crashed")
+                    warn!("Can't read the variables of {source} in include_variables: it crashed");
                 }
                 Err(_) => warn!(
                     "Left out the variables of {source} in include_variables: no answer within {}s",
@@ -139,7 +139,7 @@ mod concurrency_tests {
     use std::sync::Barrier;
 
     fn sources(names: &[&str]) -> Vec<String> {
-        names.iter().map(|name| name.to_string()).collect()
+        names.iter().map(std::string::ToString::to_string).collect()
     }
 
     fn values(pairs: &[(&str, &str)]) -> Values {

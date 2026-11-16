@@ -127,7 +127,7 @@ impl Exec {
             let stderr = scope.spawn(|| read_lines(stderr, &|line| on_line(Stream::Stderr, line)));
             let stdout = read_lines(stdout, &|line| {
                 if show_stdout {
-                    on_line(Stream::Stdout, line)
+                    on_line(Stream::Stdout, line);
                 }
             });
             (stdout, stderr.join().expect("reading stderr doesn't panic"))
@@ -238,6 +238,11 @@ impl Change for Exec {
 impl Exec {
     /// Runs the program like [`Change::execute`], and passes each line it prints to `on_line`
     /// while it runs
+    ///
+    /// # Errors
+    ///
+    /// When the program isn't found, can't start, exits with an error or is killed, when its
+    /// stdout contains the `stop_if_stdout_contains` text, or when `stdout_file` can't be written
     pub fn execute_with_lines(&self, on_line: OnLine) -> Result<()> {
         let command = self
             .find_binary(&self.command)
@@ -448,7 +453,7 @@ mod tests {
         command_run.arguments = vec![String::from("-c"), String::from(script)];
         let lines = Mutex::new(vec![]);
         let result = command_run.execute_with_lines(&|stream, line| {
-            lines.lock().unwrap().push((stream, line.to_string()))
+            lines.lock().unwrap().push((stream, line.to_string()));
         });
 
         (result, lines.into_inner().unwrap())
@@ -488,7 +493,7 @@ mod tests {
         std::thread::scope(|scope| {
             let running = scope.spawn(|| {
                 command_run.execute_with_lines(&|_, line| {
-                    sender.lock().unwrap().send(line.to_string()).unwrap()
+                    sender.lock().unwrap().send(line.to_string()).unwrap();
                 })
             });
 

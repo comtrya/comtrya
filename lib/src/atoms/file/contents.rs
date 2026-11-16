@@ -88,13 +88,7 @@ mod tests {
 
     #[test]
     fn it_can() {
-        let file = match tempfile::NamedTempFile::new() {
-            std::result::Result::Ok(file) => file,
-            std::result::Result::Err(_) => {
-                assert_eq!(false, true);
-                return;
-            }
-        };
+        let file = tempfile::NamedTempFile::new().unwrap();
 
         let file_contents = SetContents {
             path: file.path().to_path_buf(),

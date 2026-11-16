@@ -66,6 +66,11 @@ pub struct CommandOutput {
 /// Runs read-only commands, so tests can replace the system with [`fake::FakeRunner`]
 pub trait Runner: Send + Sync {
     /// Runs `command` and waits for it. Fails only if it can't be started
+    ///
+    /// # Errors
+    ///
+    /// When the program can't be started. A program that exits with an error isn't one, see
+    /// [`CommandOutput`]
     fn run(&self, command: &CommandSpec) -> io::Result<CommandOutput>;
 
     /// Forgets remembered answers, after something changed the system. Only [`Cached`]

@@ -9,6 +9,10 @@ use toml::Value;
 use super::{Error, Result};
 
 /// Reads the top-level keys of a TOML file
+///
+/// # Errors
+///
+/// When the file can't be read or isn't valid TOML
 pub fn toml_values(url: &Url, contexts: &mut HashMap<String, String>) -> Result<()> {
     let path = Path::new(url.path());
 
@@ -23,6 +27,10 @@ pub fn toml_values(url: &Url, contexts: &mut HashMap<String, String>) -> Result<
 }
 
 /// Reads the top-level keys of a YAML file
+///
+/// # Errors
+///
+/// When the file can't be read or isn't valid YAML
 pub fn yaml_values(url: &Url, contexts: &mut HashMap<String, String>) -> Result<()> {
     let path = Path::new(url.path());
 

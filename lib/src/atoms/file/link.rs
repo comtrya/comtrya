@@ -108,21 +108,9 @@ mod tests {
 
     #[test]
     fn it_can() {
-        let from_dir = match tempfile::tempdir() {
-            Ok(dir) => dir,
-            Err(_) => {
-                assert_eq!(false, true);
-                return;
-            }
-        };
+        let from_dir = tempfile::tempdir().unwrap();
 
-        let to_file = match tempfile::NamedTempFile::new() {
-            std::result::Result::Ok(file) => file,
-            std::result::Result::Err(_) => {
-                assert_eq!(false, true);
-                return;
-            }
-        };
+        let to_file = tempfile::NamedTempFile::new().unwrap();
 
         let atom = Link {
             target: from_dir.path().join("symlink"),

@@ -87,6 +87,11 @@ pub enum RunError {
 
 impl Report {
     /// An error if any manifest failed, or the run was cancelled
+    ///
+    /// # Errors
+    ///
+    /// [`RunError::Cancelled`] after Ctrl-C, else [`RunError::Failed`] with the number of
+    /// manifests that failed or were skipped
     pub fn into_result(self) -> Result<(), RunError> {
         if self.cancelled {
             return Err(RunError::Cancelled);

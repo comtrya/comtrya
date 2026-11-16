@@ -21,12 +21,11 @@ impl PackageProvider for Snapcraft {
     }
 
     fn available(&self) -> bool {
-        match which("snap") {
-            Ok(_) => true,
-            Err(_) => {
-                warn!(message = "snap is not available");
-                false
-            }
+        if which("snap").is_ok() {
+            true
+        } else {
+            warn!(message = "snap is not available");
+            false
         }
     }
 

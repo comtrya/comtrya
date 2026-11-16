@@ -154,6 +154,10 @@ impl Atom {
     }
 
     /// Whether this atom needs to run. An error means it can't
+    ///
+    /// # Errors
+    ///
+    /// When the atom can't look at the system, or what it finds is something it may not replace
     pub fn check(&self) -> Result<Check> {
         self.change().check()
     }
@@ -210,12 +214,20 @@ impl Atom {
     }
 
     /// Makes the change
+    ///
+    /// # Errors
+    ///
+    /// When the change fails, see [`Error`]
     pub fn execute(&self) -> Result<()> {
         self.change().execute()
     }
 
     /// Makes the change like [`Atom::execute`], and passes each line a program prints to
     /// `on_line` while it runs
+    ///
+    /// # Errors
+    ///
+    /// Like [`Atom::execute`]
     pub fn execute_with_lines(&self, on_line: command::OnLine) -> Result<()> {
         match self {
             Atom::Exec(exec) => exec.execute_with_lines(on_line),
@@ -226,6 +238,10 @@ impl Atom {
     /// The atom that makes this change as root, through `privilege` (`sudo`, `doas`, `run0`).
     /// Only programs can be run that way, other atoms run in the privileged helper, see
     /// [`crate::helper`]
+    ///
+    /// # Errors
+    ///
+    /// For every atom but [`Atom::Exec`], see [`Error::NotElevatable`]
     pub fn elevated(self, privilege: &Privilege) -> Result<Atom> {
         match self {
             Atom::Exec(exec) => Ok(Atom::Exec(exec.elevated(privilege))),

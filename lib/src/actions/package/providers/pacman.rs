@@ -33,12 +33,11 @@ impl PackageProvider for Pacman {
     }
 
     fn available(&self) -> bool {
-        match which("pacman") {
-            Ok(_) => true,
-            Err(_) => {
-                warn!(message = "pacman not available");
-                false
-            }
+        if which("pacman").is_ok() {
+            true
+        } else {
+            warn!(message = "pacman not available");
+            false
         }
     }
 

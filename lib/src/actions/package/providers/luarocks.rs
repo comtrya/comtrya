@@ -35,12 +35,11 @@ impl PackageProvider for Luarocks {
     }
 
     fn available(&self) -> bool {
-        match which("luarocks") {
-            Ok(_) => true,
-            Err(_) => {
-                warn!(message = "luarocks not available");
-                false
-            }
+        if which("luarocks").is_ok() {
+            true
+        } else {
+            warn!(message = "luarocks not available");
+            false
         }
     }
 
@@ -147,8 +146,11 @@ lyaml\t6.2.8-1\tinstalled\t/home/ada/.luarocks/lib/luarocks/rocks-5.4
 
     fn rocks(names: &[&str], extra_args: &[&str]) -> PackageVariant {
         PackageVariant {
-            list: names.iter().map(|name| name.to_string()).collect(),
-            extra_args: extra_args.iter().map(|arg| arg.to_string()).collect(),
+            list: names.iter().map(std::string::ToString::to_string).collect(),
+            extra_args: extra_args
+                .iter()
+                .map(std::string::ToString::to_string)
+                .collect(),
             ..Default::default()
         }
     }

@@ -21,12 +21,11 @@ impl PackageProvider for Pkgin {
     }
 
     fn available(&self) -> bool {
-        match which("/usr/pkg/bin/pkgin") {
-            Ok(_) => true,
-            Err(_) => {
-                warn!(message = "/usr/pkg/bin/pkgin is not available");
-                false
-            }
+        if which("/usr/pkg/bin/pkgin").is_ok() {
+            true
+        } else {
+            warn!(message = "/usr/pkg/bin/pkgin is not available");
+            false
         }
     }
 

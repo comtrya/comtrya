@@ -268,7 +268,7 @@ actions:
 
     #[test]
     fn a_field_that_holds_text_or_a_map_of_anything_is_not_walked() {
-        let yaml = r#"
+        let yaml = r"
 actions:
   - action: command.run
     command: env
@@ -277,7 +277,7 @@ actions:
   - action: package.install
     name: git
     key: some-key
-"#;
+";
 
         assert_eq!(Vec::<String>::new(), unknown(yaml));
     }

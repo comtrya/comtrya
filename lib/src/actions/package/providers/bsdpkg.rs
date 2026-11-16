@@ -27,12 +27,11 @@ impl PackageProvider for BsdPkg {
     }
 
     fn available(&self) -> bool {
-        match which("/usr/local/sbin/pkg") {
-            Ok(_) => true,
-            Err(_) => {
-                warn!(message = "/usr/local/sbin/pkg is not available");
-                false
-            }
+        if which("/usr/local/sbin/pkg").is_ok() {
+            true
+        } else {
+            warn!(message = "/usr/local/sbin/pkg is not available");
+            false
         }
     }
 

@@ -16,3 +16,6 @@ serde_json.workspace = true
 jsonschema.workspace = true
 serde_yaml_ng.workspace = true
 walkdir.workspace = true
+
+[lints]
+workspace = true

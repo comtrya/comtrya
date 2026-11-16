@@ -20,12 +20,11 @@ impl PackageProvider for Zypper {
     }
 
     fn available(&self) -> bool {
-        match which("zypper") {
-            Ok(_) => true,
-            Err(_) => {
-                warn!(message = "zypper not available");
-                false
-            }
+        if which("zypper").is_ok() {
+            true
+        } else {
+            warn!(message = "zypper not available");
+            false
         }
     }
 
