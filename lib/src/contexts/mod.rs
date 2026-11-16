@@ -1,5 +1,37 @@
 //! Contexts: the facts about the system and the configuration, as templates and `where`
-//! conditions see them
+//! conditions see them.
+//!
+//! [`Facts::gather`] looks at the system once per run: the user, the OS, the environment, the
+//! privilege provider, the package provider, and the `variables` and `include_variables` of
+//! `Comtrya.yaml`. Code that plans uses the typed [`Facts`]. Manifests see them as
+//! [`Contexts`]: values by context and key, like `user.home_dir` or `os.name`.
+//!
+//! ```yaml
+//! actions:
+//!   - action: file.copy
+//!     from: gitconfig
+//!     to: "{{ user.home_dir }}/.gitconfig"
+//!     where: os.family == "unix" && variables.work == "yes"
+//! ```
+//!
+//! Templates (`{{ … }}`) are rendered with Tera before a manifest is parsed, see [`to_tera`].
+//! `where` conditions are Rhai expressions, see [`evaluate_condition`]:
+//!
+//! ```
+//! use comtrya_lib::contexts::{evaluate_condition, Facts};
+//!
+//! let mut facts = Facts::default();
+//! facts.os.name = String::from("Debian");
+//! facts.variables.insert(String::from("work"), String::from("yes"));
+//! let contexts = facts.to_contexts();
+//!
+//! assert!(evaluate_condition(r#"os.name == "Debian""#, &contexts).unwrap());
+//! assert!(evaluate_condition(r#"variables.work == "yes""#, &contexts).unwrap());
+//! assert!(evaluate_condition("os.name ==", &contexts).is_err());
+//! ```
+//!
+//! To add a fact: a field in [`Facts`], filled in [`Facts::gather`], and its key in
+//! [`Facts::to_contexts`] so manifests can use it.
 
 use rhai::{Engine, EvalAltResult, Scope};
 use std::collections::BTreeMap;

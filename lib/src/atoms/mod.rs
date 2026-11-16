@@ -1,5 +1,39 @@
 //! Atoms: the smallest changes comtrya makes, like writing a file or running a command. Actions
-//! plan them, wrapped in steps
+//! plan them, wrapped in steps.
+//!
+//! An [`Atom`] is data: what to change, with no reference to the manifest it came from. That's
+//! why it can be shown in a dry run, and sent to the privileged [`helper`](crate::helper) to run
+//! as root. Every atom does two things:
+//!
+//! - [`Atom::check`] compares the system with what the atom wants: [`Check::InSync`] means
+//!   nothing to do, [`Check::Drift`] that it has to run, [`Check::Pending`] that it needs a path
+//!   an earlier step makes. Checking makes atoms idempotent: running a manifest twice changes
+//!   nothing the second time.
+//! - [`Atom::execute`] makes the change.
+//!
+//! ```
+//! use comtrya_lib::atoms::{directory, Atom, Check};
+//!
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
+//! let dir = tempfile::tempdir()?;
+//! let path = dir.path().join("new");
+//! let atom = Atom::from(directory::Create { path: path.clone() });
+//! assert_eq!(atom.to_string(), format!("Create directory {}", path.display()));
+//!
+//! assert_eq!(atom.check()?, Check::Drift(None));
+//! atom.execute()?;
+//! assert_eq!(atom.check()?, Check::InSync);
+//! # Ok(())
+//! # }
+//! ```
+//!
+//! The executor also asks an atom what it [`produces`](Atom::produces), for dry runs, and which
+//! [`Resource`]s it uses, so steps that run at the same time don't touch the same thing.
+//!
+//! To add an atom: a struct in the module of its kind, its `Display` as a short imperative
+//! sentence, the private `Change` trait with `check` and `execute`, and a variant in [`Atom`]
+//! with its arms in the methods there. Most new features need no new atom: an action can plan
+//! the existing ones.
 
 /// Running programs
 pub mod command;
