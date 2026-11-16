@@ -141,9 +141,11 @@ pub fn load_all(manifest_path: PathBuf, contexts: &Contexts) -> Loaded {
             )
             .entered();
 
+            // Named by the walked path, which starts with `manifest_path` even when that isn't
+            // canonical, like a directory given by a link, or a manifest that is a link
+            let name = get_manifest_name(&manifest_path, entry.path())
+                .unwrap_or_else(|_| entry.path().display().to_string());
             let path = canonicalize(entry.path()).unwrap_or_else(|_| entry.into_path());
-            let name = get_manifest_name(&manifest_path, &path)
-                .unwrap_or_else(|_| path.display().to_string());
 
             match load_file(&path, contexts) {
                 Ok(mut manifest) => {
@@ -250,4 +252,48 @@ fn false_where(contents: &str, path: &Path, contexts: &Contexts) -> Option<Strin
     evaluate_condition(&condition, contexts)
         .is_ok_and(|result| !result)
         .then_some(condition)
+}
+
+#[cfg(test)]
+#[cfg(unix)]
+mod tests {
+    use super::*;
+    use pretty_assertions::assert_eq;
+    use std::fs;
+
+    #[test]
+    fn manifests_are_named_below_a_directory_given_by_a_link() {
+        let dir = tempfile::tempdir().unwrap();
+        let real = dir.path().join("real");
+        fs::create_dir_all(real.join("dev")).unwrap();
+        fs::write(real.join("dev/git.yaml"), "actions: []\n").unwrap();
+        let link = dir.path().join("link");
+        std::os::unix::fs::symlink(&real, &link).unwrap();
+
+        let loaded = load_all(link, &Contexts::default());
+
+        assert!(loaded.errors.is_empty(), "{:?}", loaded.errors);
+        let mut names: Vec<_> = loaded.manifests.keys().cloned().collect();
+        names.sort();
+        assert_eq!(vec![String::from("dev.git")], names);
+    }
+
+    #[test]
+    fn a_manifest_that_is_a_link_is_named_by_the_link() {
+        let dir = tempfile::tempdir().unwrap();
+        let elsewhere = dir.path().join("elsewhere.yaml");
+        fs::write(&elsewhere, "actions: []\n").unwrap();
+        let manifests = dir.path().join("manifests");
+        fs::create_dir(&manifests).unwrap();
+        std::os::unix::fs::symlink(&elsewhere, manifests.join("git.yaml")).unwrap();
+
+        let loaded = load_all(manifests.canonicalize().unwrap(), &Contexts::default());
+
+        assert!(loaded.errors.is_empty(), "{:?}", loaded.errors);
+        assert!(
+            loaded.manifests.contains_key("git"),
+            "{:?}",
+            loaded.manifests.keys()
+        );
+    }
 }
