@@ -1,4 +1,45 @@
-//! Manifests: finding, loading and naming them
+//! Manifests: finding, loading and naming them.
+//!
+//! A manifest is a YAML (or TOML) file in the manifest directory. Its name comes from its path,
+//! like `dev.git` for `dev/git.yaml`, and other manifests use that name in `depends`:
+//!
+//! ```yaml
+//! where: os.name == "macOS"
+//! labels: [work]
+//! depends: [dev.git]
+//! actions:
+//!   - action: file.link
+//!     from: zshrc
+//!     to: "{{ user.home_dir }}/.zshrc"
+//! ```
+//!
+//! [`resolve`] finds the directory: a local path, or a git repository that a
+//! [`ManifestProvider`] clones into the cache. [`load_all`] walks it, skipping `files`
+//! directories (where actions find their files) and `Comtrya.yaml`. For each file it renders the
+//! templates with the [`contexts`](crate::contexts), then parses it into a [`Manifest`]. A file
+//! that fails doesn't stop the others; it ends up in [`Loaded::errors`]:
+//!
+//! ```
+//! use comtrya_lib::contexts::Contexts;
+//! use comtrya_lib::manifests::{load_all, LoadErrorKind};
+//!
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
+//! let dir = tempfile::tempdir()?;
+//! std::fs::create_dir(dir.path().join("dev"))?;
+//! std::fs::write(dir.path().join("dev/git.yaml"), "actions: []")?;
+//! std::fs::write(dir.path().join("future.yaml"), "version: 2\nactions: []")?;
+//!
+//! // Canonical, like `resolve` returns it: names are relative to it
+//! let loaded = load_all(dir.path().canonicalize()?, &Contexts::default());
+//!
+//! assert!(loaded.manifests.contains_key("dev.git"));
+//! assert_eq!(loaded.errors.len(), 1);
+//! assert!(matches!(loaded.errors[0].kind, LoadErrorKind::NewerVersion { found: 2, .. }));
+//! # Ok(())
+//! # }
+//! ```
+//!
+//! Then the [`executor`](crate::executor) runs the loaded manifests.
 
 /// Reading manifest files
 mod load;

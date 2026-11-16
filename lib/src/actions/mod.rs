@@ -1,5 +1,46 @@
 //! Actions: what manifests ask for, like `file.copy` or `package.install`. Each action plans the
-//! steps that bring the system there
+//! steps that bring the system there.
+//!
+//! An action is the user's words: one entry under `actions:` in a manifest. Every action can
+//! have a `where` condition, `variants` for other systems, and `continue_on_error`:
+//!
+//! ```yaml
+//! actions:
+//!   - action: package.install
+//!     list: [git]
+//!     where: os.name != "Windows"
+//!   - action: command.run
+//!     command: brew
+//!     args: [install, git]
+//!     variants:
+//!       - where: os.name == "Arch Linux"
+//!         command: pacman
+//!         args: [-S, --noconfirm, git]
+//! ```
+//!
+//! [`Actions`] is the list of all actions by name. Each holds a [`ConditionalVariantAction`]: the
+//! action's own fields, its `where` and its variants. [`ConditionalVariantAction::select`] picks
+//! the version that applies to the contexts, and [`Action::plan`] turns it into
+//! [`Step`]s. Planning only looks at the system; the [`executor`](crate::executor) runs the
+//! steps later, so a dry run can show them.
+//!
+//! ```
+//! use comtrya_lib::manifests::Manifest;
+//!
+//! let manifest: Manifest = serde_yaml_ng::from_str(
+//!     "actions:\n  - action: cmd.run\n    command: echo\n    args: [hi]\n",
+//! )
+//! .unwrap();
+//!
+//! let action = &manifest.actions[0];
+//! assert_eq!(action.name(), "command.run"); // `cmd.run` is an alias
+//! assert_eq!(action.summarize(), "Running echo command");
+//! ```
+//!
+//! To add an action: write a struct with its fields in a module here, implement [`Action`] for
+//! it by planning steps of existing [`atoms`](crate::atoms), and add a line to the `actions!`
+//! table in `registry.rs`. Its name, aliases, `Display` and schema come from that line. The
+//! actions in `directory` are short ones to copy.
 
 mod binary;
 mod command;
