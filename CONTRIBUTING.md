@@ -39,6 +39,8 @@ You don't need any permissions to contribute code. Fork the repository, make you
 
 Small, atomic commits make reviews easier and help track down regressions. We use [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`, `docs:`, `chore:`, …) for commit messages and PR titles.
 
+New to the code? [ARCHITECTURE.md](ARCHITECTURE.md) shows the path of `comtrya apply` and where to look for each part.
+
 ### Prerequisites
 
 - Rust via [rustup](https://rustup.rs/), with `rustfmt` and `clippy`:
