@@ -236,7 +236,7 @@ impl Change for Exec {
 }
 
 impl Exec {
-    /// Runs the program like [`Change::execute`], and passes each line it prints to `on_line`
+    /// Runs the program like [`Atom::execute`](crate::atoms::Atom::execute), and passes each line it prints to `on_line`
     /// while it runs
     ///
     /// # Errors

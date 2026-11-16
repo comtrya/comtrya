@@ -34,6 +34,20 @@ jobs:
         with:
           command: check
 
+  # Broken doc links, and public docs that link to private items
+  doc:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - uses: actions-rust-lang/setup-rust-toolchain@v2
+        with:
+          toolchain: stable
+
+      - run: cargo doc --workspace --no-deps --all-features
+        env:
+          RUSTDOCFLAGS: -D warnings
+
   # Dependencies that no code uses
   machete:
     runs-on: ubuntu-latest
