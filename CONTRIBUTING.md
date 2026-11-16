@@ -47,10 +47,12 @@ Small, atomic commits make reviews easier and help track down regressions. We us
 
 ### Before opening a pull request
 
-Run `./check.sh` (or `check.ps1` on Windows). It
-- formats your code with `cargo fmt`
-- runs the linter `cargo clippy`, which fails on any warning, like CI
+Run `cargo xtask check`. It runs what CI runs and stops at the first failure:
+- checks the formatting with `cargo fmt` (`cargo xtask check --fix` formats instead)
+- runs the linter `cargo clippy`, which fails on any warning
 - runs all tests with `cargo test`
+- builds the docs with `cargo doc`, which fails on broken links
+- builds everything with the minimum supported Rust version, if it is installed (`rustup toolchain install 1.88`)
 
 ### Code style
 

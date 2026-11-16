@@ -1,0 +1,3 @@
+[alias]
+# `cargo xtask check` runs what CI runs, see xtask/src/main.rs
+xtask = "run --package xtask --"

@@ -3,7 +3,8 @@ members = [
     "app",
     "compat",
     "jsonschemagen",
-    "lib"
+    "lib",
+    "xtask"
 ]
 resolver = "2"
 
