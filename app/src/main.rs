@@ -23,6 +23,7 @@ use tracing_subscriber::{fmt, fmt::writer::MakeWriterExt, layer::SubscriberExt, 
 mod commands;
 /// Command line arguments and `Comtrya.yaml`
 mod config;
+mod update_client;
 use config::Config;
 
 /// What every subcommand gets: the arguments, the configuration and the contexts
@@ -169,7 +170,8 @@ fn check_for_updates(no_color: bool) {
 
     let pkg_name = env!("CARGO_PKG_NAME");
     let pkg_version = env!("CARGO_PKG_VERSION");
-    let informer = update_informer::new(registry::Crates, pkg_name, pkg_version);
+    let informer = update_informer::new(registry::Crates, pkg_name, pkg_version)
+        .http_client(update_client::UpdateClient);
 
     if let Some(new_version) = informer.check_version().ok().flatten() {
         let msg = format!(

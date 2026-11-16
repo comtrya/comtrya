@@ -18,7 +18,7 @@ pub mod executor;
 pub mod helper;
 pub mod manifests;
 pub mod runner;
-mod runtime;
+pub mod runtime;
 pub mod steps;
 pub mod tera_functions;
 mod utilities;
