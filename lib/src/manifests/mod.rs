@@ -29,8 +29,7 @@
 //! std::fs::write(dir.path().join("dev/git.yaml"), "actions: []")?;
 //! std::fs::write(dir.path().join("future.yaml"), "version: 2\nactions: []")?;
 //!
-//! // Canonical, like `resolve` returns it: names are relative to it
-//! let loaded = load_all(dir.path().canonicalize()?, &Contexts::default());
+//! let loaded = load_all(dir.path().to_path_buf(), &Contexts::default());
 //!
 //! assert!(loaded.manifests.contains_key("dev.git"));
 //! assert_eq!(loaded.errors.len(), 1);
