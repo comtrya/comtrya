@@ -7,7 +7,7 @@ use crate::{
     tera_functions::register_functions,
     utilities::error_chain,
 };
-use ignore::WalkBuilder;
+use ignore::{DirEntry, WalkBuilder};
 use serde::{de::DeserializeOwned, Deserialize};
 use std::{
     collections::HashMap,
@@ -90,48 +90,16 @@ pub fn load(manifest_path: PathBuf, contexts: &Contexts) -> HashMap<String, Mani
 pub fn load_all(manifest_path: PathBuf, contexts: &Contexts) -> Loaded {
     let mut loaded = Loaded::default();
 
-    let mut walker = WalkBuilder::new(&manifest_path);
-
-    // FIXME: get rid of all .unwrap() calls
-    walker
+    let skipped = SkippedEntries::new(&manifest_path);
+    WalkBuilder::new(&manifest_path)
         .standard_filters(true)
         .follow_links(false)
         .same_file_system(true)
         // Arbitrary for now, 9 "should" be enough?
         .max_depth(Some(9))
-        .filter_entry({
-            // The config file next to the manifests isn't a manifest
-            let configs: Vec<_> = crate::config::FILE_NAMES
-                .iter()
-                .map(|name| manifest_path.join(name))
-                .collect();
-            move |entry| {
-                let files_dir = entry.file_type().is_some_and(|ft| ft.is_dir())
-                    && entry.file_name() == OsStr::new("files");
-                !files_dir && !configs.iter().any(|config| entry.path() == config)
-            }
-        })
+        .filter_entry(move |entry| !skipped.skips(entry))
         .build()
-        // Don't walk directories
-        .filter(|entry| {
-            !entry
-                .as_ref()
-                .ok()
-                .and_then(|entry| entry.metadata().ok().map(|entry| entry.is_dir()))
-                .unwrap_or(false)
-        })
-        .filter(|entry| {
-            entry
-                .as_ref()
-                .ok()
-                .and_then(|entry| entry.file_name().to_str())
-                .map(|file_name| {
-                    file_name.ends_with(".yaml")
-                        || file_name.ends_with(".yml")
-                        || file_name.ends_with(".toml")
-                })
-                .unwrap_or(false)
-        })
+        .filter(|entry| entry.as_ref().is_ok_and(is_manifest_file))
         .flatten()
         .for_each(|entry| {
             let span = span!(
@@ -254,13 +222,97 @@ fn false_where(contents: &str, path: &Path, contexts: &Contexts) -> Option<Strin
         .then_some(condition)
 }
 
+/// What the walk of a manifest directory doesn't go into: `files/` directories, which hold the
+/// files that actions copy or link, and the config file next to the manifests
+struct SkippedEntries {
+    /// The paths the config file can have, see [`crate::config::FILE_NAMES`]
+    configs: Vec<PathBuf>,
+}
+
+impl SkippedEntries {
+    /// The entries to skip below `manifest_path`
+    fn new(manifest_path: &Path) -> Self {
+        let configs = crate::config::FILE_NAMES
+            .iter()
+            .map(|name| manifest_path.join(name))
+            .collect();
+        Self { configs }
+    }
+
+    /// Whether the walk leaves out `entry`, and everything below it for a directory
+    fn skips(&self, entry: &DirEntry) -> bool {
+        let files_dir = entry.file_type().is_some_and(|ft| ft.is_dir())
+            && entry.file_name() == OsStr::new("files");
+        files_dir || self.configs.iter().any(|config| entry.path() == config)
+    }
+}
+
+/// Whether `entry` is a manifest: a `.yaml`, `.yml` or `.toml` file, not a directory
+fn is_manifest_file(entry: &DirEntry) -> bool {
+    let is_dir = entry.metadata().is_ok_and(|metadata| metadata.is_dir());
+    let extension = entry.path().extension().and_then(OsStr::to_str);
+    !is_dir && matches!(extension, Some("yaml" | "yml" | "toml"))
+}
+
 #[cfg(test)]
-#[cfg(unix)]
 mod tests {
     use super::*;
     use pretty_assertions::assert_eq;
     use std::fs;
 
+    /// The names of the manifests that loaded, sorted
+    fn names(loaded: &Loaded) -> Vec<String> {
+        let mut names: Vec<_> = loaded.manifests.keys().cloned().collect();
+        names.sort();
+        names
+    }
+
+    #[test]
+    fn yaml_yml_and_toml_files_are_manifests() {
+        let dir = tempfile::tempdir().unwrap();
+        fs::write(dir.path().join("a.yaml"), "actions: []\n").unwrap();
+        fs::write(dir.path().join("b.yml"), "actions: []\n").unwrap();
+        fs::write(dir.path().join("c.toml"), "actions = []\n").unwrap();
+        fs::write(dir.path().join("notes.txt"), "not a manifest\n").unwrap();
+        fs::create_dir(dir.path().join("d.yaml")).unwrap();
+
+        let loaded = load_all(dir.path().to_path_buf(), &Contexts::default());
+
+        assert!(loaded.errors.is_empty(), "{:?}", loaded.errors);
+        assert_eq!(vec!["a", "b", "c"], names(&loaded));
+    }
+
+    #[test]
+    fn files_directories_and_the_config_next_to_the_manifests_are_skipped() {
+        let dir = tempfile::tempdir().unwrap();
+        fs::write(dir.path().join("a.yaml"), "actions: []\n").unwrap();
+        for config in crate::config::FILE_NAMES {
+            fs::write(dir.path().join(config), "not: [a manifest\n").unwrap();
+        }
+        fs::create_dir_all(dir.path().join("files")).unwrap();
+        fs::write(dir.path().join("files/x.yaml"), "not: [a manifest\n").unwrap();
+        fs::create_dir_all(dir.path().join("dev/files")).unwrap();
+        fs::write(dir.path().join("dev/files/y.yaml"), "not: [a manifest\n").unwrap();
+
+        let loaded = load_all(dir.path().to_path_buf(), &Contexts::default());
+
+        assert!(loaded.errors.is_empty(), "{:?}", loaded.errors);
+        assert_eq!(vec!["a"], names(&loaded));
+    }
+
+    #[test]
+    fn a_config_file_deeper_down_is_a_manifest() {
+        let dir = tempfile::tempdir().unwrap();
+        fs::create_dir(dir.path().join("dev")).unwrap();
+        fs::write(dir.path().join("dev/Comtrya.yaml"), "actions: []\n").unwrap();
+
+        let loaded = load_all(dir.path().to_path_buf(), &Contexts::default());
+
+        assert!(loaded.errors.is_empty(), "{:?}", loaded.errors);
+        assert_eq!(vec!["dev.Comtrya"], names(&loaded));
+    }
+
+    #[cfg(unix)]
     #[test]
     fn manifests_are_named_below_a_directory_given_by_a_link() {
         let dir = tempfile::tempdir().unwrap();
@@ -278,6 +330,7 @@ mod tests {
         assert_eq!(vec![String::from("dev.git")], names);
     }
 
+    #[cfg(unix)]
     #[test]
     fn a_manifest_that_is_a_link_is_named_by_the_link() {
         let dir = tempfile::tempdir().unwrap();
