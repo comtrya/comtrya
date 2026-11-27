@@ -218,7 +218,7 @@ fn manifests_with_a_newer_version_are_skipped() {
     let f = Fixture::new();
     f.manifest(
         "newer.yaml",
-        &format!("version: 2\nactions:\n{}", f.create("newer")),
+        &format!("version: 3\nactions:\n{}", f.create("newer")),
     )
     .manifest(
         "current.yaml",
@@ -230,7 +230,26 @@ fn manifests_with_a_newer_version_are_skipped() {
 
     assert!(f.created("current"));
     assert!(!f.created("newer"));
-    assert!(log.contains("manifest version 2"), "{log}");
+    assert!(log.contains("manifest version 3"), "{log}");
+}
+
+/// A version 2 manifest runs, and the log shows the title of an action instead of its summary
+#[test]
+fn version_2_manifests_run_and_show_titles() {
+    let f = Fixture::new();
+    f.manifest(
+        "two.yaml",
+        &format!(
+            "version: 2\nactions:\n{}    title: Make the output directory\n",
+            f.create("two")
+        ),
+    );
+
+    let stdout = f.run(&["apply"]).get_output().stdout.clone();
+    let stdout = String::from_utf8_lossy(&stdout);
+
+    assert!(f.created("two"));
+    assert!(stdout.contains("Make the output directory"), "{stdout}");
 }
 
 #[test]

@@ -109,6 +109,12 @@ pub struct ConditionalVariantAction<T> {
     /// and still counts as done
     #[serde(default, skip_serializing_if = "is_false")]
     pub continue_on_error: bool,
+
+    /// `title` (manifest version 2): what log lines show instead of the generated summary.
+    /// Set by the version 2 loader, so version 1 manifests don't know the key
+    #[serde(skip)]
+    #[schemars(skip)]
+    pub title: Option<String>,
 }
 
 /// Another version of an action, used instead of it when its `where` is true
@@ -135,7 +141,9 @@ where
     T: Action,
 {
     fn summarize(&self) -> String {
-        self.action.summarize()
+        self.title
+            .clone()
+            .unwrap_or_else(|| self.action.summarize())
     }
 
     fn continue_on_error(&self) -> bool {
@@ -360,6 +368,7 @@ actions:
                     .map(|(condition, name)| Variant::new(*name, condition.map(String::from)))
                     .collect(),
                 continue_on_error: false,
+                title: None,
             }
         }
 

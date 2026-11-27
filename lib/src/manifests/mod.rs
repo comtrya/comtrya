@@ -16,7 +16,8 @@
 //! [`resolve`] finds the directory: a local path, or a git repository that a
 //! [`ManifestProvider`] clones into the cache. [`load_all`] walks it, skipping `files`
 //! directories (where actions find their files) and `Comtrya.yaml`. For each file it renders the
-//! templates with the [`contexts`](crate::contexts), then parses it into a [`Manifest`]. A file
+//! templates with the [`contexts`](crate::contexts), then parses it into a [`Manifest`]; with
+//! `version: 2` it parses first and renders each value after (see the `v2` module). A file
 //! that fails doesn't stop the others; it ends up in [`Loaded::errors`]:
 //!
 //! ```
@@ -27,13 +28,13 @@
 //! let dir = tempfile::tempdir()?;
 //! std::fs::create_dir(dir.path().join("dev"))?;
 //! std::fs::write(dir.path().join("dev/git.yaml"), "actions: []")?;
-//! std::fs::write(dir.path().join("future.yaml"), "version: 2\nactions: []")?;
+//! std::fs::write(dir.path().join("future.yaml"), "version: 3\nactions: []")?;
 //!
 //! let loaded = load_all(dir.path().to_path_buf(), &Contexts::default());
 //!
 //! assert!(loaded.manifests.contains_key("dev.git"));
 //! assert_eq!(loaded.errors.len(), 1);
-//! assert!(matches!(loaded.errors[0].kind, LoadErrorKind::NewerVersion { found: 2, .. }));
+//! assert!(matches!(loaded.errors[0].kind, LoadErrorKind::NewerVersion { found: 3, .. }));
 //! # Ok(())
 //! # }
 //! ```
@@ -45,6 +46,8 @@ mod load;
 pub use load::{load, load_all, LoadError, LoadErrorKind, Loaded};
 /// Keys nothing reads, warned about while loading
 mod unknown_keys;
+/// Manifest format 2
+mod v2;
 pub(crate) use unknown_keys::{closest, schema_keys, unknown_keys};
 /// Finding the directory with the manifests
 mod providers;
@@ -62,8 +65,8 @@ use tracing::error;
 /// A manifest file: actions, and when and after what they run
 #[derive(JsonSchema, Clone, Debug, Default, Serialize, Deserialize)]
 pub struct Manifest {
-    /// The manifest format. Only `1` exists so far; comtrya refuses manifests written for a
-    /// newer format instead of misreading them
+    /// The manifest format: `1` (the default) or `2` (a preview until 0.13.0). Comtrya refuses
+    /// manifests written for a newer format instead of misreading them
     #[serde(default)]
     pub version: Option<u32>,
 
@@ -97,7 +100,7 @@ pub struct Manifest {
 }
 
 /// The newest manifest format this version of comtrya understands
-pub const MANIFEST_VERSION: u32 = 1;
+pub const MANIFEST_VERSION: u32 = 2;
 
 /// Finds the manifests at `uri`: a local directory, or a git repository that's cloned into the
 /// cache. The error is the one of the last provider that tried
