@@ -16,30 +16,50 @@ A map of the code, to find where to make a change. The details live in the modul
 ## The path of `comtrya apply`
 
 ```mermaid
-flowchart LR
-    config["Comtrya.yaml<br/>config"] --> facts["facts and contexts"]
-    facts --> load["load and render manifests"]
-    load --> parse["parse actions<br/>actions::parse"]
-    parse --> plan["plan steps<br/>actions"]
-    plan --> steps["steps wrap atoms"]
-    steps --> exec["run what drifted<br/>executor"]
-    exec --> events["events<br/>app: log, progress"]
-    exec -. root steps .-> helper["comtrya __helper as root<br/>helper"]
+flowchart TD
+    cli["CLI<br/>parse arguments"] --> config["Config<br/>Comtrya.yaml"]
+    config --> contexts["Contexts<br/>user / os / env"]
+    config --> source["Manifest source<br/>dir or git"]
+    source --> load["Load manifests<br/>render template"]
+    contexts --> load
+    load --> parse["Read actions<br/>YAML → action"]
+    contexts --> parse
+    parse --> plan["Plan<br/>action → steps"]
+    plan --> exec["Executor<br/>runs what differs"]
+    exec --> system[("System")]
+    exec --> output["Output<br/>log, progress, exit code"]
+    exec -. root .-> helper["Helper<br/>comtrya __helper"]
+    helper --> system
 ```
 
-1. **Config and facts.** `config` reads `Comtrya.yaml`. `contexts` gathers the facts about the
-   system (user, OS, environment, variables) as `Facts`, and turns them into the `Contexts` that
-   templates and `where` conditions see.
-2. **Load.** `manifests` finds the manifest directory, local or a git repository, renders each
-   file's templates and names each manifest after its path.
-3. **Parse.** `actions::parse` picks each action by its `action` key from the registry, and takes
-   `where`, `variants` and `continue_on_error` itself.
-4. **Plan.** Each action picks the variant that applies and plans steps. Planning changes nothing.
-5. **Steps and atoms.** A step wraps one atom, the smallest change, and says who makes it: the
-   user or root.
-6. **Run.** `executor` runs the manifests, dependencies first. A step runs only when its atom's
-   check says the system differs. What happens goes out as events, and the app shows them as
-   log lines and a progress line.
+- **CLI.** What the user typed: the manifest directory (`-d`), the config file (`-c`), which
+  manifests (`-m`) or labels (`-l`) to run, extra variables (`-D key=value`), `--dry-run` and the
+  number of parallel jobs (`-j`). In `app/src/main.rs` and `app/src/config/`.
+- **Config.** `Comtrya.yaml` (or `.yml`/`.toml`): where the manifests are, variables, the
+  privilege program and the default package provider. In `lib/src/config/`.
+- **Contexts.** Everything a manifest can ask about the machine and the run: the user, the OS,
+  environment variables, variables from the config and `-D`, and from `include_variables`. In
+  `lib/src/contexts/`.
+- **Manifest source.** A local directory, or a git repository that is cloned into a cache. In
+  `lib/src/manifests/providers/`.
+- **Load manifests.** Finds the manifest files, fills in their templates (`{{ user.name }}`) with
+  the contexts, and names each manifest after its path: `dev/git.yaml` is `dev.git`. In
+  `lib/src/manifests/`.
+- **Read actions.** Turns each entry of a manifest's `actions:` list, like `action: file.copy`,
+  into a typed action. A `where:` condition or `variants:` decides, with the contexts, whether
+  and how the action applies. In `lib/src/actions/parse.rs`.
+- **Plan.** Each action works out the small changes it needs, called steps: "create the
+  directory", "copy the file". Each step holds one atom, the change itself, and says whether the
+  user or root makes it. Nothing is changed yet, which is how `--dry-run` works. In
+  `lib/src/actions/`, `lib/src/steps/` and `lib/src/atoms/`.
+- **Executor.** Runs the manifests, the ones they depend on first. Before each step, it checks
+  whether the system already looks right, and only runs the steps where it doesn't. In
+  `lib/src/executor/`.
+- **Helper.** Steps that need root, like writing below `/etc`, go to one `comtrya __helper`
+  started through `sudo` (or `doas`, `run0`), so the password is asked for once. In
+  `lib/src/helper.rs`.
+- **Output.** The executor reports what happens as events; the app shows them as log lines and a
+  progress line, and sets the exit code. In `app/src/commands/apply/`.
 
 ## To change X, look at Y
 
