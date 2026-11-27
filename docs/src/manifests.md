@@ -56,7 +56,23 @@ The manifest still runs without them. When the misspelled key is a required one,
 actions[0]: unknown action `file.cpy`, did you mean `file.copy`? at line 2 column 5
 ```
 
-A `Comtrya.yaml` (or `Comtrya.yml`, `Comtrya.toml`) in the manifest directory is the config, not a manifest.
+## Which files are manifests
+
+Every `.yaml`, `.yml` and `.toml` file below the manifest directory is a manifest, except:
+
+- files in a `files/` directory, which hold the files that actions copy or link
+- a `Comtrya.yaml` (or `Comtrya.yml`, `Comtrya.toml`) in the manifest directory, which is the config
+- paths that match a glob in `ignore` in `Comtrya.yaml`
+
+`ignore` is for YAML or TOML files that aren't manifests, like the config of an app kept next to its manifest:
+
+```yaml
+ignore:
+  - zsh/plugins       # the directory and everything in it
+  - "**/*.local.yaml" # in any directory
+```
+
+The globs match the path below the manifest directory, with `/` between directories on every system. `*` matches within one directory, `**` any number of directories, and a matching directory is left out with everything in it. An invalid glob, like `zsh/[a`, makes the config fail to load.
 
 ## Editor support
 

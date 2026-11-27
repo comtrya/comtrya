@@ -42,7 +42,9 @@
 
 /// Reading manifest files
 mod load;
-pub use load::{load, load_all, LoadError, LoadErrorKind, Loaded};
+pub use load::{
+    load, load_all, load_all_ignoring, Ignore, InvalidGlob, LoadError, LoadErrorKind, Loaded,
+};
 /// Keys nothing reads, warned about while loading
 mod unknown_keys;
 pub(crate) use unknown_keys::{closest, schema_keys, unknown_keys};

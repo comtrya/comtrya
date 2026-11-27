@@ -15,6 +15,7 @@ dirs.workspace = true
 flate2.workspace = true
 gethostname.workspace = true
 gix.workspace = true
+globset.workspace = true
 hickory-resolver.workspace = true
 ignore.workspace = true
 normpath.workspace = true
