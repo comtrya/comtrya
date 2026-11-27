@@ -65,13 +65,25 @@ fn configure_tracing(args: &GlobalArgs) -> anyhow::Result<()> {
         None => None,
     };
 
-    let subscriber = tracing_subscriber::registry().with(stdout).with(file);
-
-    #[cfg(target_os = "linux")]
-    let subscriber = subscriber.with(tracing_journald::layer().ok());
+    let subscriber = tracing_subscriber::registry()
+        .with(stdout)
+        .with(file)
+        .with(journald_layer());
 
     tracing::subscriber::set_global_default(subscriber).expect("Unable to set a global subscriber");
     Ok(())
+}
+
+/// The layer that logs to journald, or none when journald isn't running, like in a container
+#[cfg(target_os = "linux")]
+fn journald_layer() -> Option<tracing_journald::Layer> {
+    tracing_journald::layer().ok()
+}
+
+/// No journald layer: journald exists only on Linux
+#[cfg(not(target_os = "linux"))]
+fn journald_layer() -> Option<tracing_subscriber::layer::Identity> {
+    None
 }
 
 /// What stdout shows: info, more with each `-v`
