@@ -75,6 +75,7 @@ impl<T: DeserializeOwned> ConditionalVariantAction<T> {
                 })
                 .collect::<Result<_, _>>()?,
             action: T::deserialize(Value::Mapping(fields))?,
+            title: None,
         })
     }
 }

@@ -25,7 +25,7 @@ args = [ "hi" ]
 
 ## Manifest version
 
-A manifest can state the format it is written for with a top-level `version` key. Only version `1` exists so far, and leaving the key out means the same. Comtrya refuses manifests with a newer version than it supports instead of misreading them. They fail like any other manifest that can't be loaded, see [When something fails](./dependencies.md#when-something-fails).
+A manifest can state the format it is written for with a top-level `version` key. Version `1` is the default, and leaving the key out means the same; version `2` is a preview, see below. Comtrya refuses manifests with a newer version than it supports instead of misreading them. They fail like any other manifest that can't be loaded, see [When something fails](./dependencies.md#when-something-fails).
 
 ```yaml
 version: 1
@@ -34,6 +34,22 @@ actions:
     command: echo
     args:
       - hi
+```
+
+### Manifests v2 (preview)
+
+`version: 2` is a preview of the next manifest format, and can still change until comtrya 0.13.0. Don't use it for manifests you depend on yet. Comtrya 0.12.0 and older refuse it (0.9.x and older ignore `version` and misread it). So far it differs from version 1 in three ways:
+
+- **Templates are rendered per value, after the manifest's `where`.** The file has to be valid YAML or TOML as it is, so quote values with templates (`path: "{{ user.home_dir }}/bin"`). A manifest whose `where` is false isn't rendered at all. `where` conditions aren't templates; they read the contexts themselves. An error names the value, like `actions[1].to`.
+- **One name per action and field.** Old names like `cmd.run`, `dir.create`, `source`/`target` for `from`/`to` in `file.copy`, or `sudo` for `privileged` are errors that name the one to use.
+- **`title`** on an action is shown in the log instead of the generated summary:
+
+```yaml
+version: 2
+actions:
+  - action: package.install
+    title: Shell tools
+    list: [fd, ripgrep]
 ```
 
 ## Unknown keys

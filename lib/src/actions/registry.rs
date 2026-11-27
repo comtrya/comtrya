@@ -85,6 +85,13 @@ macro_rules! actions {
                 }
             }
 
+            /// Sets the `title` that log lines show instead of the action's summary
+            pub(crate) fn set_title(&mut self, title: String) {
+                match self {
+                    $(Actions::$variant(action) => action.title = Some(title),)+
+                }
+            }
+
             /// The action, whichever it is
             pub fn inner_ref(&self) -> &(dyn Action + 'static) {
                 match self {

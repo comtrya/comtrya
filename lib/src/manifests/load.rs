@@ -1,6 +1,7 @@
-//! Reads manifest files: renders their templates, checks their version, and parses them
+//! Reads manifest files: checks their version, renders their templates and parses them. This
+//! is format 1; format 2 files go to the `v2` module
 
-use super::{Manifest, MANIFEST_VERSION};
+use super::{v2, Manifest, MANIFEST_VERSION};
 use crate::{
     contexts::{evaluate_condition, to_tera, Contexts},
     manifests::get_manifest_name,
@@ -215,6 +216,9 @@ fn load_file(path: &Path, contexts: &Contexts) -> Result<Manifest, LoadErrorKind
         .ok()
         .and_then(|unrendered| unrendered.version);
     check_version(version)?;
+    if version == Some(v2::VERSION) {
+        return v2::load(&template, path, contexts);
+    }
 
     let mut tera = Tera::default();
     register_functions(&mut tera);
@@ -248,6 +252,11 @@ fn load_file(path: &Path, contexts: &Contexts) -> Result<Manifest, LoadErrorKind
         LoadErrorKind::Parse(format!("{}{hints}", error_chain(&err)))
     })?;
     check_version(manifest.version)?;
+    if manifest.version == Some(v2::VERSION) {
+        return Err(LoadErrorKind::Parse(String::from(
+            "`version: 2` has to be readable before templates are rendered, write it as it is",
+        )));
+    }
     for key in unknown {
         warn!("{}: {key}", path.display());
     }
@@ -257,7 +266,7 @@ fn load_file(path: &Path, contexts: &Contexts) -> Result<Manifest, LoadErrorKind
 
 /// Why a manifest file isn't valid YAML or TOML
 #[derive(Debug, ThisError)]
-enum ParseError {
+pub(super) enum ParseError {
     /// The file isn't valid YAML, or doesn't fit the type
     #[error(transparent)]
     Yaml(#[from] serde_yaml_ng::Error),
@@ -270,7 +279,7 @@ enum ParseError {
 }
 
 /// Parses YAML or TOML, by the file extension
-fn parse<T: DeserializeOwned>(contents: &str, path: &Path) -> Result<T, ParseError> {
+pub(super) fn parse<T: DeserializeOwned>(contents: &str, path: &Path) -> Result<T, ParseError> {
     match path.extension().and_then(OsStr::to_str) {
         Some("yaml") | Some("yml") => Ok(serde_yaml_ng::from_str(contents)?),
         Some("toml") => Ok(toml::from_str(contents)?),
