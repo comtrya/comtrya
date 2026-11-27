@@ -1295,7 +1295,12 @@ fn dry_run_shows_a_step_that_needs_what_an_earlier_step_makes() {
     let stdout = f.run(&["apply", "--dry-run"]).get_output().stdout.clone();
     let stdout = String::from_utf8_lossy(&stdout);
 
-    assert!(stdout.contains("Unarchiving file"), "{stdout}");
+    let unpack = format!(
+        "Unpack {} into {}",
+        archive.display(),
+        f.out("unpacked").display()
+    );
+    assert!(stdout.contains(&unpack), "{stdout}");
     assert!(!archive.exists());
 }
 
@@ -1318,7 +1323,12 @@ fn dry_run_shows_a_link_to_what_an_earlier_step_makes() {
     let stdout = f.run(&["apply", "--dry-run"]).get_output().stdout.clone();
     let stdout = String::from_utf8_lossy(&stdout);
 
-    assert!(stdout.contains("Linking "), "{stdout}");
+    let link = format!(
+        "Link {} to {}",
+        f.out("bin/nvim").display(),
+        unpacked.join("bin/nvim").display()
+    );
+    assert!(stdout.contains(&link), "{stdout}");
     assert!(!unpacked.exists());
 }
 

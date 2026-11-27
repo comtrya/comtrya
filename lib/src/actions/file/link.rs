@@ -138,7 +138,7 @@ impl Action for FileLink {
     /// The link first, then what it points to, like the step: `Linking ~/.zshrc to files/zshrc`
     fn summarize(&self) -> String {
         format!(
-            "Linking {} to {}",
+            "Link {} to {}",
             self.target().unwrap_or("unknown"),
             self.source().unwrap_or("unknown")
         )
@@ -290,8 +290,8 @@ mod tests {
     fn summary_names_source_and_target_in_both_spellings() {
         let link = |yaml: &str| -> FileLink { serde_yaml_ng::from_str(yaml).unwrap() };
 
-        assert_eq!("Linking b to a", link("source: a\ntarget: b\n").summarize());
-        assert_eq!("Linking b to a", link("from: a\nto: b\n").summarize());
+        assert_eq!("Link b to a", link("source: a\ntarget: b\n").summarize());
+        assert_eq!("Link b to a", link("from: a\nto: b\n").summarize());
     }
 
     /// A source outside of `files`, like a program an earlier step unpacks, may not exist while

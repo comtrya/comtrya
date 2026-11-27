@@ -30,7 +30,7 @@ impl Action for DirectoryCreate {
     }
 
     fn summarize(&self) -> String {
-        format!("Creating directory {}", self.path)
+        format!("Create directory {}", self.path)
     }
 
     fn plan(&self, _: &Manifest, _context: &PlanCx) -> Result<Vec<Step>> {

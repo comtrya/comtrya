@@ -36,7 +36,7 @@ impl Action for FileRemove {
     }
 
     fn summarize(&self) -> String {
-        format!("Removing file {}", self.target)
+        format!("Remove file {}", self.target)
     }
 
     fn plan(

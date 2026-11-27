@@ -37,7 +37,7 @@ impl Action for DirectoryCopy {
     }
 
     fn summarize(&self) -> String {
-        format!("Copying {} to {}", self.from, self.to)
+        format!("Copy the contents of {} into {}", self.from, self.to)
     }
 
     fn plan(&self, manifest: &Manifest, _context: &PlanCx) -> Result<Vec<Step>> {

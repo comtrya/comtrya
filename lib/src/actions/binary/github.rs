@@ -79,7 +79,7 @@ impl BinaryGitHub {
 impl Action for BinaryGitHub {
     fn summarize(&self) -> String {
         format!(
-            "Downloading binary from {} to {}",
+            "Download a release of {} into {}",
             self.repository, self.directory
         )
     }

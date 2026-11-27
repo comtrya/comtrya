@@ -25,7 +25,7 @@ pub struct GitClone {
 
 impl Action for GitClone {
     fn summarize(&self) -> String {
-        format!("Cloning repository {} to {}", self.repo_url, self.directory)
+        format!("Clone {} into {}", self.repo_url, self.directory)
     }
 
     fn plan(&self, _: &Manifest, _: &PlanCx) -> Result<Vec<Step>> {

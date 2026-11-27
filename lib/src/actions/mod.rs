@@ -34,7 +34,7 @@
 //!
 //! let action = &manifest.actions[0];
 //! assert_eq!(action.name(), "command.run"); // `cmd.run` is an alias
-//! assert_eq!(action.summarize(), "Running echo command");
+//! assert_eq!(action.summarize(), "Run echo");
 //! ```
 //!
 //! To add an action: write a struct with its fields in a module here, implement [`Action`] for

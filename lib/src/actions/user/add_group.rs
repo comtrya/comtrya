@@ -27,10 +27,15 @@ pub struct UserAddGroup {
 
 impl Action for UserAddGroup {
     fn summarize(&self) -> String {
+        let groups = if self.group.len() == 1 {
+            "group"
+        } else {
+            "groups"
+        };
         format!(
-            "Adding user {} to group(s) {}",
+            "Add user {} to {groups} {}",
             self.username,
-            self.group.join(",")
+            self.group.join(", ")
         )
     }
 
@@ -43,5 +48,23 @@ impl Action for UserAddGroup {
         atoms.append(&mut provider.add_to_group(self, cx.facts)?);
 
         Ok(atoms)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_summary_names_the_groups() {
+        let mut action = UserAddGroup {
+            username: String::from("ben"),
+            group: vec![String::from("wheel")],
+            provider: UserProviders::default(),
+        };
+        assert_eq!("Add user ben to group wheel", action.summarize());
+
+        action.group.push(String::from("docker"));
+        assert_eq!("Add user ben to groups wheel, docker", action.summarize());
     }
 }
