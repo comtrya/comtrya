@@ -9,7 +9,7 @@ members = [
 resolver = "2"
 
 [workspace.package]
-version = "0.11.0"
+version = "0.12.0"
 authors = ["David McKay <david@rawkode.dev>", "Benjamin Stürmer <benjamin@stuermer.pro>"]
 edition = "2021"
 # Keep in sync with MIN_SUPPORTED_RUST_VERSION in .github/workflows
@@ -29,7 +29,7 @@ semicolon_if_nothing_returned = "warn"
 single_match_else = "warn"
 
 [workspace.dependencies]
-comtrya-lib = { path = "lib", version = "0.11.0" }
+comtrya-lib = { path = "lib", version = "0.12.0" }
 
 age = { version = "0.12", features = ["armor"] }
 anyhow = "1.0"

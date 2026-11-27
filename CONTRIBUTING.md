@@ -71,8 +71,6 @@ Comtrya should be easy to read for someone who opens a file for the first time:
 
 An action is what a manifest asks for, like `file.copy`. It doesn't change the system itself: its `plan()` returns *steps*, and each step wraps an *atom*, the smallest change comtrya makes, like creating a directory or running a command. Comtrya checks every atom before it runs it, so an action that is already in place does nothing.
 
-Note: the action and atom API is being reworked for 0.11.0 (see the `v0.11.0` milestone), so details below may change.
-
 As an example, a `file.touch` action that creates an empty file:
 
 1. **Write the action** in the group it belongs to, below [`lib/src/actions/`](./lib/src/actions), here `lib/src/actions/file/touch.rs`, and declare the module in the group's `mod.rs`. The fields are what users write in manifests; their doc comments become the descriptions in the JSON schema that editors show.
