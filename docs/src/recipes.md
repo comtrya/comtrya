@@ -18,7 +18,7 @@ packages:
   - ca-certificates
 
 runcmd:
-  # Installs the latest release to /usr/local/bin. Set VERSION=v0.11.0 to pin one
+  # Installs the latest release to /usr/local/bin. Set VERSION=v0.12.0 to pin one
   - curl -fsSL https://comtrya.dev/install.sh | sh
   # Runs the manifests as ada, not as root, so `user.home_dir` and friends are hers
   - su - ada -c 'comtrya -d https://github.com/ada/dotfiles apply'

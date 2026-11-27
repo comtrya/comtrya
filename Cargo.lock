@@ -633,7 +633,7 @@ dependencies = [
 
 [[package]]
 name = "comtrya"
-version = "0.11.0"
+version = "0.12.0"
 dependencies = [
  "anyhow",
  "assert_cmd",
@@ -641,7 +641,7 @@ dependencies = [
  "clap_complete",
  "colored",
  "comfy-table",
- "comtrya-lib 0.11.0",
+ "comtrya-lib 0.12.0",
  "ctrlc",
  "dirs 7.0.0",
  "predicates",
@@ -662,48 +662,10 @@ name = "comtrya-compat"
 version = "0.0.0"
 dependencies = [
  "comtrya-lib 0.11.0",
- "comtrya-lib 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "comtrya-lib 0.12.0",
  "pretty_assertions",
  "serde_json",
  "serde_yaml_ng",
-]
-
-[[package]]
-name = "comtrya-lib"
-version = "0.11.0"
-dependencies = [
- "age",
- "dirs 7.0.0",
- "flate2",
- "gethostname",
- "gix",
- "hickory-resolver",
- "ignore",
- "normpath",
- "os_info",
- "petgraph",
- "pretty_assertions",
- "regex",
- "reqwest",
- "rhai",
- "rustls",
- "schemars",
- "serde",
- "serde_json",
- "serde_yaml_ng",
- "sha2 0.11.1",
- "similar",
- "strsim",
- "tar",
- "tempfile",
- "tera",
- "thiserror 2.0.21",
- "tokio",
- "toml 1.1.8+spec-1.1.0",
- "tracing",
- "uzers",
- "which",
- "whoami",
 ]
 
 [[package]]
@@ -734,6 +696,44 @@ dependencies = [
  "similar",
  "strsim",
  "tar",
+ "tera",
+ "thiserror 2.0.21",
+ "tokio",
+ "toml 1.1.8+spec-1.1.0",
+ "tracing",
+ "uzers",
+ "which",
+ "whoami",
+]
+
+[[package]]
+name = "comtrya-lib"
+version = "0.12.0"
+dependencies = [
+ "age",
+ "dirs 7.0.0",
+ "flate2",
+ "gethostname",
+ "gix",
+ "hickory-resolver",
+ "ignore",
+ "normpath",
+ "os_info",
+ "petgraph",
+ "pretty_assertions",
+ "regex",
+ "reqwest",
+ "rhai",
+ "rustls",
+ "schemars",
+ "serde",
+ "serde_json",
+ "serde_yaml_ng",
+ "sha2 0.11.1",
+ "similar",
+ "strsim",
+ "tar",
+ "tempfile",
  "tera",
  "thiserror 2.0.21",
  "tokio",
@@ -3506,7 +3506,7 @@ dependencies = [
 name = "jsonschemagen"
 version = "0.1.0"
 dependencies = [
- "comtrya-lib 0.11.0",
+ "comtrya-lib 0.12.0",
  "jsonschema",
  "schemars",
  "serde_json",
