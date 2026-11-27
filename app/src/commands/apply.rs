@@ -12,7 +12,7 @@ use comfy_table::{Cell, ContentArrangement, Table};
 use comtrya_lib::{
     actions::PlanCx,
     executor::{self, Options},
-    manifests::{load_all, Loaded},
+    manifests::{load_all_ignoring, Loaded},
 };
 use std::ops::Deref;
 use std::path::PathBuf;
@@ -67,6 +67,12 @@ impl Apply {
         Ok(manifest_path)
     }
 
+    /// Loads the manifests below `manifest_path`, leaving out what `ignore` in the config matches
+    fn load(manifest_path: PathBuf, runtime: &Runtime) -> anyhow::Result<Loaded> {
+        let ignore = runtime.config.ignored()?;
+        Ok(load_all_ignoring(manifest_path, &runtime.contexts, &ignore))
+    }
+
     /// The manifests to run: those of `-m`, else `default_manifests` from the config. Empty
     /// means all
     fn selected<'a>(&'a self, runtime: &'a Runtime) -> &'a [String] {
@@ -80,12 +86,11 @@ impl Apply {
     /// Lists the manifests with their number of actions, and fails if any can't be loaded
     #[instrument(skip(self, runtime))]
     pub fn status(&self, runtime: &Runtime) -> anyhow::Result<()> {
-        let contexts = &runtime.contexts;
         let manifest_path = self.manifest_path(runtime)?;
 
         println!("Load manifests from path: {:#?}", manifest_path);
 
-        let Loaded { manifests, errors } = load_all(manifest_path, contexts);
+        let Loaded { manifests, errors } = Self::load(manifest_path, runtime)?;
         for err in &errors {
             error!("{err}");
         }
@@ -150,7 +155,7 @@ impl ComtryaCommand for Apply {
         let manifest_path = self.manifest_path(runtime)?;
 
         let report = executor::run(
-            load_all(manifest_path.clone(), &runtime.contexts),
+            Self::load(manifest_path.clone(), runtime)?,
             &manifest_path,
             PlanCx::new(&runtime.facts, &runtime.contexts),
             &Options {

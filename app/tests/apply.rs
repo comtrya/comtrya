@@ -548,6 +548,21 @@ fn the_config_file_is_not_a_manifest() {
     }
 }
 
+/// `ignore` in the config leaves out app configs below the manifest directory
+#[test]
+fn ignored_paths_are_not_manifests() {
+    let f = Fixture::new();
+    f.manifest("zsh/zsh.yaml", &format!("actions:\n{}", f.create("zsh")))
+        .manifest("zsh/plugins/config.yaml", "not: [a manifest\n");
+    f.run_failing(&["apply"]);
+
+    // Found in the working directory
+    std::fs::write(f.path().join("Comtrya.yaml"), "ignore:\n  - zsh/plugins\n").unwrap();
+    f.run(&["apply"]);
+
+    assert!(f.created("zsh"));
+}
+
 #[test]
 fn keys_nothing_reads_are_warned_about() {
     let f = Fixture::new();

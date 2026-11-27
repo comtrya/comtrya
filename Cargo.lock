@@ -637,6 +637,7 @@ dependencies = [
  "flate2",
  "gethostname",
  "gix",
+ "globset",
  "hickory-resolver",
  "ignore",
  "normpath",
