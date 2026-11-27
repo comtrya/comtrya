@@ -1262,10 +1262,7 @@ fn all_examples_load() {
         .lines()
         .filter(|line| {
             let cells: Vec<&str> = line.split('|').collect();
-            cells.len() > 2
-                && cells[2].trim().parse::<usize>().is_ok()
-                // FIXME: the Comtrya.yaml config is loaded as a manifest as well
-                && cells[1].trim() != "Comtrya"
+            cells.len() > 2 && cells[2].trim().parse::<usize>().is_ok()
         })
         .count();
 
