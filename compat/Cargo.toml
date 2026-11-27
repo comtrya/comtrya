@@ -11,7 +11,7 @@ license.workspace = true
 comtrya-lib.workspace = true
 # The reference: what users' manifests meant in the last release. Moved by hand after each
 # release, so it stays out of the workspace dependencies
-released = { package = "comtrya-lib", version = "=0.11.0" }
+released = { package = "comtrya-lib", version = "=0.12.0" }
 pretty_assertions.workspace = true
 serde_json.workspace = true
 serde_yaml_ng.workspace = true
