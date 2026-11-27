@@ -61,7 +61,7 @@ impl PackageRepository {
 
 impl Action for PackageRepository {
     fn summarize(&self) -> String {
-        format!("Adding repository {}", self.name)
+        format!("Add repository {}", self.name)
     }
 
     fn plan(&self, _manifest: &Manifest, cx: &PlanCx) -> Result<Vec<Step>> {

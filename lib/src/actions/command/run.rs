@@ -65,7 +65,7 @@ impl RunCommand {
 
 impl Action for RunCommand {
     fn summarize(&self) -> String {
-        format!("Running {} command", self.command)
+        format!("Run {}", self.command)
     }
 
     fn plan(&self, _: &Manifest, _: &PlanCx) -> Result<Vec<Step>> {

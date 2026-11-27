@@ -45,7 +45,7 @@ impl Action for FileUnarchive {
     }
 
     fn summarize(&self) -> String {
-        format!("Unarchiving file {} to {}", self.from, self.to)
+        format!("Unpack {} into {}", self.from, self.to)
     }
 
     fn plan(&self, _manifest: &Manifest, _context: &PlanCx) -> Result<Vec<Step>> {

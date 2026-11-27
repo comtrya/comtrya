@@ -37,7 +37,7 @@ impl Action for DirectoryRemove {
     }
 
     fn summarize(&self) -> String {
-        format!("Removing directory {}", self.target)
+        format!("Remove directory {}", self.target)
     }
 
     fn plan(

@@ -14,7 +14,11 @@ pub type PackageInstall = Package;
 
 impl Action for PackageInstall {
     fn summarize(&self) -> String {
-        "Installing packages".to_string()
+        let packages = PackageVariant::from(self).packages();
+        if packages.is_empty() {
+            return String::from("Install packages");
+        }
+        format!("Install {}", packages.join(", "))
     }
 
     fn plan(&self, _manifest: &Manifest, cx: &PlanCx) -> Result<Vec<Step>> {
@@ -71,6 +75,22 @@ fn installs_local_files(provider: &PackageProviders) -> bool {
 mod tests {
     use super::*;
     use crate::actions::Actions;
+
+    #[test]
+    fn the_summary_names_the_packages() {
+        let one = PackageInstall {
+            name: Some(String::from("git")),
+            ..Default::default()
+        };
+        let several = PackageInstall {
+            list: vec![String::from("git"), String::from("vim")],
+            ..Default::default()
+        };
+
+        assert_eq!("Install git", one.summarize());
+        assert_eq!("Install git, vim", several.summarize());
+        assert_eq!("Install packages", PackageInstall::default().summarize());
+    }
 
     #[test]
     fn local_files_fail_with_a_provider_that_cant_install_them() {

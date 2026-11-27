@@ -124,7 +124,7 @@ impl Action for FileCopy {
     }
 
     fn summarize(&self) -> String {
-        format!("Copying file {} to {}", self.from, self.to)
+        format!("Copy {} to {}", self.from, self.to)
     }
 
     fn plan(&self, manifest: &Manifest, cx: &PlanCx) -> Result<Vec<Step>> {

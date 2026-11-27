@@ -95,7 +95,7 @@ impl Action for FileDownload {
     }
 
     fn summarize(&self) -> String {
-        format!("Downloading file {} to {}", self.from, self.to)
+        format!("Download {} to {}", self.from, self.to)
     }
 
     fn plan(&self, _manifest: &Manifest, _context: &PlanCx) -> Result<Vec<Step>> {

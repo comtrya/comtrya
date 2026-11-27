@@ -25,10 +25,7 @@ pub struct MacOSDefault {
 
 impl Action for MacOSDefault {
     fn summarize(&self) -> String {
-        format!(
-            "Writing default {} {} = {}",
-            self.domain, self.key, self.value
-        )
+        format!("Set {} {} to {}", self.domain, self.key, self.value)
     }
 
     fn plan(&self, _: &Manifest, _: &PlanCx) -> Result<Vec<Step>> {
@@ -60,9 +57,6 @@ mod tests {
             value: String::from("true"),
         };
 
-        assert_eq!(
-            "Writing default com.apple.dock autohide = true",
-            default.summarize()
-        );
+        assert_eq!("Set com.apple.dock autohide to true", default.summarize());
     }
 }

@@ -38,7 +38,7 @@ impl Action for FileChown {
     }
 
     fn summarize(&self) -> String {
-        format!("Changing ownership for file {}", self.path)
+        format!("Set the owner of {}", self.path)
     }
 
     #[cfg(not(unix))]

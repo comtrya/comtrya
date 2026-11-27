@@ -12,7 +12,7 @@ pub type GroupAdd = Group;
 
 impl Action for GroupAdd {
     fn summarize(&self) -> String {
-        format!("Creating group {}", self.group_name)
+        format!("Create group {}", self.group_name)
     }
 
     fn plan(&self, _manifest: &Manifest, cx: &PlanCx) -> Result<Vec<Step>> {
