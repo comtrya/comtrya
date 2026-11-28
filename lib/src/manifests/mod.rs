@@ -46,6 +46,8 @@ mod load;
 pub use load::{
     load, load_all, load_all_ignoring, Ignore, InvalidGlob, LoadError, LoadErrorKind, Loaded,
 };
+/// Where the files that actions read are
+mod source;
 /// Keys nothing reads, warned about while loading
 mod unknown_keys;
 /// Manifest format 2

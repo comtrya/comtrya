@@ -3,7 +3,7 @@
 
 use super::{v2, Manifest, MANIFEST_VERSION};
 use crate::{
-    contexts::{evaluate_condition, to_tera, Contexts},
+    contexts::{evaluate_condition, manifest::with_manifest, to_tera, Contexts},
     manifests::get_manifest_name,
     tera_functions::register_functions,
     utilities::error_chain,
@@ -191,8 +191,10 @@ pub fn load_all_ignoring(manifest_path: PathBuf, contexts: &Contexts, ignore: &I
             let name = get_manifest_name(&manifest_path, entry.path())
                 .unwrap_or_else(|_| entry.path().display().to_string());
             let path = canonicalize(entry.path()).unwrap_or_else(|_| entry.into_path());
+            let dir = path.parent().unwrap_or(&manifest_path);
+            let contexts = with_manifest(contexts, &name, dir);
 
-            match load_file(&path, contexts) {
+            match load_file(&path, &contexts) {
                 Ok(mut manifest) => {
                     manifest.root_dir = path.parent().map(std::path::Path::to_path_buf);
                     manifest.name = Some(name.clone());

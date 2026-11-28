@@ -66,7 +66,7 @@ fn dir(path: &Option<PathBuf>) -> Value {
 /// Windows accepts `/` as a separator. Backslashes would break manifests that put the path in a
 /// double-quoted YAML string, because templates are rendered first: `"C:\Users"` has an invalid
 /// `\U` escape
-fn template_path(path: &str) -> String {
+pub(super) fn template_path(path: &str) -> String {
     if cfg!(windows) {
         path.replace('\\', "/")
     } else {

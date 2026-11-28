@@ -12,15 +12,12 @@ pub use copy::DirectoryCopy;
 pub use create::DirectoryCreate;
 pub use remove::DirectoryRemove;
 
-/// Actions that work on directories below the manifest's `files` directory
+/// Actions that work on directories below the manifest's `files` directory, or in format 2
+/// also next to the manifest (see [`Manifest::source_path`])
 pub trait DirectoryAction: Action {
-    /// `path` below the manifest's `files` directory, which must exist
+    /// The source `path`, which must exist
     fn resolve(&self, manifest: &Manifest, path: &str) -> Result<PathBuf> {
-        let root_dir = manifest
-            .root_dir
-            .as_ref()
-            .ok_or_else(|| Error::NoManifestDir(path.to_string()))?;
-        let path = root_dir.join("files").join(path);
+        let path = crate::actions::file::source_path(manifest, path)?;
 
         path.normalize()
             .map(normpath::BasePathBuf::into_path_buf)

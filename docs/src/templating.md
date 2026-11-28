@@ -27,6 +27,14 @@ The values available in templates come from contexts. Run `comtrya contexts` to 
 | `variables`         | `variables` from `Comtrya.yaml`, and values passed with `-D key=value`                         |
 | `include_variables` | Variables loaded from the files listed under `include_variables` in `Comtrya.yaml`              |
 | `privilege`         | `privilege`: the configured privilege escalation tool (`sudo`, `doas` or `run0`)                 |
+| `manifest`          | `name` and `dir` of the manifest itself, like `dev.git` and the directory of `dev/git.yaml`     |
+
+`manifest` differs per manifest, so `comtrya contexts` doesn't list it. `manifest.dir` is the directory of the manifest file, e.g. to run a script that lies next to it:
+
+```yaml
+- action: command.run
+  command: "{{ manifest.dir }}/setup.sh"
+```
 
 `os.arch` is the CPU, like `x86_64` or `aarch64`. Release downloads often name it differently,
 e.g. `arm64`; Tera's `replace` filter maps it:

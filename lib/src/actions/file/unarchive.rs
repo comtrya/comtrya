@@ -39,6 +39,17 @@ impl FileUnarchive {}
 
 impl FileAction for FileUnarchive {}
 
+impl FileUnarchive {
+    /// The archive: in format 2, `./x` and `../x` are next to the manifest file. Anything else
+    /// is used as written, like in format 1
+    fn origin(&self, manifest: &Manifest) -> std::path::PathBuf {
+        match &manifest.root_dir {
+            Some(root_dir) if manifest.is_next_to_manifest(&self.from) => root_dir.join(&self.from),
+            _ => self.from.clone().into(),
+        }
+    }
+}
+
 impl Action for FileUnarchive {
     fn privileged(&self) -> bool {
         self.privileged
@@ -48,9 +59,9 @@ impl Action for FileUnarchive {
         format!("Unpack {} into {}", self.from, self.to)
     }
 
-    fn plan(&self, _manifest: &Manifest, _context: &PlanCx) -> Result<Vec<Step>> {
+    fn plan(&self, manifest: &Manifest, _context: &PlanCx) -> Result<Vec<Step>> {
         let steps = vec![Step::new(Unarchive {
-            origin: self.from.clone().into(),
+            origin: self.origin(manifest),
             dest: self.to.clone().into(),
             force: self.force.unwrap_or(true),
         })];
