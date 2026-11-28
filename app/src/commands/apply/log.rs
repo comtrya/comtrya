@@ -7,7 +7,7 @@ use super::progress::Progress;
 use comtrya_lib::{
     atoms::{command::Stream, Resource, RunAs},
     error_chain as chain,
-    executor::{Event, Observer, Skip, StepSkip},
+    executor::{ActionSkip, Event, Observer, Skip, StepSkip},
     steps::Step,
 };
 use std::cell::{Cell, RefCell};
@@ -123,6 +123,13 @@ impl Observer for Log {
             }
             Event::ActionPlanFailed(error) => {
                 self.failed(&format!("Action failed to get plan: {}", chain(*error)));
+                self.leave();
+            }
+            Event::ActionSkipped(ActionSkip::ReadsRegistered) => {
+                info!(
+                    "Skipped: it reads what an earlier command registered, and a dry run runs \
+                     no commands"
+                );
                 self.leave();
             }
             Event::StepSkipped { step, reason } => match reason {

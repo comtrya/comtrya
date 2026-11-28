@@ -260,3 +260,81 @@ fn a_newer_version_is_refused() {
         }
     ));
 }
+
+#[test]
+fn only_command_run_registers() {
+    let error = error(
+        "a.yaml",
+        "version: 2\nactions:\n  - action: directory.create\n    path: /tmp/x\n    register: x\n",
+    );
+
+    assert!(
+        error.contains("actions[0]: only `command.run` can `register`"),
+        "{error}"
+    );
+}
+
+#[test]
+fn a_register_name_is_a_word() {
+    let error = error(
+        "a.yaml",
+        "version: 2\nactions:\n  - action: command.run\n    command: id\n    register: rust-c\n",
+    );
+
+    assert!(
+        error.contains("actions[0]: `register` has to be a name"),
+        "{error}"
+    );
+}
+
+#[test]
+fn register_is_kept_on_the_action() {
+    let loaded = load(
+        "a.yaml",
+        "version: 2\nactions:\n  - action: command.run\n    command: id\n    register: me\n",
+    );
+
+    assert_eq!(Some("me"), loaded.manifests["a"].actions[0].register());
+}
+
+#[test]
+fn registered_values_outside_of_actions_are_errors() {
+    let error = error(
+        "a.yaml",
+        "version: 2\ndepends: [\"{{ registered.x.stdout }}\"]\nactions: []\n",
+    );
+
+    assert!(
+        error.contains("depends[0]: only the fields of actions can read `registered` values"),
+        "{error}"
+    );
+}
+
+#[test]
+fn deferred_values_are_rendered_and_typed_when_planned() {
+    use crate::actions::Actions;
+    use crate::registered::{Output, Registers};
+
+    let entry: serde_yaml_ng::Value = serde_yaml_ng::from_str(
+        "action: command.run\ncommand: \"{{ registered.x.stdout }}\"\nprivileged: \"{{ registered.x.exit_code == 0 }}\"\n",
+    )
+    .unwrap();
+    let output = Output {
+        stdout: String::from("id"),
+        ..Default::default()
+    };
+    let registers = Registers::from([(String::from("x"), output)]);
+    let deferred = [
+        String::from("actions[0].command"),
+        String::from("actions[0].privileged"),
+    ];
+
+    let action =
+        super::read_deferred(entry, "actions[0]", &deferred, &contexts(), &registers).unwrap();
+
+    let Actions::CommandRun(run) = action else {
+        panic!("not command.run");
+    };
+    assert_eq!("id", run.action.command);
+    assert!(run.action.privileged);
+}

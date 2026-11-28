@@ -145,6 +145,22 @@ pub enum Error {
         repository: String,
     },
 
+    /// A template or `where` reads `registered.<name>` (manifest version 2), but no action
+    /// registered that name so far
+    #[error(
+        "`registered.{name}` isn't set: no action before this one has `register: {name}`, or it \
+         didn't run"
+    )]
+    NotRegistered {
+        /// The name
+        name: String,
+    },
+
+    /// A field that reads `registered.*` can't be rendered, or the action can't be read with
+    /// what it rendered. The message names the field, like `actions[2].args[0]: …`
+    #[error("{0}")]
+    Registered(String),
+
     /// What atoms fail with: reading files, finding and running programs
     #[error(transparent)]
     Atom(#[from] atoms::Error),

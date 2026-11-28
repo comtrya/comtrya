@@ -14,7 +14,7 @@ use super::group::add::GroupAdd;
 use super::macos::MacOSDefault;
 use super::package::{PackageInstall, PackageRepository};
 use super::user::{add::UserAdd, add_group::UserAddGroup};
-use super::{Action, ConditionalVariantAction};
+use super::{Action, ConditionalVariantAction, Deferred};
 use crate::manifests::schema_keys;
 use schemars::JsonSchema;
 use serde::Serialize;
@@ -39,6 +39,11 @@ macro_rules! actions {
                 #[serde(rename = $name $(, alias = $first_alias $(, alias = $alias)*)?)]
                 $variant(ConditionalVariantAction<$action>),
             )+
+            /// An action of manifest version 2 whose fields read what earlier actions
+            /// registered. It's read when it's planned, once those fields can be rendered
+            #[serde(skip)]
+            #[schemars(skip)]
+            Deferred(Box<Deferred>),
         }
 
         impl Actions {
@@ -51,6 +56,7 @@ macro_rules! actions {
             pub fn name(&self) -> &'static str {
                 match self {
                     $(Actions::$variant(_) => $name,)+
+                    Actions::Deferred(action) => action.name(),
                 }
             }
 
@@ -89,6 +95,15 @@ macro_rules! actions {
             pub(crate) fn set_title(&mut self, title: String) {
                 match self {
                     $(Actions::$variant(action) => action.title = Some(title),)+
+                    Actions::Deferred(action) => action.title = Some(title),
+                }
+            }
+
+            /// Sets the name of the action's `register`, see [`crate::registered`]
+            pub(crate) fn set_register(&mut self, register: String) {
+                match self {
+                    $(Actions::$variant(action) => action.register = Some(register),)+
+                    Actions::Deferred(action) => action.register = Some(register),
                 }
             }
 
@@ -96,6 +111,7 @@ macro_rules! actions {
             pub fn inner_ref(&self) -> &(dyn Action + 'static) {
                 match self {
                     $(Actions::$variant(action) => action,)+
+                    Actions::Deferred(action) => action.as_ref(),
                 }
             }
         }

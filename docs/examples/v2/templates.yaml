@@ -1,0 +1,11 @@
+# yaml-language-server: $schema=https://comtrya.dev/schema-v2.json
+version: 2
+where: os.name == "linux"
+actions:
+  - action: directory.create
+    path: "{{ user.home_dir }}/bin"
+
+  - action: command.run
+    command: echo
+    args: ["{{ variables.greeting }}, {{ user.name }}"]
+    privileged: "{{ variables.as_root }}"

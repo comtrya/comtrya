@@ -38,22 +38,7 @@ actions:
 
 ### Manifests v2 (preview)
 
-`version: 2` is a preview of the next manifest format, and can still change until comtrya 0.13.0. Don't use it for manifests you depend on yet. Comtrya 0.12.0 and older refuse it (0.9.x and older ignore `version` and misread it). So far it differs from version 1 in four ways:
-
-- **Templates are rendered per value, after the manifest's `where`.** The file has to be valid YAML or TOML as it is, so quote values with templates (`path: "{{ user.home_dir }}/bin"`). A manifest whose `where` is false isn't rendered at all. `where` conditions aren't templates; they read the contexts themselves. An error names the value, like `actions[1].to`.
-- **A variant sets only what differs.** The fields it doesn't set come from its action, see [Variants](./variants.md#manifests-v2-variants-override-fields).
-  A value that is one template and nothing else, like `privileged: "{{ variables.root }}"` or `chmod: "{{ variables.mode }}"`, becomes a number or boolean when its field doesn't hold text; text fields keep the rendered text, so `args: ["{{ variables.port }}"]` stays `"8080"`. Values that read `registered.*` are reserved for `register`, which isn't there yet.
-- **One name per action and field.** Old names like `cmd.run`, `dir.create`, `source`/`target` for `from`/`to` in `file.copy`, or `sudo` for `privileged` are errors that name the one to use.
-- **Files next to the manifest.** A source path that starts with `./` or `../`, like `from: ./zshrc`, is relative to the manifest file's directory, so a `zsh/` folder can hold its manifest and its files without a `files/` directory. A plain name, like `from: zshrc`, still looks in `files/`. This works for `file.copy`, `file.link`, `file.unarchive` and `directory.copy`. If such a folder also holds YAML or TOML files that aren't manifests, list them in [`ignore`](#which-files-are-manifests).
-- **`title`** on an action is shown in the log instead of the generated summary:
-
-```yaml
-version: 2
-actions:
-  - action: package.install
-    title: Shell tools
-    list: [fd, ripgrep]
-```
+`version: 2` is a preview of the next manifest format, and can still change until comtrya 0.13.0. It parses the file before rendering templates, knows one name per action and field, lets variants set only what differs, finds files next to the manifest, and adds `title` and `register`. See [Manifests v2](./manifests-v2.md), and [Migrating from version 1](./manifests-v2-migrating.md).
 
 ## Unknown keys
 
@@ -118,4 +103,6 @@ command = "echo"
 args = [ "hi" ]
 ```
 
-To generate the schema for your installed version locally, run `cargo run -p jsonschemagen > schema.json` in a checkout of the repository.
+Version 2 manifests have their own schema, `https://comtrya.dev/schema-v2.json`, see [Manifests v2](./manifests-v2.md#editor-support).
+
+To generate the schemas for your installed version locally, run `cargo run -p jsonschemagen > schema.json` (version 1) or `cargo run -p jsonschemagen -- --version 2 > schema-v2.json` in a checkout of the repository.

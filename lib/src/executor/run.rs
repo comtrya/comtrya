@@ -1,7 +1,7 @@
 //! Runs the manifests of a [`ManifestGraph`]: each manifest's actions, each action's steps.
 
 use super::{
-    event::{Event, Observer, Skip, StepSkip},
+    event::{ActionSkip, Event, Observer, Skip, StepSkip},
     graph::ManifestGraph,
     locks::Locks,
     schedule, Options, Report,
@@ -12,6 +12,7 @@ use crate::{
     atoms::{self, command::Stream, Atom, Check},
     contexts::{evaluate_condition, manifest::for_manifest},
     manifests::Manifest,
+    registered::{Output, Registers},
     steps::Step,
 };
 use petgraph::graph::NodeIndex;
@@ -56,6 +57,39 @@ pub(super) struct Run<'a> {
     produced: Mutex<Vec<PathBuf>>,
     /// What the running steps use, so steps of manifests that run at once take turns
     locks: Locks,
+    /// What actions with `register` printed so far, see [`crate::registered`]
+    registered: Mutex<Registers>,
+}
+
+/// What the program of an action with `register` printed, and how it exited
+#[derive(Default)]
+struct Capture {
+    /// Its stdout lines
+    stdout: Vec<String>,
+    /// Its stderr lines
+    stderr: Vec<String>,
+    /// Its exit code, `None` until a program ran to its end
+    exit_code: Option<i32>,
+}
+
+impl Capture {
+    /// What the action registers, `None` if no program ran to its end
+    fn output(self) -> Option<Output> {
+        Some(Output {
+            exit_code: self.exit_code?,
+            stdout: self.stdout.join("\n"),
+            stderr: self.stderr.join("\n"),
+        })
+    }
+
+    /// Notes how the program of a step ended: 0, or the code it failed with
+    fn ended(&mut self, result: &atoms::Result<()>) {
+        match result {
+            Ok(()) => self.exit_code = Some(0),
+            Err(atoms::Error::CommandFailed { code, .. }) => self.exit_code = Some(*code),
+            Err(_) => {}
+        }
+    }
 }
 
 impl<'a> Run<'a> {
@@ -74,6 +108,7 @@ impl<'a> Run<'a> {
             failed: Mutex::new(HashSet::new()),
             produced: Mutex::new(vec![]),
             locks: Locks::default(),
+            registered: Mutex::new(Registers::new()),
         }
     }
 
@@ -211,6 +246,11 @@ impl<'a> Run<'a> {
                 action: &shown,
                 continue_on_error: action.continue_on_error(),
             });
+            if self.dry_run && action.reads_registered() {
+                self.observer
+                    .on(&Event::ActionSkipped(ActionSkip::ReadsRegistered));
+                continue;
+            }
 
             // A cancelled run stops at the top of the loop, also after such an action
             if !self.run_action(manifest, action, cx) && !action.continue_on_error() {
@@ -226,7 +266,9 @@ impl<'a> Run<'a> {
 
     /// Plans one action and runs the steps that are needed, false if it failed
     fn run_action(&self, manifest: &Manifest, action: &dyn Action, cx: &PlanCx) -> bool {
-        let steps = match action.plan(manifest, cx) {
+        let registered = self.registers().clone();
+        let cx = cx.with_registered(&registered);
+        let steps = match action.plan(manifest, &cx) {
             Ok(steps) => steps,
             Err(error) => {
                 self.observer.on(&Event::ActionPlanFailed(&error));
@@ -238,6 +280,7 @@ impl<'a> Run<'a> {
         // steps before it, like a link that needs the directory an earlier step creates
         let mut ran_any = false;
         let mut successful = true;
+        let mut capture = action.register().map(|_| Capture::default());
         for step in steps {
             if self.stops() {
                 successful = false;
@@ -247,10 +290,13 @@ impl<'a> Run<'a> {
                 continue;
             };
             ran_any = true;
-            if !self.run_step(step, change) {
+            if !self.run_step(step, change, capture.as_mut()) {
                 successful = false;
                 break;
             }
+        }
+        if let (Some(name), Some(output)) = (action.register(), capture.and_then(Capture::output)) {
+            self.registers().insert(name.to_string(), output);
         }
 
         let summary = ran_any.then(|| action.summarize());
@@ -274,6 +320,13 @@ impl<'a> Run<'a> {
                 None
             }
         }
+    }
+
+    /// What actions with `register` printed so far
+    fn registers(&self) -> std::sync::MutexGuard<'_, Registers> {
+        self.registered
+            .lock()
+            .expect("no action panicked while it registered its output")
     }
 
     /// Whether the run should stop. Tells it once, the first time
@@ -302,7 +355,7 @@ impl<'a> Run<'a> {
     }
 
     /// Shows what the step changes and, unless this is a dry run, runs it. False if it failed
-    fn run_step(&self, step: Step, change: Change) -> bool {
+    fn run_step(&self, step: Step, change: Change, capture: Option<&mut Capture>) -> bool {
         if let Some(change) = change {
             self.observer.on(&Event::StepChange(&change));
         }
@@ -317,7 +370,15 @@ impl<'a> Run<'a> {
 
         let _lock = self.locks.lock(step.resources());
         self.observer.on(&Event::StepStarted(&step));
-        if let Err(error) = self.run_atom(&step) {
+        let result = match capture {
+            Some(capture) => {
+                let result = self.run_atom(&step, Some(&mut *capture));
+                capture.ended(&result);
+                result
+            }
+            None => self.run_atom(&step, None),
+        };
+        if let Err(error) = result {
             self.observer.on(&Event::StepFailed {
                 step: &step,
                 error: &error,
@@ -331,7 +392,7 @@ impl<'a> Run<'a> {
     /// Runs `atom`, and tells each line its program prints while it runs. The atom runs in its
     /// own thread, so the lines reach the observer here, in the spans of the manifest and the
     /// action
-    fn execute(&self, atom: &Atom) -> atoms::Result<()> {
+    fn execute(&self, atom: &Atom, mut capture: Option<&mut Capture>) -> atoms::Result<()> {
         let (sender, lines) = mpsc::channel::<(Stream, String)>();
 
         std::thread::scope(|scope| {
@@ -347,6 +408,12 @@ impl<'a> Run<'a> {
                     stream,
                     line: &line,
                 });
+                if let Some(capture) = capture.as_deref_mut() {
+                    match stream {
+                        Stream::Stdout => capture.stdout.push(line),
+                        Stream::Stderr => capture.stderr.push(line),
+                    }
+                }
             }
 
             running
@@ -357,7 +424,7 @@ impl<'a> Run<'a> {
 
     /// Runs the step's atom: in the privileged helper if it needs root and isn't a program,
     /// otherwise here, through the privilege provider for a root program
-    fn run_atom(&self, step: &Step) -> atoms::Result<()> {
+    fn run_atom(&self, step: &Step, capture: Option<&mut Capture>) -> atoms::Result<()> {
         if step.needs_helper() {
             return self
                 .helper
@@ -366,6 +433,6 @@ impl<'a> Run<'a> {
                 .run(&step.atom);
         }
         step.atom_to_run(&self.cx.facts.privilege)
-            .and_then(|atom| self.execute(&atom))
+            .and_then(|atom| self.execute(&atom, capture))
     }
 }

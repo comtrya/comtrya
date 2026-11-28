@@ -42,6 +42,8 @@ pub enum Event<'a> {
     },
     /// The action can't plan its steps. It ends here
     ActionPlanFailed(&'a actions::Error),
+    /// The action doesn't run, and that's no failure. It ends here
+    ActionSkipped(ActionSkip),
     /// A step of the action doesn't run
     StepSkipped {
         /// The step
@@ -94,6 +96,13 @@ pub enum Skip<'a> {
         /// Why
         error: &'a ConditionError,
     },
+}
+
+/// Why an action doesn't run
+pub enum ActionSkip {
+    /// It reads what an earlier action registered (`registered.*`), and a dry run runs no
+    /// commands, so nothing was registered
+    ReadsRegistered,
 }
 
 /// Why a step doesn't run, though it would change something

@@ -1,0 +1,6 @@
+# yaml-language-server: $schema=https://comtrya.dev/schema-v2.json
+version: 2
+actions:
+  - action: package.install
+    title: Shell tools
+    list: [fd, ripgrep]

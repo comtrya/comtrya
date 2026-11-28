@@ -22,27 +22,31 @@ pub(super) fn apply(document: &mut Value, rendered: &Rendered) {
         return;
     };
 
-    for (index, action) in actions.iter_mut().enumerate() {
-        let name = action
-            .get("action")
-            .and_then(Value::as_str)
-            .map(str::to_string);
-        let Some(schema) = name.as_deref().and_then(Actions::schema) else {
-            continue;
-        };
-        let at = format!("actions[{index}]");
-        let schema = schema.as_value();
+    for (index, entry) in actions.iter_mut().enumerate() {
+        action(entry, &format!("actions[{index}]"), rendered);
+    }
+}
 
-        fields(action, schema, &at, rendered);
-        let variants = action.get_mut("variants").and_then(Value::as_sequence_mut);
-        for (index, variant) in variants.into_iter().flatten().enumerate() {
-            fields(
-                variant,
-                schema,
-                &format!("{at}.variants[{index}]"),
-                rendered,
-            );
-        }
+/// Like [`apply`], for one action entry at `at`, like `actions[2]`
+pub(crate) fn action(action: &mut Value, at: &str, rendered: &Rendered) {
+    let name = action
+        .get("action")
+        .and_then(Value::as_str)
+        .map(str::to_string);
+    let Some(schema) = name.as_deref().and_then(Actions::schema) else {
+        return;
+    };
+    let schema = schema.as_value();
+
+    fields(action, schema, at, rendered);
+    let variants = action.get_mut("variants").and_then(Value::as_sequence_mut);
+    for (index, variant) in variants.into_iter().flatten().enumerate() {
+        fields(
+            variant,
+            schema,
+            &format!("{at}.variants[{index}]"),
+            rendered,
+        );
     }
 }
 
@@ -207,15 +211,12 @@ mod tests {
     }
 
     #[test]
-    fn registered_values_are_not_rendered_yet() {
-        let loaded = load(
+    fn an_action_with_registered_values_is_read_when_its_planned() {
+        let action = action(
             "version: 2\nactions:\n  - action: command.run\n    command: \"{{ registered.x.stdout }}\"\n",
         );
 
-        let error = loaded.errors[0].kind.to_string();
-        assert!(
-            error.contains("actions[0].command: `registered` values need `register`"),
-            "{error}"
-        );
+        assert!(matches!(action, Actions::Deferred(_)));
+        assert_eq!("command.run", action.to_string());
     }
 }

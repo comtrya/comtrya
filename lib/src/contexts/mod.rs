@@ -39,7 +39,7 @@ use std::sync::LazyLock;
 use thiserror::Error as ThisError;
 use tracing::trace;
 
-use crate::{config::Config, values::Value};
+use crate::{config::Config, registered::Registers, values::Value};
 
 /// What comtrya knows before it loads manifests
 pub mod facts;
@@ -105,7 +105,31 @@ pub enum ConditionError {
 /// When the contexts can't be turned into Rhai values, or the condition isn't valid Rhai,
 /// fails, or isn't true or false
 pub fn evaluate_condition(condition: &str, contexts: &Contexts) -> Result<bool, ConditionError> {
-    Ok(ENGINE.eval_with_scope::<bool>(&mut to_rhai(contexts)?, condition)?)
+    evaluate_condition_with(condition, contexts, &crate::registered::NONE)
+}
+
+/// Evaluates a `where` condition against the contexts and what actions registered so far,
+/// `registered.<name>` (manifest version 2)
+///
+/// # Errors
+///
+/// Like [`evaluate_condition`]
+pub fn evaluate_condition_with(
+    condition: &str,
+    contexts: &Contexts,
+    registers: &Registers,
+) -> Result<bool, ConditionError> {
+    let mut scope = to_rhai(contexts)?;
+    // Only when there is something, so conditions without `register` see what they always did
+    if !registers.is_empty() {
+        let registered =
+            rhai::serde::to_dynamic(registers).map_err(|source| ConditionError::Context {
+                context: String::from("registered"),
+                source,
+            })?;
+        scope.push_constant("registered", registered);
+    }
+    Ok(ENGINE.eval_with_scope::<bool>(&mut scope, condition)?)
 }
 
 /// The contexts as constants for a `where` condition

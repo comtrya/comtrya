@@ -1,0 +1,10 @@
+# yaml-language-server: $schema=https://comtrya.dev/schema-v2.json
+version: 2
+actions:
+  - action: package.install
+    list: [fd, ripgrep]
+    state: latest
+
+  - action: package.install
+    name: nano
+    state: absent
