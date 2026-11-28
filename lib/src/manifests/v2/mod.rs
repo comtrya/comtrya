@@ -4,12 +4,15 @@
 //!
 //! Format 2 knows one name for each action and field: the aliases of format 1, like `cmd.run`
 //! or `source` for `from`, are errors with the name to use. Every action can have a `title`,
-//! which log lines show instead of the generated summary
+//! which log lines show instead of the generated summary. A variant sets only the fields that
+//! differ from its action
 
 /// Old names of actions and fields, which format 2 doesn't accept
 mod aliases;
 /// Templates in values
 mod render;
+/// Variants that override fields of their action
+mod variants;
 
 use super::load::{parse, LoadErrorKind};
 use super::{unknown_keys, Manifest};
@@ -45,6 +48,7 @@ pub(super) fn load(
     let unknown = serde_json::to_value(&document)
         .map(|generic| unknown_keys(&generic))
         .unwrap_or_default();
+    variants::complete(&mut document).map_err(LoadErrorKind::Parse)?;
     let mut manifest = parse_manifest(document).map_err(|err| {
         // A misspelled required field is the likely cause
         let hints: String = unknown.iter().map(|key| format!("; {key}")).collect();

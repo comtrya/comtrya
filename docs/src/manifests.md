@@ -38,10 +38,11 @@ actions:
 
 ### Manifests v2 (preview)
 
-`version: 2` is a preview of the next manifest format, and can still change until comtrya 0.13.0. Don't use it for manifests you depend on yet. Comtrya 0.12.0 and older refuse it (0.9.x and older ignore `version` and misread it). So far it differs from version 1 in three ways:
+`version: 2` is a preview of the next manifest format, and can still change until comtrya 0.13.0. Don't use it for manifests you depend on yet. Comtrya 0.12.0 and older refuse it (0.9.x and older ignore `version` and misread it). So far it differs from version 1 in four ways:
 
 - **Templates are rendered per value, after the manifest's `where`.** The file has to be valid YAML or TOML as it is, so quote values with templates (`path: "{{ user.home_dir }}/bin"`). A manifest whose `where` is false isn't rendered at all. `where` conditions aren't templates; they read the contexts themselves. An error names the value, like `actions[1].to`.
-- **One name per action and field.** Old names like `cmd.run`, `dir.create`, `source`/`target` for `from`/`to` (in `file.link` too), or `sudo` for `privileged` are errors that name the one to use.
+- **One name per action and field.** Old names like `cmd.run`, `dir.create`, `source`/`target` for `from`/`to` in `file.copy`, or `sudo` for `privileged` are errors that name the one to use.
+- **A variant sets only what differs.** The fields it doesn't set come from its action, see [Variants](./variants.md#manifests-v2-variants-override-fields).
 - **`title`** on an action is shown in the log instead of the generated summary:
 
 ```yaml
