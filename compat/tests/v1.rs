@@ -105,8 +105,8 @@ fn manifest_dirs() -> Vec<PathBuf> {
 
 /// Intended differences to the release, as (manifest directory, manifest name)
 fn known_differences() -> Vec<(&'static str, &'static str)> {
-    // None since 0.11.0: the differences to 0.10.0 are in its release notes
-    vec![]
+    // `state` of package.install is new in 0.13.0, 0.12.0 ignores it
+    vec![("v1", "package-states")]
 }
 
 /// Drops `null` fields and empty objects, so a new optional field, or a removed one that was
@@ -291,6 +291,7 @@ fn fixtures_cover_the_v1_rules() {
             "manifest-where-false",
             "nested",
             "nested.other",
+            "package-states",
             "packages",
             "scalars",
             "system",

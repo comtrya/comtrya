@@ -1,24 +1,29 @@
 //! `package.install`
 
-use super::providers::PackageProviders;
+use super::providers::{PackageProvider, PackageProviders};
 use super::Package;
-use super::PackageVariant;
+use super::{PackageState, PackageVariant};
 use crate::actions::{Action, Error, PlanCx, Result};
 use crate::manifests::Manifest;
 use crate::steps::Step;
 use std::ops::Deref;
-use tracing::span;
+use tracing::{debug, span};
 
 /// The `package.install` action
 pub type PackageInstall = Package;
 
 impl Action for PackageInstall {
     fn summarize(&self) -> String {
+        let verb = match self.state() {
+            PackageState::Present => "Install",
+            PackageState::Latest => "Install or upgrade",
+            PackageState::Absent => "Remove",
+        };
         let packages = PackageVariant::from(self).packages();
         if packages.is_empty() {
-            return String::from("Install packages");
+            return format!("{verb} packages");
         }
-        format!("Install {}", packages.join(", "))
+        format!("{verb} {}", packages.join(", "))
     }
 
     fn plan(&self, _manifest: &Manifest, cx: &PlanCx) -> Result<Vec<Step>> {
@@ -36,31 +41,97 @@ impl Action for PackageInstall {
 
         crate::actions::warn_ignored(&self.ignored_fields());
 
+        if variant.file && self.state() != PackageState::Present {
+            return Err(Error::Invalid {
+                field: "file",
+                problem: format!(
+                    "only works with `state: present`, not `{}`",
+                    self.state().as_str()
+                ),
+            });
+        }
+
         if variant.file && !installs_local_files(&provider_type) {
             return Err(Error::NoLocalInstall {
                 provider: provider.name().to_string(),
             });
         }
 
-        let mut atoms: Vec<Step> = vec![];
-
-        // If the provider isn't available, see if we can bootstrap it
-        if !provider.available() {
-            if provider.bootstrap(cx.facts).is_empty() {
-                return Err(Error::ProviderUnavailable {
-                    provider: provider.name().to_string(),
-                });
-            }
-
-            atoms.append(&mut provider.bootstrap(cx.facts));
+        // Before a bootstrap, so a missing provider isn't installed for a state it can't do
+        if !makes_sure_of(&provider_type, self.state()) {
+            return Err(Error::UnsupportedState {
+                provider: provider.name().to_string(),
+                state: self.state().as_str(),
+            });
         }
 
-        atoms.append(&mut provider.install(&variant, cx.facts)?);
+        let steps = match self.state() {
+            PackageState::Absent => remove(provider, &variant, cx),
+            state => install(provider, &variant, cx, state),
+        };
 
         span.exit();
 
-        Ok(atoms)
+        steps
     }
+}
+
+/// Installs the packages, or upgrades them for `latest`. A provider that isn't installed is
+/// bootstrapped first, then there's nothing to upgrade
+fn install(
+    provider: &dyn PackageProvider,
+    variant: &PackageVariant,
+    cx: &PlanCx,
+    state: PackageState,
+) -> Result<Vec<Step>> {
+    if provider.available() {
+        return match state {
+            PackageState::Latest => provider.upgrade(variant, cx.facts),
+            _ => provider.install(variant, cx.facts),
+        };
+    }
+
+    let mut steps = provider.bootstrap(cx.facts);
+    if steps.is_empty() {
+        return Err(Error::ProviderUnavailable {
+            provider: provider.name().to_string(),
+        });
+    }
+
+    steps.append(&mut provider.install(variant, cx.facts)?);
+    Ok(steps)
+}
+
+/// Removes the packages. Without the provider, none of its packages are installed
+fn remove(
+    provider: &dyn PackageProvider,
+    variant: &PackageVariant,
+    cx: &PlanCx,
+) -> Result<Vec<Step>> {
+    if !provider.available() {
+        debug!(
+            "{} isn't installed, so neither are the packages",
+            provider.name()
+        );
+        return Ok(vec![]);
+    }
+
+    provider.remove(variant, cx.facts)
+}
+
+/// Whether the provider can tell and do `state`. Every provider installs (`present`)
+fn makes_sure_of(provider: &PackageProviders, state: PackageState) -> bool {
+    state == PackageState::Present
+        || matches!(
+            provider,
+            PackageProviders::Homebrew
+                | PackageProviders::Aptitude
+                | PackageProviders::Dnf
+                | PackageProviders::Pacman
+                | PackageProviders::Yay
+                | PackageProviders::Paru
+                | PackageProviders::Winget
+        )
 }
 
 /// Whether the provider installs a package from a file given as `name`, for `file: true`
@@ -90,6 +161,114 @@ mod tests {
         assert_eq!("Install git", one.summarize());
         assert_eq!("Install git, vim", several.summarize());
         assert_eq!("Install packages", PackageInstall::default().summarize());
+    }
+
+    #[test]
+    fn the_summary_says_what_the_state_does() {
+        let package = |state| PackageInstall {
+            name: Some(String::from("git")),
+            state: Some(state),
+            ..Default::default()
+        };
+
+        assert_eq!("Install git", package(PackageState::Present).summarize());
+        assert_eq!(
+            "Install or upgrade git",
+            package(PackageState::Latest).summarize()
+        );
+        assert_eq!("Remove git", package(PackageState::Absent).summarize());
+    }
+
+    #[test]
+    fn a_provider_that_cant_do_the_state_fails_before_a_bootstrap() {
+        for state in [PackageState::Latest, PackageState::Absent] {
+            let package = PackageInstall {
+                name: Some(String::from("git")),
+                provider: Some(PackageProviders::Zypper),
+                state: Some(state),
+                ..Default::default()
+            };
+
+            let Err(error) = package.plan(&Manifest::default(), &PlanCx::empty()) else {
+                panic!("zypper can't do {}", state.as_str());
+            };
+
+            assert_eq!(
+                format!(
+                    "package provider Zypper can't do `state: {}`",
+                    state.as_str()
+                ),
+                error.to_string()
+            );
+        }
+    }
+
+    #[test]
+    fn providers_without_the_state_fail_by_default() {
+        let package = PackageVariant {
+            name: Some(String::from("git")),
+            ..Default::default()
+        };
+        let facts = crate::contexts::Facts::default();
+        let snap = PackageProviders::Snapcraft.get_provider();
+
+        assert!(matches!(
+            snap.upgrade(&package, &facts),
+            Err(Error::UnsupportedState {
+                state: "latest",
+                ..
+            })
+        ));
+        assert!(matches!(
+            snap.remove(&package, &facts),
+            Err(Error::UnsupportedState {
+                state: "absent",
+                ..
+            })
+        ));
+    }
+
+    #[test]
+    fn local_files_only_work_with_state_present() {
+        let package = PackageInstall {
+            name: Some(String::from("/tmp/nano.deb")),
+            provider: Some(PackageProviders::Aptitude),
+            file: true,
+            state: Some(PackageState::Absent),
+            ..Default::default()
+        };
+
+        let Err(error) = package.plan(&Manifest::default(), &PlanCx::empty()) else {
+            panic!("file: true can't be removed");
+        };
+
+        assert!(error.to_string().contains("state: present"), "{error}");
+    }
+
+    #[test]
+    fn state_is_read_from_manifests_and_defaults_to_present() {
+        let yaml = r"
+- action: package.install
+  name: git
+  state: latest
+
+- action: package.install
+  name: vim
+";
+        let actions: Vec<Actions> = serde_yaml_ng::from_str(yaml).unwrap();
+        let states: Vec<PackageState> = actions
+            .iter()
+            .map(|action| match action {
+                Actions::PackageInstall(action) => action.action.state(),
+                _ => panic!("not package.install"),
+            })
+            .collect();
+
+        assert_eq!(vec![PackageState::Latest, PackageState::Present], states);
+        assert!(serde_yaml_ng::from_str::<Vec<Actions>>(
+            "- action: package.install\n  name: git\n  state: newest\n"
+        )
+        .is_err());
     }
 
     #[test]

@@ -70,7 +70,7 @@ impl PackageProvider for Homebrew {
         // Formulae are installed below the Cellar, casks below the Caskroom, both by their name
         // without the tap, like `terraform` for `hashicorp/tap/terraform`
         Ok(super::missing(package, |p| {
-            let name = p.rsplit('/').next().unwrap_or(p);
+            let name = short_name(p);
             cellar.join(name).is_dir() || caskroom.join(name).is_dir()
         }))
     }
@@ -84,17 +84,72 @@ impl PackageProvider for Homebrew {
             return Ok(vec![]);
         }
 
-        Ok(vec![Step::new(Exec {
-            command: String::from("brew"),
-            arguments: [
-                vec![String::from("install")],
-                package.extra_args.clone(),
-                need_installed,
-            ]
-            .concat(),
-            ..Default::default()
-        })])
+        Ok(vec![brew("install", &package.extra_args, need_installed)])
     }
+
+    fn upgrade(&self, package: &PackageVariant, _facts: &Facts) -> Result<Vec<Step>> {
+        let missing = self.query(package)?;
+        let outdated = self.outdated(&super::installed(package, &missing))?;
+
+        let mut steps = vec![];
+        if !missing.is_empty() {
+            steps.push(brew("install", &package.extra_args, missing));
+        }
+        if !outdated.is_empty() {
+            // The executor runs the step before it plans the next action, which asks again
+            self.runner.forget();
+            steps.push(brew("upgrade", &package.extra_args, outdated));
+        }
+
+        Ok(steps)
+    }
+
+    fn remove(&self, package: &PackageVariant, _facts: &Facts) -> Result<Vec<Step>> {
+        let installed = super::installed(package, &self.query(package)?);
+        if installed.is_empty() {
+            return Ok(vec![]);
+        }
+
+        Ok(vec![brew("uninstall", &[], installed)])
+    }
+}
+
+impl Homebrew {
+    /// The installed packages that `brew outdated` lists. It names formulae and casks without
+    /// their tap, so they're compared by the name after the last `/`
+    fn outdated(&self, installed: &[String]) -> Result<Vec<String>> {
+        if installed.is_empty() {
+            return Ok(vec![]);
+        }
+
+        let command = CommandSpec::new("brew").args(["outdated", "--quiet"]);
+        let outdated = super::listed(&*self.runner, &command, |line| Some(short_name(line)))?;
+
+        Ok(installed
+            .iter()
+            .filter(|p| outdated.contains(short_name(p)))
+            .cloned()
+            .collect())
+    }
+}
+
+/// The name of a formula or cask without its tap, like `terraform` for `hashicorp/tap/terraform`
+fn short_name(package: &str) -> &str {
+    package.rsplit('/').next().unwrap_or(package)
+}
+
+/// `brew <subcommand>` for the packages, as the user
+fn brew(subcommand: &str, extra_args: &[String], packages: Vec<String>) -> Step {
+    Step::new(Exec {
+        command: String::from("brew"),
+        arguments: [
+            vec![String::from(subcommand)],
+            extra_args.to_vec(),
+            packages,
+        ]
+        .concat(),
+        ..Default::default()
+    })
 }
 
 #[cfg(test)]
@@ -126,6 +181,112 @@ mod tests {
         };
 
         assert_eq!(vec!["ripgrep"], homebrew.query(&package).unwrap());
+    }
+
+    /// Homebrew with `git` and `firefox` installed below a temporary prefix, and `brew outdated`
+    /// answering `outdated`
+    fn installed_git_and_firefox(prefix: &Path, outdated: &str) -> (Homebrew, Arc<FakeRunner>) {
+        std::fs::create_dir_all(prefix.join("Cellar/git")).unwrap();
+        std::fs::create_dir_all(prefix.join("Caskroom/firefox")).unwrap();
+        let runner = FakeRunner::new()
+            .answer(
+                "brew --prefix",
+                succeeds(&format!("{}\n", prefix.display())),
+            )
+            .answer("brew outdated --quiet", succeeds(outdated))
+            .shared();
+
+        (
+            Homebrew {
+                runner: runner.clone(),
+            },
+            runner,
+        )
+    }
+
+    fn steps(steps: Vec<Step>) -> Vec<String> {
+        steps.iter().map(ToString::to_string).collect()
+    }
+
+    fn packages(list: &[&str]) -> PackageVariant {
+        PackageVariant {
+            list: list.iter().map(ToString::to_string).collect(),
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn latest_installs_missing_and_upgrades_outdated_packages() {
+        let prefix = tempfile::tempdir().unwrap();
+        let (homebrew, _) = installed_git_and_firefox(prefix.path(), "git\nnode\n");
+
+        let planned = homebrew
+            .upgrade(&packages(&["git", "firefox", "ripgrep"]), &Facts::default())
+            .unwrap();
+
+        assert_eq!(
+            vec!["Run brew install ripgrep", "Run brew upgrade git"],
+            steps(planned)
+        );
+    }
+
+    #[test]
+    fn latest_does_nothing_when_everything_is_up_to_date() {
+        let prefix = tempfile::tempdir().unwrap();
+        let (homebrew, _) = installed_git_and_firefox(prefix.path(), "node\n");
+
+        let planned = homebrew
+            .upgrade(
+                &packages(&["git", "homebrew/cask/firefox"]),
+                &Facts::default(),
+            )
+            .unwrap();
+
+        assert!(planned.is_empty());
+    }
+
+    #[test]
+    fn latest_compares_tap_packages_by_their_name() {
+        let prefix = tempfile::tempdir().unwrap();
+        let (homebrew, _) = installed_git_and_firefox(prefix.path(), "firefox\n");
+
+        let planned = homebrew
+            .upgrade(&packages(&["homebrew/cask/firefox"]), &Facts::default())
+            .unwrap();
+
+        assert_eq!(
+            vec!["Run brew upgrade homebrew/cask/firefox"],
+            steps(planned)
+        );
+    }
+
+    #[test]
+    fn latest_doesnt_ask_for_outdated_packages_when_none_is_installed() {
+        let prefix = tempfile::tempdir().unwrap();
+        let (homebrew, runner) = installed_git_and_firefox(prefix.path(), "");
+
+        let planned = homebrew
+            .upgrade(&packages(&["ripgrep"]), &Facts::default())
+            .unwrap();
+
+        assert_eq!(vec!["Run brew install ripgrep"], steps(planned));
+        assert_eq!(vec!["brew --prefix"], runner.calls());
+    }
+
+    #[test]
+    fn absent_removes_only_installed_packages() {
+        let prefix = tempfile::tempdir().unwrap();
+        let (homebrew, _) = installed_git_and_firefox(prefix.path(), "");
+
+        let planned = homebrew
+            .remove(&packages(&["git", "ripgrep", "firefox"]), &Facts::default())
+            .unwrap();
+        let nothing = homebrew
+            .remove(&packages(&["ripgrep"]), &Facts::default())
+            .unwrap();
+
+        assert_eq!(vec!["Run brew uninstall git firefox"], steps(planned));
+        assert!(nothing.is_empty());
     }
 
     #[test]
