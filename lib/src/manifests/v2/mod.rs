@@ -11,6 +11,8 @@
 mod aliases;
 /// Templates in values
 mod render;
+/// Numbers and booleans from templates
+mod typed;
 /// Variants that override fields of their action
 mod variants;
 
@@ -41,7 +43,9 @@ pub(super) fn load(
         return Ok(skipped(&document, condition));
     }
 
-    render::all(&mut document, contexts).map_err(LoadErrorKind::Render)?;
+    let rendered = render::all(&mut document, contexts).map_err(LoadErrorKind::Render)?;
+    deferred_unsupported(&rendered).map_err(LoadErrorKind::Render)?;
+    typed::apply(&mut document, &rendered);
     let titles = take_titles(&mut document).map_err(LoadErrorKind::Parse)?;
     aliases::check(&document).map_err(LoadErrorKind::Parse)?;
 
@@ -64,6 +68,17 @@ pub(super) fn load(
         }
     }
     Ok(manifest)
+}
+
+/// Fails on the first value that uses `registered.*`: rendering those when their action is
+/// planned comes with `register`
+fn deferred_unsupported(rendered: &render::Rendered) -> Result<(), String> {
+    match rendered.deferred.first() {
+        Some(at) => Err(format!(
+            "{at}: `registered` values need `register`, which manifest version 2 doesn't have yet"
+        )),
+        None => Ok(()),
+    }
 }
 
 /// The manifest's `where`, if it is there and false. One that can't be evaluated counts as
