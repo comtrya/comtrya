@@ -16,6 +16,7 @@ The most frequently used command s the **apply** command, which will apply the a
 | status          | List manifest status                         |
 | version         | Print version information                    |
 | contexts        | List available contexts                      |
+| manifests       | Work on manifest files, like upgrading them  |
 | gen-completions | Auto generate completions                    |
 | help            | Print out help information for using comtrya |
 
@@ -174,6 +175,35 @@ comtrya contexts --show-values
 ```
 
 At the end, `comtrya contexts` also prints the directory where manifests fetched from git repositories are cached, e.g. `~/.cache/comtrya/manifests/git` on Linux. Comtrya updates these clones on every run, see [remote manifests](./cli.md#basic-usage-on-remote-manifests).
+
+## Manifests
+
+### Upgrading to version 2
+
+`comtrya manifests upgrade` rewrites version 1 manifests as [version 2](./manifests.md#manifests-v2-preview), a preview until 0.13.0. It prints the upgraded manifest; `--write` replaces the file instead:
+
+```shell
+comtrya manifests upgrade manifests/zsh.yaml
+comtrya manifests upgrade --write manifests/zsh.yaml manifests/git.toml
+```
+
+What it changes:
+
+- `version: 2` comes first.
+- Old names of actions and fields become the one name version 2 knows, like `cmd.run` → `command.run`, `sudo` → `privileged`, and `source`/`target` → `from`/`to`.
+- Variants keep only the fields that differ from their action, since a version 2 variant takes the others from it.
+- Source paths that start with `./` or `../` are rewritten to point to the same file, since version 2 reads them next to the manifest instead of below `files/`: `from: ./zshrc` becomes `from: zshrc`.
+- A value that starts with an unquoted template, like `path: {{ user.home_dir }}/bin`, gets quotes, since version 2 reads the file before it renders templates.
+
+A manifest is only upgraded if both versions mean the same: comtrya loads both with the contexts of this machine and compares their actions, variants and source files. It refuses, names the reason and leaves the file as it is when:
+
+- templates are more than values, like `{% if %}` around actions; the error names the line,
+- a `where` has a template; version 2 conditions read the contexts themselves,
+- a variant leaves out a field its action sets, which version 2 would take from the action; set the field in the variant first,
+- a `file.unarchive` source starts with `../`, which version 1 reads from where comtrya runs,
+- the manifest doesn't load on this machine, like a template that only renders where its `where` is true.
+
+Comments aren't kept; comtrya warns when the file has some. The upgraded manifest goes to stdout and everything else to stderr, so `comtrya manifests upgrade m.yaml > new.yaml` gets only the manifest. The command fails if any file isn't upgraded.
 
 ## Status
 

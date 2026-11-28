@@ -64,6 +64,9 @@ pub enum Commands {
     /// List available contexts
     Contexts(commands::Contexts),
 
+    /// Work on manifest files, like upgrading them to manifest version 2
+    Manifests(commands::Manifests),
+
     /// Auto generate completions
     ///
     /// for examples:

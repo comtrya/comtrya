@@ -46,6 +46,7 @@ pub(crate) fn execute(runtime: Runtime) -> anyhow::Result<()> {
         Commands::Status(apply) => apply.status(&runtime),
         Commands::Version(version) => version.execute(&runtime),
         Commands::Contexts(contexts) => contexts.execute(&runtime),
+        Commands::Manifests(manifests) => manifests.execute(&runtime),
         Commands::GenCompletions(gen_completions) => gen_completions.execute(&runtime),
         Commands::Helper => unreachable!("the helper runs before the runtime is built"),
     }

@@ -11,6 +11,10 @@ pub(crate) use version::Version;
 mod contexts;
 pub(crate) use contexts::Contexts;
 
+/// `comtrya manifests`
+mod manifests;
+pub(crate) use manifests::Manifests;
+
 /// `comtrya gen-completions`
 mod gen_completions;
 pub(crate) use gen_completions::GenCompletions;

@@ -40,7 +40,7 @@ fn check_action(action: &Value) -> Result<(), String> {
 }
 
 /// The action that `name` is an alias of, `None` for an action's own name or an unknown one
-fn aliased_action(name: &str) -> Option<&'static str> {
+pub(in crate::manifests) fn aliased_action(name: &str) -> Option<&'static str> {
     Actions::NAMES
         .iter()
         .find(|(_, aliases)| aliases.contains(&name))
@@ -74,7 +74,9 @@ const VERSION_1_FIELDS: [(&str, &str, &str); 2] = [
 ];
 
 /// The fields of the action `name` that format 2 doesn't know, as (field, the one to use)
-fn version_1_fields(name: &str) -> impl Iterator<Item = (String, String)> + '_ {
+pub(in crate::manifests) fn version_1_fields(
+    name: &str,
+) -> impl Iterator<Item = (String, String)> + '_ {
     VERSION_1_FIELDS
         .iter()
         .filter(move |(action, _, _)| *action == name)
@@ -82,7 +84,7 @@ fn version_1_fields(name: &str) -> impl Iterator<Item = (String, String)> + '_ {
 }
 
 /// The aliases of the fields of an action's schema, as (alias, field), from their `x-aliases`
-fn field_aliases(schema: &Json) -> Vec<(String, String)> {
+pub(in crate::manifests) fn field_aliases(schema: &Json) -> Vec<(String, String)> {
     let Some(properties) = schema.get("properties").and_then(Json::as_object) else {
         return vec![];
     };
