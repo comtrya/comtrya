@@ -19,4 +19,6 @@
   - [Privilege Escalation](./privileged.md)
   - [Dependencies](./dependencies.md)
   - [Variants](./variants.md)
+  - [Manifests v2 (preview)](./manifests-v2.md)
+    - [Migrating from version 1](./manifests-v2-migrating.md)
 - [Recipes](./recipes.md)

@@ -42,6 +42,36 @@ With `stdout`, the command's output is written to a file instead of the log, lik
 - If the command fails, the file is left untouched.
 - The file is written by comtrya itself, so with `privileged: true` it still belongs to the user running comtrya and its directory must be writable by them.
 
+### Registering the output (manifest version 2)
+
+In a [`version: 2`](./manifests-v2.md) manifest, `register: <name>` keeps what the command printed and how it exited. Later actions read it in templates and `where` conditions:
+
+```yaml
+version: 2
+actions:
+  - action: command.run
+    command: rustc
+    args: [--version]
+    register: rustc
+
+  - action: file.copy
+    from: rust-1.8.toml
+    to: "{{ user.home_dir }}/.config/rust.toml"
+    where: '"1.8" in registered.rustc.stdout'
+```
+
+| Value                           | What it is                                                                 |
+|:--------------------------------|:---------------------------------------------------------------------------|
+| `registered.<name>.stdout`      | the lines it printed to stdout, joined with line breaks, without the last |
+| `registered.<name>.stderr`      | the same for stderr                                                        |
+| `registered.<name>.exit_code`   | 0, or the code it failed with when the action has `continue_on_error`      |
+
+- The name is letters, digits and `_`, like `rustc_version`. Only `command.run` can `register`.
+- The values are there once the action ran, for the later actions of its manifest and for the manifests that [depend](./dependencies.md) on it. With `--jobs`, other manifests may run before it or at the same time, so only dependents can rely on them.
+- Reading a name that nothing registered fails the action: `` `registered.rustc` isn't set: no action before this one has `register: rustc`, or it didn't run ``. That's also the case when the command wasn't found, or when its `where` was false.
+- An action whose fields read `registered.*` is read when it runs, so a missing or misspelled field in it is only reported then.
+- `--dry-run` runs no commands, so nothing is registered: actions that read `registered.*` are skipped, with a line saying so.
+
 ### Example
 
 ```yaml

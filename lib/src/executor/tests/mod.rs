@@ -5,6 +5,9 @@ mod events;
 mod failures;
 mod jobs;
 mod options;
+// The commands are `sh`
+#[cfg(unix)]
+mod registered;
 
 use super::*;
 use crate::manifests::{LoadError, LoadErrorKind, Manifest};

@@ -1,0 +1,6 @@
+# yaml-language-server: $schema=https://comtrya.dev/schema-v2.json
+version: 2
+actions:
+  - action: file.link
+    from: ./zshrc
+    to: "{{ user.home_dir }}/.zshrc"

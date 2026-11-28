@@ -44,6 +44,9 @@
 
 mod binary;
 mod command;
+/// Actions that read what earlier actions registered
+mod deferred;
+pub use deferred::Deferred;
 mod directory;
 mod error;
 pub use error::{Error, Result};
@@ -60,8 +63,9 @@ pub use registry::Actions;
 mod user;
 
 use crate::{
-    contexts::{evaluate_condition, Contexts, Facts},
+    contexts::{evaluate_condition_with, Contexts, Facts},
     manifests::Manifest,
+    registered::{self, Registers},
     steps::Step,
 };
 use schemars::JsonSchema;
@@ -115,6 +119,12 @@ pub struct ConditionalVariantAction<T> {
     #[serde(skip)]
     #[schemars(skip)]
     pub title: Option<String>,
+
+    /// `register` (manifest version 2): the name later actions read what this one printed by,
+    /// see [`crate::registered`]. Set by the version 2 loader, like `title`
+    #[serde(skip)]
+    #[schemars(skip)]
+    pub register: Option<String>,
 }
 
 /// Another version of an action, used instead of it when its `where` is true
@@ -150,8 +160,26 @@ where
         self.continue_on_error
     }
 
+    fn register(&self) -> Option<&str> {
+        self.register.as_deref()
+    }
+
+    fn reads_registered(&self) -> bool {
+        self.conditions()
+            .any(|condition| registered::names_in(condition).next().is_some())
+    }
+
     fn plan(&self, manifest: &Manifest, cx: &PlanCx) -> Result<Vec<Step>> {
-        let Some(action) = self.select(cx.contexts)? else {
+        let unregistered = self
+            .conditions()
+            .find_map(|condition| registered::missing(condition, cx.registered));
+        if let Some(name) = unregistered {
+            return Err(Error::NotRegistered {
+                name: name.to_string(),
+            });
+        }
+
+        let Some(action) = self.select_with(cx.contexts, cx.registered)? else {
             return Ok(vec![]);
         };
 
@@ -164,6 +192,14 @@ where
 }
 
 impl<T> ConditionalVariantAction<T> {
+    /// The action's own `where` and those of its variants
+    fn conditions(&self) -> impl Iterator<Item = &str> {
+        let variants = self.variants.iter().map(|variant| &variant.condition);
+        std::iter::once(&self.condition)
+            .chain(variants)
+            .filter_map(Option::as_deref)
+    }
+
     /// The action that applies: the first variant whose `where` is true, else the action itself
     /// if its own `where` is true or missing, else `None`. These are the v1 rules:
     ///
@@ -175,9 +211,19 @@ impl<T> ConditionalVariantAction<T> {
     ///
     /// When the action's own `where` can't be evaluated
     pub fn select(&self, contexts: &Contexts) -> Result<Option<&T>> {
+        self.select_with(contexts, &registered::NONE)
+    }
+
+    /// Like [`ConditionalVariantAction::select`], with what actions registered so far for the
+    /// conditions to read
+    ///
+    /// # Errors
+    ///
+    /// When the action's own `where` can't be evaluated
+    pub fn select_with(&self, contexts: &Contexts, registers: &Registers) -> Result<Option<&T>> {
         let variant = self.variants.iter().find(|variant| {
             variant.condition.as_ref().is_some_and(|condition| {
-                evaluate_condition(condition, contexts).unwrap_or_else(|error| {
+                evaluate_condition_with(condition, contexts, registers).unwrap_or_else(|error| {
                     error!(
                         "Failed execution condition for action: {}",
                         crate::error_chain(&error)
@@ -195,7 +241,7 @@ impl<T> ConditionalVariantAction<T> {
             return Ok(Some(&self.action));
         };
 
-        match evaluate_condition(condition, contexts) {
+        match evaluate_condition_with(condition, contexts, registers) {
             Ok(true) => Ok(Some(&self.action)),
             Ok(false) => Ok(None),
             Err(error) => Err(Error::Condition {
@@ -248,6 +294,17 @@ pub trait Action {
     fn continue_on_error(&self) -> bool {
         false
     }
+
+    /// The name of its `register`, if it keeps what it printed, see [`crate::registered`]
+    fn register(&self) -> Option<&str> {
+        None
+    }
+
+    /// Whether its fields or conditions read what earlier actions registered. A dry run runs
+    /// no commands, so it skips such an action
+    fn reads_registered(&self) -> bool {
+        false
+    }
 }
 
 /// What actions plan with: the typed facts about this machine, and the contexts that templates
@@ -258,12 +315,24 @@ pub struct PlanCx<'a> {
     pub facts: &'a Facts,
     /// The same, as templates and `where` see it
     pub contexts: &'a Contexts,
+    /// What earlier actions of the run registered, `registered.*` in templates and `where`
+    pub registered: &'a Registers,
 }
 
 impl<'a> PlanCx<'a> {
-    /// The facts and the contexts made from them
+    /// The facts and the contexts made from them, before any action registered something
     pub fn new(facts: &'a Facts, contexts: &'a Contexts) -> Self {
-        Self { facts, contexts }
+        Self {
+            facts,
+            contexts,
+            registered: &registered::NONE,
+        }
+    }
+
+    /// The same, with what earlier actions registered
+    #[must_use]
+    pub fn with_registered(self, registered: &'a Registers) -> Self {
+        Self { registered, ..self }
     }
 }
 
@@ -369,6 +438,7 @@ actions:
                     .collect(),
                 continue_on_error: false,
                 title: None,
+                register: None,
             }
         }
 

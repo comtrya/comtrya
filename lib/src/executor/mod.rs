@@ -69,7 +69,7 @@ mod run;
 mod schedule;
 
 use crate::{actions::PlanCx, manifests::Loaded};
-pub use event::{Event, Ignore, Observer, Skip, StepSkip};
+pub use event::{ActionSkip, Event, Ignore, Observer, Skip, StepSkip};
 use graph::ManifestGraph;
 use run::Run;
 use std::{path::Path, sync::atomic::AtomicBool};

@@ -53,6 +53,7 @@ mod unknown_keys;
 /// Manifest format 2
 mod v2;
 pub(crate) use unknown_keys::{closest, schema_keys, unknown_keys};
+pub(crate) use v2::read_deferred;
 /// Finding the directory with the manifests
 mod providers;
 use crate::actions::Actions;

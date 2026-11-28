@@ -56,7 +56,7 @@ actions:
 
 ## Manifests v2: variants override fields
 
-In a version 1 manifest, a variant is a complete action: it has to repeat every field the action needs, like `command` above. In a [version 2](./manifests.md#manifests-v2-preview) manifest (a preview until 0.13.0), a variant sets only the fields that differ, and takes the others from its action:
+In a version 1 manifest, a variant is a complete action: it has to repeat every field the action needs, like `command` above. In a [version 2]((./manifests-v2.md)) manifest (a preview until 0.13.0), a variant sets only the fields that differ, and takes the others from its action:
 
 ```yaml
 version: 2

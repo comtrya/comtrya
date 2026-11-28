@@ -1,0 +1,8 @@
+# yaml-language-server: $schema=https://comtrya.dev/schema-v2.json
+version: 2
+actions:
+  - action: package.install
+    name: fd
+    variants:
+      - where: os.distribution == "Ubuntu"
+        name: fd-find

@@ -1,0 +1,13 @@
+# yaml-language-server: $schema=https://comtrya.dev/schema-v2.json
+version: 2
+actions:
+  - action: command.run
+    command: rustc
+    args: [--version]
+    register: rustc
+
+  - action: command.run
+    title: Say which Rust is installed
+    command: echo
+    args: ["{{ registered.rustc.stdout }}"]
+    where: registered.rustc.exit_code == 0

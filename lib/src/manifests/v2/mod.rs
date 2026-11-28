@@ -18,8 +18,9 @@ mod variants;
 
 use super::load::{parse, LoadErrorKind};
 use super::{unknown_keys, Manifest};
-use crate::actions::Actions;
+use crate::actions::{Actions, Deferred};
 use crate::contexts::{evaluate_condition, Contexts};
+use crate::registered::{self, Registers};
 use crate::utilities::error_chain;
 use serde::Deserialize;
 use serde_yaml_ng::Value;
@@ -44,16 +45,18 @@ pub(super) fn load(
     }
 
     let rendered = render::all(&mut document, contexts).map_err(LoadErrorKind::Render)?;
-    deferred_unsupported(&rendered).map_err(LoadErrorKind::Render)?;
+    only_in_actions(&rendered.deferred).map_err(LoadErrorKind::Render)?;
     typed::apply(&mut document, &rendered);
     let titles = take_titles(&mut document).map_err(LoadErrorKind::Parse)?;
+    let registers = take_registers(&mut document).map_err(LoadErrorKind::Parse)?;
     aliases::check(&document).map_err(LoadErrorKind::Parse)?;
 
     let unknown = serde_json::to_value(&document)
         .map(|generic| unknown_keys(&generic))
         .unwrap_or_default();
     variants::complete(&mut document).map_err(LoadErrorKind::Parse)?;
-    let mut manifest = parse_manifest(document).map_err(|err| {
+    let deferred = render::deferred(&document);
+    let mut manifest = parse_manifest(document, &deferred).map_err(|err| {
         // A misspelled required field is the likely cause
         let hints: String = unknown.iter().map(|key| format!("; {key}")).collect();
         LoadErrorKind::Parse(format!("{err}{hints}"))
@@ -62,23 +65,77 @@ pub(super) fn load(
         warn!("{}: {key}", path.display());
     }
 
-    for (action, title) in manifest.actions.iter_mut().zip(titles) {
+    let extras = titles.into_iter().zip(registers);
+    for (action, (title, register)) in manifest.actions.iter_mut().zip(extras) {
         if let Some(title) = title {
             action.set_title(title);
+        }
+        if let Some(register) = register {
+            action.set_register(register);
         }
     }
     Ok(manifest)
 }
 
-/// Fails on the first value that uses `registered.*`: rendering those when their action is
-/// planned comes with `register`
-fn deferred_unsupported(rendered: &render::Rendered) -> Result<(), String> {
-    match rendered.deferred.first() {
+/// Reads an action entry at `at` whose values at the paths in `deferred` read `registered.*`,
+/// when it's planned: renders them with the contexts and what was registered, then reads the
+/// action. The error names the value or the action
+pub(crate) fn read_deferred(
+    mut entry: Value,
+    at: &str,
+    deferred: &[String],
+    contexts: &Contexts,
+    registers: &Registers,
+) -> Result<Actions, String> {
+    let rendered = render::registered(&mut entry, at, deferred, contexts, registers)?;
+    typed::action(&mut entry, at, &rendered);
+    Actions::deserialize(entry).map_err(|err| format!("{at}: {err}"))
+}
+
+/// Fails on a value that reads `registered.*` outside of the actions, like in `depends`: only
+/// actions are planned after earlier ones ran
+fn only_in_actions(deferred: &[String]) -> Result<(), String> {
+    match deferred.iter().find(|at| !at.starts_with("actions[")) {
         Some(at) => Err(format!(
-            "{at}: `registered` values need `register`, which manifest version 2 doesn't have yet"
+            "{at}: only the fields of actions can read `registered` values"
         )),
         None => Ok(()),
     }
+}
+
+/// Removes `register` from each action, in the order of the actions. Only `command.run` has
+/// it, and its name has to be one templates can read, see [`registered::is_name`]
+fn take_registers(document: &mut Value) -> Result<Vec<Option<String>>, String> {
+    let Some(actions) = document.get_mut("actions").and_then(Value::as_sequence_mut) else {
+        return Ok(vec![]);
+    };
+
+    actions
+        .iter_mut()
+        .enumerate()
+        .map(|(index, action)| {
+            let name = action
+                .get("action")
+                .and_then(Value::as_str)
+                .map(str::to_string);
+            let register = action
+                .as_mapping_mut()
+                .and_then(|fields| fields.remove("register"));
+            match register {
+                None => Ok(None),
+                Some(_) if name.as_deref() != Some("command.run") => Err(format!(
+                    "actions[{index}]: only `command.run` can `register` what it printed"
+                )),
+                Some(Value::String(register)) if registered::is_name(&register) => {
+                    Ok(Some(register))
+                }
+                Some(_) => Err(format!(
+                    "actions[{index}]: `register` has to be a name of letters, digits and `_`, \
+                     like `rustc_version`"
+                )),
+            }
+        })
+        .collect()
 }
 
 /// The manifest's `where`, if it is there and false. One that can't be evaluated counts as
@@ -139,7 +196,7 @@ fn take_titles(document: &mut Value) -> Result<Vec<Option<String>>, String> {
 
 /// The manifest from its parsed, rendered file. Actions are read one at a time, so an error
 /// names the action: `actions[1]: missing field `from``
-fn parse_manifest(mut document: Value) -> Result<Manifest, String> {
+fn parse_manifest(mut document: Value, deferred: &[String]) -> Result<Manifest, String> {
     let actions = match document.as_mapping_mut() {
         Some(fields) => fields.remove("actions"),
         None => return Err(String::from("a manifest has to be a map of keys")),
@@ -151,13 +208,39 @@ fn parse_manifest(mut document: Value) -> Result<Manifest, String> {
         Some(Value::Sequence(actions)) => actions
             .into_iter()
             .enumerate()
-            .map(|(index, action)| {
-                Actions::deserialize(action).map_err(|err| format!("actions[{index}]: {err}"))
-            })
+            .map(|(index, action)| read_action(action, index, deferred))
             .collect::<Result<_, _>>()?,
         Some(_) => return Err(String::from("`actions` has to be a list")),
     };
     Ok(manifest)
+}
+
+/// Reads the action entry at `index`, or keeps it to read when it's planned if values in it
+/// read `registered.*`, see [`Deferred`]
+fn read_action(action: Value, index: usize, deferred: &[String]) -> Result<Actions, String> {
+    let at = format!("actions[{index}]");
+    let paths: Vec<String> = deferred
+        .iter()
+        .filter(|path| is_below(path, &at))
+        .cloned()
+        .collect();
+    let name = action
+        .get("action")
+        .and_then(Value::as_str)
+        .and_then(|name| Actions::NAMES.iter().find(|(known, _)| *known == name));
+
+    match (paths.is_empty(), name) {
+        (false, Some((name, _))) => Ok(Actions::Deferred(Box::new(Deferred::new(
+            name, at, action, paths,
+        )))),
+        _ => Actions::deserialize(action).map_err(|err| format!("{at}: {err}")),
+    }
+}
+
+/// Whether the value at `path` is `at` or inside it
+fn is_below(path: &str, at: &str) -> bool {
+    path.strip_prefix(at)
+        .is_some_and(|rest| rest.is_empty() || rest.starts_with(['.', '[']))
 }
 
 #[cfg(test)]

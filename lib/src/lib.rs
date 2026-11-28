@@ -63,6 +63,7 @@ pub mod contexts;
 pub mod executor;
 pub mod helper;
 pub mod manifests;
+pub mod registered;
 pub mod runner;
 pub mod runtime;
 pub mod steps;
