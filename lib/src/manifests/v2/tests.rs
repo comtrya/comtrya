@@ -128,6 +128,48 @@ fn a_field_alias_names_the_field() {
 }
 
 #[test]
+fn file_link_knows_only_from_and_to() {
+    let source = error(
+        "a.yaml",
+        "version: 2\nactions:\n  - action: file.link\n    source: a\n    to: b\n",
+    );
+    let target = error(
+        "a.yaml",
+        "version: 2\nactions:\n  - action: file.link\n    from: a\n    target: b\n",
+    );
+
+    assert!(
+        source.contains("actions[0]: `source` is another name for `from`"),
+        "{source}"
+    );
+    assert!(
+        target.contains("actions[0]: `target` is another name for `to`"),
+        "{target}"
+    );
+}
+
+#[test]
+fn file_link_with_from_and_to_loads() {
+    let loaded = load(
+        "a.yaml",
+        "version: 2\nactions:\n  - action: file.link\n    from: a\n    to: b\n",
+    );
+
+    assert!(loaded.errors.is_empty(), "{:?}", loaded.errors);
+}
+
+#[test]
+fn version_1_file_link_keeps_source_and_target() {
+    let loaded = load(
+        "a.yaml",
+        "actions:\n  - action: file.link\n    source: a\n    target: b\n  - action: file.link\n    from: a\n    to: b\n",
+    );
+
+    assert!(loaded.errors.is_empty(), "{:?}", loaded.errors);
+    assert_eq!(2, loaded.manifests["a"].actions.len());
+}
+
+#[test]
 fn a_field_alias_in_a_variant_names_the_variant() {
     let error = error(
         "a.yaml",
