@@ -2,7 +2,7 @@
 
 Version 1 manifests keep working, so there's no need to migrate all at once: move one manifest at a time, and keep the others as they are. [Manifests v2](./manifests-v2.md) is a preview until comtrya 0.13.0.
 
-To move a manifest to version 2:
+`comtrya manifests upgrade <manifest>` does the steps below for you and checks that both versions mean the same; it refuses what it can't rewrite safely, see [Commands](./commands.md#upgrading-to-version-2). To do it by hand:
 
 1. Add `version: 2` at the top. Switch the editor hint to `# yaml-language-server: $schema=https://comtrya.dev/schema-v2.json`, so the editor shows what's left.
 2. Go through the table below.

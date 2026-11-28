@@ -212,25 +212,33 @@ pub fn load_all_ignoring(manifest_path: PathBuf, contexts: &Contexts, ignore: &I
 /// Reads, renders and parses one manifest file
 fn load_file(path: &Path, contexts: &Contexts) -> Result<Manifest, LoadErrorKind> {
     let template = std::fs::read_to_string(path).map_err(LoadErrorKind::Read)?;
+    load_text(&template, path, contexts)
+}
 
+/// Renders and parses the `template` of a manifest file; `path` says whether it's YAML or TOML
+pub(super) fn load_text(
+    template: &str,
+    path: &Path,
+    contexts: &Contexts,
+) -> Result<Manifest, LoadErrorKind> {
     // Checked before rendering, a newer format may use templates differently
-    let version = parse::<Unrendered>(&template, path)
+    let version = parse::<Unrendered>(template, path)
         .ok()
         .and_then(|unrendered| unrendered.version);
     check_version(version)?;
     if version == Some(v2::VERSION) {
-        return v2::load(&template, path, contexts);
+        return v2::load(template, path, contexts);
     }
 
     let mut tera = Tera::default();
     register_functions(&mut tera);
 
-    let rendered = match tera.render_str(&template, &to_tera(contexts)) {
+    let rendered = match tera.render_str(template, &to_tera(contexts)) {
         Ok(rendered) => rendered,
         // A template that only works where the manifest applies, like an env var
         // that only exists on Windows, is fine when `where` skips it anyway (#283)
         Err(err) => {
-            return match false_where(&template, path, contexts) {
+            return match false_where(template, path, contexts) {
                 Some(condition) => {
                     debug!("Not rendering templates, because the 'where' condition is false");
                     Ok(Manifest {

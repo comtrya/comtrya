@@ -40,6 +40,8 @@ actions:
 
 `version: 2` is a preview of the next manifest format, and can still change until comtrya 0.13.0. It parses the file before rendering templates, knows one name per action and field, lets variants set only what differs, finds files next to the manifest, and adds `title` and `register`. See [Manifests v2](./manifests-v2.md), and [Migrating from version 1](./manifests-v2-migrating.md).
 
+`comtrya manifests upgrade` rewrites a version 1 manifest as version 2 and checks that both mean the same, see [Commands](./commands.md#upgrading-to-version-2).
+
 ## Unknown keys
 
 Comtrya warns about keys it doesn't read, like a misspelled field, and names the key it probably means:

@@ -8,13 +8,13 @@
 //! differ from its action
 
 /// Old names of actions and fields, which format 2 doesn't accept
-mod aliases;
+pub(super) mod aliases;
 /// Templates in values
 mod render;
 /// Numbers and booleans from templates
 mod typed;
 /// Variants that override fields of their action
-mod variants;
+pub(super) mod variants;
 
 use super::load::{parse, LoadErrorKind};
 use super::{unknown_keys, Manifest};

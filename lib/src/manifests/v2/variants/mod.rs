@@ -11,7 +11,8 @@ use serde_yaml_ng::{Mapping, Value};
 
 /// Keys of the action that a variant doesn't take: they decide about the whole action, not one
 /// of its versions
-const ACTION_ONLY: [&str; 5] = ["action", "where", "variants", "title", "continue_on_error"];
+pub(in crate::manifests) const ACTION_ONLY: [&str; 5] =
+    ["action", "where", "variants", "title", "continue_on_error"];
 
 /// Keys a variant can't set, since they belong to the whole action. `where` is the variant's
 /// own condition

@@ -50,9 +50,12 @@ pub use load::{
 mod source;
 /// Keys nothing reads, warned about while loading
 mod unknown_keys;
+/// Rewriting format 1 manifests as format 2
+mod upgrade;
 /// Manifest format 2
 mod v2;
 pub(crate) use unknown_keys::{closest, schema_keys, unknown_keys};
+pub use upgrade::{upgrade, upgrade_text, UpgradeError, Upgraded};
 pub(crate) use v2::read_deferred;
 /// Finding the directory with the manifests
 mod providers;
