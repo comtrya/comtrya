@@ -16,8 +16,44 @@ use which::which;
 /// xbps
 #[derive(Clone)]
 pub struct Xbps {
-    /// Runs `xbps-query -l` to find the installed packages
+    /// Runs `xbps-query -l` and `xbps-install -n -u` to find the installed and the upgradable
+    /// packages
     runner: Arc<dyn Runner>,
+}
+
+impl Xbps {
+    /// The packages of `installed` that a dry run of a system update would update, from the
+    /// repository data xbps has (no `-S`)
+    fn outdated(&self, installed: &[String]) -> Result<Vec<String>> {
+        if installed.is_empty() {
+            return Ok(vec![]);
+        }
+
+        let command = CommandSpec::new("xbps-install").args(["-n", "-u"]);
+        let updates = super::listed(&*self.runner, &command, update_name)?;
+
+        Ok(super::among(installed, &updates))
+    }
+
+    /// `xbps-install -S --yes --update <packages>`, which installs missing and updates
+    /// installed packages, as root
+    fn install_step(package: &PackageVariant, packages: Vec<String>) -> Step {
+        Step::new(Exec {
+            command: String::from("xbps-install"),
+            arguments: [
+                vec![
+                    String::from("-S"),
+                    String::from("--yes"),
+                    String::from("--update"),
+                ],
+                package.extra_args.clone(),
+                packages,
+            ]
+            .concat(),
+            ..Default::default()
+        })
+        .as_root()
+    }
 }
 
 impl Default for Xbps {
@@ -90,22 +126,49 @@ impl PackageProvider for Xbps {
         // The executor runs the step before it plans the next action, which reads the list again
         self.runner.forget();
 
+        Ok(vec![Self::install_step(package, need_installed)])
+    }
+
+    fn upgrade(&self, package: &PackageVariant, _facts: &Facts) -> Result<Vec<Step>> {
+        let missing = self.query(package)?;
+        let outdated = self.outdated(&super::installed(package, &missing))?;
+        let targets: Vec<String> = package
+            .packages()
+            .into_iter()
+            .filter(|p| missing.contains(p) || outdated.contains(p))
+            .collect();
+        if targets.is_empty() {
+            return Ok(vec![]);
+        }
+
+        self.runner.forget();
+        Ok(vec![Self::install_step(package, targets)])
+    }
+
+    fn remove(&self, package: &PackageVariant, _facts: &Facts) -> Result<Vec<Step>> {
+        let installed = super::installed(package, &self.query(package)?);
+        if installed.is_empty() {
+            return Ok(vec![]);
+        }
+
+        self.runner.forget();
         Ok(vec![Step::new(Exec {
-            command: String::from("xbps-install"),
-            arguments: [
-                vec![
-                    String::from("-S"),
-                    String::from("--yes"),
-                    String::from("--update"),
-                ],
-                package.extra_args.clone(),
-                need_installed,
-            ]
-            .concat(),
+            command: String::from("xbps-remove"),
+            arguments: [vec![String::from("--yes")], installed].concat(),
             ..Default::default()
         })
         .as_root()])
     }
+}
+
+/// The name of the package on a line of `xbps-install -n -u`, like
+/// `vim-9.1.0866_1 update x86_64 https://repo-default.voidlinux.org/current 12345 6789`, if
+/// the line is an update
+fn update_name(line: &str) -> Option<&str> {
+    let mut fields = line.split_whitespace();
+    let pkgver = fields.next()?;
+    (fields.next()? == "update").then_some(())?;
+    pkgver.rsplit_once('-').map(|(name, _version)| name)
 }
 
 /// The names of the installed packages in `xbps-query -l`, whose lines look like
@@ -163,6 +226,72 @@ uu half-installed-1.0_1               Unpacked, but not configured
             xbps.query(&package).unwrap()
         );
         assert_eq!(vec!["xbps-query -l"], runner.calls());
+    }
+
+    /// xbps with LIST installed and `updates` from a dry run of a system update
+    fn with_updates(updates: &str) -> Xbps {
+        Xbps {
+            runner: FakeRunner::new()
+                .answer("xbps-query -l", succeeds(LIST))
+                .answer("xbps-install -n -u", succeeds(updates))
+                .shared(),
+        }
+    }
+
+    fn packages(list: &[&str]) -> PackageVariant {
+        PackageVariant {
+            list: list.iter().map(ToString::to_string).collect(),
+            ..Default::default()
+        }
+    }
+
+    fn commands(steps: &[Step]) -> Vec<String> {
+        steps.iter().map(ToString::to_string).collect()
+    }
+
+    #[test]
+    fn latest_installs_missing_and_updates_outdated_packages() {
+        let xbps = with_updates(
+            "bash-5.2.037_2 update x86_64 https://repo-default.voidlinux.org/current 1 2\n\
+             zsh-5.9_6 install x86_64 https://repo-default.voidlinux.org/current 1 2\n",
+        );
+
+        let steps = xbps
+            .upgrade(
+                &packages(&["bash", "python3-yaml", "zsh"]),
+                &Facts::default(),
+            )
+            .unwrap();
+
+        assert_eq!(
+            vec!["Run xbps-install -S --yes --update bash zsh (as root)"],
+            commands(&steps)
+        );
+    }
+
+    #[test]
+    fn latest_does_nothing_when_everything_is_up_to_date() {
+        let steps = with_updates("")
+            .upgrade(&packages(&["bash"]), &Facts::default())
+            .unwrap();
+
+        assert!(steps.is_empty());
+    }
+
+    #[test]
+    fn absent_removes_only_installed_packages() {
+        let xbps = with_updates("");
+
+        let steps = xbps
+            .remove(&packages(&["bash", "zsh"]), &Facts::default())
+            .unwrap();
+        let nothing = xbps.remove(&packages(&["zsh"]), &Facts::default()).unwrap();
+
+        assert_eq!(
+            vec!["Run xbps-remove --yes bash (as root)"],
+            commands(&steps)
+        );
+        assert!(nothing.is_empty());
     }
 
     #[test]

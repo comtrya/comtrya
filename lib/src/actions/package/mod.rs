@@ -47,8 +47,7 @@ pub struct Package {
     file: bool,
 
     /// `present` (the default) installs missing packages, `latest` also upgrades outdated
-    /// ones, `absent` removes installed ones. `latest` and `absent` work with homebrew,
-    /// aptitude, dnf, pacman, yay, paru and winget
+    /// ones, `absent` removes installed ones. Every provider can do all three
     #[serde(default)]
     state: Option<PackageState>,
 }
