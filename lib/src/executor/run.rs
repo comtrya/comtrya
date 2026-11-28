@@ -10,7 +10,7 @@ use crate::helper::Helper;
 use crate::{
     actions::{Action, PlanCx},
     atoms::{self, command::Stream, Atom, Check},
-    contexts::evaluate_condition,
+    contexts::{evaluate_condition, manifest::for_manifest},
     manifests::Manifest,
     steps::Step,
 };
@@ -131,11 +131,14 @@ impl<'a> Run<'a> {
             return;
         }
 
-        if !self.has_label(manifest) || !self.where_allows(manifest) {
+        // Templates saw `manifest.*` when the manifest was loaded, `where` sees it now
+        let contexts = for_manifest(self.cx.contexts, manifest);
+        let cx = PlanCx::new(self.cx.facts, &contexts);
+        if !self.has_label(manifest) || !self.where_allows(manifest, &cx) {
             return;
         }
 
-        let failed = !self.run_actions(manifest);
+        let failed = !self.run_actions(manifest, &cx);
         if failed {
             self.failed().insert(node);
         }
@@ -165,12 +168,12 @@ impl<'a> Run<'a> {
 
     /// Whether the manifest's `where` condition, if it has one, is true.
     /// A condition that can't be evaluated counts as false
-    fn where_allows(&self, manifest: &Manifest) -> bool {
+    fn where_allows(&self, manifest: &Manifest, cx: &PlanCx) -> bool {
         let Some(condition) = &manifest.r#where else {
             return true;
         };
 
-        match evaluate_condition(condition, self.cx.contexts) {
+        match evaluate_condition(condition, cx.contexts) {
             Ok(result) => {
                 self.observer
                     .on(&Event::WhereEvaluated { condition, result });
@@ -195,7 +198,7 @@ impl<'a> Run<'a> {
     /// Later actions usually build on earlier ones, so a failure stops the manifest, unless the
     /// action has `continue_on_error`. A dry run changes nothing, so it goes on and reports
     /// every action that can't be planned.
-    fn run_actions(&self, manifest: &Manifest) -> bool {
+    fn run_actions(&self, manifest: &Manifest, cx: &PlanCx) -> bool {
         let mut successful = true;
 
         for action in &manifest.actions {
@@ -210,7 +213,7 @@ impl<'a> Run<'a> {
             });
 
             // A cancelled run stops at the top of the loop, also after such an action
-            if !self.run_action(manifest, action) && !action.continue_on_error() {
+            if !self.run_action(manifest, action, cx) && !action.continue_on_error() {
                 successful = false;
                 if !self.dry_run {
                     break;
@@ -222,8 +225,8 @@ impl<'a> Run<'a> {
     }
 
     /// Plans one action and runs the steps that are needed, false if it failed
-    fn run_action(&self, manifest: &Manifest, action: &dyn Action) -> bool {
-        let steps = match action.plan(manifest, &self.cx) {
+    fn run_action(&self, manifest: &Manifest, action: &dyn Action, cx: &PlanCx) -> bool {
+        let steps = match action.plan(manifest, cx) {
             Ok(steps) => steps,
             Err(error) => {
                 self.observer.on(&Event::ActionPlanFailed(&error));

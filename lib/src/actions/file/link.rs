@@ -57,8 +57,8 @@ impl FileLink {
     }
 
     /// The source: an absolute path as it is, since an earlier step may still have to make it,
-    /// like a program it unpacks. Anything else is below the manifest's `files` directory, which
-    /// must have it
+    /// like a program it unpacks. Anything else is below the manifest's `files` directory (or
+    /// next to the manifest, see [`Manifest::source_path`]), which must have it
     fn source_path(&self, manifest: &Manifest) -> Result<PathBuf> {
         let source = self.source()?;
         if Path::new(source).is_absolute() {

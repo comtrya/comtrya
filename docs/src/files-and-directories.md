@@ -18,6 +18,8 @@ The following commands expect the `from`/`source` to point to files/directories 
 This is a restriction so that comtrya knows not to parse any .yaml file e.g. a config for a different tool as a manifest.
 To see how it works check the [examples](https://github.com/comtrya/comtrya/tree/main/examples/file)
 
+In [version 2 manifests](./manifests.md#manifests-v2-preview) (a preview), a path that starts with `./` or `../` is relative to the manifest file instead, like `from: ./zshrc` for a `zshrc` next to `zsh/zsh.yaml`. YAML or TOML files kept there that aren't manifests go into [`ignore`](./manifests.md#which-files-are-manifests). In templates, `{{ manifest.dir }}` is the manifest's directory in both versions.
+
 - file.link
 - file.copy
 - directory.copy

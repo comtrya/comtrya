@@ -43,6 +43,8 @@ use crate::{config::Config, values::Value};
 
 /// What comtrya knows before it loads manifests
 pub mod facts;
+/// The name and directory of the manifest that is loaded or runs
+pub mod manifest;
 /// The operating system
 pub mod os;
 /// The program that runs privileged commands

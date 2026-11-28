@@ -1442,3 +1442,82 @@ fn continue_on_error_warns_and_goes_on() {
     assert!(!stdout.contains("ERROR"), "{stdout}");
     assert!(f.created("after"));
 }
+
+/// Writes `contents` to `path` below the tempdir
+fn write(f: &Fixture, path: &str, contents: &str) {
+    let path = f.path().join(path);
+    std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+    std::fs::write(path, contents).unwrap();
+}
+
+/// A `file.copy` action from `from` to `<tempdir>/out/<to>`
+fn copy(f: &Fixture, from: &str, to: &str) -> String {
+    format!(
+        "  - action: file.copy\n    from: {from}\n    to: '{}'\n",
+        f.out(to).display()
+    )
+}
+
+#[test]
+fn version_2_copies_dot_paths_from_next_to_the_manifest() {
+    let f = Fixture::new();
+    write(&f, "manifests/zsh/zshrc", "next to the manifest");
+    write(&f, "manifests/shared/x", "one level up");
+    write(&f, "manifests/zsh/files/plain", "below files");
+    f.manifest(
+        "zsh/zsh.yaml",
+        &format!(
+            "version: 2\nactions:\n{}{}{}",
+            copy(&f, "./zshrc", "zshrc"),
+            copy(&f, "../shared/x", "x"),
+            copy(&f, "plain", "plain")
+        ),
+    );
+
+    f.run(&["apply"]);
+
+    let read = |name: &str| std::fs::read_to_string(f.out(name)).unwrap();
+    assert_eq!("next to the manifest", read("zshrc"));
+    assert_eq!("one level up", read("x"));
+    assert_eq!("below files", read("plain"));
+}
+
+#[test]
+fn version_1_dot_paths_stay_below_files() {
+    let f = Fixture::new();
+    write(&f, "manifests/zsh/zshrc", "next to the manifest");
+    write(&f, "manifests/zsh/files/zshrc", "below files");
+    f.manifest(
+        "zsh/zsh.yaml",
+        &format!("actions:\n{}", copy(&f, "./zshrc", "zshrc")),
+    );
+
+    f.run(&["apply"]);
+
+    assert_eq!(
+        "below files",
+        std::fs::read_to_string(f.out("zshrc")).unwrap()
+    );
+}
+
+#[test]
+fn templates_and_where_see_the_manifest_name_and_directory() {
+    let f = Fixture::new();
+    for version in ["", "version: 2\n"] {
+        let name = if version.is_empty() { "one" } else { "two" };
+        f.manifest(
+            &format!("dev/{name}.yaml"),
+            &format!(
+                "{version}where: manifest.name == \"dev.{name}\"\nactions:\n  - action: file.copy\n    from: '{{{{ manifest.dir }}}}/{name}.yaml'\n    to: '{}'\n",
+                f.out(name).display()
+            ),
+        );
+    }
+
+    f.run(&["apply"]);
+
+    for name in ["one", "two"] {
+        let copied = std::fs::read_to_string(f.out(name)).unwrap();
+        assert!(copied.contains("manifest.name"), "{name}: {copied}");
+    }
+}

@@ -18,20 +18,21 @@ use schemars::JsonSchema;
 use serde::{de::Error as _, Deserialize, Deserializer};
 use std::path::{Path, PathBuf};
 
-/// Actions that read files from the manifest's `files` directory
+/// Actions that read files from the manifest's `files` directory, or in format 2 also from
+/// next to the manifest (see [`Manifest::source_path`])
 pub trait FileAction: Action {
-    /// `path` below the manifest's `files` directory, which must exist
+    /// The source `path`, which must exist
     fn resolve(&self, manifest: &Manifest, path: &str) -> Result<PathBuf> {
-        let path = files_dir(manifest, path)?.join(path);
+        let path = source_path(manifest, path)?;
 
         path.normalize()
             .map(normpath::BasePathBuf::into_path_buf)
             .map_err(|_| Error::NotFound(path))
     }
 
-    /// The contents of `path` below the manifest's `files` directory
+    /// The contents of the source `path`
     fn load(&self, manifest: &Manifest, path: &str) -> Result<Vec<u8>> {
-        let path = files_dir(manifest, path)?.join(path);
+        let path = source_path(manifest, path)?;
 
         std::fs::read(&path).map_err(|err| match err.kind() {
             std::io::ErrorKind::NotFound => Error::NotFound(path),
@@ -40,12 +41,10 @@ pub trait FileAction: Action {
     }
 }
 
-/// The manifest's `files` directory, to find `path` in
-fn files_dir(manifest: &Manifest, path: &str) -> Result<PathBuf> {
+/// Where the source `path` is, see [`Manifest::source_path`]
+pub(crate) fn source_path(manifest: &Manifest, path: &str) -> Result<PathBuf> {
     manifest
-        .root_dir
-        .as_ref()
-        .map(|root_dir| root_dir.join("files"))
+        .source_path(path)
         .ok_or_else(|| Error::NoManifestDir(path.to_string()))
 }
 
