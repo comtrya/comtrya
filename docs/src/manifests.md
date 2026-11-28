@@ -41,7 +41,8 @@ actions:
 `version: 2` is a preview of the next manifest format, and can still change until comtrya 0.13.0. Don't use it for manifests you depend on yet. Comtrya 0.12.0 and older refuse it (0.9.x and older ignore `version` and misread it). So far it differs from version 1 in three ways:
 
 - **Templates are rendered per value, after the manifest's `where`.** The file has to be valid YAML or TOML as it is, so quote values with templates (`path: "{{ user.home_dir }}/bin"`). A manifest whose `where` is false isn't rendered at all. `where` conditions aren't templates; they read the contexts themselves. An error names the value, like `actions[1].to`.
-- **One name per action and field.** Old names like `cmd.run`, `dir.create`, `source`/`target` for `from`/`to` (in `file.link` too), or `sudo` for `privileged` are errors that name the one to use.
+  A value that is one template and nothing else, like `privileged: "{{ variables.root }}"` or `chmod: "{{ variables.mode }}"`, becomes a number or boolean when its field doesn't hold text; text fields keep the rendered text, so `args: ["{{ variables.port }}"]` stays `"8080"`. Values that read `registered.*` are reserved for `register`, which isn't there yet.
+- **One name per action and field.** Old names like `cmd.run`, `dir.create`, `source`/`target` for `from`/`to` in `file.copy`, or `sudo` for `privileged` are errors that name the one to use.
 - **`title`** on an action is shown in the log instead of the generated summary:
 
 ```yaml
