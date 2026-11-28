@@ -156,7 +156,7 @@ Packages that are already as asked are left alone, so a second run, or `--dry-ru
   state: absent
 ```
 
-`latest` and `absent` work with `homebrew`, `aptitude`, `dnf`, `pacman`, `yay`, `paru` and `winget`. Other providers fail with an error naming the provider and the state. How each one finds out:
+Every provider can do `latest` and `absent`. How each one finds out:
 
 | Provider | Installed          | Outdated                                          | Upgrade with                 | Remove with              |
 |:---------|:-------------------|:--------------------------------------------------|:-----------------------------|:-------------------------|
@@ -166,8 +166,15 @@ Packages that are already as asked are left alone, so a second run, or `--dry-ru
 | pacman   | `pacman -Q`        | `pacman -Q -u`                                    | `pacman -S --needed`         | `pacman -R`              |
 | yay/paru | `pacman -Q`        | `pacman -Q -u`, and `yay -Q -u -a` for the AUR    | `yay -S` / `paru -S`         | `yay -R` / `paru -R`     |
 | winget   | `winget list`      | `winget list --upgrade-available`                 | `winget upgrade`             | `winget uninstall`       |
+| zypper   | `rpm -q -a`        | `zypper --no-refresh list-updates`                | `zypper update`              | `zypper remove`          |
+| xbps     | `xbps-query -l`    | `xbps-install -n -u` (a dry run)                  | `xbps-install -S --update`   | `xbps-remove`            |
+| bsdpkg   | `pkg query %n`     | `pkg version -R -U -l <`                          | `pkg upgrade`                | `pkg delete`             |
+| pkgin    | `pkgin list`       | `pkgin -l < list`                                 | `pkgin install`              | `pkgin remove`           |
+| macports | `port installed`   | `port outdated`                                   | `port upgrade`               | `port uninstall`         |
+| snap     | `snap list`        | `snap refresh --list` (asks the store)            | `snap refresh`               | `snap remove`            |
+| luarocks | `luarocks list`    | `luarocks list --outdated` (asks the rocks server) | `luarocks install`           | `luarocks remove`        |
 
-Outdated means newer than what the package manager knows of: comtrya doesn't refresh the package lists first. Refresh them yourself if you want the newest versions, e.g. `apt update` or `dnf makecache` with `command.run` before. On Arch, sync and upgrade the whole system with `pacman -Syu` instead: Arch doesn't support upgrading single packages against newer package lists. `extra_args` are used for installs and upgrades, not for removing. `file: true` only works with `state: present`.
+Outdated means newer than what the package manager knows of: comtrya doesn't refresh the package lists first. Refresh them yourself if you want the newest versions, e.g. `apt update`, `dnf makecache` or `port selfupdate` with `command.run` before. snap and luarocks have no local lists, they ask their server. On Arch, sync and upgrade the whole system with `pacman -Syu` instead: Arch doesn't support upgrading single packages against newer package lists. `extra_args` are used for installs and upgrades, not for removing; luarocks keeps the tree arguments (`--local`, `--tree`) for removing too. `file: true` only works with `state: present`.
 
 ### Local package install support
 

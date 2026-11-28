@@ -17,7 +17,8 @@ use which::which;
 /// `extra_args`, which needs no root
 #[derive(Clone)]
 pub struct Luarocks {
-    /// Runs `luarocks list --porcelain` to find the installed rocks
+    /// Runs `luarocks list --porcelain` to find the installed rocks, with `--outdated` the
+    /// outdated ones
     runner: Arc<dyn Runner>,
 }
 
@@ -85,6 +86,90 @@ impl PackageProvider for Luarocks {
             .map(|rock| install_step(package, rock))
             .collect())
     }
+
+    /// Outdated rocks are what `luarocks list --outdated` names: a newer version on the rocks
+    /// server, which luarocks asks
+    fn upgrade(&self, package: &PackageVariant, _facts: &Facts) -> Result<Vec<Step>> {
+        let missing = self.query(package)?;
+        let installed = super::installed(package, &missing);
+        let outdated = if installed.is_empty() {
+            vec![]
+        } else {
+            let command = CommandSpec::new("luarocks").args(["list", "--outdated", "--porcelain"]);
+            let list = String::from_utf8_lossy(&super::query(&*self.runner, &command)?.stdout)
+                .into_owned();
+            let outdated: HashSet<String> = installed_rocks(&list)
+                .into_iter()
+                .map(String::from)
+                .collect();
+            super::among(&installed, &outdated)
+        };
+        let targets: Vec<String> = package
+            .packages()
+            .into_iter()
+            .filter(|rock| missing.contains(rock) || outdated.contains(rock))
+            .collect();
+        if targets.is_empty() {
+            return Ok(vec![]);
+        }
+
+        // `luarocks install` installs the newest version, also over an older one
+        self.runner.forget();
+        Ok(targets
+            .into_iter()
+            .map(|rock| install_step(package, rock))
+            .collect())
+    }
+
+    fn remove(&self, package: &PackageVariant, _facts: &Facts) -> Result<Vec<Step>> {
+        let installed = super::installed(package, &self.query(package)?);
+        if installed.is_empty() {
+            return Ok(vec![]);
+        }
+
+        self.runner.forget();
+        Ok(installed
+            .into_iter()
+            .map(|rock| remove_step(package, rock))
+            .collect())
+    }
+}
+
+/// `luarocks remove <rock>` in the tree the rocks went into: only the tree arguments of
+/// `extra_args` are passed, install arguments like `--server` aren't known to `remove`
+fn remove_step(package: &PackageVariant, rock: String) -> Step {
+    let step = Step::new(Exec {
+        command: String::from("luarocks"),
+        arguments: [
+            vec![String::from("remove")],
+            tree_args(&package.extra_args),
+            vec![rock],
+        ]
+        .concat(),
+        ..Default::default()
+    });
+
+    if user_tree(&package.extra_args) {
+        step
+    } else {
+        step.as_root()
+    }
+}
+
+/// The arguments of `extra_args` that pick a tree: `--local`, `--tree=<dir>`, `--tree <dir>`
+fn tree_args(extra_args: &[String]) -> Vec<String> {
+    let mut args = vec![];
+    let mut next_is_tree = false;
+    for arg in extra_args {
+        if next_is_tree || arg == "--local" || arg.starts_with("--tree=") {
+            args.push(arg.clone());
+            next_is_tree = false;
+        } else if arg == "--tree" {
+            args.push(arg.clone());
+            next_is_tree = true;
+        }
+    }
+    args
 }
 
 /// `luarocks install <rock>`, as root unless it goes into the user's tree
@@ -224,6 +309,70 @@ lyaml\t6.2.8-1\tinstalled\t/home/ada/.luarocks/lib/luarocks/rocks-5.4
             .install(&rocks(&["lpeg"], &[]), &Facts::default())
             .unwrap()
             .is_empty());
+    }
+
+    /// `luarocks list --outdated --porcelain` names lpeg
+    fn with_outdated_lpeg() -> Arc<FakeRunner> {
+        FakeRunner::new()
+            .answer("luarocks list --porcelain", succeeds(LIST))
+            .answer(
+                "luarocks list --outdated --porcelain",
+                succeeds("lpeg\t1.1.0-2\t1.1.0-3\thttps://luarocks.org\n"),
+            )
+            .shared()
+    }
+
+    fn shown(steps: &[Step]) -> Vec<String> {
+        steps.iter().map(ToString::to_string).collect()
+    }
+
+    #[test]
+    fn latest_installs_missing_and_outdated_rocks() {
+        let steps = luarocks(&with_outdated_lpeg())
+            .upgrade(&rocks(&["lpeg", "lyaml", "lgi"], &[]), &Facts::default())
+            .unwrap();
+
+        assert_eq!(
+            vec![
+                "Run luarocks install lpeg (as root)",
+                "Run luarocks install lgi (as root)",
+            ],
+            shown(&steps)
+        );
+    }
+
+    #[test]
+    fn latest_does_nothing_when_everything_is_up_to_date() {
+        let steps = luarocks(&with_outdated_lpeg())
+            .upgrade(&rocks(&["lyaml"], &[]), &Facts::default())
+            .unwrap();
+
+        assert!(steps.is_empty());
+    }
+
+    #[test]
+    fn absent_removes_installed_rocks_from_their_tree() {
+        let runner = with_outdated_lpeg();
+
+        let steps = luarocks(&runner)
+            .remove(
+                &rocks(
+                    &["lyaml", "lgi"],
+                    &["--server=https://example.com", "--local"],
+                ),
+                &Facts::default(),
+            )
+            .unwrap();
+        let nothing = luarocks(&runner)
+            .remove(&rocks(&["lgi"], &[]), &Facts::default())
+            .unwrap();
+
+        assert_eq!(vec!["Run luarocks remove --local lyaml"], shown(&steps));
+        assert!(nothing.is_empty());
+        assert_eq!(
+            vec!["--tree", "/opt/rocks"],
+            tree_args(&["--tree".into(), "/opt/rocks".into(), "--server=x".into()])
+        );
     }
 
     #[test]

@@ -57,14 +57,6 @@ impl Action for PackageInstall {
             });
         }
 
-        // Before a bootstrap, so a missing provider isn't installed for a state it can't do
-        if !makes_sure_of(&provider_type, self.state()) {
-            return Err(Error::UnsupportedState {
-                provider: provider.name().to_string(),
-                state: self.state().as_str(),
-            });
-        }
-
         let steps = match self.state() {
             PackageState::Absent => remove(provider, &variant, cx),
             state => install(provider, &variant, cx, state),
@@ -119,21 +111,6 @@ fn remove(
     provider.remove(variant, cx.facts)
 }
 
-/// Whether the provider can tell and do `state`. Every provider installs (`present`)
-fn makes_sure_of(provider: &PackageProviders, state: PackageState) -> bool {
-    state == PackageState::Present
-        || matches!(
-            provider,
-            PackageProviders::Homebrew
-                | PackageProviders::Aptitude
-                | PackageProviders::Dnf
-                | PackageProviders::Pacman
-                | PackageProviders::Yay
-                | PackageProviders::Paru
-                | PackageProviders::Winget
-        )
-}
-
 /// Whether the provider installs a package from a file given as `name`, for `file: true`
 fn installs_local_files(provider: &PackageProviders) -> bool {
     matches!(
@@ -177,55 +154,6 @@ mod tests {
             package(PackageState::Latest).summarize()
         );
         assert_eq!("Remove git", package(PackageState::Absent).summarize());
-    }
-
-    #[test]
-    fn a_provider_that_cant_do_the_state_fails_before_a_bootstrap() {
-        for state in [PackageState::Latest, PackageState::Absent] {
-            let package = PackageInstall {
-                name: Some(String::from("git")),
-                provider: Some(PackageProviders::Zypper),
-                state: Some(state),
-                ..Default::default()
-            };
-
-            let Err(error) = package.plan(&Manifest::default(), &PlanCx::empty()) else {
-                panic!("zypper can't do {}", state.as_str());
-            };
-
-            assert_eq!(
-                format!(
-                    "package provider Zypper can't do `state: {}`",
-                    state.as_str()
-                ),
-                error.to_string()
-            );
-        }
-    }
-
-    #[test]
-    fn providers_without_the_state_fail_by_default() {
-        let package = PackageVariant {
-            name: Some(String::from("git")),
-            ..Default::default()
-        };
-        let facts = crate::contexts::Facts::default();
-        let snap = PackageProviders::Snapcraft.get_provider();
-
-        assert!(matches!(
-            snap.upgrade(&package, &facts),
-            Err(Error::UnsupportedState {
-                state: "latest",
-                ..
-            })
-        ));
-        assert!(matches!(
-            snap.remove(&package, &facts),
-            Err(Error::UnsupportedState {
-                state: "absent",
-                ..
-            })
-        ));
     }
 
     #[test]

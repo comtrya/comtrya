@@ -102,19 +102,19 @@ impl PackageProviders {
     pub fn get_provider(self) -> Box<dyn PackageProvider> {
         match self {
             PackageProviders::Aptitude => Box::new(Aptitude::default()),
-            PackageProviders::BsdPkg => Box::new(BsdPkg {}),
+            PackageProviders::BsdPkg => Box::new(BsdPkg::default()),
             PackageProviders::Dnf => Box::new(Dnf::default()),
             PackageProviders::Homebrew => Box::new(Homebrew::default()),
             PackageProviders::Luarocks => Box::new(Luarocks::default()),
-            PackageProviders::Macports => Box::new(Macports {}),
-            PackageProviders::Pkgin => Box::new(Pkgin {}),
+            PackageProviders::Macports => Box::new(Macports::default()),
+            PackageProviders::Pkgin => Box::new(Pkgin::default()),
             PackageProviders::Pacman => Box::new(Pacman::default()),
             PackageProviders::Yay => Box::new(AurHelper::yay()),
             PackageProviders::Paru => Box::new(AurHelper::paru()),
             PackageProviders::Winget => Box::new(Winget::default()),
             PackageProviders::Xbps => Box::new(Xbps::default()),
-            PackageProviders::Zypper => Box::new(Zypper {}),
-            PackageProviders::Snapcraft => Box::new(Snapcraft {}),
+            PackageProviders::Zypper => Box::new(Zypper::default()),
+            PackageProviders::Snapcraft => Box::new(Snapcraft::default()),
         }
     }
 
@@ -244,6 +244,15 @@ fn installed(package: &PackageVariant, missing: &[String]) -> Vec<String> {
         .packages()
         .into_iter()
         .filter(|p| !missing.contains(p))
+        .collect()
+}
+
+/// The packages of `requested` that `listed` names, in the order they were requested
+fn among(requested: &[String], listed: &HashSet<String>) -> Vec<String> {
+    requested
+        .iter()
+        .filter(|p| listed.contains(*p))
+        .cloned()
         .collect()
 }
 
