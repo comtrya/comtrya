@@ -9,19 +9,18 @@ use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use std::vec;
 
-// TODO: Next Major Version - Deprecate from and to
 /// Links `target` to `source`. With `walk_dir`, links each entry of the `source` directory
 /// instead
 #[derive(JsonSchema, Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct FileLink {
-    /// Old name of `source`
-    pub from: Option<String>,
     /// The file or directory to link to, below the manifest's `files` directory
+    pub from: Option<String>,
+    /// Another name for `from`, only in manifest version 1
     pub source: Option<String>,
 
-    /// Where to create the link
+    /// Another name for `to`, only in manifest version 1
     pub target: Option<String>,
-    /// Old name of `target`
+    /// Where to create the link
     pub to: Option<String>,
 
     /// Link each entry of the `source` directory into the `target` directory, instead of the
@@ -45,14 +44,14 @@ fn walk_dir_default() -> bool {
 }
 
 impl FileLink {
-    /// `source`, or the old `from`
+    /// `from`, or `source` of manifest version 1
     fn source(&self) -> Result<&str> {
         self.source
             .as_deref()
             .or(self.from.as_deref())
             .ok_or(Error::Missing {
                 action: "file.link",
-                field: "source",
+                field: "from",
             })
     }
 
@@ -67,14 +66,14 @@ impl FileLink {
         self.resolve(manifest, source)
     }
 
-    /// `target`, or the old `to`
+    /// `to`, or `target` of manifest version 1
     fn target(&self) -> Result<&str> {
         self.target
             .as_deref()
             .or(self.to.as_deref())
             .ok_or(Error::Missing {
                 action: "file.link",
-                field: "target",
+                field: "to",
             })
     }
 

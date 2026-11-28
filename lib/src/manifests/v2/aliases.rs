@@ -28,7 +28,8 @@ fn check_action(action: &Value) -> Result<(), String> {
     let Some(schema) = Actions::schema(name) else {
         return Ok(());
     };
-    let aliases = field_aliases(schema.as_value());
+    let mut aliases = field_aliases(schema.as_value());
+    aliases.extend(version_1_fields(name));
 
     check_fields(action, &aliases)?;
     let variants = action.get("variants").and_then(Value::as_sequence);
@@ -62,6 +63,22 @@ fn check_fields(object: &Value, aliases: &[(String, String)]) -> Result<(), Stri
         }
     }
     Ok(())
+}
+
+/// Fields of format 1 that are their own fields, not serde aliases, but another name for a field
+/// format 2 keeps, as (action, field, the one to use). `file.link` had `source`/`target` next to
+/// `from`/`to`; format 2 says `from`/`to`, like the other actions
+const VERSION_1_FIELDS: [(&str, &str, &str); 2] = [
+    ("file.link", "source", "from"),
+    ("file.link", "target", "to"),
+];
+
+/// The fields of the action `name` that format 2 doesn't know, as (field, the one to use)
+fn version_1_fields(name: &str) -> impl Iterator<Item = (String, String)> + '_ {
+    VERSION_1_FIELDS
+        .iter()
+        .filter(move |(action, _, _)| *action == name)
+        .map(|(_, field, actual)| ((*field).to_string(), (*actual).to_string()))
 }
 
 /// The aliases of the fields of an action's schema, as (alias, field), from their `x-aliases`

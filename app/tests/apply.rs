@@ -484,7 +484,7 @@ fn file_link_without_source_is_reported() {
 
     let log = failure_log(&f, &["apply"]);
 
-    assert!(log.contains("file.link needs `source`"), "{log}");
+    assert!(log.contains("file.link needs `from`"), "{log}");
 }
 
 /// YAML and TOML files in `files` directories are files for actions, never manifests (#575)

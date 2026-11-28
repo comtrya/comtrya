@@ -4,12 +4,17 @@
 //!
 //! Format 2 knows one name for each action and field: the aliases of format 1, like `cmd.run`
 //! or `source` for `from`, are errors with the name to use. Every action can have a `title`,
-//! which log lines show instead of the generated summary
+//! which log lines show instead of the generated summary. A variant sets only the fields that
+//! differ from its action
 
 /// Old names of actions and fields, which format 2 doesn't accept
 mod aliases;
 /// Templates in values
 mod render;
+/// Numbers and booleans from templates
+mod typed;
+/// Variants that override fields of their action
+mod variants;
 
 use super::load::{parse, LoadErrorKind};
 use super::{unknown_keys, Manifest};
@@ -38,13 +43,16 @@ pub(super) fn load(
         return Ok(skipped(&document, condition));
     }
 
-    render::all(&mut document, contexts).map_err(LoadErrorKind::Render)?;
+    let rendered = render::all(&mut document, contexts).map_err(LoadErrorKind::Render)?;
+    deferred_unsupported(&rendered).map_err(LoadErrorKind::Render)?;
+    typed::apply(&mut document, &rendered);
     let titles = take_titles(&mut document).map_err(LoadErrorKind::Parse)?;
     aliases::check(&document).map_err(LoadErrorKind::Parse)?;
 
     let unknown = serde_json::to_value(&document)
         .map(|generic| unknown_keys(&generic))
         .unwrap_or_default();
+    variants::complete(&mut document).map_err(LoadErrorKind::Parse)?;
     let mut manifest = parse_manifest(document).map_err(|err| {
         // A misspelled required field is the likely cause
         let hints: String = unknown.iter().map(|key| format!("; {key}")).collect();
@@ -60,6 +68,17 @@ pub(super) fn load(
         }
     }
     Ok(manifest)
+}
+
+/// Fails on the first value that uses `registered.*`: rendering those when their action is
+/// planned comes with `register`
+fn deferred_unsupported(rendered: &render::Rendered) -> Result<(), String> {
+    match rendered.deferred.first() {
+        Some(at) => Err(format!(
+            "{at}: `registered` values need `register`, which manifest version 2 doesn't have yet"
+        )),
+        None => Ok(()),
+    }
 }
 
 /// The manifest's `where`, if it is there and false. One that can't be evaluated counts as
