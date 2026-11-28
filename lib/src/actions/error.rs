@@ -99,6 +99,15 @@ pub enum Error {
         provider: String,
     },
 
+    /// The package provider can't make sure of this `state` of `package.install`
+    #[error("package provider {provider} can't do `state: {state}`")]
+    UnsupportedState {
+        /// The provider
+        provider: String,
+        /// The state, like "latest"
+        state: &'static str,
+    },
+
     /// An AUR helper refuses to run as root
     #[error(
         "{provider} can't run as root. Run comtrya as a normal user, it asks for sudo where \

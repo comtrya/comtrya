@@ -1,0 +1,14 @@
+# `state` is new in 0.13.0: 0.12.0 warns about the unknown key and installs, so this manifest is
+# a known difference
+actions:
+  - action: package.install
+    list: [git, ripgrep]
+    state: latest
+
+  - action: package.install
+    name: nano
+    state: absent
+
+  - action: package.install
+    name: curl
+    state: present

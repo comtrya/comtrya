@@ -12,8 +12,8 @@ pub(crate) use repository::PackageRepository;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-/// Installs packages with a package manager. Packages that are already installed are skipped
-/// where the provider can tell
+/// Installs, upgrades or removes packages with a package manager, see `state`. Packages that
+/// are already as asked are skipped where the provider can tell
 #[derive(JsonSchema, Clone, Debug, Default, Serialize, Deserialize)]
 #[serde(rename = "package.install")]
 pub struct Package {
@@ -42,9 +42,39 @@ pub struct Package {
     extra_args: Vec<String>,
 
     /// Install from a local file, like a `.pkg` or `.deb` file, given as `name`. Only `bsdpkg`
-    /// and `aptitude` support it
+    /// and `aptitude` support it, and only with `state: present`
     #[serde(default)]
     file: bool,
+
+    /// `present` (the default) installs missing packages, `latest` also upgrades outdated
+    /// ones, `absent` removes installed ones. `latest` and `absent` work with homebrew,
+    /// aptitude, dnf, pacman, yay, paru and winget
+    #[serde(default)]
+    state: Option<PackageState>,
+}
+
+/// What `package.install` makes sure of
+#[derive(JsonSchema, Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum PackageState {
+    /// Installed. An installed package isn't upgraded
+    #[default]
+    Present,
+    /// Installed and up to date: missing packages are installed, outdated ones upgraded
+    Latest,
+    /// Not installed: installed packages are removed
+    Absent,
+}
+
+impl PackageState {
+    /// The name used in manifests
+    pub fn as_str(self) -> &'static str {
+        match self {
+            PackageState::Present => "present",
+            PackageState::Latest => "latest",
+            PackageState::Absent => "absent",
+        }
+    }
 }
 
 /// What `package.install` installs, as the providers take it
@@ -72,6 +102,11 @@ pub struct PackageVariant {
 }
 
 impl Package {
+    /// `state`, or `present` when it isn't set
+    fn state(&self) -> PackageState {
+        self.state.unwrap_or_default()
+    }
+
     /// The fields of this action that are set but not used
     fn ignored_fields(&self) -> Vec<Ignored> {
         let instead = "add it with `package.repository`";

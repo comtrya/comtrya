@@ -103,6 +103,7 @@ Some package manager providers can implement a `bootstrap` method that will auto
 | repository | string | yes      | Ignored with a warning, add repositories with `package.repository`                 |
 | file       | bool   | yes      | Specify that package is a local package on the file system.                        |
 |            |        |          | Default value is `false`                                                           |
+| state      | string | yes      | `present` (default), `latest` or `absent`, see [State](#state)                     |
 
 ### Example
 
@@ -130,6 +131,43 @@ Some package manager providers can implement a `bootstrap` method that will auto
   name: foo
   provider: homebrew
 ```
+
+### State
+
+`state` says what `package.install` makes sure of:
+
+| State     | Does                                                                                   |
+|:----------|:---------------------------------------------------------------------------------------|
+| `present` | Installs missing packages. Installed ones stay as they are. The default                |
+| `latest`  | Installs missing packages and upgrades installed ones that have a newer version        |
+| `absent`  | Removes installed packages                                                             |
+
+Packages that are already as asked are left alone, so a second run, or `--dry-run`, has nothing to do.
+
+```yaml
+# Keep these up to date
+- action: package.install
+  list: [git, ripgrep]
+  state: latest
+
+# Make sure nano is gone
+- action: package.install
+  name: nano
+  state: absent
+```
+
+`latest` and `absent` work with `homebrew`, `aptitude`, `dnf`, `pacman`, `yay`, `paru` and `winget`. Other providers fail with an error naming the provider and the state. How each one finds out:
+
+| Provider | Installed          | Outdated                                          | Upgrade with                 | Remove with              |
+|:---------|:-------------------|:--------------------------------------------------|:-----------------------------|:-------------------------|
+| homebrew | Cellar, Caskroom   | `brew outdated`                                   | `brew upgrade`               | `brew uninstall`         |
+| aptitude | `dpkg-query`       | `apt list --upgradable`                           | `apt install`                | `apt remove`             |
+| dnf      | `rpm -q -a`        | `dnf list --upgrades`                             | `dnf upgrade`                | `dnf remove`             |
+| pacman   | `pacman -Q`        | `pacman -Q -u`                                    | `pacman -S --needed`         | `pacman -R`              |
+| yay/paru | `pacman -Q`        | `pacman -Q -u`, and `yay -Q -u -a` for the AUR    | `yay -S` / `paru -S`         | `yay -R` / `paru -R`     |
+| winget   | `winget list`      | `winget list --upgrade-available`                 | `winget upgrade`             | `winget uninstall`       |
+
+Outdated means newer than what the package manager knows of: comtrya doesn't refresh the package lists first. Refresh them yourself if you want the newest versions, e.g. `apt update` or `dnf makecache` with `command.run` before. On Arch, sync and upgrade the whole system with `pacman -Syu` instead: Arch doesn't support upgrading single packages against newer package lists. `extra_args` are used for installs and upgrades, not for removing. `file: true` only works with `state: present`.
 
 ### Local package install support
 

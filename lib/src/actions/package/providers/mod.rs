@@ -29,11 +29,12 @@ mod xbps;
 use self::xbps::Xbps;
 mod zypper;
 use self::zypper::Zypper;
-use super::{repository::PackageRepository, PackageVariant};
+use super::{repository::PackageRepository, PackageState, PackageVariant};
 use crate::contexts::Facts;
 use crate::runner::{CommandOutput, CommandSpec, Runner};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 use tracing::{debug, trace};
 
 /// A package manager, by the name used for `provider` in manifests and `Comtrya.yaml`
@@ -100,9 +101,9 @@ impl PackageProviders {
     /// The implementation of this package manager
     pub fn get_provider(self) -> Box<dyn PackageProvider> {
         match self {
-            PackageProviders::Aptitude => Box::new(Aptitude {}),
+            PackageProviders::Aptitude => Box::new(Aptitude::default()),
             PackageProviders::BsdPkg => Box::new(BsdPkg {}),
-            PackageProviders::Dnf => Box::new(Dnf {}),
+            PackageProviders::Dnf => Box::new(Dnf::default()),
             PackageProviders::Homebrew => Box::new(Homebrew::default()),
             PackageProviders::Luarocks => Box::new(Luarocks::default()),
             PackageProviders::Macports => Box::new(Macports {}),
@@ -237,6 +238,37 @@ fn missing(package: &PackageVariant, installed: impl Fn(&str) -> bool) -> Vec<St
         .collect()
 }
 
+/// The requested packages that aren't in `missing`, in the order they were requested
+fn installed(package: &PackageVariant, missing: &[String]) -> Vec<String> {
+    package
+        .packages()
+        .into_iter()
+        .filter(|p| !missing.contains(p))
+        .collect()
+}
+
+/// The names `command` lists, one per line, as `name` reads them from a line. Fails only if
+/// the command can't be started: some list nothing with a failing exit code
+fn listed(
+    runner: &dyn Runner,
+    command: &CommandSpec,
+    name: impl Fn(&str) -> Option<&str>,
+) -> Result<HashSet<String>> {
+    Ok(String::from_utf8_lossy(&query(runner, command)?.stdout)
+        .lines()
+        .filter_map(|line| name(line.trim_end()))
+        .map(String::from)
+        .collect())
+}
+
+/// The error of a provider that can't make sure of `state`
+fn unsupported(provider: &str, state: PackageState) -> Error {
+    Error::UnsupportedState {
+        provider: provider.to_string(),
+        state: state.as_str(),
+    }
+}
+
 /// A package manager: what `package.install` and `package.repository` plan their steps with
 pub trait PackageProvider {
     /// The name shown in the output
@@ -255,6 +287,24 @@ pub trait PackageProvider {
     fn query(&self, package: &PackageVariant) -> Result<Vec<String>>;
     /// Steps that install the packages that are missing
     fn install(&self, package: &PackageVariant, facts: &Facts) -> Result<Vec<Step>>;
+    /// Steps that install the missing packages and upgrade the outdated ones, for
+    /// `state: latest`. Nothing when all are installed and up to date
+    ///
+    /// # Errors
+    ///
+    /// [`Error::UnsupportedState`] for providers that can't tell or do it, the default
+    fn upgrade(&self, _package: &PackageVariant, _facts: &Facts) -> Result<Vec<Step>> {
+        Err(unsupported(self.name(), PackageState::Latest))
+    }
+    /// Steps that remove the installed packages, for `state: absent`. Nothing when none of
+    /// them is installed
+    ///
+    /// # Errors
+    ///
+    /// [`Error::UnsupportedState`] for providers that can't tell or do it, the default
+    fn remove(&self, _package: &PackageVariant, _facts: &Facts) -> Result<Vec<Step>> {
+        Err(unsupported(self.name(), PackageState::Absent))
+    }
 }
 
 #[cfg(test)]

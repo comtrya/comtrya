@@ -9,17 +9,70 @@ use crate::actions::package::{
 use crate::actions::{Error, Result};
 use crate::atoms::command::Exec;
 use crate::contexts::Facts;
+use crate::runner::{self, CommandSpec, Runner};
 use crate::steps::Step;
 use crate::utilities;
-use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 use tracing::warn;
 use which::which;
 
 /// apt, as `aptitude`, `apt` or `apt-get`. Always runs `apt install`, which skips installed packages
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub struct Aptitude {}
+#[derive(Clone)]
+pub struct Aptitude {
+    /// Runs `dpkg-query` and `apt list` to find the installed and the upgradable packages
+    runner: Arc<dyn Runner>,
+}
+
+impl Default for Aptitude {
+    fn default() -> Self {
+        Self {
+            runner: runner::system(),
+        }
+    }
+}
 
 impl Aptitude {
+    /// The requested packages that dpkg doesn't list as installed (`ii`)
+    fn missing(&self, package: &PackageVariant) -> Result<Vec<String>> {
+        let command =
+            CommandSpec::new("dpkg-query").args(["-W", "-f=${db:Status-Abbrev}${Package}\\n"]);
+        let installed = super::listed(&*self.runner, &command, |line| line.strip_prefix("ii "))?;
+
+        Ok(super::missing(package, |p| installed.contains(p)))
+    }
+
+    /// The requested packages that `apt list --upgradable` lists, like
+    /// `git/stable 1:2.39.5 amd64 [upgradable from: 1:2.39.2]`. It compares with the package
+    /// lists from the last `apt update`
+    fn outdated(&self, installed: &[String]) -> Result<Vec<String>> {
+        if installed.is_empty() {
+            return Ok(vec![]);
+        }
+
+        let command = CommandSpec::new("apt").args(["list", "--upgradable"]);
+        let upgradable = super::listed(&*self.runner, &command, |line| {
+            line.split_once('/').map(|(name, _)| name)
+        })?;
+
+        Ok(installed
+            .iter()
+            .filter(|p| upgradable.contains(*p))
+            .cloned()
+            .collect())
+    }
+
+    /// `apt install` for the packages
+    fn install_step(&self, package: &PackageVariant, packages: Vec<String>) -> Step {
+        self.privileged_exec(
+            "apt",
+            [String::from("install"), String::from("--yes")]
+                .into_iter()
+                .chain(package.extra_args.clone())
+                .chain(packages)
+                .collect(),
+        )
+    }
+
     /// Keeps apt and the package scripts from asking questions
     fn env(&self) -> Vec<(String, String)> {
         vec![(
@@ -227,12 +280,39 @@ impl PackageProvider for Aptitude {
     }
 
     fn install(&self, package: &PackageVariant, _facts: &Facts) -> Result<Vec<Step>> {
+        Ok(vec![self.install_step(package, package.packages())])
+    }
+
+    /// `apt install` installs the missing packages and upgrades the outdated ones alike
+    fn upgrade(&self, package: &PackageVariant, _facts: &Facts) -> Result<Vec<Step>> {
+        let missing = self.missing(package)?;
+        let outdated = self.outdated(&super::installed(package, &missing))?;
+        let targets: Vec<String> = package
+            .packages()
+            .into_iter()
+            .filter(|p| missing.contains(p) || outdated.contains(p))
+            .collect();
+        if targets.is_empty() {
+            return Ok(vec![]);
+        }
+
+        // The executor runs the step before it plans the next action, which asks again
+        self.runner.forget();
+        Ok(vec![self.install_step(package, targets)])
+    }
+
+    fn remove(&self, package: &PackageVariant, _facts: &Facts) -> Result<Vec<Step>> {
+        let installed = super::installed(package, &self.missing(package)?);
+        if installed.is_empty() {
+            return Ok(vec![]);
+        }
+
+        self.runner.forget();
         Ok(vec![self.privileged_exec(
             "apt",
-            [String::from("install"), String::from("--yes")]
+            [String::from("remove"), String::from("--yes")]
                 .into_iter()
-                .chain(package.extra_args.clone())
-                .chain(package.packages())
+                .chain(installed)
                 .collect(),
         )])
     }
@@ -248,7 +328,7 @@ mod test {
     use super::*;
 
     fn add_repository(repository: PackageRepository) -> Vec<String> {
-        Aptitude {}
+        Aptitude::default()
             .add_repository(&repository, &Facts::default())
             .unwrap()
             .iter()
@@ -353,7 +433,7 @@ mod test {
 
     #[test]
     fn test_add_repository_invalid() {
-        assert!(Aptitude {}
+        assert!(Aptitude::default()
             .add_repository(
                 &PackageRepository {
                     name: String::from("test"),
@@ -370,11 +450,11 @@ mod test {
             name: String::from("ppa:neovim-ppa/stable"),
             ..Default::default()
         };
-        let mut steps = Aptitude {}
+        let mut steps = Aptitude::default()
             .add_repository(&repository, &Facts::default())
             .unwrap();
         steps.extend(
-            Aptitude {}
+            Aptitude::default()
                 .install(
                     &PackageVariant {
                         list: vec![String::from("git")],
@@ -389,5 +469,72 @@ mod test {
         for step in steps {
             assert_eq!(RunAs::Root, step.run_as, "{step}");
         }
+    }
+
+    /// apt with `git` and `vim` installed, `curl` removed but configured, and `apt list
+    /// --upgradable` answering `upgradable`
+    fn installed_git_and_vim(upgradable: &str) -> Aptitude {
+        use crate::runner::fake::{succeeds, FakeRunner};
+
+        Aptitude {
+            runner: FakeRunner::new()
+                .answer(
+                    r"dpkg-query -W -f=${db:Status-Abbrev}${Package}\n",
+                    succeeds("ii git\nii vim\nrc curl\n"),
+                )
+                .answer(
+                    "apt list --upgradable",
+                    succeeds(&format!("Listing...\n{upgradable}")),
+                )
+                .shared(),
+        }
+    }
+
+    fn packages(list: &[&str]) -> PackageVariant {
+        PackageVariant {
+            list: list.iter().map(ToString::to_string).collect(),
+            ..Default::default()
+        }
+    }
+
+    fn commands(steps: &[Step]) -> Vec<String> {
+        steps.iter().map(|step| step.atom.to_string()).collect()
+    }
+
+    #[test]
+    fn latest_installs_missing_and_upgradable_packages() {
+        let apt = installed_git_and_vim("vim/stable 2:9.1 amd64 [upgradable from: 2:9.0]\n");
+
+        let steps = apt
+            .upgrade(&packages(&["git", "vim", "curl"]), &Facts::default())
+            .unwrap();
+
+        assert_eq!(vec!["Run apt install --yes vim curl"], commands(&steps));
+        assert_eq!(RunAs::Root, steps[0].run_as);
+    }
+
+    #[test]
+    fn latest_does_nothing_when_everything_is_up_to_date() {
+        let apt = installed_git_and_vim("");
+
+        let steps = apt
+            .upgrade(&packages(&["git", "vim"]), &Facts::default())
+            .unwrap();
+
+        assert!(steps.is_empty());
+    }
+
+    #[test]
+    fn absent_removes_only_installed_packages() {
+        let apt = installed_git_and_vim("");
+
+        let steps = apt
+            .remove(&packages(&["vim", "curl"]), &Facts::default())
+            .unwrap();
+        let nothing = apt.remove(&packages(&["curl"]), &Facts::default()).unwrap();
+
+        assert_eq!(vec!["Run apt remove --yes vim"], commands(&steps));
+        assert_eq!(RunAs::Root, steps[0].run_as);
+        assert!(nothing.is_empty());
     }
 }

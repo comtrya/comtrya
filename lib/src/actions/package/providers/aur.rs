@@ -6,7 +6,7 @@ use crate::actions::package::{repository::PackageRepository, PackageVariant};
 use crate::actions::{Error, Result};
 use crate::atoms::command::Exec;
 use crate::contexts::Facts;
-use crate::runner::{self, Runner};
+use crate::runner::{self, CommandSpec, Runner};
 use crate::steps::Step;
 use std::sync::Arc;
 use tracing::warn;
@@ -147,16 +147,55 @@ impl PackageProvider for AurHelper {
         // The executor runs the step before it plans the next action, which reads the list again
         self.runner.forget();
 
+        Ok(vec![self.install_step(package, need_installed)])
+    }
+
+    /// Installs the missing packages and upgrades the outdated ones, from the official
+    /// repositories (`pacman -Q -u`) and the AUR (`<helper> -Q -u -a`)
+    fn upgrade(&self, package: &PackageVariant, facts: &Facts) -> Result<Vec<Step>> {
+        refuse_root(self.helper.command, facts)?;
+
+        let aur = CommandSpec::new(self.helper.command).args(["-Q", "-u", "-a", "-q"]);
+        let targets = pacman::missing_or_outdated(self.runner.as_ref(), package, &[aur])?;
+        if targets.is_empty() {
+            return Ok(vec![]);
+        }
+
+        self.runner.forget();
+        Ok(vec![self.install_step(package, targets)])
+    }
+
+    /// Removes the installed packages. The helper asks for sudo itself
+    fn remove(&self, package: &PackageVariant, facts: &Facts) -> Result<Vec<Step>> {
+        refuse_root(self.helper.command, facts)?;
+
+        let installed = super::installed(package, &self.query(package)?);
+        if installed.is_empty() {
+            return Ok(vec![]);
+        }
+
+        self.runner.forget();
         Ok(vec![Step::new(Exec {
+            command: String::from(self.helper.command),
+            arguments: [strings(&["-R", "--noconfirm"]), installed].concat(),
+            ..Default::default()
+        })])
+    }
+}
+
+impl AurHelper {
+    /// The helper's install command for the packages
+    fn install_step(&self, package: &PackageVariant, packages: Vec<String>) -> Step {
+        Step::new(Exec {
             command: String::from(self.helper.command),
             arguments: [
                 strings(self.helper.install_args),
                 package.extra_args.clone(),
-                need_installed,
+                packages,
             ]
             .concat(),
             ..Default::default()
-        })])
+        })
     }
 }
 
@@ -253,6 +292,61 @@ mod tests {
             .unwrap();
 
         assert!(steps.is_empty());
+    }
+
+    #[test]
+    fn latest_upgrades_outdated_packages_from_the_repositories_and_the_aur() {
+        let runner = FakeRunner::new()
+            .answer("pacman -Q -q", succeeds("git\nvim\nyay-bin\n"))
+            .answer("pacman -Q -u -q", succeeds("vim\n"))
+            .answer("yay -Q -u -a -q", succeeds("yay-bin\n"));
+
+        let steps = with_runner(&YAY, runner)
+            .upgrade(
+                &package(&["git", "vim", "yay-bin", "ripgrep"]),
+                &user_facts(1000),
+            )
+            .unwrap();
+
+        assert_eq!(1, steps.len());
+        assert_eq!(
+            "Run yay -S --noconfirm vim yay-bin ripgrep",
+            steps[0].to_string()
+        );
+    }
+
+    #[test]
+    fn latest_does_nothing_when_everything_is_up_to_date() {
+        let runner = FakeRunner::new()
+            .answer("pacman -Q -q", succeeds("git\n"))
+            .answer("pacman -Q -u -q", succeeds(""))
+            .answer("paru -Q -u -a -q", succeeds(""));
+
+        let steps = with_runner(&PARU, runner)
+            .upgrade(&package(&["git"]), &user_facts(1000))
+            .unwrap();
+
+        assert!(steps.is_empty());
+    }
+
+    #[test]
+    fn absent_removes_installed_packages_as_the_user() {
+        let runner = FakeRunner::new().answer("pacman -Q -q", succeeds("git\nyay-bin\n"));
+
+        let steps = with_runner(&PARU, runner)
+            .remove(&package(&["yay-bin", "ripgrep"]), &user_facts(1000))
+            .unwrap();
+
+        assert_eq!(1, steps.len());
+        assert_eq!("Run paru -R --noconfirm yay-bin", steps[0].to_string());
+    }
+
+    #[test]
+    fn latest_and_absent_refuse_to_run_as_root() {
+        let helper = AurHelper::yay();
+
+        assert!(helper.upgrade(&package(&["git"]), &user_facts(0)).is_err());
+        assert!(helper.remove(&package(&["git"]), &user_facts(0)).is_err());
     }
 
     #[test]

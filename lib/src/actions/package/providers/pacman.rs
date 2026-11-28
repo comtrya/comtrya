@@ -67,6 +67,66 @@ impl PackageProvider for Pacman {
         self.runner.forget();
         Ok(vec![install_step(package, need_installed)])
     }
+
+    /// `pacman -S --needed` installs the missing packages and upgrades the outdated ones alike
+    fn upgrade(&self, package: &PackageVariant, _facts: &Facts) -> Result<Vec<Step>> {
+        let targets = missing_or_outdated(self.runner.as_ref(), package, &[])?;
+        if targets.is_empty() {
+            return Ok(vec![]);
+        }
+
+        self.runner.forget();
+        Ok(vec![install_step(package, targets)])
+    }
+
+    fn remove(&self, package: &PackageVariant, _facts: &Facts) -> Result<Vec<Step>> {
+        let installed = super::installed(package, &self.query(package)?);
+        if installed.is_empty() {
+            return Ok(vec![]);
+        }
+
+        self.runner.forget();
+        Ok(vec![Step::new(Exec {
+            command: String::from("pacman"),
+            arguments: [
+                vec![String::from("-R"), String::from("--noconfirm")],
+                installed,
+            ]
+            .concat(),
+            ..Default::default()
+        })
+        .as_root()])
+    }
+}
+
+/// The requested packages that are missing, or that pacman (`pacman -Q -u`) or one of the
+/// `also_outdated` commands lists as outdated, in the order they were requested. The AUR
+/// helpers use it too, with their own list of outdated AUR packages
+pub(super) fn missing_or_outdated(
+    runner: &dyn Runner,
+    package: &PackageVariant,
+    also_outdated: &[CommandSpec],
+) -> Result<Vec<String>> {
+    let missing = missing(runner, package)?;
+    if missing.len() == package.packages().len() {
+        return Ok(missing);
+    }
+
+    // `-Q -u` lists nothing and fails when everything is up to date
+    let mut outdated = HashSet::new();
+    for command in std::iter::once(CommandSpec::new("pacman").args(["-Q", "-u", "-q"]))
+        .chain(also_outdated.iter().cloned())
+    {
+        outdated.extend(super::listed(runner, &command, |line| {
+            line.split_whitespace().next()
+        })?);
+    }
+
+    Ok(package
+        .packages()
+        .into_iter()
+        .filter(|p| missing.contains(p) || outdated.contains(p))
+        .collect())
 }
 
 /// The requested packages that pacman doesn't list as installed. The AUR helpers use it too.
@@ -171,6 +231,72 @@ mod test {
         pacman.query(&package).unwrap();
 
         assert_eq!(vec!["pacman -Q -q", "pacman -Q -q"], fake.calls());
+    }
+
+    fn packages(list: &[&str]) -> PackageVariant {
+        PackageVariant {
+            list: list.iter().map(ToString::to_string).collect(),
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn latest_installs_missing_and_outdated_packages_in_one_step() {
+        let pacman = Pacman {
+            runner: FakeRunner::new()
+                .answer("pacman -Q -q", succeeds("git\nvim\nzsh\n"))
+                .answer("pacman -Q -u -q", succeeds("vim\nlinux\n"))
+                .shared(),
+        };
+
+        let steps = pacman
+            .upgrade(&packages(&["git", "vim", "ripgrep"]), &Facts::default())
+            .unwrap();
+
+        assert_eq!(1, steps.len());
+        assert_eq!(
+            "Run pacman -S --needed --noconfirm vim ripgrep (as root)",
+            steps[0].to_string()
+        );
+    }
+
+    #[test]
+    fn latest_does_nothing_when_everything_is_up_to_date() {
+        let pacman = Pacman {
+            runner: FakeRunner::new()
+                .answer("pacman -Q -q", succeeds("git\nvim\n"))
+                .answer("pacman -Q -u -q", crate::runner::fake::fails("", ""))
+                .shared(),
+        };
+
+        let steps = pacman
+            .upgrade(&packages(&["git", "vim"]), &Facts::default())
+            .unwrap();
+
+        assert!(steps.is_empty());
+    }
+
+    #[test]
+    fn absent_removes_only_installed_packages_as_root() {
+        let pacman = Pacman {
+            runner: FakeRunner::new()
+                .answer("pacman -Q -q", succeeds("git\nvim\n"))
+                .shared(),
+        };
+
+        let steps = pacman
+            .remove(&packages(&["vim", "ripgrep"]), &Facts::default())
+            .unwrap();
+        let nothing = pacman
+            .remove(&packages(&["ripgrep"]), &Facts::default())
+            .unwrap();
+
+        assert_eq!(1, steps.len());
+        assert_eq!(
+            "Run pacman -R --noconfirm vim (as root)",
+            steps[0].to_string()
+        );
+        assert!(nothing.is_empty());
     }
 
     #[test]
